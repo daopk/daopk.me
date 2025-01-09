@@ -1,0 +1,70 @@
+import type { Component, InjectionKey } from "vue";
+
+import type { WidgetManifest } from "~/types/widget";
+
+export type AppPermission =
+  | "vfs.read"
+  | "vfs.write"
+  | "storage.write"
+  | "shortcut.global"
+  | "notifications.post"
+  | "network.fetch";
+
+export interface WindowDefaults {
+  width?: number;
+  height?: number;
+  maximized?: boolean;
+  centered?: boolean;
+}
+
+export interface AppManifest {
+  id: string;
+  name: string;
+  /**
+   * App icon as a Vue Component (typically an Iconify-backed icon export).
+   * Manifests own their visual identity so the dock/launcher can tree-shake
+   * down to only the icons actually registered. If broader registries
+   * (remote/serializable manifests) become a need later, introduce a parallel
+   * string-keyed icon registry then; do not weaken this contract.
+   */
+  icon: Component;
+  category: "system" | "productivity" | "media" | "dev" | "other";
+  hidden?: boolean;
+  singleton?: boolean;
+  defaultWindow?: WindowDefaults;
+  permissions?: AppPermission[];
+  widgets?: readonly WidgetManifest[];
+  component: () => Promise<{ default: Component }>;
+  autorun?: boolean;
+  keywords?: string[];
+}
+
+export interface AppContext {
+  manifestId: string;
+  handleId: string;
+  args: Readonly<Record<string, unknown>>;
+  // TODO: inject AbortSignal tied to window unmount + process kill.
+}
+
+export const AppContextInjectionKey: InjectionKey<AppContext> = Symbol("AppContext");
+
+export interface AppChromeBackAction {
+  readonly ariaLabel: string;
+  readonly handler: () => void;
+}
+
+export interface AppChromeController {
+  setTitle(title: string | null): void;
+  setBackAction(action: AppChromeBackAction | null): void;
+}
+
+export const AppChromeInjectionKey: InjectionKey<AppChromeController> = Symbol("AppChrome");
+
+export type AppLifecycleEvent = "close" | "blur" | "focus";
+
+export interface AppHandle {
+  readonly id: string;
+  readonly manifestId: string;
+  on(event: AppLifecycleEvent, listener: () => void): () => void;
+  postMessage(payload: Record<string, unknown>): void;
+}

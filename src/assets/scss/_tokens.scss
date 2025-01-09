@@ -1,0 +1,167 @@
+:root {
+  color-scheme: light dark;
+
+  /* Menubar — typography/z-index independent of palette */
+  --menubar-height: 28px;
+  --menubar-fg: var(--color-fg);
+  --menubar-fg-muted: var(--color-fg-muted);
+  --menubar-blur: 12px;
+  --menubar-z: 1000;
+  --menubar-font-size: 12px;
+
+  /* DropdownMenu — click-open menubar chrome. Portaled above shell
+     chrome/windows (`--menubar-z: 1000`, `--window-z-max: 800`) but
+     below Spotlight and modal surfaces. ContextMenu keeps its higher
+     right-click band below. */
+  --dropdown-menu-z: 1200;
+
+  /* Dialog — modal + sheet surfaces. Sits above Spotlight
+     (--spotlight-z: 1500) so a permission prompt that fires while
+     Spotlight is open paints on top — the user must answer before
+     resuming the launcher. Overlay + content share a stacking
+     band; content's :focus-visible outline lives on the same
+     element so focus trapping isn't visually obscured by the
+     scrim. */
+  --dialog-overlay-z: 1600;
+  --dialog-content-z: 1601;
+
+  /* ContextMenu — wallpaper widget right-click +
+     future menubar / dock / window-titlebar context menus. Sits one
+     band above the dialog content so a context menu opened over a
+     dialog (e.g. a permission prompt) paints on top of the dialog's
+     overlay + content. reka-ui's ContextMenuPortal portals into
+     <body>; the `.ds-context-menu` rule below applies this z-index
+     to the portaled content directly. */
+  --context-menu-z: 1700;
+
+  --dock-bg: var(--menubar-bg-translucent);
+  --dock-blur: var(--menubar-blur);
+  --dock-z: 900;
+  --dock-icon-size: 40px;
+  --dock-padding: var(--space-sm);
+  --dock-radius: var(--radius-lg);
+  --dock-gap: var(--space-sm);
+  --dock-indicator-size: 4px;
+  --dock-indicator-offset: 4px;
+  --dock-indicator-bg: var(--color-accent);
+
+  --home-screen-padding-inline: var(--space-lg);
+  --home-screen-padding-block: var(--space-xl);
+  --home-screen-grid-gap-x: var(--space-lg);
+  --home-screen-grid-gap-y: var(--space-xl);
+  --home-screen-icon-size: 56px;
+  --home-screen-icon-radius: 18px;
+  --home-screen-icon-bg: var(--color-bg-elevated);
+  --home-screen-icon-shadow: var(--shadow-sm);
+  --home-screen-label-font-size: 12px;
+  --home-screen-label-gap: var(--space-sm);
+  --home-screen-label-fg: var(--color-fg);
+  --home-screen-label-shadow: none;
+
+  --app-switcher-z: 950;
+  --app-switcher-card-bg: var(--color-bg-elevated);
+  --app-switcher-card-border: var(--color-border);
+  --app-switcher-card-radius: var(--radius-lg);
+  --app-switcher-card-gap: var(--space-md);
+  --app-switcher-card-padding: var(--space-md);
+  --app-switcher-card-icon-size: 32px;
+  --app-switcher-header-h: 56px;
+  --app-switcher-padding-inline: var(--space-lg);
+  --app-switcher-scrim: color-mix(in srgb, var(--color-bg) 70%, transparent);
+
+  --window-bg: var(--color-bg-elevated);
+  --window-fg: var(--color-fg);
+  --window-radius: var(--radius-lg);
+  --window-titlebar-h: 28px;
+  --window-titlebar-bg: var(--color-bg-subtle);
+  --window-titlebar-fg: var(--color-fg);
+  --window-titlebar-fg-muted: var(--color-fg-muted);
+  --window-shadow: var(--shadow-md);
+  --window-shadow-focused: var(--shadow-lg);
+  --window-min-w: 240px;
+  --window-min-h: 160px;
+  --window-default-w: 360px;
+  --window-default-h: 240px;
+  --window-handle-size: 6px;
+  --window-handle-corner: 12px;
+  --window-snap-zone: 8px;
+  --window-snap-preview-bg: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  --window-snap-preview-border: var(--color-accent);
+  --window-snap-preview-radius: var(--window-radius);
+  --window-snap-preview-duration: 160ms;
+  --window-z-base: 100;
+  --window-z-max: 800;
+
+  --color-accent: #5a2d82;
+  --color-accent-fg: #ffffff;
+  --color-accent-hover: #70379e;
+  --color-accent-sheen: #b794d6;
+
+  --space-base: 4px;
+  --density-scale: 1;
+  --space-xs: calc(var(--space-base) * 1 * var(--density-scale));
+  --space-sm: calc(var(--space-base) * 2 * var(--density-scale));
+  --space-md: calc(var(--space-base) * 3 * var(--density-scale));
+  --space-lg: calc(var(--space-base) * 4 * var(--density-scale));
+  --space-xl: calc(var(--space-base) * 6 * var(--density-scale));
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-size-base: 14px;
+
+  --ease: cubic-bezier(0.33, 0, 0.2, 1);
+
+  --desktop-widget-layer-z: 0;
+  --desktop-widget-drag-z: 1;
+  --widget-grid-pitch: 24px;
+
+  /* Wallpaper blur — Settings → Background toggles these token overrides.
+     The renderer applies them only to the wallpaper paint layer, so shell
+     chrome stays crisp while the image/gradient softens underneath it. */
+  --wallpaper-blur: 0px;
+  --wallpaper-blur-scale: 1;
+}
+
+[data-theme="light"] {
+  --menubar-bg-translucent: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  --color-bg: #f8f8fc;
+  --color-bg-elevated: #ffffff;
+  --color-bg-subtle: #ececf6;
+  --color-fg: #12121a;
+  --color-fg-muted: rgb(18 18 26 / 0.62);
+  --color-border: rgb(18 18 26 / 0.12);
+  --color-error: #b42318;
+  --color-error-soft: color-mix(in srgb, var(--color-fg) 30%, var(--color-error));
+  --color-success: #067647;
+  --shadow-sm: 0 1px 2px rgb(18 18 26 / 0.06), 0 1px 3px rgb(18 18 26 / 0.04);
+  --shadow-md: 0 8px 20px rgb(18 18 26 / 0.1), 0 4px 8px rgb(18 18 26 / 0.06);
+  --shadow-lg: 0 24px 48px rgb(18 18 26 / 0.14), 0 8px 24px rgb(18 18 26 / 0.08);
+  --shadow-accent-sm: 0 0 22px rgb(183 148 214 / 0.35);
+  --shadow-accent-lg: 0 0 42px rgb(90 45 130 / 0.45);
+  --duration-fast: 120ms;
+  --duration-base: 380ms;
+}
+
+[data-theme="dark"] {
+  --menubar-bg-translucent: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  --color-bg: #09090f;
+  --color-bg-elevated: #12121c;
+  --color-bg-subtle: #181825;
+  --color-fg: #f4f5ff;
+  --color-fg-muted: rgb(244 245 255 / 0.7);
+  --color-border: rgb(244 245 255 / 0.1);
+  --color-error: #f97066;
+  --color-error-soft: color-mix(in srgb, var(--color-fg) 30%, var(--color-error));
+  --color-success: #32d583;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45), 0 1px 4px rgb(0 0 0 / 0.35);
+  --shadow-md: 0 12px 32px rgb(0 0 0 / 0.55), 0 4px 14px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 28px 64px rgb(0 0 0 / 0.62), 0 16px 40px rgb(0 0 0 / 0.45);
+  --shadow-accent-sm: 0 0 24px rgb(183 148 214 / 0.45);
+  --shadow-accent-lg: 0 0 48px rgb(90 45 130 / 0.55);
+  --duration-fast: 120ms;
+  --duration-base: 380ms;
+}

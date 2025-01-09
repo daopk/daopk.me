@@ -1,0 +1,86 @@
+import { createPinia } from "pinia";
+import { createApp } from "vue";
+
+import "~/core/boot/syncPreflightTheme";
+import "~/assets/scss/base.scss";
+
+import App from "~/App.vue";
+import { blogManifest } from "~/apps/blog";
+import { browserManifest } from "~/apps/browser";
+import { calendarManifest } from "~/apps/calendar";
+import { clockManifest } from "~/apps/clock";
+import { editorManifest } from "~/apps/editor";
+import { finderManifest } from "~/apps/finder";
+import { notesManifest } from "~/apps/notes";
+import { pdfViewerManifest } from "~/apps/pdf-viewer";
+import { slidesManifest } from "~/apps/slides";
+import { settingsManifest } from "~/apps/settings";
+import { terminalManifest } from "~/apps/terminal";
+import { trashManifest } from "~/apps/trash";
+import { BootManager, BootManagerInjectionKey, bootstrapKernel, defaultBootPhases } from "~/core";
+import { registerPwaInstallPrompt } from "~/service-worker/installController";
+
+import { referralCode } from "~/utils/console";
+
+import { KernelInjectionKey } from "~/types/kernel";
+import { disposeBuiltinWidgets, registerBuiltinWidgets } from "~/widgets/builtin";
+
+const app = createApp(App);
+const disposePwaInstallPrompt = registerPwaInstallPrompt();
+
+app.use(createPinia());
+
+const kernel = bootstrapKernel();
+
+kernel.apps.register(blogManifest);
+
+kernel.apps.register(finderManifest);
+
+kernel.apps.register(browserManifest);
+
+kernel.apps.register(clockManifest);
+
+kernel.apps.register(calendarManifest);
+
+kernel.apps.register(editorManifest);
+
+kernel.apps.register(notesManifest);
+
+kernel.apps.register(slidesManifest);
+
+kernel.apps.register(pdfViewerManifest);
+
+kernel.apps.register(terminalManifest);
+
+kernel.apps.register(settingsManifest);
+
+kernel.apps.register(trashManifest);
+
+registerBuiltinWidgets(kernel);
+
+app.provide(KernelInjectionKey, kernel);
+
+const bootManager = new BootManager(kernel, kernel.boot, [...defaultBootPhases]);
+
+app.provide(BootManagerInjectionKey, bootManager);
+
+// Dev-only a11y runtime (vue-axe). The dynamic import + DEV gate means
+// dev a11y is best-effort — never crash the app for it.
+if (import.meta.env.DEV) {
+  void import("~/devtools/axe-bootstrap")
+    .then(({ installAxeIfDev }) => installAxeIfDev(app))
+    .catch(() => {
+      // Intentional dev-only swallow — `installAxeIfDev` already logs
+    });
+}
+
+app.mount("#app");
+
+referralCode();
+
+import.meta.hot?.dispose(() => {
+  disposePwaInstallPrompt();
+  bootManager.dispose();
+  disposeBuiltinWidgets();
+  kernel.dispose();
+});

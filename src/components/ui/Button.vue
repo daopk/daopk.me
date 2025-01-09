@@ -1,0 +1,130 @@
+<script setup lang="ts">
+import type { Component } from "vue";
+
+interface ButtonProps {
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md";
+  loading?: boolean;
+  disabled?: boolean;
+  iconStart?: Component;
+  iconEnd?: Component;
+  type?: "button" | "submit" | "reset";
+}
+
+withDefaults(defineProps<ButtonProps>(), {
+  variant: "secondary",
+  size: "md",
+  loading: false,
+  disabled: false,
+  iconStart: undefined,
+  iconEnd: undefined,
+  type: "button",
+});
+</script>
+
+<template>
+  <button
+    :type="type"
+    :disabled="disabled || loading"
+    :aria-busy="loading || undefined"
+    class="ds-button"
+    :class="[
+      `ds-button--${variant}`,
+      `ds-button--${size}`,
+      loading && 'ds-button--loading',
+      disabled && !loading && 'ds-button--disabled',
+    ]"
+  >
+    <component :is="iconStart" v-if="iconStart" class="ds-button__icon" aria-hidden="true" />
+    <slot />
+    <component :is="iconEnd" v-if="iconEnd" class="ds-button__icon" aria-hidden="true" />
+  </button>
+</template>
+
+<style scoped lang="scss">
+.ds-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--space-xs);
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease),
+    color 120ms var(--ease);
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+.ds-button__icon {
+  block-size: 14px;
+  inline-size: 14px;
+}
+
+.ds-button--sm {
+  font-size: 12px;
+  padding: 2px var(--space-sm);
+}
+
+.ds-button--md {
+  font-size: 13px;
+  padding: var(--space-xs) var(--space-md);
+}
+
+.ds-button--primary {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-fg);
+
+  &:hover {
+    background-color: var(--color-accent-hover);
+  }
+}
+
+.ds-button--secondary {
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-border);
+  color: var(--color-fg);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-accent);
+  }
+}
+
+.ds-button--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--color-accent);
+  padding-inline: 0;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.ds-button--loading {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.ds-button--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-button {
+    transition: none;
+  }
+}
+</style>

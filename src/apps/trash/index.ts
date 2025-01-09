@@ -1,0 +1,1 @@
+export { trashManifest } from "./manifest";

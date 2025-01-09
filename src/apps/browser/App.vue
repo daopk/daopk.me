@@ -1,0 +1,633 @@
+<script setup lang="ts">
+import { inject, ref, watch } from "vue";
+
+import { Button, ContextMenu, ContextMenuItem } from "~/components/ui";
+import { BrowserAppIcon } from "~/icons/fluentColor";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ExternalLink,
+  Globe,
+  Home,
+  RefreshCw,
+  Search,
+  Shield,
+} from "~/icons/lucide";
+import { AppContextInjectionKey } from "~/types/app";
+
+import { BROWSER_QUICK_LINKS, useBrowser } from "./useBrowser";
+
+const ctx = inject(AppContextInjectionKey, null);
+const browser = useBrowser({ initialUrl: ctx?.args.url });
+const addressInput = ref(browser.address.value);
+
+watch(
+  () => browser.address.value,
+  (next) => {
+    addressInput.value = next;
+  },
+);
+
+function submitAddress(): void {
+  if (browser.navigate(addressInput.value)) {
+    addressInput.value = browser.address.value;
+  }
+}
+
+function goBack(): void {
+  if (browser.goBack()) {
+    addressInput.value = browser.address.value;
+  }
+}
+
+function goForward(): void {
+  if (browser.goForward()) {
+    addressInput.value = browser.address.value;
+  }
+}
+
+function goHome(): void {
+  browser.goHome();
+  addressInput.value = browser.address.value;
+}
+
+function jumpToHistory(index: number): void {
+  if (browser.jumpToHistory(index)) {
+    addressInput.value = browser.address.value;
+  }
+}
+
+function openQuickLink(url: string): void {
+  addressInput.value = url;
+  submitAddress();
+}
+
+function selectAddress(event: FocusEvent): void {
+  if (event.currentTarget instanceof HTMLInputElement) {
+    event.currentTarget.select();
+  }
+}
+
+function hideBrokenIcon(event: Event): void {
+  if (event.currentTarget instanceof HTMLImageElement) {
+    event.currentTarget.hidden = true;
+  }
+}
+
+function openExternally(): void {
+  if (browser.current.value.kind !== "web") {
+    return;
+  }
+
+  window.open(browser.current.value.url, "_blank", "noopener,noreferrer");
+}
+</script>
+
+<template>
+  <section class="browser" aria-label="Browser">
+    <header class="browser__toolbar">
+      <div class="browser__nav" aria-label="Navigation controls">
+        <ContextMenu :modal="false">
+          <template #trigger>
+            <Button
+              size="sm"
+              :icon-start="ArrowLeft"
+              :disabled="!browser.canGoBack.value"
+              aria-label="Back"
+              title="Back"
+              @click="goBack"
+            />
+          </template>
+          <template #items>
+            <ContextMenuItem v-if="browser.backHistory.value.length === 0" disabled>
+              No back history
+            </ContextMenuItem>
+            <ContextMenuItem
+              v-for="item in browser.backHistory.value"
+              :key="`back-${item.index}`"
+              @select="jumpToHistory(item.index)"
+            >
+              <span class="browser__history-item">
+                <span class="browser__history-title">{{ item.entry.title }}</span>
+                <span v-if="item.entry.kind === 'web'" class="browser__history-url">
+                  {{ item.entry.url }}
+                </span>
+              </span>
+            </ContextMenuItem>
+          </template>
+        </ContextMenu>
+        <ContextMenu :modal="false">
+          <template #trigger>
+            <Button
+              size="sm"
+              :icon-start="ArrowRight"
+              :disabled="!browser.canGoForward.value"
+              aria-label="Forward"
+              title="Forward"
+              @click="goForward"
+            />
+          </template>
+          <template #items>
+            <ContextMenuItem v-if="browser.forwardHistory.value.length === 0" disabled>
+              No forward history
+            </ContextMenuItem>
+            <ContextMenuItem
+              v-for="item in browser.forwardHistory.value"
+              :key="`forward-${item.index}`"
+              @select="jumpToHistory(item.index)"
+            >
+              <span class="browser__history-item">
+                <span class="browser__history-title">{{ item.entry.title }}</span>
+                <span v-if="item.entry.kind === 'web'" class="browser__history-url">
+                  {{ item.entry.url }}
+                </span>
+              </span>
+            </ContextMenuItem>
+          </template>
+        </ContextMenu>
+        <Button
+          size="sm"
+          :icon-start="RefreshCw"
+          :disabled="!browser.canPreview.value"
+          aria-label="Reload"
+          title="Reload"
+          @click="browser.reload"
+        />
+        <Button size="sm" :icon-start="Home" aria-label="Home" title="Home" @click="goHome" />
+      </div>
+
+      <form class="browser__address" role="search" @submit.prevent="submitAddress">
+        <label class="browser__address-label" for="browser-address">URL</label>
+        <img
+          v-if="browser.faviconUrl.value"
+          :key="browser.faviconUrl.value"
+          class="browser__favicon"
+          :src="browser.faviconUrl.value"
+          alt=""
+          decoding="async"
+          @error="hideBrokenIcon"
+        />
+        <Shield
+          v-else-if="browser.isSecure.value"
+          class="browser__address-icon"
+          aria-hidden="true"
+        />
+        <Globe v-else class="browser__address-icon" aria-hidden="true" />
+        <input
+          id="browser-address"
+          v-model="addressInput"
+          class="browser__address-input"
+          type="text"
+          autocomplete="url"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          inputmode="url"
+          placeholder="Search or enter address"
+          @focus="selectAddress"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="primary"
+          :icon-start="Search"
+          aria-label="Go"
+          title="Go"
+        />
+      </form>
+
+      <Button
+        size="sm"
+        :icon-start="ExternalLink"
+        :disabled="browser.current.value.kind !== 'web'"
+        aria-label="Open externally"
+        title="Open externally"
+        @click="openExternally"
+      />
+    </header>
+
+    <nav class="browser__bookmarks" aria-label="Bookmarks">
+      <button
+        v-for="link in BROWSER_QUICK_LINKS"
+        :key="link.url"
+        type="button"
+        class="browser__bookmark"
+        :title="link.url"
+        @click="openQuickLink(link.url)"
+      >
+        <span class="browser__bookmark-icon" aria-hidden="true">{{ link.iconLabel }}</span>
+        <span class="browser__bookmark-label">{{ link.label }}</span>
+      </button>
+    </nav>
+
+    <main class="browser__viewport">
+      <section v-if="browser.current.value.kind === 'start'" class="browser__start">
+        <div class="browser__start-mark" aria-hidden="true">
+          <BrowserAppIcon :size="44" />
+        </div>
+        <h2 class="browser__start-title">Start</h2>
+        <ul class="browser__quick-links" aria-label="Quick links">
+          <li v-for="link in BROWSER_QUICK_LINKS" :key="link.url">
+            <button type="button" class="browser__quick-link" @click="openQuickLink(link.url)">
+              <span class="browser__quick-link-icon" aria-hidden="true">{{ link.iconLabel }}</span>
+              <span>{{ link.label }}</span>
+              <ExternalLink aria-hidden="true" :size="14" :stroke-width="2" />
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <section v-else-if="browser.previewBlocked.value" class="browser__blocked">
+        <div class="browser__blocked-mark" aria-hidden="true">
+          <ExternalLink :size="32" :stroke-width="1.9" />
+        </div>
+        <h2 class="browser__blocked-title">This site could not be embedded.</h2>
+        <p class="browser__blocked-copy">{{ browser.current.value.url }}</p>
+        <Button
+          variant="primary"
+          :icon-start="ExternalLink"
+          aria-label="Open current site externally"
+          @click="openExternally"
+        >
+          Open externally
+        </Button>
+      </section>
+
+      <iframe
+        v-else
+        :key="browser.iframeKey.value"
+        class="browser__frame"
+        :src="browser.iframeSrc.value ?? undefined"
+        sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+        allow="
+          accelerometer;
+          autoplay;
+          clipboard-write;
+          encrypted-media;
+          gyroscope;
+          picture-in-picture;
+          web-share;
+        "
+        allowfullscreen
+        credentialless="credentialless"
+        referrerpolicy="no-referrer"
+        title="Browser content"
+        @error="browser.markPreviewError"
+        @load="browser.finishLoad"
+      />
+    </main>
+
+    <footer class="browser__status" role="status">
+      <span v-if="browser.isLoading.value" class="browser__status-spinner" aria-hidden="true" />
+      {{ browser.message.value }}
+    </footer>
+  </section>
+</template>
+
+<style scoped lang="scss">
+.browser {
+  background: var(--color-bg);
+  block-size: 100%;
+  color: var(--color-fg);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  inline-size: 100%;
+  min-block-size: 0;
+}
+
+.browser__toolbar {
+  align-items: center;
+  background: var(--color-bg-subtle);
+  border-block-end: 1px solid var(--color-border);
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-sm);
+  min-block-size: 48px;
+  padding-block: var(--space-xs);
+  padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
+  padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
+}
+
+.browser__nav {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-xs);
+}
+
+.browser__address {
+  align-items: center;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-xs);
+  min-inline-size: 120px;
+  padding-block: 2px;
+  padding-inline: var(--space-sm) 2px;
+}
+
+.browser__address:focus-within {
+  border-color: var(--color-accent);
+}
+
+.browser__address-label {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.browser__address-icon {
+  block-size: 15px;
+  color: var(--color-fg-muted);
+  flex: 0 0 auto;
+  inline-size: 15px;
+}
+
+.browser__favicon {
+  block-size: 16px;
+  flex: 0 0 auto;
+  inline-size: 16px;
+}
+
+.browser__address-input {
+  background: transparent;
+  border: 0;
+  color: var(--color-fg);
+  flex: 1 1 auto;
+  font: inherit;
+  min-inline-size: 4ch;
+  outline: none;
+  padding: 0;
+}
+
+.browser__bookmarks {
+  align-items: center;
+  background: var(--color-bg);
+  border-block-end: 1px solid var(--color-border);
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-xs);
+  min-block-size: 38px;
+  overflow-x: auto;
+  padding-block: var(--space-xs);
+  padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
+  padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
+}
+
+.browser__bookmark {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: inherit;
+  gap: var(--space-xs);
+  min-block-size: 28px;
+  padding: 2px var(--space-sm);
+}
+
+.browser__bookmark:hover,
+.browser__bookmark:focus-visible {
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border);
+}
+
+.browser__bookmark:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.browser__bookmark-icon,
+.browser__quick-link-icon {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+  border-radius: 50%;
+  color: var(--color-accent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.browser__bookmark-icon {
+  block-size: 18px;
+  inline-size: 18px;
+}
+
+.browser__bookmark-label {
+  max-inline-size: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser__history-item {
+  display: grid;
+  gap: 1px;
+  min-inline-size: 0;
+}
+
+.browser__history-title {
+  color: var(--color-fg);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser__history-url {
+  color: var(--color-fg-muted);
+  font-size: 11px;
+  max-inline-size: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser__viewport {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  position: relative;
+}
+
+.browser__start {
+  align-items: center;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  inline-size: 100%;
+  justify-content: center;
+  padding: var(--space-xl);
+}
+
+.browser__start-mark {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
+  border-radius: 50%;
+  display: inline-flex;
+  block-size: 72px;
+  inline-size: 72px;
+  justify-content: center;
+}
+
+.browser__start-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.browser__quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.browser__quick-link {
+  align-items: center;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: var(--space-xs);
+  min-block-size: 34px;
+  padding: var(--space-xs) var(--space-md);
+}
+
+.browser__quick-link-icon {
+  block-size: 20px;
+  inline-size: 20px;
+}
+
+.browser__quick-link:hover,
+.browser__quick-link:focus-visible {
+  border-color: var(--color-accent);
+}
+
+.browser__quick-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.browser__blocked {
+  align-items: center;
+  block-size: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  inline-size: 100%;
+  justify-content: center;
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.browser__blocked-mark {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-fg-muted) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg-muted) 22%, transparent);
+  border-radius: 50%;
+  color: var(--color-fg-muted);
+  display: inline-flex;
+  block-size: 64px;
+  inline-size: 64px;
+  justify-content: center;
+}
+
+.browser__blocked-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.browser__blocked-copy {
+  color: var(--color-fg-muted);
+  font-size: 13px;
+  margin: 0;
+  max-inline-size: min(56ch, 100%);
+  overflow-wrap: anywhere;
+}
+
+.browser__frame {
+  background: var(--color-bg-elevated);
+  block-size: 100%;
+  border: 0;
+  display: block;
+  inline-size: 100%;
+}
+
+.browser__status {
+  align-items: center;
+  background: var(--color-bg-subtle);
+  border-block-start: 1px solid var(--color-border);
+  color: var(--color-fg-muted);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  gap: var(--space-xs);
+  min-block-size: 28px;
+  overflow: hidden;
+  padding-block-start: var(--space-xs);
+  padding-block-end: calc(var(--space-xs) + var(--mobile-shell-app-bottom-padding, 0px));
+  padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
+  padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser__status-spinner {
+  animation: browser-spin 700ms linear infinite;
+  block-size: 12px;
+  border: 2px solid color-mix(in srgb, var(--color-fg-muted) 32%, transparent);
+  border-block-start-color: var(--color-accent);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  inline-size: 12px;
+}
+
+@keyframes browser-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .browser__toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .browser__address {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .browser__bookmark-label {
+    max-inline-size: 10ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .browser__status-spinner {
+    animation-duration: 0ms;
+  }
+}
+</style>

@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "coverage/**",
+    "pnpm-lock.yaml",
+    "src/apps/slides/runtime-pnpm-lock.yaml",
+    "*.log",
+    "\u0070\u006c\u0061\u006e\u0073\u002e\u006d\u0064",
+    "\u0077\u006f\u0072\u006b\u0069\u006e\u0067\u002e\u006d\u0064",
+    "\u0070\u006c\u0061\u006e\u002d\u0070\u0068\u0061\u0073\u0065\u002d\u002a\u002e\u006d\u0064",
+    "src/utils/console.ts"
+  ]
+}

@@ -1,0 +1,1 @@
+export { finderManifest } from "./manifest";

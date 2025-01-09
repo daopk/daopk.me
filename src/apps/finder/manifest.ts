@@ -1,0 +1,15 @@
+import { FinderAppIcon } from "~/icons/fluentColor";
+
+import type { AppManifest } from "~/types/app";
+
+export const finderManifest: AppManifest = {
+  id: "finder",
+  name: "Finder",
+  icon: FinderAppIcon,
+  category: "system",
+  singleton: true,
+  permissions: ["vfs.read", "vfs.write"],
+  defaultWindow: { width: 860, height: 560, centered: true },
+  component: () => import("./App.vue"),
+  keywords: ["files", "browser", "vfs", "folder", "documents"],
+};

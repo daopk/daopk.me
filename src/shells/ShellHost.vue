@@ -1,0 +1,108 @@
+<script setup lang="ts">
+import { computed, nextTick, onMounted, useTemplateRef } from "vue";
+
+import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
+import { runAutorunManifests } from "~/core/boot/autorun";
+import { consumeInitialAppUrlIntent } from "~/core/routing/appUrlIntents";
+import { useBreakpoint } from "~/composables/useBreakpoint";
+import { useKernel } from "~/composables/useKernel";
+import { peekShellStickyOverride, pickShell, type PickedShell } from "~/shells/shellRegistry";
+
+const kernel = useKernel();
+const breakpoint = useBreakpoint();
+const hostRef = useTemplateRef<HTMLElement>("hostRef");
+
+const bootstrapSticky = peekShellStickyOverride();
+
+const picked = computed<PickedShell>(() => pickShell(breakpoint.profile.value, bootstrapSticky));
+
+let lastReadyShellId: PickedShell["shellId"] | null = null;
+
+function onShellReady(shellRoot: Element): void {
+  const shellId = picked.value.shellId;
+
+  if (lastReadyShellId === shellId) {
+    return;
+  }
+  lastReadyShellId = shellId;
+
+  const profileSnapshot = breakpoint.profile.value;
+
+  kernel.events.emit("shell.changed", {
+    shellId,
+    profile: { ...profileSnapshot },
+  });
+
+  void nextTick(() => {
+    focusShellMain(shellRoot);
+  });
+
+  // cancels any pending callback before tearing down (HMR / tests).
+  kernel.boot.scheduleIdleAfterShellReady(() => {
+    consumeInitialAppUrlIntent(kernel);
+    void runAutorunManifests(kernel);
+  });
+}
+
+function onShellAfterEnter(shellRoot: Element): void {
+  onShellReady(shellRoot);
+}
+
+onMounted(() => {
+  void nextTick(() => {
+    const shellRoot = hostRef.value?.firstElementChild;
+    if (shellRoot) {
+      onShellReady(shellRoot);
+    }
+  });
+});
+
+function focusShellMain(rootEl: Element): void {
+  if (!(rootEl instanceof HTMLElement)) {
+    return;
+  }
+
+  let target: HTMLElement | null =
+    rootEl.tagName.toLowerCase() === "main" ? rootEl : rootEl.querySelector("main");
+
+  if (!(target instanceof HTMLElement)) {
+    target = rootEl;
+  }
+
+  target.setAttribute("tabindex", "-1");
+  target.focus({ preventScroll: true });
+}
+</script>
+
+<template>
+  <div ref="hostRef" class="shell-host">
+    <Transition mode="out-in" name="shell-fade" @after-enter="onShellAfterEnter">
+      <component :is="picked.component" :key="picked.shellId" />
+    </Transition>
+    <SessionLockOverlay />
+  </div>
+</template>
+
+<style scoped lang="scss">
+.shell-host {
+  isolation: isolate;
+  min-block-size: 100dvh;
+}
+
+.shell-fade-enter-active,
+.shell-fade-leave-active {
+  transition: opacity var(--duration-base) var(--ease);
+}
+
+.shell-fade-enter-from,
+.shell-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-fade-enter-active,
+  .shell-fade-leave-active {
+    transition-duration: var(--duration-fast);
+  }
+}
+</style>
