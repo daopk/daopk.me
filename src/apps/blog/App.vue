@@ -4,6 +4,7 @@ import { computed, inject, onUnmounted, ref, watch } from "vue";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
+import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { ArrowLeft } from "~/icons/lucide";
 import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
 
@@ -72,13 +73,39 @@ onUnmounted(() => {
   appChrome?.setBackAction(null);
 });
 
+function replaceBrowserPath(pathname: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (
+    window.location.pathname === pathname &&
+    window.location.search === "" &&
+    window.location.hash === ""
+  ) {
+    return;
+  }
+
+  window.history.replaceState(window.history.state, "", pathname);
+}
+
+function replaceBlogPostPath(slug: string): void {
+  if (!isBlogPostSlug(slug)) {
+    return;
+  }
+
+  replaceBrowserPath(`/blog/${slug}`);
+}
+
 function openIndex(): void {
   view.value = "index";
+  replaceBrowserPath("/blog");
 }
 
 function openPost(args: { readonly slug: string; readonly path?: string }): void {
   view.value = "post";
   blogPost.open(args);
+  replaceBlogPostPath(args.slug);
 }
 
 function onPostSelect(post: BlogIndexPost): void {

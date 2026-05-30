@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount, type VueWrapper } from "@vue/test-utils";
 
@@ -12,6 +12,11 @@ vi.mock("~/core/debug", () => ({
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
+});
 
 async function waitForContent(wrapper: VueWrapper, timeoutMs = 1500): Promise<void> {
   await vi.waitFor(
@@ -118,6 +123,23 @@ function wrap(kernel: Kernel = makeKernel(), context: AppContext = blogContext) 
   });
 }
 
+function blogOpenListener(
+  kernel: Kernel,
+): (payload: KernelEventPayloads["blog.open.requested"]) => void {
+  const eventsOn = kernel.events.on as unknown as {
+    mock: {
+      calls: [string, (payload: KernelEventPayloads["blog.open.requested"]) => void][];
+    };
+  };
+  const call = eventsOn.mock.calls.find(([event]) => event === "blog.open.requested");
+
+  if (!call) {
+    throw new Error("Blog open listener was not registered.");
+  }
+
+  return call[1];
+}
+
 describe("Blog app", () => {
   it("renders the latest-post index when launched without a slug", async () => {
     const wrapper = mount(
@@ -148,6 +170,8 @@ New body`,
   });
 
   it("opens an index item in the reader and returns to the index", async () => {
+    window.history.replaceState({ preserved: true }, "", "/");
+    const replaceSpy = vi.spyOn(window.history, "replaceState");
     const wrapper = mount(
       wrap(
         makeKernel({
@@ -165,12 +189,60 @@ New body`,
     await wrapper.find(".blog__index-item").trigger("click");
     await waitForContent(wrapper, 5000);
 
+    expect(replaceSpy).toHaveBeenCalledWith({ preserved: true }, "", "/blog/new-post");
+    expect(window.location.pathname).toBe("/blog/new-post");
     expect(wrapper.find(".blog__content").text()).toContain("New Post");
     expect(wrapper.find(".blog__content").text()).toContain("New body");
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
+
+    expect(replaceSpy).toHaveBeenLastCalledWith({ preserved: true }, "", "/blog");
+    expect(window.location.pathname).toBe("/blog");
     expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
+  });
+
+  it("replaces the URL for blog.open.requested events with valid slugs", async () => {
+    window.history.replaceState({ preserved: "event" }, "", "/apps/blog");
+    const replaceSpy = vi.spyOn(window.history, "replaceState");
+    const kernel = makeKernel({
+      "/home/posts/event-post.md": `---
+title: "Event Post"
+date: "2026-05-30"
+---
+Event body`,
+    });
+    const wrapper = mount(wrap(kernel, blogIndexContext));
+
+    blogOpenListener(kernel)({
+      source: "deeplink",
+      slug: "event-post",
+      path: "/home/posts/event-post.md",
+    });
+    await waitForContent(wrapper, 5000);
+
+    expect(replaceSpy).toHaveBeenCalledWith({ preserved: "event" }, "", "/blog/event-post");
+    expect(window.location.pathname).toBe("/blog/event-post");
+    expect(wrapper.find(".blog__content").text()).toContain("Event Post");
+  });
+
+  it("does not create post URLs for unsafe or missing blog slugs", async () => {
+    const replaceSpy = vi.spyOn(window.history, "replaceState");
+    const kernel = makeKernel(null);
+    mount(wrap(kernel, blogIndexContext));
+    const openBlog = blogOpenListener(kernel);
+
+    openBlog({ source: "deeplink", slug: "FIELD-NOTES" });
+
+    expect(replaceSpy).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe("/");
+
+    openBlog({ source: "deeplink" });
+
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    expect(replaceSpy).toHaveBeenLastCalledWith(null, "", "/blog");
+    expect(replaceSpy).not.toHaveBeenCalledWith(expect.anything(), "", "/blog/undefined");
+    expect(window.location.pathname).toBe("/blog");
   });
 
   it("renders the seeded VFS post from launch args", async () => {
