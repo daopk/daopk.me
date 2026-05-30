@@ -4,6 +4,7 @@ import { handleRequest, isCrawlerRequest, type SeoWorkerEnv } from "../../worker
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const SEO_BLOG_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
 
 function textResponse(body: string, init: ResponseInit = {}): Response {
   return new Response(body, {
@@ -23,12 +24,14 @@ function makeEnv(): {
   const fetch = vi.fn(async (input: Request | string) => {
     const url = typeof input === "string" ? new URL(input, "https://daopk.me") : new URL(input.url);
 
-    if (url.pathname === "/__seo/blog/building-a-tiny-web-os.html") {
-      return textResponse("<article>Building a Tiny OS in the Browser</article>");
+    if (url.pathname === "/__seo/blog/building-a-tiny-web-os") {
+      return textResponse(
+        `${SEO_BLOG_ASSET_MARKER}<article>Building a Tiny OS in the Browser</article>`,
+      );
     }
 
     if (url.pathname.startsWith("/__seo/blog/")) {
-      return textResponse("Missing", { status: 404 });
+      return textResponse('<div id="app"></div>');
     }
 
     return textResponse('<div id="app"></div>');
@@ -61,6 +64,13 @@ describe("SEO Worker", () => {
     expect(
       isCrawlerRequest(
         new Request("https://daopk.me/blog/building-a-tiny-web-os", {
+          headers: { "User-Agent": "curl/8.7.1" },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isCrawlerRequest(
+        new Request("https://daopk.me/blog/building-a-tiny-web-os", {
           headers: { "User-Agent": BROWSER_USER_AGENT },
         }),
       ),
@@ -86,7 +96,7 @@ describe("SEO Worker", () => {
     const assetRequest = firstCall[0];
     expect(assetRequest).toBeInstanceOf(Request);
     expect(new URL((assetRequest as Request).url).pathname).toBe(
-      "/__seo/blog/building-a-tiny-web-os.html",
+      "/__seo/blog/building-a-tiny-web-os",
     );
   });
 

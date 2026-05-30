@@ -10,6 +10,7 @@ export interface SeoWorkerEnv {
 
 const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
+const SEO_BLOG_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
 
 function appendVary(value: string | null, token: string): string {
   if (value === null || value.trim().length === 0) {
@@ -51,15 +52,28 @@ function blogSlugFromPathname(pathname: string): string | null {
   return slug !== null && SLUG_PATTERN.test(slug) ? slug : null;
 }
 
+function responseFromHtml(html: string, response: Response): Response {
+  return new Response(html, {
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
+}
+
 async function fetchSeoPost(request: Request, env: SeoWorkerEnv, slug: string): Promise<Response> {
-  const assetUrl = new URL(`/__seo/blog/${slug}.html`, request.url);
+  const assetUrl = new URL(`/__seo/blog/${slug}`, request.url);
   const response = await env.ASSETS.fetch(new Request(assetUrl, request));
 
   if (response.status === 404) {
     return noIndexResponse("Blog post not found.");
   }
 
-  return withCrawlerHeaders(response);
+  const html = await response.text();
+  if (!html.includes(SEO_BLOG_ASSET_MARKER)) {
+    return noIndexResponse("Blog post not found.");
+  }
+
+  return withCrawlerHeaders(responseFromHtml(html, response));
 }
 
 export async function handleRequest(request: Request, env: SeoWorkerEnv): Promise<Response> {

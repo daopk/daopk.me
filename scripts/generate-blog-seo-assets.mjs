@@ -268,6 +268,7 @@ function buildPostDocument({ html, metadata, slug }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${escapeHtml(pageTitle)}</title>
+    <meta name="x-daopk-seo-asset" content="blog-post" />
     <meta name="description" content="${escapeHtml(metadata.description)}" />
     <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
     <meta property="og:type" content="article" />
