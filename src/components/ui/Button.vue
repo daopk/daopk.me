@@ -2,7 +2,7 @@
 import type { Component } from "vue";
 
 interface ButtonProps {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
   loading?: boolean;
   disabled?: boolean;
@@ -109,6 +109,17 @@ withDefaults(defineProps<ButtonProps>(), {
 
   &:focus-visible {
     outline: none;
+  }
+}
+
+.ds-button--danger {
+  background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-error) 24%, var(--color-border));
+  color: var(--color-error-soft);
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-error) 16%, transparent);
+    border-color: color-mix(in srgb, var(--color-error) 36%, var(--color-border));
   }
 }
 

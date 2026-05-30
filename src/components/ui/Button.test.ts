@@ -37,6 +37,14 @@ describe("Button (M2b Phase 3 / Commit H)", () => {
     expect(cls).not.toContain("ds-button--secondary");
   });
 
+  it("applies the danger variant modifier", () => {
+    const wrapper = mount(Button, { props: { variant: "danger" } });
+    const cls = wrapper.classes();
+    expect(cls).toContain("ds-button--danger");
+    expect(cls).not.toContain("ds-button--primary");
+    expect(cls).not.toContain("ds-button--secondary");
+  });
+
   it("applies the size modifier (sm vs md)", () => {
     const sm = mount(Button, { props: { size: "sm" } });
     expect(sm.classes()).toContain("ds-button--sm");

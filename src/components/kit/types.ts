@@ -13,3 +13,13 @@ export interface SelectOption {
   readonly label: string;
   readonly disabled?: boolean;
 }
+
+export interface TabListOption {
+  readonly value: string;
+  readonly label: string;
+  readonly ariaLabel?: string;
+  readonly disabled?: boolean;
+  readonly icon?: Component;
+  readonly id?: string;
+  readonly panelId?: string;
+}
