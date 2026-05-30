@@ -146,11 +146,7 @@ export function useFinder({
       cwd.value = normalized;
       currentDirectory.value = nextStat;
       entries.value = nextEntries;
-      selectedPath.value = chooseSelection(
-        nextEntries,
-        preferredPath,
-        shouldAutoSelectFirstEntry,
-      );
+      selectedPath.value = chooseSelection(nextEntries, preferredPath, shouldAutoSelectFirstEntry);
 
       return true;
     } catch (loadError) {

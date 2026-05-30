@@ -356,7 +356,9 @@ describe("Spotlight.vue", () => {
       });
       await w.find('[role="option"]').trigger("mousedown");
 
-      expect(w.emitted("dispatch")).toEqual([[{ kind: "vfs", id: "/portfolio/posts/field-notes.md" }]]);
+      expect(w.emitted("dispatch")).toEqual([
+        [{ kind: "vfs", id: "/portfolio/posts/field-notes.md" }],
+      ]);
       w.unmount();
     });
 

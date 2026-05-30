@@ -16,11 +16,7 @@ import {
 
 const StubIcon = defineComponent({ template: "<svg />" });
 
-function manifest(
-  id = "alpha",
-  name = "Alpha",
-  overrides: Partial<AppManifest> = {},
-): AppManifest {
+function manifest(id = "alpha", name = "Alpha", overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id,
     name,

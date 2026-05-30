@@ -358,5 +358,4 @@ function onPostSelect(post: BlogIndexPost): void {
   color: var(--color-fg-muted);
   margin: 0;
 }
-
 </style>

@@ -81,7 +81,8 @@ function makeKernel(
     },
     events: {
       on: vi.fn((channel: string, listener: (payload: Record<string, unknown>) => void) => {
-        const bucket = listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
+        const bucket =
+          listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
         bucket.add(listener);
         listeners.set(channel, bucket);
         return (): void => {
@@ -274,9 +275,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
   });
 
   it("replays app settings requests when a running app is resumed with settings args", async () => {
-    currentKernel = makeKernel([
-      manifest({ id: "calendar", name: "Calendar", settings: {} }),
-    ]);
+    currentKernel = makeKernel([manifest({ id: "calendar", name: "Calendar", settings: {} })]);
     const wrapper = mount(MobileShell, { attachTo: document.body });
 
     currentKernel.events.emit("app.launch.requested", {

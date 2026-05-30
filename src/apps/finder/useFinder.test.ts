@@ -334,7 +334,10 @@ describe("useFinder", () => {
   it("selects an initial reveal entry after the first refresh", async () => {
     const finder = useFinder({
       vfs: makeVfs({
-        "/portfolio/posts": [entry("/portfolio/posts/a.md"), entry("/portfolio/posts/field-notes.md")],
+        "/portfolio/posts": [
+          entry("/portfolio/posts/a.md"),
+          entry("/portfolio/posts/field-notes.md"),
+        ],
       }),
       initialPath: "/portfolio/posts",
       initialReveal: "/portfolio/posts/field-notes.md",
@@ -349,7 +352,10 @@ describe("useFinder", () => {
     const finder = useFinder({
       vfs: makeVfs({
         "/": [entry("/portfolio", "directory")],
-        "/portfolio/posts": [entry("/portfolio/posts/a.md"), entry("/portfolio/posts/field-notes.md")],
+        "/portfolio/posts": [
+          entry("/portfolio/posts/a.md"),
+          entry("/portfolio/posts/field-notes.md"),
+        ],
       }),
     });
 

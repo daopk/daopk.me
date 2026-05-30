@@ -114,9 +114,7 @@ function viewLabel(view: CalendarViewMode): string {
       </section>
 
       <section class="calendar-settings__group" aria-labelledby="calendar-settings-week-start">
-        <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">
-          Week start
-        </h3>
+        <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">Week start</h3>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
           role="radiogroup"
