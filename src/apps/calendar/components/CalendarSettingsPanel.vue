@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { ActionRow, AppFrame, AppToolbar, Panel } from "~/components/kit";
 import { Button, Switch } from "~/components/ui";
 import { ArrowLeft, RotateCcw } from "~/icons/lucide";
 
@@ -65,8 +66,14 @@ function viewLabel(view: CalendarViewMode): string {
 </script>
 
 <template>
-  <main class="calendar-settings" aria-label="Calendar settings">
-    <header v-if="showHeader" class="calendar-settings__header">
+  <AppFrame
+    as="main"
+    class="calendar-settings"
+    layout="flex-column"
+    :safe-area="false"
+    aria-label="Calendar settings"
+  >
+    <AppToolbar v-if="showHeader" class="calendar-settings__header">
       <div class="calendar-settings__header-main">
         <Button
           v-if="showBack"
@@ -80,18 +87,26 @@ function viewLabel(view: CalendarViewMode): string {
         </Button>
         <h2 class="calendar-settings__title">Calendar settings</h2>
       </div>
-      <Button
-        class="calendar-settings__action-button"
-        size="md"
-        :icon-start="RotateCcw"
-        @click="settings.reset"
-      >
-        Reset
-      </Button>
-    </header>
+      <template #end>
+        <Button
+          class="calendar-settings__action-button"
+          size="md"
+          :icon-start="RotateCcw"
+          @click="settings.reset"
+        >
+          Reset
+        </Button>
+      </template>
+    </AppToolbar>
 
     <div class="calendar-settings__content">
-      <section class="calendar-settings__group" aria-labelledby="calendar-settings-view">
+      <Panel
+        as="section"
+        class="calendar-settings__group"
+        variant="plain"
+        padding="none"
+        aria-labelledby="calendar-settings-view"
+      >
         <h3 id="calendar-settings-view" class="calendar-settings__group-title">View</h3>
         <div
           class="calendar-settings__option-grid"
@@ -111,9 +126,15 @@ function viewLabel(view: CalendarViewMode): string {
             {{ option.label }}
           </button>
         </div>
-      </section>
+      </Panel>
 
-      <section class="calendar-settings__group" aria-labelledby="calendar-settings-week-start">
+      <Panel
+        as="section"
+        class="calendar-settings__group"
+        variant="plain"
+        padding="none"
+        aria-labelledby="calendar-settings-week-start"
+      >
         <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">Week start</h3>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
@@ -133,9 +154,15 @@ function viewLabel(view: CalendarViewMode): string {
             {{ option.label }}
           </button>
         </div>
-      </section>
+      </Panel>
 
-      <section class="calendar-settings__group" aria-labelledby="calendar-settings-agenda">
+      <Panel
+        as="section"
+        class="calendar-settings__group"
+        variant="plain"
+        padding="none"
+        aria-labelledby="calendar-settings-agenda"
+      >
         <h3 id="calendar-settings-agenda" class="calendar-settings__group-title">Agenda range</h3>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
@@ -155,21 +182,35 @@ function viewLabel(view: CalendarViewMode): string {
             {{ days }} days
           </button>
         </div>
-      </section>
+      </Panel>
 
-      <section class="calendar-settings__toggle-row" aria-labelledby="calendar-settings-lunar">
-        <div>
-          <h3 id="calendar-settings-lunar" class="calendar-settings__row-title">Lunar labels</h3>
-          <p class="calendar-settings__row-copy">Show Vietnamese lunar date labels in Calendar.</p>
-        </div>
+      <ActionRow
+        as="section"
+        class="calendar-settings__toggle-row"
+        aria-labelledby="calendar-settings-lunar"
+      >
+        <template #copy>
+          <div>
+            <h3 id="calendar-settings-lunar" class="calendar-settings__row-title">Lunar labels</h3>
+            <p class="calendar-settings__row-copy">
+              Show Vietnamese lunar date labels in Calendar.
+            </p>
+          </div>
+        </template>
         <Switch
           :model-value="showLunarCalendar"
           :aria-label="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
           @update:model-value="settings.setShowLunarCalendar"
         />
-      </section>
+      </ActionRow>
 
-      <section class="calendar-settings__group" aria-labelledby="calendar-settings-duration">
+      <Panel
+        as="section"
+        class="calendar-settings__group"
+        variant="plain"
+        padding="none"
+        aria-labelledby="calendar-settings-duration"
+      >
         <h3 id="calendar-settings-duration" class="calendar-settings__group-title">
           New event duration
         </h3>
@@ -193,9 +234,15 @@ function viewLabel(view: CalendarViewMode): string {
             {{ minutes }}m
           </button>
         </div>
-      </section>
+      </Panel>
 
-      <section class="calendar-settings__group" aria-labelledby="calendar-settings-color">
+      <Panel
+        as="section"
+        class="calendar-settings__group"
+        variant="plain"
+        padding="none"
+        aria-labelledby="calendar-settings-color"
+      >
         <h3 id="calendar-settings-color" class="calendar-settings__group-title">New event color</h3>
         <div
           class="calendar-settings__swatches"
@@ -218,7 +265,7 @@ function viewLabel(view: CalendarViewMode): string {
             @click="settings.setDefaultEventColor(color)"
           />
         </div>
-      </section>
+      </Panel>
 
       <footer v-if="!showHeader" class="calendar-settings__footer">
         <Button
@@ -231,7 +278,7 @@ function viewLabel(view: CalendarViewMode): string {
         </Button>
       </footer>
     </div>
-  </main>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">

@@ -10,6 +10,17 @@ import {
   type Component,
 } from "vue";
 
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  IconButton,
+  Panel,
+  StatusBanner,
+  TabList,
+  ToolbarGroup,
+  type TabListOption,
+} from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useBreakpoint } from "~/composables/useBreakpoint";
 import { useVfs } from "~/composables/useVfs";
@@ -43,6 +54,7 @@ import {
   buildDayCell,
   buildWeekCells,
   initialCalendarViewMode,
+  isCalendarViewMode,
   type CalendarViewMode,
 } from "./calendarViews";
 import {
@@ -86,6 +98,16 @@ const viewTabs: ReadonlyArray<{
   { id: "day", label: "Day", icon: CalendarDays },
   { id: "agenda", label: "Agenda", icon: List },
 ];
+const viewTabOptions = computed<readonly TabListOption[]>(() =>
+  viewTabs.map((tab) => ({
+    value: tab.id,
+    label: tab.label,
+    icon: tab.icon,
+    id: viewTabId(tab.id),
+    panelId: viewPanelId(tab.id),
+    ariaLabel: `${tab.label} view`,
+  })),
+);
 
 const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
 const fullDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -244,6 +266,12 @@ watch(
 function selectView(view: CalendarViewMode): void {
   activeView.value = view;
   calendarSettings.setPreferredViewMode(view);
+}
+
+function onViewTabChange(view: string): void {
+  if (isCalendarViewMode(view)) {
+    selectView(view);
+  }
 }
 
 function openSettings(): void {
@@ -428,7 +456,7 @@ function labelForStatus(status: CalendarStatus): string {
 </script>
 
 <template>
-  <section class="calendar" aria-label="Calendar">
+  <AppFrame class="calendar" layout="flex-column" :safe-area="false" aria-label="Calendar">
     <CalendarSettingsPanel
       v-if="settingsPaneOpen"
       :settings="calendarSettings"
@@ -438,77 +466,70 @@ function labelForStatus(status: CalendarStatus): string {
     />
 
     <template v-else>
-      <header class="calendar__toolbar">
-        <div class="calendar__title-group">
-          <CalendarAppIcon class="calendar__app-icon" aria-hidden="true" />
-          <div class="calendar__title-stack">
-            <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
-            <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
+      <AppToolbar class="calendar__toolbar">
+        <template #start>
+          <div class="calendar__title-group">
+            <CalendarAppIcon class="calendar__app-icon" aria-hidden="true" />
+            <div class="calendar__title-stack">
+              <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
+              <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
+            </div>
           </div>
-        </div>
+        </template>
 
         <div class="calendar__controls">
-          <div class="calendar__nav" aria-label="Calendar navigation">
-            <button
-              type="button"
+          <ToolbarGroup class="calendar__nav" label="Calendar navigation">
+            <IconButton
               class="calendar__icon-button"
-              :aria-label="`Previous ${navigationUnitLabel}`"
+              :label="`Previous ${navigationUnitLabel}`"
+              :icon="ChevronLeft"
               @click="goToPrevious"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </button>
+            />
             <Button class="calendar__nav-button" size="sm" @click="calendar.goToToday"
               >Today</Button
             >
-            <button
-              type="button"
+            <IconButton
               class="calendar__icon-button"
-              :aria-label="`Next ${navigationUnitLabel}`"
+              :label="`Next ${navigationUnitLabel}`"
+              :icon="ChevronRight"
               @click="goToNext"
-            >
-              <ChevronRight aria-hidden="true" />
-            </button>
-          </div>
+            />
+          </ToolbarGroup>
 
-          <div class="calendar__view-switcher" role="tablist" aria-label="Calendar view">
-            <button
-              v-for="tab in viewTabs"
-              :id="viewTabId(tab.id)"
-              :key="tab.id"
-              type="button"
-              class="calendar__view-button"
-              :class="{ 'calendar__view-button--active': activeView === tab.id }"
-              role="tab"
-              :aria-selected="activeView === tab.id"
-              :aria-controls="viewPanelId(tab.id)"
-              :aria-label="`${tab.label} view`"
-              @click="selectView(tab.id)"
-            >
-              <component :is="tab.icon" aria-hidden="true" />
-              <span>{{ tab.label }}</span>
-            </button>
-          </div>
+          <TabList
+            class="calendar__view-switcher"
+            :model-value="activeView"
+            :tabs="viewTabOptions"
+            label="Calendar view"
+            item-class="calendar__view-button"
+            active-item-class="calendar__view-button--active"
+            size="sm"
+            @change="onViewTabChange"
+          />
         </div>
 
-        <Button
-          class="calendar__new-button"
-          size="sm"
-          variant="primary"
-          :icon-start="Plus"
-          @click="openCreate()"
-        >
-          New
-        </Button>
-      </header>
+        <template #end>
+          <Button
+            class="calendar__new-button"
+            size="sm"
+            variant="primary"
+            :icon-start="Plus"
+            @click="openCreate()"
+          >
+            New
+          </Button>
+        </template>
+      </AppToolbar>
 
-      <div
+      <StatusBanner
         v-if="showStatus"
+        as="div"
         class="calendar__status"
+        :tone="calendar.error.value !== null ? 'error' : 'info'"
         :class="{ 'calendar__status--error': calendar.error.value !== null }"
-        role="status"
       >
         {{ statusText }}
-      </div>
+      </StatusBanner>
 
       <main class="calendar__surface">
         <section
@@ -584,7 +605,13 @@ function labelForStatus(status: CalendarStatus): string {
               </div>
             </div>
 
-            <aside class="calendar__selected-panel" aria-label="Selected day events">
+            <Panel
+              as="aside"
+              class="calendar__selected-panel"
+              variant="subtle"
+              padding="none"
+              aria-label="Selected day events"
+            >
               <header class="calendar__panel-header">
                 <div class="calendar__panel-title-group">
                   <Clock class="calendar__panel-icon" aria-hidden="true" />
@@ -601,13 +628,12 @@ function labelForStatus(status: CalendarStatus): string {
                 <Button size="sm" :icon-start="Plus" @click="openCreate()">New</Button>
               </header>
 
-              <div
+              <EmptyState
                 v-if="calendar.selectedDateEvents.value.length === 0"
                 class="calendar__empty"
-                role="status"
               >
                 No events.
-              </div>
+              </EmptyState>
               <ul v-else class="calendar__event-list">
                 <li
                   v-for="event in calendar.selectedDateEvents.value"
@@ -626,7 +652,7 @@ function labelForStatus(status: CalendarStatus): string {
                   </button>
                 </li>
               </ul>
-            </aside>
+            </Panel>
           </div>
         </section>
 
@@ -683,8 +709,11 @@ function labelForStatus(status: CalendarStatus): string {
             </article>
           </div>
 
-          <aside
+          <Panel
+            as="aside"
             class="calendar__week-selected calendar__selected-panel"
+            variant="subtle"
+            padding="none"
             aria-label="Selected day events"
           >
             <header class="calendar__panel-header">
@@ -703,13 +732,12 @@ function labelForStatus(status: CalendarStatus): string {
               <Button size="sm" :icon-start="Plus" @click="openCreate()">New</Button>
             </header>
 
-            <div
+            <EmptyState
               v-if="calendar.selectedDateEvents.value.length === 0"
               class="calendar__empty"
-              role="status"
             >
               No events.
-            </div>
+            </EmptyState>
             <ul v-else class="calendar__event-list">
               <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
@@ -724,7 +752,7 @@ function labelForStatus(status: CalendarStatus): string {
                 </button>
               </li>
             </ul>
-          </aside>
+          </Panel>
         </section>
 
         <section
@@ -734,7 +762,7 @@ function labelForStatus(status: CalendarStatus): string {
           role="tabpanel"
           :aria-labelledby="viewTabId('day')"
         >
-          <div class="calendar__focus-panel">
+          <Panel as="div" class="calendar__focus-panel" variant="subtle" padding="none">
             <header class="calendar__focus-header">
               <div>
                 <p class="calendar__focus-kicker">{{ formatWeekday(selectedDayCell.date) }}</p>
@@ -751,13 +779,12 @@ function labelForStatus(status: CalendarStatus): string {
               >
             </header>
 
-            <div
+            <EmptyState
               v-if="calendar.selectedDateEvents.value.length === 0"
               class="calendar__empty calendar__empty--large"
-              role="status"
             >
               No events.
-            </div>
+            </EmptyState>
             <ul v-else class="calendar__event-list calendar__event-list--roomy">
               <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
@@ -772,7 +799,7 @@ function labelForStatus(status: CalendarStatus): string {
                 </button>
               </li>
             </ul>
-          </div>
+          </Panel>
         </section>
 
         <section
@@ -782,13 +809,12 @@ function labelForStatus(status: CalendarStatus): string {
           role="tabpanel"
           :aria-labelledby="viewTabId('agenda')"
         >
-          <div
+          <EmptyState
             v-if="agendaGroups.length === 0"
             class="calendar__empty calendar__empty--large"
-            role="status"
           >
             No events in this range.
-          </div>
+          </EmptyState>
 
           <div v-else class="calendar__agenda-groups">
             <section
@@ -847,7 +873,7 @@ function labelForStatus(status: CalendarStatus): string {
         @submit="submitForm"
       />
     </template>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -875,6 +901,10 @@ function labelForStatus(status: CalendarStatus): string {
   grid-template-columns: minmax(0, 1fr) auto auto;
   min-block-size: 56px;
   padding: var(--space-xs) var(--space-sm);
+}
+
+.calendar__toolbar :deep(.ds-kit-toolbar__section) {
+  display: contents;
 }
 
 .calendar__title-group {
@@ -1036,7 +1066,10 @@ function labelForStatus(status: CalendarStatus): string {
 
 .calendar__status {
   background: var(--color-bg-elevated);
+  border-block-start: 0;
   border-block-end: 1px solid var(--color-border);
+  border-inline: 0;
+  border-radius: 0;
   color: var(--color-fg-muted);
   flex: 0 0 auto;
   padding: var(--space-xs) var(--space-sm);

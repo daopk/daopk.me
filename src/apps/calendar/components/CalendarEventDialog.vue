@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue";
+
+import { FormField, Select, StatusBanner, Textarea, TextInput } from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
 import { Trash2 } from "~/icons/lucide";
 
 import { colorLabel, type EventFormState } from "../eventForm";
 import type { CalendarEventColor } from "../useCalendar";
 
-defineProps<{
+const props = defineProps<{
   readonly eventColors: readonly CalendarEventColor[];
   readonly form: EventFormState;
   readonly formError: string | null;
@@ -13,6 +16,10 @@ defineProps<{
   readonly title: string;
   readonly variant?: "modal" | "sheet";
 }>();
+
+const colorOptions = computed(() =>
+  props.eventColors.map((color) => ({ value: color, label: colorLabel(color) })),
+);
 
 const emit = defineEmits<{
   "update:open": [open: boolean];
@@ -42,16 +49,14 @@ function onAllDayChange(event: Event): void {
     @close="emit('close')"
   >
     <form class="calendar__form" @submit.prevent="emit('submit')">
-      <label class="calendar__field">
-        <span>Title</span>
-        <input v-model="form.title" class="calendar__input" type="text" autocomplete="off" />
-      </label>
+      <FormField class="calendar__field" label="Title">
+        <TextInput v-model="form.title" class="calendar__input" type="text" autocomplete="off" />
+      </FormField>
 
       <div class="calendar__form-row">
-        <label class="calendar__field">
-          <span>Date</span>
-          <input v-model="form.date" class="calendar__input" type="date" />
-        </label>
+        <FormField class="calendar__field" label="Date">
+          <TextInput v-model="form.date" class="calendar__input" type="date" />
+        </FormField>
         <label class="calendar__check-field">
           <input type="checkbox" :checked="form.allDay" @change="onAllDayChange" />
           <span>All day</span>
@@ -59,53 +64,52 @@ function onAllDayChange(event: Event): void {
       </div>
 
       <div class="calendar__form-row">
-        <label class="calendar__field">
-          <span>Start</span>
-          <input
+        <FormField class="calendar__field" label="Start">
+          <TextInput
             v-model="form.startTime"
             class="calendar__input"
             type="time"
             :disabled="form.allDay"
           />
-        </label>
-        <label class="calendar__field">
-          <span>End</span>
-          <input
+        </FormField>
+        <FormField class="calendar__field" label="End">
+          <TextInput
             v-model="form.endTime"
             class="calendar__input"
             type="time"
             :disabled="form.allDay"
           />
-        </label>
+        </FormField>
       </div>
 
-      <label class="calendar__field">
-        <span>Color</span>
-        <select v-model="form.color" class="calendar__input">
-          <option v-for="color in eventColors" :key="color" :value="color">
-            {{ colorLabel(color) }}
-          </option>
-        </select>
-      </label>
+      <FormField class="calendar__field" label="Color">
+        <Select v-model="form.color" class="calendar__input" :options="colorOptions" />
+      </FormField>
 
-      <label class="calendar__field">
-        <span>Notes</span>
-        <textarea v-model="form.notes" class="calendar__textarea" rows="3" />
-      </label>
+      <FormField class="calendar__field" label="Notes">
+        <Textarea v-model="form.notes" class="calendar__textarea" :rows="3" />
+      </FormField>
 
-      <p v-if="formError" class="calendar__form-error" role="alert">{{ formError }}</p>
+      <StatusBanner v-if="formError" as="p" class="calendar__form-error" tone="error" role="alert">
+        {{ formError }}
+      </StatusBanner>
 
-      <div v-if="form.confirmingDelete" class="calendar__delete-confirm" role="alert">
+      <StatusBanner
+        v-if="form.confirmingDelete"
+        class="calendar__delete-confirm"
+        tone="error"
+        role="alert"
+      >
         <span>Delete this event?</span>
         <Button size="sm" @click="emit('cancelDelete')">Cancel</Button>
-        <Button size="sm" variant="primary" @click="emit('confirmDelete')">Delete</Button>
-      </div>
+        <Button size="sm" variant="danger" @click="emit('confirmDelete')">Delete</Button>
+      </StatusBanner>
 
       <footer class="calendar__form-actions">
         <Button
           v-if="form.id !== null && !form.confirmingDelete"
           size="sm"
-          variant="ghost"
+          variant="danger"
           :icon-start="Trash2"
           @click="emit('requestDelete')"
         >
