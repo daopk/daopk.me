@@ -190,6 +190,26 @@ function settingsSectionFromArgs(
   return isSettingsSectionId(args.section) ? args.section : null;
 }
 
+function blogOpenFromArgs(
+  manifestId: string,
+  args: Readonly<Record<string, unknown>> | undefined,
+  source: AppLaunchSource,
+): KernelEventPayloads["blog.open.requested"] | null {
+  if (manifestId !== "blog") {
+    return null;
+  }
+
+  if (args === undefined && source !== "deeplink") {
+    return null;
+  }
+
+  return {
+    source,
+    ...(typeof args?.slug === "string" ? { slug: args.slug } : {}),
+    ...(typeof args?.path === "string" ? { path: args.path } : {}),
+  };
+}
+
 async function replayFinderRevealAfterRestore(
   manifestId: string,
   args?: Readonly<Record<string, unknown>>,
@@ -218,6 +238,21 @@ async function replaySettingsSectionAfterRestore(
   return true;
 }
 
+async function replayBlogOpenAfterRestore(
+  manifestId: string,
+  args: Readonly<Record<string, unknown>> | undefined,
+  source: AppLaunchSource,
+): Promise<boolean> {
+  const request = blogOpenFromArgs(manifestId, args, source);
+  if (request === null) {
+    return false;
+  }
+
+  await nextTick();
+  kernel.events.emit("blog.open.requested", request);
+  return true;
+}
+
 async function onLaunchRequested(
   manifestId: string,
   args?: Readonly<Record<string, unknown>>,
@@ -235,7 +270,8 @@ async function onLaunchRequested(
   if (windowManager.restoreAllForManifest(manifest.id)) {
     const replayed =
       (await replayFinderRevealAfterRestore(manifest.id, args)) ||
-      (await replaySettingsSectionAfterRestore(manifest.id, args));
+      (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
+      (await replayBlogOpenAfterRestore(manifest.id, args, source));
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "restore — dropping launch args", manifest.id, args);
     }
@@ -245,7 +281,8 @@ async function onLaunchRequested(
   if (windowManager.focusTopOfManifest(manifest.id)) {
     const replayed =
       (await replayFinderRevealAfterRestore(manifest.id, args)) ||
-      (await replaySettingsSectionAfterRestore(manifest.id, args));
+      (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
+      (await replayBlogOpenAfterRestore(manifest.id, args, source));
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "focus — dropping launch args", manifest.id, args);
     }

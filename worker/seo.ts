@@ -10,7 +10,8 @@ export interface SeoWorkerEnv {
 
 const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
-const SEO_BLOG_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
+const SEO_BLOG_INDEX_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-index" />';
+const SEO_BLOG_POST_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
 
 function appendVary(value: string | null, token: string): string {
   if (value === null || value.trim().length === 0) {
@@ -60,20 +61,46 @@ function responseFromHtml(html: string, response: Response): Response {
   });
 }
 
-async function fetchSeoPost(request: Request, env: SeoWorkerEnv, slug: string): Promise<Response> {
-  const assetUrl = new URL(`/__seo/blog/${slug}`, request.url);
+async function fetchSeoPage(
+  request: Request,
+  env: SeoWorkerEnv,
+  pathname: string,
+  marker: string,
+  missingMessage: string,
+): Promise<Response> {
+  const assetUrl = new URL(pathname, request.url);
   const response = await env.ASSETS.fetch(new Request(assetUrl, request));
 
   if (response.status === 404) {
-    return noIndexResponse("Blog post not found.");
+    return noIndexResponse(missingMessage);
   }
 
   const html = await response.text();
-  if (!html.includes(SEO_BLOG_ASSET_MARKER)) {
-    return noIndexResponse("Blog post not found.");
+  if (!html.includes(marker)) {
+    return noIndexResponse(missingMessage);
   }
 
   return withCrawlerHeaders(responseFromHtml(html, response));
+}
+
+async function fetchSeoIndex(request: Request, env: SeoWorkerEnv): Promise<Response> {
+  return fetchSeoPage(
+    request,
+    env,
+    "/__seo/blog/index",
+    SEO_BLOG_INDEX_ASSET_MARKER,
+    "Blog index not found.",
+  );
+}
+
+async function fetchSeoPost(request: Request, env: SeoWorkerEnv, slug: string): Promise<Response> {
+  return fetchSeoPage(
+    request,
+    env,
+    `/__seo/blog/${slug}`,
+    SEO_BLOG_POST_ASSET_MARKER,
+    "Blog post not found.",
+  );
 }
 
 export async function handleRequest(request: Request, env: SeoWorkerEnv): Promise<Response> {
@@ -83,12 +110,16 @@ export async function handleRequest(request: Request, env: SeoWorkerEnv): Promis
     return noIndexResponse("Not found.");
   }
 
-  if (!url.pathname.startsWith("/blog/")) {
+  if (url.pathname !== "/blog" && !url.pathname.startsWith("/blog/")) {
     return env.ASSETS.fetch(request);
   }
 
   if (!isCrawlerRequest(request)) {
     return env.ASSETS.fetch(request);
+  }
+
+  if (url.pathname === "/blog") {
+    return fetchSeoIndex(request, env);
   }
 
   const slug = blogSlugFromPathname(url.pathname);

@@ -53,6 +53,11 @@ declare global {
     "settings.changed": { key: keyof SettingsState };
     "settings.synced": { source: "storage" };
     "settings.section.requested": { section: SettingsSectionId };
+    "blog.open.requested": {
+      source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
+      path?: string;
+      slug?: string;
+    };
     "theme.changed": { theme: ResolvedTheme };
     "app.launch.requested": {
       manifestId: string;

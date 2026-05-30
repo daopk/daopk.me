@@ -69,6 +69,13 @@ function argsForApp(
 }
 
 function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
+  if (segments.length === 1 && segments[0] === "blog") {
+    return {
+      kind: "app",
+      manifestId: "blog",
+    };
+  }
+
   if (segments.length !== 2 || segments[0] !== "blog") {
     return { kind: "none" };
   }

@@ -7,7 +7,6 @@ export const blogManifest: AppManifest = {
   name: "Blog",
   icon: BlogAppIcon,
   category: "system",
-  hidden: true,
   permissions: ["vfs.read"],
   defaultWindow: { width: 720, height: 520, centered: true },
   component: () => import("./App.vue"),

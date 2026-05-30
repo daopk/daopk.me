@@ -24,6 +24,28 @@ async function waitForContent(wrapper: VueWrapper, timeoutMs = 1500): Promise<vo
   );
 }
 
+async function waitForIndex(wrapper: VueWrapper, timeoutMs = 1500): Promise<void> {
+  await vi.waitFor(
+    () => {
+      if (!wrapper.find(".blog__index").exists()) {
+        throw new Error("index not yet rendered");
+      }
+    },
+    { timeout: timeoutMs, interval: 25 },
+  );
+}
+
+async function waitForIndexItems(wrapper: VueWrapper, timeoutMs = 1500): Promise<void> {
+  await vi.waitFor(
+    () => {
+      if (wrapper.findAll(".blog__index-title").length === 0) {
+        throw new Error("index items not yet rendered");
+      }
+    },
+    { timeout: timeoutMs, interval: 25 },
+  );
+}
+
 const blogContext: AppContext = Object.freeze({
   manifestId: "blog",
   handleId: "h-blog-test",
@@ -33,15 +55,43 @@ const blogContext: AppContext = Object.freeze({
   }),
 });
 
-function makeKernel(source: string | null = "# Field Notes\n\nBlog body") {
+const blogIndexContext: AppContext = Object.freeze({
+  manifestId: "blog",
+  handleId: "h-blog-test",
+  args: Object.freeze({}),
+});
+
+type BlogKernelSource = string | null | Readonly<Record<string, string | null>>;
+
+function entriesFromSourceMap(source: Readonly<Record<string, string | null>>) {
+  return Object.keys(source).map((path) => ({
+    kind: "file" as const,
+    name: path.split("/").pop() ?? path,
+    path,
+    readonly: false,
+    size: source[path]?.length ?? 0,
+    updatedAt: 0,
+  }));
+}
+
+function makeKernel(source: BlogKernelSource = "# Field Notes\n\nBlog body") {
   return {
     vfs: {
       stat: vi.fn(async () => null),
-      list: vi.fn(async () => []),
+      list: vi.fn(async () =>
+        typeof source === "object" && source !== null ? entriesFromSourceMap(source) : [],
+      ),
       read: vi.fn(async () => null),
       readText: vi.fn(async (path: string) => {
         if (source === null) {
           throw new VfsError("NOT_FOUND", `Path not found: ${path}`, { path });
+        }
+        if (typeof source === "object") {
+          const value = source[path];
+          if (value === undefined || value === null) {
+            throw new VfsError("NOT_FOUND", `Path not found: ${path}`, { path });
+          }
+          return value;
         }
         return source;
       }),
@@ -49,6 +99,9 @@ function makeKernel(source: string | null = "# Field Notes\n\nBlog body") {
       writeText: vi.fn(async () => null),
       mkdir: vi.fn(async () => null),
       remove: vi.fn(async () => false),
+    },
+    events: {
+      on: vi.fn(() => vi.fn()),
     },
   } as unknown as Kernel;
 }
@@ -66,6 +119,60 @@ function wrap(kernel: Kernel = makeKernel(), context: AppContext = blogContext) 
 }
 
 describe("Blog app", () => {
+  it("renders the latest-post index when launched without a slug", async () => {
+    const wrapper = mount(
+      wrap(
+        makeKernel({
+          "/home/posts/old-post.md": `---
+title: "Old Post"
+date: "2026-05-01"
+---
+Old body`,
+          "/home/posts/new-post.md": `---
+title: "New Post"
+date: "2026-05-30"
+---
+New body`,
+        }),
+        blogIndexContext,
+      ),
+    );
+
+    await waitForIndexItems(wrapper);
+
+    expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
+    expect(wrapper.findAll(".blog__index-title").map((row) => row.text())).toEqual([
+      "New Post",
+      "Old Post",
+    ]);
+  });
+
+  it("opens an index item in the reader and returns to the index", async () => {
+    const wrapper = mount(
+      wrap(
+        makeKernel({
+          "/home/posts/new-post.md": `---
+title: "New Post"
+date: "2026-05-30"
+---
+New body`,
+        }),
+        blogIndexContext,
+      ),
+    );
+
+    await waitForIndexItems(wrapper);
+    await wrapper.find(".blog__index-item").trigger("click");
+    await waitForContent(wrapper, 5000);
+
+    expect(wrapper.find(".blog__content").text()).toContain("New Post");
+    expect(wrapper.find(".blog__content").text()).toContain("New body");
+
+    await wrapper.find(".blog__back").trigger("click");
+    await waitForIndex(wrapper);
+    expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
+  });
+
   it("renders the seeded VFS post from launch args", async () => {
     const kernel = makeKernel();
     const wrapper = mount(wrap(kernel));

@@ -4,7 +4,8 @@ import { handleRequest, isCrawlerRequest, type SeoWorkerEnv } from "../../worker
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-const SEO_BLOG_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
+const SEO_BLOG_INDEX_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-index" />';
+const SEO_BLOG_POST_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
 
 function textResponse(body: string, init: ResponseInit = {}): Response {
   return new Response(body, {
@@ -24,9 +25,13 @@ function makeEnv(): {
   const fetch = vi.fn(async (input: Request | string) => {
     const url = typeof input === "string" ? new URL(input, "https://daopk.me") : new URL(input.url);
 
+    if (url.pathname === "/__seo/blog/index") {
+      return textResponse(`${SEO_BLOG_INDEX_ASSET_MARKER}<main>Latest posts</main>`);
+    }
+
     if (url.pathname === "/__seo/blog/building-a-tiny-web-os") {
       return textResponse(
-        `${SEO_BLOG_ASSET_MARKER}<article>Building a Tiny OS in the Browser</article>`,
+        `${SEO_BLOG_POST_ASSET_MARKER}<article>Building a Tiny OS in the Browser</article>`,
       );
     }
 
@@ -100,9 +105,42 @@ describe("SEO Worker", () => {
     );
   });
 
+  it("serves generated blog index HTML to crawlers", async () => {
+    const { env, fetch } = makeEnv();
+    const request = new Request("https://daopk.me/blog", {
+      headers: { "User-Agent": "Googlebot/2.1" },
+    });
+
+    const response = await handleRequest(request, env);
+
+    await expect(response.text()).resolves.toContain("Latest posts");
+    expect(response.headers.get("Vary")).toBe("User-Agent");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const firstCall = fetch.mock.calls[0];
+    if (!firstCall) {
+      throw new Error("Expected ASSETS.fetch to be called.");
+    }
+
+    const assetRequest = firstCall[0];
+    expect(assetRequest).toBeInstanceOf(Request);
+    expect(new URL((assetRequest as Request).url).pathname).toBe("/__seo/blog/index");
+  });
+
   it("passes normal browser blog requests through to SPA assets", async () => {
     const { env, fetch } = makeEnv();
     const request = new Request("https://daopk.me/blog/building-a-tiny-web-os", {
+      headers: { "User-Agent": BROWSER_USER_AGENT },
+    });
+
+    const response = await handleRequest(request, env);
+
+    await expect(response.text()).resolves.toContain('<div id="app"></div>');
+    expect(fetch).toHaveBeenCalledWith(request);
+  });
+
+  it("passes normal browser blog index requests through to SPA assets", async () => {
+    const { env, fetch } = makeEnv();
+    const request = new Request("https://daopk.me/blog", {
       headers: { "User-Agent": BROWSER_USER_AGENT },
     });
 

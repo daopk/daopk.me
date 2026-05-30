@@ -392,14 +392,205 @@ function buildPostDocument({ html, metadata, slug }) {
 `;
 }
 
+function comparePostsNewestFirst(a, b) {
+  if (a.metadata.date !== b.metadata.date) {
+    if (a.metadata.date === null) {
+      return 1;
+    }
+    if (b.metadata.date === null) {
+      return -1;
+    }
+    return b.metadata.date.localeCompare(a.metadata.date);
+  }
+
+  return a.slug.localeCompare(b.slug);
+}
+
+function buildIndexDocument(posts) {
+  const canonicalUrl = `${SITE_ORIGIN}/blog`;
+  const description = `Latest posts from ${SITE_NAME}.`;
+  const listItems = posts
+    .map((post) => {
+      const href = `/blog/${post.slug}`;
+      const dateHtml =
+        post.metadata.date === null || post.metadata.formattedDate === null
+          ? ""
+          : `<p class="post-list__date"><time datetime="${escapeHtml(
+              post.metadata.date,
+            )}">${escapeHtml(post.metadata.formattedDate)}</time></p>`;
+
+      return `<li class="post-list__item">
+          <a class="post-list__link" href="${escapeHtml(href)}">
+            ${dateHtml}
+            <span class="post-list__title">${escapeHtml(post.metadata.title)}</span>
+            <span class="post-list__description">${escapeHtml(post.metadata.description)}</span>
+          </a>
+        </li>`;
+    })
+    .join("\n");
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    description,
+    inLanguage: "en",
+    name: SITE_NAME,
+    url: canonicalUrl,
+    blogPost: posts.map((post) => ({
+      "@type": "BlogPosting",
+      datePublished: post.metadata.date ?? undefined,
+      description: post.metadata.description,
+      headline: post.metadata.title,
+      url: `${SITE_ORIGIN}/blog/${post.slug}`,
+    })),
+  };
+
+  for (const post of jsonLd.blogPost) {
+    for (const key of Object.keys(post)) {
+      if (post[key] === undefined) {
+        delete post[key];
+      }
+    }
+  }
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blog | ${escapeHtml(SITE_NAME)}</title>
+    <meta name="x-daopk-seo-asset" content="blog-index" />
+    <meta name="description" content="${escapeHtml(description)}" />
+    <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />
+    <meta property="og:title" content="Blog" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Blog" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <script type="application/ld+json">${jsonLdScript(jsonLd)}</script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        background: #f8f7fb;
+        color: #201f24;
+        margin: 0;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 760px;
+        padding: 56px 24px 72px;
+      }
+
+      .site {
+        color: #635f6d;
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        margin: 0 0 12px;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.25rem);
+        line-height: 1.08;
+        margin: 0 0 32px;
+      }
+
+      .post-list {
+        display: grid;
+        gap: 14px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .post-list__link {
+        border: 1px solid rgb(32 31 36 / 12%);
+        border-radius: 8px;
+        color: inherit;
+        display: grid;
+        gap: 8px;
+        padding: 18px;
+        text-decoration: none;
+      }
+
+      .post-list__link:hover,
+      .post-list__link:focus-visible {
+        border-color: #5a2d82;
+      }
+
+      .post-list__date {
+        color: #635f6d;
+        font-size: 0.85rem;
+        margin: 0;
+      }
+
+      .post-list__title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+
+      .post-list__description {
+        color: #635f6d;
+        line-height: 1.6;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #17151c;
+          color: #f5f1fb;
+        }
+
+        .site,
+        .post-list__date,
+        .post-list__description {
+          color: #b7afc3;
+        }
+
+        .post-list__link {
+          border-color: rgb(245 241 251 / 16%);
+        }
+
+        .post-list__link:hover,
+        .post-list__link:focus-visible {
+          border-color: #caa8ff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="site">${escapeHtml(SITE_NAME)}</p>
+      <h1>Latest posts</h1>
+      <ol class="post-list">
+        ${listItems}
+      </ol>
+    </main>
+  </body>
+</html>
+`;
+}
+
 function buildSitemap(posts) {
-  const entries = posts
+  const latestPostDate = posts.find((post) => post.metadata.date !== null)?.metadata.date ?? null;
+  const indexLastmod = latestPostDate === null ? "" : `\n    <lastmod>${latestPostDate}</lastmod>`;
+  const indexEntry = `  <url>\n    <loc>${escapeHtml(SITE_ORIGIN)}/blog</loc>${indexLastmod}\n  </url>`;
+  const postEntries = posts
     .map((post) => {
       const loc = `${SITE_ORIGIN}/blog/${post.slug}`;
       const lastmod = post.metadata.date ? `\n    <lastmod>${post.metadata.date}</lastmod>` : "";
       return `  <url>\n    <loc>${escapeHtml(loc)}</loc>${lastmod}\n  </url>`;
     })
     .join("\n");
+  const entries = [indexEntry, postEntries].filter((entry) => entry.length > 0).join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
 }
@@ -431,7 +622,10 @@ async function main() {
     posts.push({ slug, metadata: parsed.metadata });
   }
 
-  await writeTextFile(join(DIST_DIR, "sitemap.xml"), buildSitemap(posts));
+  const sortedPosts = [...posts].sort(comparePostsNewestFirst);
+
+  await writeTextFile(join(SEO_BLOG_DIR, "index.html"), buildIndexDocument(sortedPosts));
+  await writeTextFile(join(DIST_DIR, "sitemap.xml"), buildSitemap(sortedPosts));
   await writeTextFile(
     join(DIST_DIR, "robots.txt"),
     `User-agent: *\nAllow: /\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`,

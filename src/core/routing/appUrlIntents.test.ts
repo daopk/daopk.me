@@ -92,7 +92,14 @@ describe("app URL intents", () => {
     });
   });
 
-  it("parses `/blog/:slug` as the hidden Blog app launch intent", () => {
+  it("parses `/blog` as the Blog app index launch intent", () => {
+    expect(parseAppUrlIntent("/blog")).toEqual({
+      kind: "app",
+      manifestId: "blog",
+    });
+  });
+
+  it("parses `/blog/:slug` as the Blog app post launch intent", () => {
     expect(parseAppUrlIntent("/blog/field-notes")).toEqual({
       kind: "app",
       manifestId: "blog",
@@ -122,7 +129,6 @@ describe("app URL intents", () => {
 
   it("ignores unclaimed and malformed routes", () => {
     expect(parseAppUrlIntent("/blogs/xin-chao")).toEqual({ kind: "none" });
-    expect(parseAppUrlIntent("/blog")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/a/b")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/hello%2Fworld")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/%E0%A4%A")).toEqual({ kind: "none" });
@@ -156,6 +162,17 @@ describe("app URL intents", () => {
     });
   });
 
+  it("emits a Blog launch request for the registered public index route", () => {
+    const { kernel, eventsEmit } = makeKernel(["blog"]);
+
+    expect(consumeInitialAppUrlIntent(kernel, "/blog")).toBe(true);
+
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "blog",
+      source: "deeplink",
+    });
+  });
+
   it("fails softly for an unknown app deep link", () => {
     const { kernel, eventsEmit } = makeKernel(["about"]);
 
@@ -178,6 +195,7 @@ describe("app URL intents", () => {
     const { kernel, eventsEmit } = makeKernel(["about", "blog"]);
 
     expect(hasRegisteredAppUrlIntent(kernel, "/apps/about")).toBe(true);
+    expect(hasRegisteredAppUrlIntent(kernel, "/blog")).toBe(true);
     expect(hasRegisteredAppUrlIntent(kernel, "/blog/field-notes")).toBe(true);
     expect(consumeInitialAppUrlIntent(kernel, "/apps/about")).toBe(true);
 

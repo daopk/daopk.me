@@ -21,6 +21,7 @@ export interface BlogPostOptions {
 
 export interface BlogPostMetadata {
   readonly date: string | null;
+  readonly description: string | null;
   readonly formattedDate: string | null;
   readonly title: string | null;
 }
@@ -34,6 +35,7 @@ const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EMPTY_METADATA: BlogPostMetadata = Object.freeze({
   date: null,
+  description: null,
   formattedDate: null,
   title: null,
 });
@@ -106,6 +108,7 @@ export function parseBlogPostSource(source: string): ParsedBlogPost {
   }
 
   let date: string | null = null;
+  let description: string | null = null;
   let title: string | null = null;
 
   for (const line of match[1]!.split(/\r?\n/)) {
@@ -118,6 +121,8 @@ export function parseBlogPostSource(source: string): ParsedBlogPost {
     const value = unquoteScalar(line.slice(separator + 1));
     if (key === "date") {
       date = validDate(value);
+    } else if (key === "description") {
+      description = value.length > 0 ? value : null;
     } else if (key === "title") {
       title = value.length > 0 ? value : null;
     }
@@ -127,6 +132,7 @@ export function parseBlogPostSource(source: string): ParsedBlogPost {
     body: source.slice(match[0].length),
     metadata: {
       date,
+      description,
       formattedDate: date === null ? null : formatPostDate(date),
       title,
     },
@@ -266,6 +272,13 @@ export function useBlogPost({
     }
   }
 
+  function open(nextArgs: BlogLaunchArgs | undefined): void {
+    const next = resolveBlogPath(nextArgs);
+    slug.value = next.slug;
+    path.value = next.path;
+    void refresh();
+  }
+
   function dispose(): void {
     disposed = true;
     refreshRun += 1;
@@ -287,6 +300,7 @@ export function useBlogPost({
     loadFailed,
     metadata,
     notFound,
+    open,
     path,
     refresh,
     slug,

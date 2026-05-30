@@ -111,6 +111,7 @@ This is the body.`,
 
     expect(state.metadata.value).toEqual({
       date: "2026-05-30",
+      description: null,
       formattedDate: "May 30, 2026",
       title: "Meta Title",
     });
@@ -154,6 +155,7 @@ Body`),
       body: "Body",
       metadata: {
         date: null,
+        description: null,
         formattedDate: null,
         title: "Meta Title",
       },

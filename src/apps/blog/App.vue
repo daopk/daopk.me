@@ -1,36 +1,140 @@
 <script setup lang="ts">
-import { computed, inject } from "vue";
+import { computed, inject, onUnmounted, ref, watch } from "vue";
 
+import { Button } from "~/components/ui";
+import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
-import { AppContextInjectionKey } from "~/types/app";
+import { ArrowLeft } from "~/icons/lucide";
+import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
 
+import { useBlogIndex, type BlogIndexPost } from "./useBlogIndex";
 import { useBlogPost } from "./useBlogPost";
 
 const ctx = inject(AppContextInjectionKey, null);
+const appChrome = inject(AppChromeInjectionKey, null);
+const kernel = useKernel();
 const vfs = useVfs();
 
-const { html, loadFailed, notFound, slug, status } = useBlogPost({
+const blogIndex = useBlogIndex({
+  list: vfs.list,
+  readText: vfs.readText,
+});
+const blogPost = useBlogPost({
   args: ctx?.args,
   readText: vfs.readText,
 });
 
 const debugHandleId = import.meta.env.DEV ? ctx?.handleId : undefined;
-const missingLabel = computed(() => slug.value ?? "post");
+const initialSlug =
+  typeof ctx?.args.slug === "string" && ctx.args.slug.length > 0 ? ctx.args.slug : null;
+const view = ref<"index" | "post">(initialSlug === null ? "index" : "post");
+const missingLabel = computed(() => blogPost.slug.value ?? "post");
+const busy = computed(
+  () =>
+    (view.value === "index" && blogIndex.status.value === "loading") ||
+    (view.value === "post" && blogPost.status.value === "loading"),
+);
+
+const stopOpenRequests = kernel.events.on("blog.open.requested", (payload) => {
+  const slug = typeof payload.slug === "string" && payload.slug.length > 0 ? payload.slug : null;
+  if (slug === null) {
+    openIndex();
+    return;
+  }
+
+  openPost({
+    slug,
+    ...(typeof payload.path === "string" ? { path: payload.path } : {}),
+  });
+});
+
+watch(
+  () => [view.value, blogPost.metadata.value.title] as const,
+  ([nextView, title]) => {
+    if (nextView === "post") {
+      appChrome?.setTitle(title ?? "Blog");
+      appChrome?.setBackAction({
+        ariaLabel: "Back to Blog",
+        handler: openIndex,
+      });
+      return;
+    }
+
+    appChrome?.setTitle(null);
+    appChrome?.setBackAction(null);
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  stopOpenRequests();
+  appChrome?.setTitle(null);
+  appChrome?.setBackAction(null);
+});
+
+function openIndex(): void {
+  view.value = "index";
+}
+
+function openPost(args: { readonly slug: string; readonly path?: string }): void {
+  view.value = "post";
+  blogPost.open(args);
+}
+
+function onPostSelect(post: BlogIndexPost): void {
+  openPost({ slug: post.slug, path: post.path });
+}
 </script>
 
 <template>
-  <article
-    class="blog"
-    :aria-busy="status === 'loading' ? 'true' : undefined"
-    :data-handle-id="debugHandleId"
-  >
-    <div v-if="html" class="blog__content" v-html="html" />
-    <section v-else-if="notFound" class="blog__state" aria-live="polite">
-      <p class="blog__eyebrow">Blog</p>
-      <h1>Post not found</h1>
-      <p>The post "{{ missingLabel }}" is not available.</p>
+  <article class="blog" :aria-busy="busy ? 'true' : undefined" :data-handle-id="debugHandleId">
+    <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
+      <header class="blog__index-header">
+        <p class="blog__eyebrow">Blog</p>
+        <h1>Latest posts</h1>
+      </header>
+
+      <p v-if="blogIndex.loading.value" class="blog__status">Loading posts...</p>
+      <section v-else-if="blogIndex.loadFailed.value" class="blog__state" aria-live="polite">
+        <h2>Could not load posts</h2>
+        <p>Try opening Blog again.</p>
+      </section>
+      <section v-else-if="blogIndex.empty.value" class="blog__state" aria-live="polite">
+        <h2>No posts yet</h2>
+      </section>
+      <ol v-else class="blog__index-list">
+        <li v-for="post in blogIndex.posts.value" :key="post.slug">
+          <button class="blog__index-item" type="button" @click="onPostSelect(post)">
+            <span v-if="post.date && post.formattedDate" class="blog__index-date">
+              <time :datetime="post.date">{{ post.formattedDate }}</time>
+            </span>
+            <span class="blog__index-title">{{ post.title }}</span>
+            <span v-if="post.excerpt" class="blog__index-excerpt">{{ post.excerpt }}</span>
+          </button>
+        </li>
+      </ol>
     </section>
-    <p v-else-if="loadFailed" class="blog__error">Could not load blog post.</p>
+
+    <template v-else>
+      <div class="blog__post-shell">
+        <Button
+          class="blog__back"
+          variant="ghost"
+          size="sm"
+          :icon-start="ArrowLeft"
+          @click="openIndex"
+        >
+          All posts
+        </Button>
+        <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
+        <section v-else-if="blogPost.notFound.value" class="blog__state" aria-live="polite">
+          <p class="blog__eyebrow">Blog</p>
+          <h1>Post not found</h1>
+          <p>The post "{{ missingLabel }}" is not available.</p>
+        </section>
+        <p v-else-if="blogPost.loadFailed.value" class="blog__error">Could not load blog post.</p>
+      </div>
+    </template>
   </article>
 </template>
 
@@ -54,6 +158,83 @@ const missingLabel = computed(() => slug.value ?? "post");
   max-inline-size: 68ch;
   overflow-wrap: anywhere;
   word-break: normal;
+}
+
+.blog__index {
+  margin-inline: auto;
+  max-inline-size: 760px;
+}
+
+.blog__index-header {
+  margin-block-end: var(--space-lg);
+}
+
+.blog__index-header h1 {
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.blog__index-list {
+  display: grid;
+  gap: var(--space-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blog__index-item {
+  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-xs);
+  inline-size: 100%;
+  padding: var(--space-md);
+  text-align: start;
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease);
+}
+
+.blog__index-item:hover,
+.blog__index-item:focus-visible {
+  background: var(--color-bg-elevated);
+  border-color: var(--color-accent);
+}
+
+.blog__index-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.blog__index-date {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+
+.blog__index-title {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.blog__index-excerpt {
+  color: var(--color-fg-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.blog__post-shell {
+  margin-inline: auto;
+  max-inline-size: 68ch;
+}
+
+.blog__back {
+  margin-block-end: var(--space-md);
 }
 
 .blog__content :deep(h1) {
@@ -117,7 +298,8 @@ const missingLabel = computed(() => slug.value ?? "post");
 }
 
 .blog__state,
-.blog__error {
+.blog__error,
+.blog__status {
   margin-inline: auto;
   max-inline-size: 52ch;
 }
@@ -133,8 +315,16 @@ const missingLabel = computed(() => slug.value ?? "post");
   margin: 0 0 var(--space-sm);
 }
 
+.blog__state h2 {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.2;
+  margin: 0 0 var(--space-sm);
+}
+
 .blog__state p,
-.blog__error {
+.blog__error,
+.blog__status {
   color: var(--color-fg-muted);
   margin: 0;
 }
