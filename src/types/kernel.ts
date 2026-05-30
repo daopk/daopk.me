@@ -62,6 +62,10 @@ declare global {
       path?: string;
       slug?: string;
     };
+    "notes.open.requested": {
+      source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
+      path: string;
+    };
     "theme.changed": { theme: ResolvedTheme };
     "app.launch.requested": {
       manifestId: string;

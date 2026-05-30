@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { ArrowUp, ChevronRight, Grid2X2, List, Pencil, RefreshCw } from "~/icons/lucide";
-import { FinderPdfFileIcon, SlidesAppIcon } from "~/icons/fluentColor";
+import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "~/icons/lucide";
 
 import type { FinderBreadcrumb, FinderViewMode } from "../useFinder";
 
 defineProps<{
   readonly breadcrumbs: readonly FinderBreadcrumb[];
   readonly cwd: string;
-  readonly selectedEditableFile: boolean;
-  readonly selectedPdfFile: boolean;
-  readonly selectedSlideDeckFile: boolean;
   readonly viewMode: FinderViewMode;
 }>();
 
 const emit = defineEmits<{
   breadcrumb: [path: string];
   goUp: [];
-  openEditor: [];
-  openPdfViewer: [];
-  openSlides: [];
   refresh: [];
   setViewMode: [mode: FinderViewMode];
 }>();
@@ -64,36 +57,6 @@ const emit = defineEmits<{
       <RefreshCw :size="16" aria-hidden="true" />
     </button>
 
-    <button
-      type="button"
-      class="finder__toolbar-button"
-      :disabled="!selectedSlideDeckFile || undefined"
-      @click="emit('openSlides')"
-    >
-      <SlidesAppIcon class="finder__toolbar-icon" aria-hidden="true" />
-      <span>Open in Slides</span>
-    </button>
-
-    <button
-      type="button"
-      class="finder__toolbar-button"
-      :disabled="!selectedEditableFile || undefined"
-      @click="emit('openEditor')"
-    >
-      <Pencil :size="15" aria-hidden="true" />
-      <span>Open in Editor</span>
-    </button>
-
-    <button
-      type="button"
-      class="finder__toolbar-button"
-      :disabled="!selectedPdfFile || undefined"
-      @click="emit('openPdfViewer')"
-    >
-      <FinderPdfFileIcon class="finder__toolbar-icon" aria-hidden="true" />
-      <span>Open in PDF Viewer</span>
-    </button>
-
     <div class="finder__view-toggle" role="group" aria-label="View mode">
       <button
         type="button"
@@ -133,7 +96,6 @@ const emit = defineEmits<{
 
 .finder__icon-button,
 .finder__toggle-button,
-.finder__toolbar-button,
 .finder__breadcrumb {
   align-items: center;
   background: transparent;
@@ -152,25 +114,11 @@ const emit = defineEmits<{
   inline-size: 32px;
 }
 
-.finder__toolbar-button {
-  block-size: 32px;
-  gap: var(--space-xs);
-  padding: 0 var(--space-sm);
-  white-space: nowrap;
-}
-
-.finder__toolbar-icon {
-  block-size: 16px;
-  inline-size: 16px;
-}
-
 .finder__icon-button:hover,
 .finder__toggle-button:hover,
-.finder__toolbar-button:hover,
 .finder__breadcrumb:hover,
 .finder__icon-button:focus-visible,
 .finder__toggle-button:focus-visible,
-.finder__toolbar-button:focus-visible,
 .finder__breadcrumb:focus-visible {
   background: var(--color-bg-elevated);
   color: var(--color-fg);
@@ -178,21 +126,18 @@ const emit = defineEmits<{
 
 .finder__icon-button:focus-visible,
 .finder__toggle-button:focus-visible,
-.finder__toolbar-button:focus-visible,
 .finder__breadcrumb:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-.finder__icon-button:disabled,
-.finder__toolbar-button:disabled {
+.finder__icon-button:disabled {
   color: var(--color-fg-muted);
   cursor: default;
   opacity: 0.45;
 }
 
-.finder__icon-button:disabled:hover,
-.finder__toolbar-button:disabled:hover {
+.finder__icon-button:disabled:hover {
   background: transparent;
 }
 

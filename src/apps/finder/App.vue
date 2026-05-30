@@ -13,6 +13,7 @@ import FinderEntries from "./components/FinderEntries.vue";
 import FinderPreviewPane from "./components/FinderPreviewPane.vue";
 import FinderToolbar from "./components/FinderToolbar.vue";
 import { isPdfEntry, isSlideDeckEntry } from "./display";
+import { openSuggestionsForEntry, type FinderOpenSuggestion } from "./openSuggestions";
 import { useFinderPreview } from "./useFinderPreview";
 import { useFinder } from "./useFinder";
 
@@ -66,11 +67,6 @@ const stopRevealRequests = kernel.events.on("finder.reveal.requested", (payload)
 const activeDescendant = computed(() =>
   selectedIndex.value < 0 ? undefined : `finder-entry-${selectedIndex.value}`,
 );
-const selectedEditableFile = computed(
-  () => selectedEntry.value?.kind === "file" && isEditableVfsTextFile(selectedEntry.value),
-);
-const selectedPdfFile = computed(() => isPdfEntry(selectedEntry.value));
-const selectedSlideDeckFile = computed(() => isSlideDeckEntry(selectedEntry.value));
 const mutationDisabled = computed(
   () => loading.value || finder.mutating.value || finder.currentDirectoryReadonly.value,
 );
@@ -125,33 +121,6 @@ function onBreadcrumb(path: string): void {
   void finder.openDirectory(path);
 }
 
-function onOpenInEditor(): void {
-  const entry = selectedEntry.value;
-  if (entry?.kind !== "file" || !isEditableVfsTextFile(entry)) {
-    return;
-  }
-
-  openInEditor(entry);
-}
-
-function onOpenInPdfViewer(): void {
-  const entry = selectedEntry.value;
-  if (!isPdfEntry(entry)) {
-    return;
-  }
-
-  openPdf(entry);
-}
-
-function onOpenInSlides(): void {
-  const entry = selectedEntry.value;
-  if (!isSlideDeckEntry(entry)) {
-    return;
-  }
-
-  openSlides(entry);
-}
-
 function openInEditor(entry: VfsDirEntry): void {
   if (entry.kind !== "file" || !isEditableVfsTextFile(entry)) {
     return;
@@ -162,6 +131,41 @@ function openInEditor(entry: VfsDirEntry): void {
     source: "api",
     args: { path: entry.path },
   });
+}
+
+function openWithSuggestion(entry: VfsDirEntry, suggestion: FinderOpenSuggestion): void {
+  const currentSuggestion = openSuggestionsForEntry(entry).find(
+    (item) => item.id === suggestion.id,
+  );
+  if (currentSuggestion === undefined) {
+    return;
+  }
+
+  if (currentSuggestion.id === "editor") {
+    openInEditor(entry);
+    return;
+  }
+  if (currentSuggestion.id === "pdf-viewer") {
+    openPdf(entry);
+    return;
+  }
+  if (currentSuggestion.id === "slides") {
+    openSlides(entry);
+    return;
+  }
+
+  kernel.events.emit("app.launch.requested", {
+    manifestId: currentSuggestion.manifestId,
+    source: "api",
+    args: currentSuggestion.args,
+  });
+
+  if (currentSuggestion.id === "notes" && typeof currentSuggestion.args.path === "string") {
+    kernel.events.emit("notes.open.requested", {
+      source: "api",
+      path: currentSuggestion.args.path,
+    });
+  }
 }
 
 function openSelectedEntry(): void {
@@ -274,15 +278,9 @@ async function copyPath(path: string): Promise<void> {
     <FinderToolbar
       :breadcrumbs="breadcrumbs"
       :cwd="cwd"
-      :selected-editable-file="selectedEditableFile"
-      :selected-pdf-file="selectedPdfFile"
-      :selected-slide-deck-file="selectedSlideDeckFile"
       :view-mode="viewMode"
       @breadcrumb="onBreadcrumb"
       @go-up="finder.goUp"
-      @open-editor="onOpenInEditor"
-      @open-pdf-viewer="onOpenInPdfViewer"
-      @open-slides="onOpenInSlides"
       @refresh="finder.refresh"
       @set-view-mode="finder.setViewMode"
     />
@@ -306,9 +304,7 @@ async function copyPath(path: string): Promise<void> {
         @go-up="finder.goUp"
         @move-selection="finder.moveSelection"
         @open-entry="openEntry"
-        @open-in-editor="openInEditor"
-        @open-pdf="openPdf"
-        @open-slides="openSlides"
+        @open-with-suggestion="openWithSuggestion"
         @open-selected="openSelectedEntry"
         @refresh="finder.refresh"
         @request-delete-entry="requestDeleteEntry"

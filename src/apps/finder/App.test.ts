@@ -336,9 +336,7 @@ describe("Finder App.vue", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("note.txt");
-    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual([
-      "note.txt",
-    ]);
+    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual(["note.txt"]);
 
     wrapper.unmount();
   });
@@ -361,9 +359,7 @@ describe("Finder App.vue", () => {
     );
     await flushPromises();
 
-    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual([
-      "note.txt",
-    ]);
+    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual(["note.txt"]);
 
     wrapper.unmount();
   });
@@ -383,18 +379,33 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
-  it("opens the selected text file in Editor", async () => {
+  it("keeps Open in actions out of the toolbar", async () => {
+    const wrapper = mountFinder(
+      makeKernel({
+        "/": [entry("/note.md")],
+      }),
+    );
+
+    await flushPromises();
+
+    expect(wrapper.find(".finder__toolbar").text()).not.toContain("Open in");
+
+    wrapper.unmount();
+  });
+
+  it("opens a text file in Editor from its context menu", async () => {
     const kernel = makeKernel({
       "/": [entry("/note.md")],
     });
     const wrapper = mountFinder(kernel);
 
     await flushPromises();
-    const openButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("Open in Editor"));
-    expect(openButton).toBeDefined();
-    await openButton!.trigger("click");
+    dispatchContextMenu(wrapper.get(".finder__entry").element);
+    await flushReka();
+    const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in Editor");
+    expect(openItem).toBeDefined();
+    openItem!.click();
+    await flushReka();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "editor",
@@ -405,7 +416,73 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
-  it("opens the selected Slidev deck in Slides", async () => {
+  it("suggests Blog for markdown files under /home/posts", async () => {
+    const kernel = makeKernel({
+      "/home/posts": [entry("/home/posts/field-notes.md")],
+    });
+    const wrapper = mountFinder(kernel, makeContext({ path: "/home/posts" }));
+
+    await flushPromises();
+    dispatchContextMenu(wrapper.get(".finder__entry").element);
+    await flushReka();
+
+    expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
+      "Open in Blog",
+      "Open in Editor",
+      "Copy Path",
+      "Duplicate",
+      "Delete...",
+    ]);
+    expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(5);
+
+    menuItems()[0]!.click();
+    await flushReka();
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/field-notes.md", slug: "field-notes" },
+    });
+
+    wrapper.unmount();
+  });
+
+  it("suggests Notes for markdown files under /home/notes", async () => {
+    const kernel = makeKernel({
+      "/home/notes": [entry("/home/notes/daily.md")],
+    });
+    const wrapper = mountFinder(kernel, makeContext({ path: "/home/notes" }));
+
+    await flushPromises();
+    dispatchContextMenu(wrapper.get(".finder__entry").element);
+    await flushReka();
+
+    expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
+      "Open in Notes",
+      "Open in Editor",
+      "Copy Path",
+      "Duplicate",
+      "Delete...",
+    ]);
+    expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(5);
+
+    menuItems()[0]!.click();
+    await flushReka();
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "notes",
+      source: "api",
+      args: { path: "/home/notes/daily.md" },
+    });
+    expect(kernel.events.emit).toHaveBeenCalledWith("notes.open.requested", {
+      source: "api",
+      path: "/home/notes/daily.md",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("opens a Slidev deck in Slides from its context menu", async () => {
     const kernel = makeKernel({
       "/home/slides/demo": [
         entry("/home/slides/demo/slides.md", "file", { mimeType: "text/markdown" }),
@@ -414,11 +491,12 @@ describe("Finder App.vue", () => {
     const wrapper = mountFinder(kernel, makeContext({ path: "/home/slides/demo" }));
 
     await flushPromises();
-    const openButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("Open in Slides"));
-    expect(openButton).toBeDefined();
-    await openButton!.trigger("click");
+    dispatchContextMenu(wrapper.get(".finder__entry").element);
+    await flushReka();
+    const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in Slides");
+    expect(openItem).toBeDefined();
+    openItem!.click();
+    await flushReka();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "slides",
@@ -433,18 +511,19 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
-  it("opens the selected PDF file in PDF Viewer", async () => {
+  it("opens a PDF file in PDF Viewer from its context menu", async () => {
     const kernel = makeKernel({
       "/": [entry("/manual.pdf", "file", { mimeType: "application/pdf" })],
     });
     const wrapper = mountFinder(kernel);
 
     await flushPromises();
-    const openButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("Open in PDF Viewer"));
-    expect(openButton).toBeDefined();
-    await openButton!.trigger("click");
+    dispatchContextMenu(wrapper.get(".finder__entry").element);
+    await flushReka();
+    const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in PDF Viewer");
+    expect(openItem).toBeDefined();
+    openItem!.click();
+    await flushReka();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "pdf-viewer",
@@ -504,7 +583,10 @@ describe("Finder App.vue", () => {
   it("selects an initial reveal child from launch args", async () => {
     const wrapper = mountFinder(
       makeKernel({
-        "/portfolio/posts": [entry("/portfolio/posts/a.md"), entry("/portfolio/posts/field-notes.md")],
+        "/portfolio/posts": [
+          entry("/portfolio/posts/a.md"),
+          entry("/portfolio/posts/field-notes.md"),
+        ],
       }),
       makeContext({ path: "/portfolio/posts", reveal: "/portfolio/posts/field-notes.md" }),
     );
@@ -520,7 +602,10 @@ describe("Finder App.vue", () => {
   it("responds to finder.reveal.requested while mounted", async () => {
     const kernel = makeKernel({
       "/": [entry("/portfolio", "directory")],
-      "/portfolio/posts": [entry("/portfolio/posts/a.md"), entry("/portfolio/posts/field-notes.md")],
+      "/portfolio/posts": [
+        entry("/portfolio/posts/a.md"),
+        entry("/portfolio/posts/field-notes.md"),
+      ],
     });
     const wrapper = mountFinder(kernel);
 
@@ -555,6 +640,7 @@ describe("Finder App.vue", () => {
       "Duplicate",
       "Delete...",
     ]);
+    expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(4);
     expect(wrapper.find(".finder__entry--selected").text()).toContain("b.txt");
 
     wrapper.unmount();
@@ -594,6 +680,7 @@ describe("Finder App.vue", () => {
       "Refresh",
       "Copy Current Folder Path",
     ]);
+    expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(3);
 
     menuItems()[0]!.click();
     await flushReka();

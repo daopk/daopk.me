@@ -59,6 +59,18 @@ export interface UseNotesBindings {
   dispose(options?: { flush?: boolean }): void;
 }
 
+export function isNotesMarkdownPath(path: string): boolean {
+  let normalized: VfsPath;
+  try {
+    normalized = normalizeVfsPath(path);
+  } catch {
+    return false;
+  }
+
+  const extension = vfsFileExtension(normalized);
+  return dirname(normalized) === NOTES_ROOT && (extension === "md" || extension === "markdown");
+}
+
 interface ParsedNote {
   readonly title: string;
   readonly body: string;

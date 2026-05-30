@@ -15,7 +15,13 @@ import { FileText, Plus } from "~/icons/lucide";
 import { formatDateTime } from "~/utils/format";
 import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
 
-import { NOTES_ROOT, useNotes, type NoteListItem, type NotesStatus } from "./useNotes";
+import {
+  isNotesMarkdownPath,
+  NOTES_ROOT,
+  useNotes,
+  type NoteListItem,
+  type NotesStatus,
+} from "./useNotes";
 
 const COMPACT_BREAKPOINT = 620;
 
@@ -40,6 +46,8 @@ const pendingDeleteNote = ref<NoteListItem | null>(null);
 const deletingNote = ref(false);
 let closeFlush: Promise<boolean> | undefined;
 
+const initialNotePath = notePathFromArgs(appContext?.args);
+
 const stopWillKill = kernel.events.on("app.will-kill", (payload) => {
   if (payload.handleId !== appContext?.handleId) {
     return;
@@ -47,6 +55,14 @@ const stopWillKill = kernel.events.on("app.will-kill", (payload) => {
 
   closeFlush ??= notes.flushAutosave();
   payload.waitUntil(closeFlush);
+});
+
+const stopOpenRequests = kernel.events.on("notes.open.requested", (payload) => {
+  if (!isNotesMarkdownPath(payload.path)) {
+    return;
+  }
+
+  void selectNoteForView(payload.path, { openEditor: true });
 });
 
 const statusText = computed(() => {
@@ -89,11 +105,12 @@ useResizeObserver(rootRef, ([entry]) => {
 });
 
 onMounted(() => {
-  void notes.loadNotes();
+  void loadInitialNotes();
 });
 
 onUnmounted(() => {
   stopWillKill();
+  stopOpenRequests();
   appChrome?.setTitle(null);
   appChrome?.setBackAction(null);
   notes.dispose({ flush: closeFlush === undefined });
@@ -125,6 +142,17 @@ watch(
     }
   },
 );
+
+function notePathFromArgs(args: Readonly<Record<string, unknown>> | undefined): string | null {
+  return typeof args?.path === "string" && isNotesMarkdownPath(args.path) ? args.path : null;
+}
+
+async function loadInitialNotes(): Promise<void> {
+  const loaded = await notes.loadNotes();
+  if (loaded && initialNotePath !== null) {
+    await selectNoteForView(initialNotePath, { openEditor: true });
+  }
+}
 
 async function createNote(): Promise<void> {
   const created = await notes.createNote();

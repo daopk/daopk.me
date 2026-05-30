@@ -2,18 +2,12 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
-import { isEditableVfsTextFile } from "~/core/vfs/fileTypes";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
+import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide";
 
+import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../openSuggestions";
 import type { FinderViewMode } from "../useFinder";
-import {
-  entryIcon,
-  entryKindLabel,
-  formatBytes,
-  formatModified,
-  isPdfEntry,
-  isSlideDeckEntry,
-} from "../display";
+import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../display";
 
 const GRID_KEYBOARD_COLUMNS = 4;
 const GRID_MIN_COLUMN_WIDTH = 120;
@@ -49,9 +43,7 @@ const emit = defineEmits<{
   goUp: [];
   moveSelection: [delta: number];
   openEntry: [entry: VfsDirEntry];
-  openInEditor: [entry: VfsDirEntry];
-  openPdf: [entry: VfsDirEntry];
-  openSlides: [entry: VfsDirEntry];
+  openWithSuggestion: [entry: VfsDirEntry, suggestion: FinderOpenSuggestion];
   openSelected: [];
   refresh: [];
   requestDeleteEntry: [entry: VfsDirEntry];
@@ -287,30 +279,34 @@ function onBrowserKeydown(event: KeyboardEvent): void {
             </template>
             <template #items>
               <ContextMenuItem v-if="entry.kind === 'directory'" @select="emit('openEntry', entry)">
-                Open
-              </ContextMenuItem>
-              <ContextMenuItem v-if="isSlideDeckEntry(entry)" @select="emit('openSlides', entry)">
-                Open in Slides
+                <FolderOpen class="finder__context-icon" :size="15" aria-hidden="true" />
+                <span>Open</span>
               </ContextMenuItem>
               <ContextMenuItem
-                v-if="
-                  entry.kind === 'file' && isEditableVfsTextFile(entry) && !isSlideDeckEntry(entry)
-                "
-                @select="emit('openInEditor', entry)"
+                v-for="suggestion in openSuggestionsForEntry(entry)"
+                :key="suggestion.id"
+                @select="emit('openWithSuggestion', entry, suggestion)"
               >
-                Open in Editor
+                <component
+                  :is="suggestion.icon"
+                  class="finder__context-icon finder__context-icon--app"
+                  :size="16"
+                  aria-hidden="true"
+                />
+                <span>{{ suggestion.label }}</span>
               </ContextMenuItem>
-              <ContextMenuItem v-if="isPdfEntry(entry)" @select="emit('openPdf', entry)">
-                Open in PDF Viewer
+              <ContextMenuItem @select="emit('copyPath', entry.path)">
+                <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                <span>Copy Path</span>
               </ContextMenuItem>
-              <ContextMenuItem @select="emit('copyPath', entry.path)">Copy Path</ContextMenuItem>
               <template v-if="entry.kind === 'file'">
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   :disabled="!canMutateEntry(entry)"
                   @select="emit('duplicateEntry', entry)"
                 >
-                  Duplicate
+                  <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <span>Duplicate</span>
                 </ContextMenuItem>
               </template>
               <ContextMenuSeparator />
@@ -318,7 +314,8 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                 :disabled="!canMutateEntry(entry)"
                 @select="emit('requestDeleteEntry', entry)"
               >
-                Delete...
+                <Trash2 class="finder__context-icon" :size="15" aria-hidden="true" />
+                <span>Delete...</span>
               </ContextMenuItem>
             </template>
           </ContextMenu>
@@ -327,11 +324,18 @@ function onBrowserKeydown(event: KeyboardEvent): void {
     </template>
     <template #items>
       <ContextMenuItem :disabled="mutationDisabled" @select="emit('createFolder')">
-        New Folder
+        <FolderPlus class="finder__context-icon" :size="15" aria-hidden="true" />
+        <span>New Folder</span>
       </ContextMenuItem>
-      <ContextMenuItem @select="emit('refresh')">Refresh</ContextMenuItem>
+      <ContextMenuItem @select="emit('refresh')">
+        <RefreshCw class="finder__context-icon" :size="15" aria-hidden="true" />
+        <span>Refresh</span>
+      </ContextMenuItem>
       <ContextMenuSeparator />
-      <ContextMenuItem @select="emit('copyPath', cwd)">Copy Current Folder Path</ContextMenuItem>
+      <ContextMenuItem @select="emit('copyPath', cwd)">
+        <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+        <span>Copy Current Folder Path</span>
+      </ContextMenuItem>
     </template>
   </ContextMenu>
 </template>
@@ -457,6 +461,15 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-xs);
+}
+
+.finder__context-icon {
+  color: var(--color-fg-muted);
+  flex: 0 0 auto;
+}
+
+.finder__context-icon--app {
+  color: inherit;
 }
 
 @media (max-width: 640px) {

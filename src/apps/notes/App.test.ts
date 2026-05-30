@@ -276,6 +276,65 @@ describe("Notes App.vue", () => {
     wrapper.unmount();
   });
 
+  it("opens the note path provided by launch args", async () => {
+    const wrapper = mountNotes(
+      makeKernel({
+        [NOTES_ROOT]: { kind: "directory" },
+        "/home/notes/a.md": {
+          kind: "file",
+          text: "# Alpha\n\nA body",
+          mimeType: NOTES_MIME_TYPE,
+          updatedAt: 2,
+        },
+        "/home/notes/b.md": {
+          kind: "file",
+          text: "# Beta\n\nB body",
+          mimeType: NOTES_MIME_TYPE,
+          updatedAt: 1,
+        },
+      }),
+      makeContext({ path: "/home/notes/b.md" }),
+    );
+
+    await flushPromises();
+
+    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
+    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+
+    wrapper.unmount();
+  });
+
+  it("responds to notes.open.requested while mounted", async () => {
+    const kernel = makeKernel({
+      [NOTES_ROOT]: { kind: "directory" },
+      "/home/notes/a.md": {
+        kind: "file",
+        text: "# Alpha\n\nA body",
+        mimeType: NOTES_MIME_TYPE,
+        updatedAt: 2,
+      },
+      "/home/notes/b.md": {
+        kind: "file",
+        text: "# Beta\n\nB body",
+        mimeType: NOTES_MIME_TYPE,
+        updatedAt: 1,
+      },
+    });
+    const wrapper = mountNotes(kernel);
+
+    await flushPromises();
+    kernel.events.emit("notes.open.requested", {
+      source: "api",
+      path: "/home/notes/b.md",
+    });
+    await flushPromises();
+
+    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
+    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+
+    wrapper.unmount();
+  });
+
   it("selecting a note loads its title and body", async () => {
     const wrapper = mountNotes(
       makeKernel({
