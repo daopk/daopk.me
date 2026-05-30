@@ -184,7 +184,12 @@ function onPostSelect(post: BlogIndexPost): void {
   margin-inline: auto;
   max-inline-size: 68ch;
   overflow-wrap: anywhere;
+  user-select: text;
   word-break: normal;
+}
+
+.blog__content :deep(*) {
+  user-select: text;
 }
 
 .blog__index {
