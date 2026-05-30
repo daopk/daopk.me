@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from "vue";
+import { computed, ref, unref, type ComputedRef, type Ref } from "vue";
 
 import { VfsError } from "~/core/vfs/errors";
 import type { VfsStat } from "~/core/vfs/nodes";
@@ -65,6 +65,9 @@ export interface UseCalendarOptions {
   readonly vfs: CalendarVfsClient;
   readonly now?: () => Date;
   readonly idFactory?: () => string;
+  readonly weekStartsOn?: number | Ref<number>;
+  readonly defaultEventDurationMinutes?: number | Ref<number>;
+  readonly defaultEventColor?: CalendarEventColor | Ref<CalendarEventColor>;
 }
 
 export interface UseCalendarBindings {
@@ -103,6 +106,9 @@ export function useCalendar({
   vfs,
   now = () => new Date(),
   idFactory = defaultIdFactory,
+  weekStartsOn = 1,
+  defaultEventDurationMinutes = 60,
+  defaultEventColor = "blue",
 }: UseCalendarOptions): UseCalendarBindings {
   const today = startOfLocalDay(now());
   const events = ref<readonly CalendarEvent[]>([]);
@@ -117,6 +123,7 @@ export function useCalendar({
       month: visibleMonth.value,
       selectedDate: selectedDate.value,
       today: now(),
+      weekStartsOn: normalizeWeekStartsOn(unref(weekStartsOn)),
     }),
   );
   const selectedDateEvents = computed(() => eventsForDate(selectedDateKey.value));
@@ -175,7 +182,11 @@ export function useCalendar({
 
   function defaultEventInputForDate(dateKey = selectedDateKey.value): CalendarEventInput {
     const safeDateKey = isValidDateKey(dateKey) ? dateKey : selectedDateKey.value;
-    const [startTime, endTime] = defaultTimedRange(safeDateKey, now());
+    const [startTime, endTime] = defaultTimedRange(
+      safeDateKey,
+      now(),
+      normalizeDefaultDuration(unref(defaultEventDurationMinutes)),
+    );
 
     return {
       title: "",
@@ -183,7 +194,7 @@ export function useCalendar({
       endAt: localDateTimeFromParts(safeDateKey, endTime),
       allDay: false,
       notes: "",
-      color: "blue",
+      color: normalizeDefaultColor(unref(defaultEventColor)),
     };
   }
 
@@ -439,26 +450,46 @@ function eventOccursOnDate(event: CalendarEvent, dateKey: string): boolean {
   );
 }
 
-function defaultTimedRange(dateKey: string, current: Date): readonly [string, string] {
-  if (localDateKey(current) !== dateKey) {
-    return ["09:00", "10:00"];
-  }
+function defaultTimedRange(
+  dateKey: string,
+  current: Date,
+  durationMinutes: number,
+): readonly [string, string] {
+  const start =
+    localDateKey(current) === dateKey
+      ? nextWholeHour(current)
+      : new Date(parseLocalDateKey(dateKey).setHours(9, 0, 0, 0));
 
-  const nextHour = new Date(current);
-  nextHour.setMinutes(0, 0, 0);
-  nextHour.setHours(nextHour.getHours() + 1);
-
-  if (localDateKey(nextHour) !== dateKey) {
+  if (localDateKey(start) !== dateKey) {
     return ["23:00", "23:59"];
   }
 
-  const end = new Date(nextHour);
-  end.setHours(end.getHours() + 1);
+  const end = new Date(start);
+  end.setMinutes(end.getMinutes() + durationMinutes);
   if (localDateKey(end) !== dateKey) {
-    return [timeString(nextHour), "23:59"];
+    return [timeString(start), "23:59"];
   }
 
-  return [timeString(nextHour), timeString(end)];
+  return [timeString(start), timeString(end)];
+}
+
+function nextWholeHour(current: Date): Date {
+  const nextHour = new Date(current);
+  nextHour.setMinutes(0, 0, 0);
+  nextHour.setHours(nextHour.getHours() + 1);
+  return nextHour;
+}
+
+function normalizeWeekStartsOn(value: number): number {
+  return value === 0 || value === 1 ? value : 1;
+}
+
+function normalizeDefaultDuration(value: number): number {
+  return value === 30 || value === 60 || value === 90 || value === 120 ? value : 60;
+}
+
+function normalizeDefaultColor(value: CalendarEventColor): CalendarEventColor {
+  return EVENT_COLORS.includes(value) ? value : "blue";
 }
 
 function isValidLocalDateTime(value: string): boolean {

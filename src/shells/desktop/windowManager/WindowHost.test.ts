@@ -16,13 +16,18 @@ import {
 
 const StubIcon = defineComponent({ template: "<svg />" });
 
-function manifest(id = "alpha", name = "Alpha"): AppManifest {
+function manifest(
+  id = "alpha",
+  name = "Alpha",
+  overrides: Partial<AppManifest> = {},
+): AppManifest {
   return {
     id,
     name,
     icon: StubIcon as Component,
     category: "system",
     component: () => Promise.resolve({ default: defineComponent({ template: "<div />" }) }),
+    ...overrides,
   };
 }
 
@@ -74,7 +79,13 @@ vi.mock("~/composables/useKernel", () => ({
   },
 }));
 
-function makeKernel(): {
+function makeKernel(
+  manifests: readonly AppManifest[] = [
+    manifest(),
+    manifest("finder", "Finder"),
+    manifest("settings", "Settings"),
+  ],
+): {
   kernel: Pick<Kernel, "apps" | "commands" | "events" | "processes">;
   launchSpy: ReturnType<typeof vi.fn>;
   commands: Map<string, CommandManifest>;
@@ -96,7 +107,7 @@ function makeKernel(): {
     launchSpy,
     kernel: {
       apps: {
-        list: () => [manifest(), manifest("finder", "Finder"), manifest("settings", "Settings")],
+        list: () => [...manifests],
         register: vi.fn(),
         launch: launchSpy as unknown as Kernel["apps"]["launch"],
         unregister: vi.fn(),
@@ -366,6 +377,55 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("replays app settings pane args when a settings-enabled app is already open", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([
+      manifest("calendar", "Calendar", { settings: {} }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "calendar",
+      source: "menu",
+      args: { pane: "settings" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "calendar");
+    expect(record).toBeDefined();
+
+    bus.emit("app.launch.requested", {
+      manifestId: "calendar",
+      source: "menu",
+      args: { pane: "settings" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(bus.emitted).toContainEqual({
+      channel: "app.settings.requested",
+      payload: { manifestId: "calendar", handleId: record!.handleId },
+    });
+    expect(
+      debugWarnSpy.mock.calls.some(
+        (call) => typeof call[1] === "string" && call[1].includes("dropping launch args"),
+      ),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("registers command-backed window actions", async () => {
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;
@@ -405,6 +465,44 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
       .get("desktop:window.close")!
       .run(commandCtx(kernel as Kernel, { windowId: record!.id }));
     expect(manager.windows.some((entry) => entry.id === record!.id)).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("registers a command-backed app settings window action", async () => {
+    const { kernel, commands, bus } = makeKernel([
+      manifest("calendar", "Calendar", { settings: {} }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "calendar",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "calendar");
+    expect(record).toBeDefined();
+
+    await commands
+      .get("desktop:window.openSettings")!
+      .run(commandCtx(kernel as Kernel, { windowId: record!.id }));
+
+    expect(bus.emitted).toContainEqual({
+      channel: "app.settings.requested",
+      payload: { manifestId: "calendar", handleId: record!.handleId },
+    });
 
     wrapper.unmount();
   });

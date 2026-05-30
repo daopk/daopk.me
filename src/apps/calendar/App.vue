@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, type Component } from "vue";
+import {
+  computed,
+  inject,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+  type Component,
+} from "vue";
 
 import { Button } from "~/components/ui";
 import { useBreakpoint } from "~/composables/useBreakpoint";
@@ -15,8 +24,11 @@ import {
   List,
   Plus,
 } from "~/icons/lucide";
+import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
+import { KernelInjectionKey } from "~/types/kernel";
 
 import CalendarEventDialog from "./components/CalendarEventDialog.vue";
+import CalendarSettingsPanel from "./components/CalendarSettingsPanel.vue";
 import { addDays, localDateKey, type CalendarDayCell } from "./dateGrid";
 import {
   createEventFormState,
@@ -31,7 +43,6 @@ import {
   buildDayCell,
   buildWeekCells,
   initialCalendarViewMode,
-  writeCalendarViewMode,
   type CalendarViewMode,
 } from "./calendarViews";
 import {
@@ -40,10 +51,27 @@ import {
   type CalendarEventInput,
   type CalendarStatus,
 } from "./useCalendar";
+import { useCalendarSettings } from "./useCalendarSettings";
 
-const calendar = useCalendar({ vfs: useVfs() });
+type CalendarPane = "calendar" | "settings";
+
 const { isMobile } = useBreakpoint();
-const activeView = ref<CalendarViewMode>(initialCalendarViewMode(isMobile.value));
+const appContext = inject(AppContextInjectionKey, null);
+const appChrome = inject(AppChromeInjectionKey, null);
+const kernel = inject(KernelInjectionKey, null);
+const calendarSettings = useCalendarSettings();
+const calendar = useCalendar({
+  vfs: useVfs(),
+  weekStartsOn: calendarSettings.weekStartsOn,
+  defaultEventDurationMinutes: calendarSettings.defaultEventDurationMinutes,
+  defaultEventColor: calendarSettings.defaultEventColor,
+});
+const activePane = ref<CalendarPane>(
+  appContext?.args.pane === "settings" ? "settings" : "calendar",
+);
+const activeView = ref<CalendarViewMode>(
+  initialCalendarViewMode(calendarSettings.preferredViewMode.value, isMobile.value),
+);
 const dialogOpen = ref(false);
 const formError = ref<string | null>(null);
 const form = reactive(createEventFormState());
@@ -82,6 +110,10 @@ const visibleMonthLabel = computed(() => monthFormatter.format(calendar.visibleM
 const selectedDateLabel = computed(() => fullDateFormatter.format(calendar.selectedDate.value));
 
 const selectedDateLunarLabel = computed(() => {
+  if (!calendarSettings.showLunarCalendar.value) {
+    return null;
+  }
+
   const lunar = gregorianToVietnameseLunar(calendar.selectedDate.value);
   return lunar === null ? null : formatVietnameseLunarLong(lunar);
 });
@@ -92,6 +124,7 @@ const weekCells = computed(() =>
   buildWeekCells({
     selectedDate: calendar.selectedDate.value,
     today: new Date(),
+    weekStartsOn: calendarSettings.weekStartsOn.value,
   }),
 );
 
@@ -99,6 +132,7 @@ const agendaGroups = computed(() =>
   buildAgendaGroups({
     events: calendar.events.value,
     startDate: calendar.selectedDate.value,
+    dayCount: calendarSettings.agendaDayCount.value,
     today: new Date(),
   }),
 );
@@ -118,7 +152,7 @@ const visibleRangeLabel = computed(() => {
       return selectedDateLabel.value;
     case "agenda":
       return `${formatCompactDate(calendar.selectedDate.value)} - ${formatCompactDateWithYear(
-        addDays(calendar.selectedDate.value, 6),
+        addDays(calendar.selectedDate.value, calendarSettings.agendaDayCount.value - 1),
       )}`;
   }
 
@@ -152,14 +186,72 @@ const showStatus = computed(
 );
 
 const dialogVariant = computed(() => (isMobile.value ? "sheet" : "modal"));
+const settingsPaneOpen = computed(() => activePane.value === "settings");
+const showLunarCalendar = computed(() => calendarSettings.showLunarCalendar.value);
+const ownManifestId = appContext?.manifestId ?? "calendar";
+const ownHandleId = appContext?.handleId;
+
+const stopAppSettingsListener = kernel?.events.on(
+  "app.settings.requested",
+  ({ manifestId, handleId }) => {
+    if (manifestId !== ownManifestId) {
+      return;
+    }
+
+    if (handleId !== undefined && handleId !== ownHandleId) {
+      return;
+    }
+
+    openSettings();
+  },
+);
 
 onMounted(() => {
   void calendar.loadCalendar();
 });
 
+onUnmounted(() => {
+  stopAppSettingsListener?.();
+  appChrome?.setTitle(null);
+  appChrome?.setBackAction(null);
+});
+
+watch(
+  () => [calendarSettings.preferredViewMode.value, isMobile.value] as const,
+  ([preferredViewMode, mobile]) => {
+    activeView.value = initialCalendarViewMode(preferredViewMode, mobile);
+  },
+);
+
+watch(
+  () => [settingsPaneOpen.value, isMobile.value] as const,
+  ([open, mobile]) => {
+    if (open && mobile) {
+      appChrome?.setTitle("Calendar settings");
+      appChrome?.setBackAction({
+        ariaLabel: "Back to Calendar",
+        handler: closeSettings,
+      });
+      return;
+    }
+
+    appChrome?.setTitle(null);
+    appChrome?.setBackAction(null);
+  },
+  { immediate: true },
+);
+
 function selectView(view: CalendarViewMode): void {
   activeView.value = view;
-  writeCalendarViewMode(view);
+  calendarSettings.setPreferredViewMode(view);
+}
+
+function openSettings(): void {
+  activePane.value = "settings";
+}
+
+function closeSettings(): void {
+  activePane.value = "calendar";
 }
 
 function openCreate(dateKey = calendar.selectedDateKey.value): void {
@@ -303,7 +395,9 @@ function dateCellAriaLabel(cell: CalendarDayCell): string {
   const count = eventCountForDate(cell.dateKey);
   const eventLabel = count === 1 ? "1 event" : `${count} events`;
   const base =
-    cell.lunarLongLabel === null ? cell.dateKey : `${cell.dateKey}, ${cell.lunarLongLabel}`;
+    !showLunarCalendar.value || cell.lunarLongLabel === null
+      ? cell.dateKey
+      : `${cell.dateKey}, ${cell.lunarLongLabel}`;
   return count === 0 ? base : `${base}, ${eventLabel}`;
 }
 
@@ -335,151 +429,263 @@ function labelForStatus(status: CalendarStatus): string {
 
 <template>
   <section class="calendar" aria-label="Calendar">
-    <header class="calendar__toolbar">
-      <div class="calendar__title-group">
-        <CalendarAppIcon class="calendar__app-icon" aria-hidden="true" />
-        <div class="calendar__title-stack">
-          <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
-          <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
+    <CalendarSettingsPanel
+      v-if="settingsPaneOpen"
+      :settings="calendarSettings"
+      :show-back="!isMobile"
+      @back="closeSettings"
+    />
+
+    <template v-else>
+      <header class="calendar__toolbar">
+        <div class="calendar__title-group">
+          <CalendarAppIcon class="calendar__app-icon" aria-hidden="true" />
+          <div class="calendar__title-stack">
+            <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
+            <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
+          </div>
         </div>
+
+        <div class="calendar__controls">
+          <div class="calendar__nav" aria-label="Calendar navigation">
+            <button
+              type="button"
+              class="calendar__icon-button"
+              :aria-label="`Previous ${navigationUnitLabel}`"
+              @click="goToPrevious"
+            >
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <Button class="calendar__nav-button" size="sm" @click="calendar.goToToday"
+              >Today</Button
+            >
+            <button
+              type="button"
+              class="calendar__icon-button"
+              :aria-label="`Next ${navigationUnitLabel}`"
+              @click="goToNext"
+            >
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
+
+          <div class="calendar__view-switcher" role="tablist" aria-label="Calendar view">
+            <button
+              v-for="tab in viewTabs"
+              :id="viewTabId(tab.id)"
+              :key="tab.id"
+              type="button"
+              class="calendar__view-button"
+              :class="{ 'calendar__view-button--active': activeView === tab.id }"
+              role="tab"
+              :aria-selected="activeView === tab.id"
+              :aria-controls="viewPanelId(tab.id)"
+              :aria-label="`${tab.label} view`"
+              @click="selectView(tab.id)"
+            >
+              <component :is="tab.icon" aria-hidden="true" />
+              <span>{{ tab.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <Button
+          class="calendar__new-button"
+          size="sm"
+          variant="primary"
+          :icon-start="Plus"
+          @click="openCreate()"
+        >
+          New
+        </Button>
+      </header>
+
+      <div
+        v-if="showStatus"
+        class="calendar__status"
+        :class="{ 'calendar__status--error': calendar.error.value !== null }"
+        role="status"
+      >
+        {{ statusText }}
       </div>
 
-      <div class="calendar__controls">
-        <div class="calendar__nav" aria-label="Calendar navigation">
-          <button
-            type="button"
-            class="calendar__icon-button"
-            :aria-label="`Previous ${navigationUnitLabel}`"
-            @click="goToPrevious"
-          >
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <Button class="calendar__nav-button" size="sm" @click="calendar.goToToday">Today</Button>
-          <button
-            type="button"
-            class="calendar__icon-button"
-            :aria-label="`Next ${navigationUnitLabel}`"
-            @click="goToNext"
-          >
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
+      <main class="calendar__surface">
+        <section
+          v-if="activeView === 'month'"
+          :id="viewPanelId('month')"
+          class="calendar__view calendar__view--month"
+          role="tabpanel"
+          :aria-labelledby="viewTabId('month')"
+        >
+          <div class="calendar__month-layout">
+            <div class="calendar__month-panel" aria-label="Month view">
+              <div class="calendar__weekdays" aria-hidden="true">
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+                <span>Sun</span>
+              </div>
 
-        <div class="calendar__view-switcher" role="tablist" aria-label="Calendar view">
-          <button
-            v-for="tab in viewTabs"
-            :id="viewTabId(tab.id)"
-            :key="tab.id"
-            type="button"
-            class="calendar__view-button"
-            :class="{ 'calendar__view-button--active': activeView === tab.id }"
-            role="tab"
-            :aria-selected="activeView === tab.id"
-            :aria-controls="viewPanelId(tab.id)"
-            :aria-label="`${tab.label} view`"
-            @click="selectView(tab.id)"
-          >
-            <component :is="tab.icon" aria-hidden="true" />
-            <span>{{ tab.label }}</span>
-          </button>
-        </div>
-      </div>
-
-      <Button
-        class="calendar__new-button"
-        size="sm"
-        variant="primary"
-        :icon-start="Plus"
-        @click="openCreate()"
-      >
-        New
-      </Button>
-    </header>
-
-    <div
-      v-if="showStatus"
-      class="calendar__status"
-      :class="{ 'calendar__status--error': calendar.error.value !== null }"
-      role="status"
-    >
-      {{ statusText }}
-    </div>
-
-    <main class="calendar__surface">
-      <section
-        v-if="activeView === 'month'"
-        :id="viewPanelId('month')"
-        class="calendar__view calendar__view--month"
-        role="tabpanel"
-        :aria-labelledby="viewTabId('month')"
-      >
-        <div class="calendar__month-layout">
-          <div class="calendar__month-panel" aria-label="Month view">
-            <div class="calendar__weekdays" aria-hidden="true">
-              <span>Mon</span>
-              <span>Tue</span>
-              <span>Wed</span>
-              <span>Thu</span>
-              <span>Fri</span>
-              <span>Sat</span>
-              <span>Sun</span>
-            </div>
-
-            <div class="calendar__grid" role="grid" :aria-label="visibleMonthLabel">
-              <button
-                v-for="cell in calendar.monthGrid.value"
-                :key="cell.dateKey"
-                type="button"
-                class="calendar__day"
-                :class="{
-                  'calendar__day--muted': !cell.inCurrentMonth,
-                  'calendar__day--today': cell.isToday,
-                  'calendar__day--selected': cell.isSelected,
-                }"
-                :aria-selected="cell.isSelected"
-                :aria-label="dateCellAriaLabel(cell)"
-                @click="calendar.selectDate(cell.dateKey)"
-              >
-                <span class="calendar__day-heading">
-                  <span class="calendar__day-number">{{ cell.dayOfMonth }}</span>
-                  <span v-if="cell.lunarLabel" class="calendar__lunar-label">
-                    {{ cell.lunarLabel }}
-                  </span>
-                </span>
-                <span class="calendar__day-events">
-                  <span
-                    v-for="event in eventChipsForDate(cell.dateKey)"
-                    :key="event.id"
-                    class="calendar__event-chip"
-                    :class="`calendar__event-chip--${event.color}`"
-                  >
-                    <span class="calendar__event-chip-time">{{ formatEventTime(event) }}</span>
-                    <span class="calendar__event-chip-title">{{ event.title }}</span>
-                  </span>
-                  <span v-if="eventOverflowForDate(cell.dateKey) > 0" class="calendar__overflow">
-                    +{{ eventOverflowForDate(cell.dateKey) }}
-                  </span>
-                </span>
-                <span
-                  v-if="eventCountForDate(cell.dateKey) > 0"
-                  class="calendar__day-summary"
-                  aria-hidden="true"
+              <div class="calendar__grid" role="grid" :aria-label="visibleMonthLabel">
+                <button
+                  v-for="cell in calendar.monthGrid.value"
+                  :key="cell.dateKey"
+                  type="button"
+                  class="calendar__day"
+                  :class="{
+                    'calendar__day--muted': !cell.inCurrentMonth,
+                    'calendar__day--today': cell.isToday,
+                    'calendar__day--selected': cell.isSelected,
+                  }"
+                  :aria-selected="cell.isSelected"
+                  :aria-label="dateCellAriaLabel(cell)"
+                  @click="calendar.selectDate(cell.dateKey)"
                 >
-                  <span class="calendar__day-dots">
+                  <span class="calendar__day-heading">
+                    <span class="calendar__day-number">{{ cell.dayOfMonth }}</span>
+                    <span v-if="showLunarCalendar && cell.lunarLabel" class="calendar__lunar-label">
+                      {{ cell.lunarLabel }}
+                    </span>
+                  </span>
+                  <span class="calendar__day-events">
                     <span
                       v-for="event in eventChipsForDate(cell.dateKey)"
                       :key="event.id"
-                      class="calendar__day-dot"
-                      :class="`calendar__day-dot--${event.color}`"
-                    />
+                      class="calendar__event-chip"
+                      :class="`calendar__event-chip--${event.color}`"
+                    >
+                      <span class="calendar__event-chip-time">{{ formatEventTime(event) }}</span>
+                      <span class="calendar__event-chip-title">{{ event.title }}</span>
+                    </span>
+                    <span v-if="eventOverflowForDate(cell.dateKey) > 0" class="calendar__overflow">
+                      +{{ eventOverflowForDate(cell.dateKey) }}
+                    </span>
                   </span>
-                  <span class="calendar__day-count">{{ eventCountForDate(cell.dateKey) }}</span>
+                  <span
+                    v-if="eventCountForDate(cell.dateKey) > 0"
+                    class="calendar__day-summary"
+                    aria-hidden="true"
+                  >
+                    <span class="calendar__day-dots">
+                      <span
+                        v-for="event in eventChipsForDate(cell.dateKey)"
+                        :key="event.id"
+                        class="calendar__day-dot"
+                        :class="`calendar__day-dot--${event.color}`"
+                      />
+                    </span>
+                    <span class="calendar__day-count">{{ eventCountForDate(cell.dateKey) }}</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <aside class="calendar__selected-panel" aria-label="Selected day events">
+              <header class="calendar__panel-header">
+                <div class="calendar__panel-title-group">
+                  <Clock class="calendar__panel-icon" aria-hidden="true" />
+                  <div class="calendar__panel-title-stack">
+                    <h3 class="calendar__panel-title">{{ selectedDateLabel }}</h3>
+                    <p
+                      v-if="selectedDateLunarLabel"
+                      class="calendar__panel-lunar calendar__agenda-lunar"
+                    >
+                      {{ selectedDateLunarLabel }}
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" :icon-start="Plus" @click="openCreate()">New</Button>
+              </header>
+
+              <div
+                v-if="calendar.selectedDateEvents.value.length === 0"
+                class="calendar__empty"
+                role="status"
+              >
+                No events.
+              </div>
+              <ul v-else class="calendar__event-list">
+                <li
+                  v-for="event in calendar.selectedDateEvents.value"
+                  :key="event.id"
+                  class="calendar__event-list-item"
+                >
+                  <button
+                    type="button"
+                    class="calendar__event-button"
+                    :class="`calendar__event-button--${event.color}`"
+                    @click="openEdit(event)"
+                  >
+                    <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
+                    <span class="calendar__event-title">{{ event.title }}</span>
+                    <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
+                  </button>
+                </li>
+              </ul>
+            </aside>
+          </div>
+        </section>
+
+        <section
+          v-else-if="activeView === 'week'"
+          :id="viewPanelId('week')"
+          class="calendar__view calendar__view--week"
+          role="tabpanel"
+          :aria-labelledby="viewTabId('week')"
+        >
+          <div class="calendar__week-grid" role="grid" aria-label="Week view">
+            <article
+              v-for="cell in weekCells"
+              :key="cell.dateKey"
+              class="calendar__week-day"
+              :class="{
+                'calendar__week-day--today': cell.isToday,
+                'calendar__week-day--selected': cell.isSelected,
+              }"
+              role="gridcell"
+            >
+              <button
+                type="button"
+                class="calendar__week-day-header"
+                :aria-label="dateCellAriaLabel(cell)"
+                @click="calendar.selectDate(cell.dateKey)"
+              >
+                <span class="calendar__week-weekday">{{ formatWeekday(cell.date) }}</span>
+                <span class="calendar__week-date">{{ cell.dayOfMonth }}</span>
+                <span v-if="showLunarCalendar && cell.lunarLabel" class="calendar__week-lunar">
+                  {{ cell.lunarLabel }}
+                </span>
+                <span v-if="eventCountForDate(cell.dateKey) > 0" class="calendar__week-count">
+                  {{ eventCountForDate(cell.dateKey) }}
                 </span>
               </button>
-            </div>
+
+              <div v-if="eventCountForDate(cell.dateKey) === 0" class="calendar__week-empty">
+                No events
+              </div>
+              <ul v-else class="calendar__week-day-events">
+                <li v-for="event in calendar.eventsForDate(cell.dateKey)" :key="event.id">
+                  <button
+                    type="button"
+                    class="calendar__event-button calendar__event-button--compact"
+                    :class="`calendar__event-button--${event.color}`"
+                    @click="openEdit(event)"
+                  >
+                    <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
+                    <span class="calendar__event-title">{{ event.title }}</span>
+                  </button>
+                </li>
+              </ul>
+            </article>
           </div>
 
-          <aside class="calendar__selected-panel" aria-label="Selected day events">
+          <aside
+            class="calendar__week-selected calendar__selected-panel"
+            aria-label="Selected day events"
+          >
             <header class="calendar__panel-header">
               <div class="calendar__panel-title-group">
                 <Clock class="calendar__panel-icon" aria-hidden="true" />
@@ -504,11 +710,7 @@ function labelForStatus(status: CalendarStatus): string {
               No events.
             </div>
             <ul v-else class="calendar__event-list">
-              <li
-                v-for="event in calendar.selectedDateEvents.value"
-                :key="event.id"
-                class="calendar__event-list-item"
-              >
+              <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
                   type="button"
                   class="calendar__event-button"
@@ -522,69 +724,20 @@ function labelForStatus(status: CalendarStatus): string {
               </li>
             </ul>
           </aside>
-        </div>
-      </section>
+        </section>
 
-      <section
-        v-else-if="activeView === 'week'"
-        :id="viewPanelId('week')"
-        class="calendar__view calendar__view--week"
-        role="tabpanel"
-        :aria-labelledby="viewTabId('week')"
-      >
-        <div class="calendar__week-grid" role="grid" aria-label="Week view">
-          <article
-            v-for="cell in weekCells"
-            :key="cell.dateKey"
-            class="calendar__week-day"
-            :class="{
-              'calendar__week-day--today': cell.isToday,
-              'calendar__week-day--selected': cell.isSelected,
-            }"
-            role="gridcell"
-          >
-            <button
-              type="button"
-              class="calendar__week-day-header"
-              :aria-label="dateCellAriaLabel(cell)"
-              @click="calendar.selectDate(cell.dateKey)"
-            >
-              <span class="calendar__week-weekday">{{ formatWeekday(cell.date) }}</span>
-              <span class="calendar__week-date">{{ cell.dayOfMonth }}</span>
-              <span v-if="cell.lunarLabel" class="calendar__week-lunar">{{ cell.lunarLabel }}</span>
-              <span v-if="eventCountForDate(cell.dateKey) > 0" class="calendar__week-count">
-                {{ eventCountForDate(cell.dateKey) }}
-              </span>
-            </button>
-
-            <div v-if="eventCountForDate(cell.dateKey) === 0" class="calendar__week-empty">
-              No events
-            </div>
-            <ul v-else class="calendar__week-day-events">
-              <li v-for="event in calendar.eventsForDate(cell.dateKey)" :key="event.id">
-                <button
-                  type="button"
-                  class="calendar__event-button calendar__event-button--compact"
-                  :class="`calendar__event-button--${event.color}`"
-                  @click="openEdit(event)"
-                >
-                  <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
-                  <span class="calendar__event-title">{{ event.title }}</span>
-                </button>
-              </li>
-            </ul>
-          </article>
-        </div>
-
-        <aside
-          class="calendar__week-selected calendar__selected-panel"
-          aria-label="Selected day events"
+        <section
+          v-else-if="activeView === 'day'"
+          :id="viewPanelId('day')"
+          class="calendar__view calendar__view--day"
+          role="tabpanel"
+          :aria-labelledby="viewTabId('day')"
         >
-          <header class="calendar__panel-header">
-            <div class="calendar__panel-title-group">
-              <Clock class="calendar__panel-icon" aria-hidden="true" />
-              <div class="calendar__panel-title-stack">
-                <h3 class="calendar__panel-title">{{ selectedDateLabel }}</h3>
+          <div class="calendar__focus-panel">
+            <header class="calendar__focus-header">
+              <div>
+                <p class="calendar__focus-kicker">{{ formatWeekday(selectedDayCell.date) }}</p>
+                <h3 class="calendar__focus-title">{{ selectedDateLabel }}</h3>
                 <p
                   v-if="selectedDateLunarLabel"
                   class="calendar__panel-lunar calendar__agenda-lunar"
@@ -592,119 +745,23 @@ function labelForStatus(status: CalendarStatus): string {
                   {{ selectedDateLunarLabel }}
                 </p>
               </div>
-            </div>
-            <Button size="sm" :icon-start="Plus" @click="openCreate()">New</Button>
-          </header>
-
-          <div
-            v-if="calendar.selectedDateEvents.value.length === 0"
-            class="calendar__empty"
-            role="status"
-          >
-            No events.
-          </div>
-          <ul v-else class="calendar__event-list">
-            <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
-              <button
-                type="button"
-                class="calendar__event-button"
-                :class="`calendar__event-button--${event.color}`"
-                @click="openEdit(event)"
-              >
-                <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
-                <span class="calendar__event-title">{{ event.title }}</span>
-                <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
-              </button>
-            </li>
-          </ul>
-        </aside>
-      </section>
-
-      <section
-        v-else-if="activeView === 'day'"
-        :id="viewPanelId('day')"
-        class="calendar__view calendar__view--day"
-        role="tabpanel"
-        :aria-labelledby="viewTabId('day')"
-      >
-        <div class="calendar__focus-panel">
-          <header class="calendar__focus-header">
-            <div>
-              <p class="calendar__focus-kicker">{{ formatWeekday(selectedDayCell.date) }}</p>
-              <h3 class="calendar__focus-title">{{ selectedDateLabel }}</h3>
-              <p v-if="selectedDateLunarLabel" class="calendar__panel-lunar calendar__agenda-lunar">
-                {{ selectedDateLunarLabel }}
-              </p>
-            </div>
-            <Button size="sm" variant="primary" :icon-start="Plus" @click="openCreate()"
-              >New</Button
-            >
-          </header>
-
-          <div
-            v-if="calendar.selectedDateEvents.value.length === 0"
-            class="calendar__empty calendar__empty--large"
-            role="status"
-          >
-            No events.
-          </div>
-          <ul v-else class="calendar__event-list calendar__event-list--roomy">
-            <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
-              <button
-                type="button"
-                class="calendar__event-button calendar__event-button--roomy"
-                :class="`calendar__event-button--${event.color}`"
-                @click="openEdit(event)"
-              >
-                <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
-                <span class="calendar__event-title">{{ event.title }}</span>
-                <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
-              </button>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <section
-        v-else
-        :id="viewPanelId('agenda')"
-        class="calendar__view calendar__view--agenda"
-        role="tabpanel"
-        :aria-labelledby="viewTabId('agenda')"
-      >
-        <div
-          v-if="agendaGroups.length === 0"
-          class="calendar__empty calendar__empty--large"
-          role="status"
-        >
-          No events in this range.
-        </div>
-
-        <div v-else class="calendar__agenda-groups">
-          <section
-            v-for="group in agendaGroups"
-            :key="group.cell.dateKey"
-            class="calendar__agenda-group"
-          >
-            <header class="calendar__agenda-group-header">
-              <div>
-                <h3 class="calendar__agenda-group-title">
-                  {{ fullDateFormatter.format(group.cell.date) }}
-                </h3>
-                <p v-if="group.cell.lunarLongLabel" class="calendar__panel-lunar">
-                  {{ group.cell.lunarLongLabel }}
-                </p>
-              </div>
-              <Button size="sm" :icon-start="Plus" @click="openCreate(group.cell.dateKey)"
+              <Button size="sm" variant="primary" :icon-start="Plus" @click="openCreate()"
                 >New</Button
               >
             </header>
 
-            <ul class="calendar__event-list">
-              <li v-for="event in group.events" :key="`${group.cell.dateKey}-${event.id}`">
+            <div
+              v-if="calendar.selectedDateEvents.value.length === 0"
+              class="calendar__empty calendar__empty--large"
+              role="status"
+            >
+              No events.
+            </div>
+            <ul v-else class="calendar__event-list calendar__event-list--roomy">
+              <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
                   type="button"
-                  class="calendar__event-button"
+                  class="calendar__event-button calendar__event-button--roomy"
                   :class="`calendar__event-button--${event.color}`"
                   @click="openEdit(event)"
                 >
@@ -714,25 +771,81 @@ function labelForStatus(status: CalendarStatus): string {
                 </button>
               </li>
             </ul>
-          </section>
-        </div>
-      </section>
-    </main>
+          </div>
+        </section>
 
-    <CalendarEventDialog
-      v-model:open="dialogOpen"
-      :title="dialogTitle"
-      :variant="dialogVariant"
-      :event-colors="EVENT_COLORS"
-      :form="form"
-      :form-error="formError"
-      @all-day-change="onAllDayChange"
-      @cancel-delete="cancelDelete"
-      @close="closeDialog"
-      @confirm-delete="confirmDelete"
-      @request-delete="requestDelete"
-      @submit="submitForm"
-    />
+        <section
+          v-else
+          :id="viewPanelId('agenda')"
+          class="calendar__view calendar__view--agenda"
+          role="tabpanel"
+          :aria-labelledby="viewTabId('agenda')"
+        >
+          <div
+            v-if="agendaGroups.length === 0"
+            class="calendar__empty calendar__empty--large"
+            role="status"
+          >
+            No events in this range.
+          </div>
+
+          <div v-else class="calendar__agenda-groups">
+            <section
+              v-for="group in agendaGroups"
+              :key="group.cell.dateKey"
+              class="calendar__agenda-group"
+            >
+              <header class="calendar__agenda-group-header">
+                <div>
+                  <h3 class="calendar__agenda-group-title">
+                    {{ fullDateFormatter.format(group.cell.date) }}
+                  </h3>
+                  <p
+                    v-if="showLunarCalendar && group.cell.lunarLongLabel"
+                    class="calendar__panel-lunar"
+                  >
+                    {{ group.cell.lunarLongLabel }}
+                  </p>
+                </div>
+                <Button size="sm" :icon-start="Plus" @click="openCreate(group.cell.dateKey)"
+                  >New</Button
+                >
+              </header>
+
+              <ul class="calendar__event-list">
+                <li v-for="event in group.events" :key="`${group.cell.dateKey}-${event.id}`">
+                  <button
+                    type="button"
+                    class="calendar__event-button"
+                    :class="`calendar__event-button--${event.color}`"
+                    @click="openEdit(event)"
+                  >
+                    <span class="calendar__event-time">{{ formatEventTime(event) }}</span>
+                    <span class="calendar__event-title">{{ event.title }}</span>
+                    <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
+                  </button>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <CalendarEventDialog
+        v-model:open="dialogOpen"
+        :title="dialogTitle"
+        :variant="dialogVariant"
+        :event-colors="EVENT_COLORS"
+        :form="form"
+        :form-error="formError"
+        @all-day-change="onAllDayChange"
+        @cancel-delete="cancelDelete"
+        @close="closeDialog"
+        @confirm-delete="confirmDelete"
+        @request-delete="requestDelete"
+        @submit="submitForm"
+      />
+    </template>
   </section>
 </template>
 

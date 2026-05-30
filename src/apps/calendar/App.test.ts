@@ -3,11 +3,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { VfsStat } from "~/core/vfs/nodes";
 import { normalizeVfsPath } from "~/core/vfs/path";
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeController,
+  type AppContext,
+} from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
 import App from "./App.vue";
-import { CALENDAR_VIEW_STORAGE_KEY, type CalendarViewMode } from "./calendarViews";
+import type { CalendarViewMode } from "./calendarViews";
+import {
+  CALENDAR_KV_NAMESPACE,
+  CALENDAR_SETTINGS_KV_KEY,
+  type CalendarSettingsState,
+} from "./useCalendarSettings";
 import {
   CALENDAR_FILE_PATH,
   CALENDAR_MIME_TYPE,
@@ -27,6 +37,8 @@ interface FakeKernel extends Kernel {
   readonly writes: Array<{ path: string; text: string; options: Record<string, unknown> }>;
 }
 
+const CALENDAR_SETTINGS_STORAGE_KEY = `${CALENDAR_KV_NAMESPACE}:${CALENDAR_SETTINGS_KV_KEY}`;
+
 function stat(path: string, node: FakeNode): VfsStat {
   const normalized = normalizeVfsPath(path);
   return {
@@ -43,10 +55,30 @@ function stat(path: string, node: FakeNode): VfsStat {
 function makeKernel(seed: Record<string, FakeNode> = {}): FakeKernel {
   const nodes: Record<string, FakeNode> = { ...seed };
   const writes: FakeKernel["writes"] = [];
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+  const on = vi.fn((channel: string, listener: (payload: unknown) => void) => {
+    const bucket = listeners.get(channel) ?? new Set<(payload: unknown) => void>();
+    bucket.add(listener);
+    listeners.set(channel, bucket);
+    return (): void => {
+      bucket.delete(listener);
+    };
+  });
+  const emit = vi.fn((channel: string, payload: unknown) => {
+    for (const listener of listeners.get(channel) ?? []) {
+      listener(payload);
+    }
+  });
   let now = 20;
 
   return {
     writes,
+    events: {
+      on,
+      emit,
+      once: vi.fn(),
+      off: vi.fn(),
+    },
     vfs: {
       stat: vi.fn(async (path: string) => stat(path, nodes[normalizeVfsPath(path)]!)),
       list: vi.fn(async () => []),
@@ -88,16 +120,55 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
   });
 }
 
-function mountCalendar(kernel: Kernel = makeKernel()) {
+function mountCalendar(
+  kernel: Kernel = makeKernel(),
+  options: {
+    readonly args?: Readonly<Record<string, unknown>>;
+    readonly appChrome?: AppChromeController;
+  } = {},
+) {
+  const provide: Record<symbol, unknown> = {
+    [KernelInjectionKey as symbol]: kernel,
+    [AppContextInjectionKey as symbol]: makeContext(options.args),
+  };
+
+  if (options.appChrome !== undefined) {
+    provide[AppChromeInjectionKey as symbol] = options.appChrome;
+  }
+
   return mount(App, {
     attachTo: document.body,
     global: {
-      provide: {
-        [KernelInjectionKey as symbol]: kernel,
-        [AppContextInjectionKey as symbol]: makeContext(),
-      },
+      provide,
     },
   });
+}
+
+function defaultSettings(overrides: Partial<CalendarSettingsState> = {}): CalendarSettingsState {
+  return {
+    preferredViewMode: "device",
+    weekStartsOn: 1,
+    agendaDayCount: 7,
+    showLunarCalendar: true,
+    defaultEventDurationMinutes: 60,
+    defaultEventColor: "blue",
+    ...overrides,
+  };
+}
+
+function persistSettings(overrides: Partial<CalendarSettingsState>): void {
+  localStorage.setItem(
+    CALENDAR_SETTINGS_STORAGE_KEY,
+    JSON.stringify({ __v: 1, data: defaultSettings(overrides) }),
+  );
+}
+
+function readSettings(): CalendarSettingsState {
+  const raw = localStorage.getItem(CALENDAR_SETTINGS_STORAGE_KEY);
+  if (raw === null) {
+    throw new Error("Calendar settings missing");
+  }
+  return (JSON.parse(raw) as { data: CalendarSettingsState }).data;
 }
 
 function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
@@ -181,7 +252,7 @@ async function setField(selector: string, value: string, eventName = "input"): P
 
 afterEach(() => {
   vi.useRealTimers();
-  sessionStorage.clear();
+  localStorage.clear();
   setViewportWidth(1024);
   document.body.innerHTML = "";
 });
@@ -262,16 +333,16 @@ describe("Calendar App.vue", () => {
     await flushPromises();
 
     expect(viewButton("agenda").getAttribute("aria-selected")).toBe("true");
-    expect(sessionStorage.getItem(CALENDAR_VIEW_STORAGE_KEY)).toBe("agenda");
+    expect(readSettings().preferredViewMode).toBe("agenda");
 
     wrapper.unmount();
   });
 
-  it("restores a valid stored view and ignores invalid stored views", async () => {
+  it("restores a valid preferred view and ignores invalid preferred views", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 4, 26, 10, 15));
 
-    sessionStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, "week");
+    persistSettings({ preferredViewMode: "week" });
     const first = mountCalendar(makeKernel());
     await flushPromises();
 
@@ -279,7 +350,10 @@ describe("Calendar App.vue", () => {
     first.unmount();
     document.body.innerHTML = "";
 
-    sessionStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, "timeline");
+    localStorage.setItem(
+      CALENDAR_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ __v: 1, data: { ...defaultSettings(), preferredViewMode: "timeline" } }),
+    );
     const second = mountCalendar(makeKernel());
     await flushPromises();
 
@@ -297,6 +371,127 @@ describe("Calendar App.vue", () => {
 
     expect(viewButton("agenda").getAttribute("aria-selected")).toBe("true");
     expect(wrapper.text()).toContain("No events in this range.");
+
+    wrapper.unmount();
+  });
+
+  it("opens Calendar settings from an app settings request and returns to Calendar", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 26, 10, 15));
+    const kernel = makeKernel();
+    const wrapper = mountCalendar(kernel);
+
+    await flushPromises();
+    kernel.events.emit("app.settings.requested", {
+      manifestId: "calendar",
+      handleId: "calendar-handle",
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Calendar settings");
+    expect(wrapper.find(".calendar__view-switcher").exists()).toBe(false);
+
+    textButton("Back").click();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("May 2026");
+    expect(wrapper.find(".calendar__view-switcher").exists()).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("opens Calendar settings from app args and uses mobile chrome back", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 26, 10, 15));
+    setViewportWidth(375);
+
+    let backAction: Parameters<AppChromeController["setBackAction"]>[0] = null;
+    const appChrome: AppChromeController = {
+      setTitle: vi.fn(),
+      setBackAction: vi.fn((action) => {
+        backAction = action;
+      }),
+    };
+    const wrapper = mountCalendar(makeKernel(), {
+      args: { pane: "settings" },
+      appChrome,
+    });
+
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Calendar settings");
+    expect(appChrome.setTitle).toHaveBeenLastCalledWith("Calendar settings");
+    expect(backAction?.ariaLabel).toBe("Back to Calendar");
+
+    backAction?.handler();
+    await flushPromises();
+
+    expect(viewButton("agenda").getAttribute("aria-selected")).toBe("true");
+    expect(appChrome.setTitle).toHaveBeenLastCalledWith(null);
+
+    wrapper.unmount();
+  });
+
+  it("applies Calendar settings to labels, grid, agenda range, and new event defaults", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 17, 10, 15));
+    const kernel = makeKernel({
+      [CALENDAR_ROOT]: { kind: "directory" },
+      [CALENDAR_FILE_PATH]: {
+        kind: "file",
+        text: serializeCalendar([
+          makeEvent({
+            id: "future-range",
+            title: "Future range",
+            startAt: "2026-03-01T09:00",
+            endAt: "2026-03-01T10:00",
+          }),
+        ]),
+        mimeType: CALENDAR_MIME_TYPE,
+      },
+    });
+    const wrapper = mountCalendar(kernel);
+
+    await flushPromises();
+    expect(dayButton("2026-02-17").textContent).toContain("Tháng 1");
+
+    kernel.events.emit("app.settings.requested", {
+      manifestId: "calendar",
+      handleId: "calendar-handle",
+    });
+    await flushPromises();
+    textButton("Sunday").click();
+    textButton("14 days").click();
+    textButton("90m").click();
+    document.body.querySelector<HTMLButtonElement>('button[aria-label="Purple"]')?.click();
+    document.body
+      .querySelector<HTMLButtonElement>('button[aria-label="Hide lunar labels"]')
+      ?.click();
+    textButton("Back").click();
+    await flushPromises();
+
+    expect(dayButton("2026-02-01")).toBeInstanceOf(HTMLButtonElement);
+    expect(dayButton("2026-02-17").textContent).not.toContain("Tháng 1");
+
+    await viewButton("agenda").click();
+    await flushPromises();
+    expect(wrapper.text()).toContain("Future range");
+
+    toolbarNewButton().click();
+    await flushPromises();
+    const timeInputs = [...document.body.querySelectorAll('input[type="time"]')];
+    expect((timeInputs[0] as HTMLInputElement | undefined)?.value).toBe("11:00");
+    expect((timeInputs[1] as HTMLInputElement | undefined)?.value).toBe("12:30");
+    expect(document.body.querySelector<HTMLSelectElement>("select")?.value).toBe("purple");
+
+    expect(readSettings()).toMatchObject({
+      weekStartsOn: 0,
+      agendaDayCount: 14,
+      showLunarCalendar: false,
+      defaultEventDurationMinutes: 90,
+      defaultEventColor: "purple",
+      preferredViewMode: "agenda",
+    });
 
     wrapper.unmount();
   });
@@ -430,7 +625,7 @@ describe("Calendar App.vue", () => {
 
       wrapper.unmount();
       document.body.innerHTML = "";
-      sessionStorage.clear();
+      localStorage.clear();
     }
   });
 

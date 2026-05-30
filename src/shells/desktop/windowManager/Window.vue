@@ -9,6 +9,7 @@ import {
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
+import { hasAppSettings } from "~/core/apps/appSettings";
 import AppMount from "./AppMount.vue";
 import { TITLEBAR_HEIGHT, type SnapEdge, type WindowRecord } from "./useWindowManager";
 import { clampWindowPosition } from "./windowGeometry";
@@ -38,6 +39,12 @@ const kernel = useKernel();
 const dragging = ref(false);
 const resizing = ref(false);
 const snapIntent = ref<SnapEdge | null>(null);
+const manifest = computed(() =>
+  kernel.apps.list().find((entry) => entry.id === props.record.manifestId),
+);
+const showSettingsAction = computed(() =>
+  manifest.value === undefined ? false : hasAppSettings(manifest.value),
+);
 
 function clampPosition(x: number, y: number): { x: number; y: number } {
   return clampWindowPosition(x, y, {
@@ -297,6 +304,12 @@ function dispatchWindowCommand(id: string): void {
         </ContextMenuItem>
         <ContextMenuItem @select="dispatchWindowCommand('desktop:window.toggleMaximize')">
           {{ record.maximized ? "Restore" : "Maximize" }}
+        </ContextMenuItem>
+        <ContextMenuItem
+          v-if="showSettingsAction"
+          @select="dispatchWindowCommand('desktop:window.openSettings')"
+        >
+          Settings
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem @select="dispatchWindowCommand('desktop:window.close')">

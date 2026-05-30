@@ -9,6 +9,7 @@ import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromp
 import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
+import { isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
 
@@ -119,6 +120,13 @@ function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>):
     () => {
       if (!willResume) {
         clearLaunching(manifestId);
+      }
+      if (willResume && isAppSettingsLaunchArgs(args)) {
+        const frame = nav.stack.find((entry) => entry.manifestId === manifestId);
+        kernel.events.emit("app.settings.requested", {
+          manifestId,
+          ...(frame === undefined ? {} : { handleId: frame.handleId }),
+        });
       }
       lastLaunchedManifestId.value = manifestId;
     },

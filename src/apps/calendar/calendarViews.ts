@@ -9,9 +9,13 @@ import {
 import type { CalendarEvent } from "./useCalendar";
 
 export type CalendarViewMode = "month" | "week" | "day" | "agenda";
+export type CalendarPreferredViewMode = "device" | CalendarViewMode;
 
-export const CALENDAR_VIEW_STORAGE_KEY = "daopk:calendar:view-mode";
 export const CALENDAR_VIEW_MODES: readonly CalendarViewMode[] = ["month", "week", "day", "agenda"];
+export const CALENDAR_PREFERRED_VIEW_MODES: readonly CalendarPreferredViewMode[] = [
+  "device",
+  ...CALENDAR_VIEW_MODES,
+];
 
 export interface AgendaDayGroup {
   readonly cell: CalendarDayCell;
@@ -38,39 +42,18 @@ export function isCalendarViewMode(value: unknown): value is CalendarViewMode {
   return typeof value === "string" && CALENDAR_VIEW_MODES.includes(value as CalendarViewMode);
 }
 
-export function readCalendarViewMode(
-  storage: Pick<Storage, "getItem"> | undefined = safeSessionStorage(),
-): CalendarViewMode | null {
-  if (storage === undefined) {
-    return null;
-  }
-
-  try {
-    const value = storage.getItem(CALENDAR_VIEW_STORAGE_KEY);
-    return isCalendarViewMode(value) ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-export function writeCalendarViewMode(
-  viewMode: CalendarViewMode,
-  storage: Pick<Storage, "setItem"> | undefined = safeSessionStorage(),
-): void {
-  if (storage === undefined) {
-    return;
-  }
-
-  try {
-    storage.setItem(CALENDAR_VIEW_STORAGE_KEY, viewMode);
-  } catch {}
+export function isCalendarPreferredViewMode(value: unknown): value is CalendarPreferredViewMode {
+  return (
+    typeof value === "string" &&
+    CALENDAR_PREFERRED_VIEW_MODES.includes(value as CalendarPreferredViewMode)
+  );
 }
 
 export function initialCalendarViewMode(
+  preferredViewMode: CalendarPreferredViewMode,
   isMobile: boolean,
-  storage?: Pick<Storage, "getItem">,
 ): CalendarViewMode {
-  return readCalendarViewMode(storage) ?? (isMobile ? "agenda" : "month");
+  return preferredViewMode === "device" ? (isMobile ? "agenda" : "month") : preferredViewMode;
 }
 
 export function buildWeekCells({
@@ -130,8 +113,4 @@ export function buildDayCell(
   }
 
   return cell;
-}
-
-function safeSessionStorage(): Storage | undefined {
-  return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
 }

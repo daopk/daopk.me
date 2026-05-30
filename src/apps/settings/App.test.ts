@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick, ref } from "vue";
+import { defineComponent, nextTick, ref, type Component } from "vue";
 
 const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
@@ -29,6 +29,7 @@ import { serviceWorkerUpdateController } from "~/service-worker/updateController
 import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
+  type AppManifest,
   type AppChromeBackAction,
   type AppChromeController,
   type AppContext,
@@ -38,7 +39,18 @@ import { KernelInjectionKey } from "~/types/kernel";
 
 import App from "./App.vue";
 
-function makeFakeKernel(): Kernel {
+const StubIcon = defineComponent({ template: "<svg />" });
+
+function makeApp(overrides: Partial<AppManifest> & { id: string; name: string }): AppManifest {
+  return {
+    icon: StubIcon as Component,
+    category: "productivity",
+    component: () => Promise.resolve({ default: defineComponent({ template: "<div />" }) }),
+    ...overrides,
+  };
+}
+
+function makeFakeKernel(apps: readonly AppManifest[] = []): Kernel {
   const desktopWallpaperIdRef = ref<string>(DEFAULT_WALLPAPER_ID);
   const mobileWallpaperIdRef = ref<string>(DEFAULT_WALLPAPER_ID);
   const telemetryEnabledRef = ref(false);
@@ -104,7 +116,7 @@ function makeFakeKernel(): Kernel {
       emit,
     },
     apps: {
-      list: vi.fn(() => []),
+      list: vi.fn(() => [...apps]),
       register: vi.fn(),
       launch: vi.fn(),
       unregister: vi.fn(),
@@ -262,6 +274,7 @@ describe("Settings App.vue", () => {
       "Comfort",
       "Account",
       "Privacy",
+      "Apps",
       "About device",
     ]);
     expect(wrapper.text()).not.toContain("Desktop Dock");
@@ -338,6 +351,52 @@ describe("Settings App.vue", () => {
     expect(items[0]?.classes()).toContain("settings__nav-item--active");
     expect(wrapper.find(".appearance").exists()).toBe(true);
     expect(wrapper.find(".dock-settings").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("renders mobile app settings entries and launches the selected app settings pane", async () => {
+    setShellViewportWidth(390);
+    const kernel = makeFakeKernel([
+      makeApp({
+        id: "notes",
+        name: "Notes",
+      }),
+      makeApp({
+        id: "calendar",
+        name: "Calendar",
+        settings: { keywords: ["calendar settings"] },
+      }),
+      makeApp({
+        id: "hidden-settings",
+        name: "Hidden Settings",
+        hidden: true,
+        settings: {},
+      }),
+      makeApp({
+        id: "_template",
+        name: "Template",
+        settings: {},
+      }),
+    ]);
+    const wrapper = mountApp({ kernel });
+
+    const appsItem = wrapper
+      .findAll(".settings__nav-item")
+      .find((item) => item.find(".settings__nav-label").text() === "Apps");
+    await appsItem?.trigger("click");
+
+    const appItems = wrapper.findAll(".apps-settings__item");
+    expect(appItems).toHaveLength(1);
+    expect(appItems[0]?.text()).toContain("Calendar");
+
+    await appItems[0]?.trigger("click");
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "calendar",
+      source: "api",
+      args: { pane: "settings" },
+    });
 
     wrapper.unmount();
   });

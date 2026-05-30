@@ -1,14 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   buildAgendaGroups,
   buildWeekCells,
-  CALENDAR_VIEW_STORAGE_KEY,
   eventsForDate,
   initialCalendarViewMode,
+  isCalendarPreferredViewMode,
   isCalendarViewMode,
-  readCalendarViewMode,
-  writeCalendarViewMode,
 } from "./calendarViews";
 import type { CalendarEvent } from "./useCalendar";
 
@@ -28,30 +26,19 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
 }
 
 describe("calendar view helpers", () => {
-  it("guards and persists supported view modes", () => {
-    const storage = new Map<string, string>();
-    const adapter = {
-      getItem: vi.fn((key: string) => storage.get(key) ?? null),
-      setItem: vi.fn((key: string, value: string) => {
-        storage.set(key, value);
-      }),
-    };
-
+  it("guards supported view modes and preferred view modes", () => {
     expect(isCalendarViewMode("week")).toBe(true);
     expect(isCalendarViewMode("timeline")).toBe(false);
-    expect(readCalendarViewMode(adapter)).toBe(null);
-
-    writeCalendarViewMode("agenda", adapter);
-
-    expect(adapter.setItem).toHaveBeenCalledWith(CALENDAR_VIEW_STORAGE_KEY, "agenda");
-    expect(readCalendarViewMode(adapter)).toBe("agenda");
+    expect(isCalendarPreferredViewMode("device")).toBe(true);
+    expect(isCalendarPreferredViewMode("agenda")).toBe(true);
+    expect(isCalendarPreferredViewMode("timeline")).toBe(false);
   });
 
-  it("falls back to the device default when storage has no valid view", () => {
-    const storage = { getItem: vi.fn(() => "timeline") };
-
-    expect(initialCalendarViewMode(true, storage)).toBe("agenda");
-    expect(initialCalendarViewMode(false, storage)).toBe("month");
+  it("resolves device defaults and explicit preferred views", () => {
+    expect(initialCalendarViewMode("device", true)).toBe("agenda");
+    expect(initialCalendarViewMode("device", false)).toBe("month");
+    expect(initialCalendarViewMode("week", true)).toBe("week");
+    expect(initialCalendarViewMode("week", false)).toBe("week");
   });
 
   it("builds a Monday-start week around the selected date", () => {

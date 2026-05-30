@@ -8,7 +8,7 @@ export const calendarManifest: AppManifest = {
   icon: CalendarAppIcon,
   category: "productivity",
   singleton: true,
-  permissions: ["vfs.read", "vfs.write"],
+  permissions: ["vfs.read", "vfs.write", "storage.write"],
   defaultWindow: { width: 980, height: 680, centered: true },
   widgets: [
     {
@@ -30,5 +30,8 @@ export const calendarManifest: AppManifest = {
     },
   ],
   component: () => import("./App.vue"),
-  keywords: ["calendar", "events", "schedule", "agenda", "planner"],
+  keywords: ["calendar", "events", "schedule", "agenda", "planner", "settings", "preferences"],
+  settings: {
+    keywords: ["calendar settings", "week start", "lunar calendar", "event defaults"],
+  },
 };

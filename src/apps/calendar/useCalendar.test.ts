@@ -201,6 +201,28 @@ describe("useCalendar", () => {
     expect(calendar.status.value).toBe("empty");
   });
 
+  it("uses configured defaults for week starts and new events", () => {
+    const calendar = useCalendar({
+      vfs: makeVfs(),
+      now: () => new Date(2026, 4, 26, 10, 15),
+      weekStartsOn: 0,
+      defaultEventDurationMinutes: 90,
+      defaultEventColor: "purple",
+    });
+
+    expect(calendar.monthGrid.value[0]?.dateKey).toBe("2026-04-26");
+    expect(calendar.defaultEventInputForDate("2026-05-27")).toMatchObject({
+      startAt: "2026-05-27T09:00",
+      endAt: "2026-05-27T10:30",
+      color: "purple",
+    });
+    expect(calendar.defaultEventInputForDate("2026-05-26")).toMatchObject({
+      startAt: "2026-05-26T11:00",
+      endAt: "2026-05-26T12:30",
+      color: "purple",
+    });
+  });
+
   it("rejects invalid input before writing", async () => {
     const vfs = makeVfs();
     const calendar = useCalendar({ vfs });

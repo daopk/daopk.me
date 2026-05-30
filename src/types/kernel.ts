@@ -50,6 +50,10 @@ declare global {
       handleId: string;
       reason: "user" | "shell" | "kernel";
     };
+    "app.settings.requested": {
+      manifestId: string;
+      handleId?: string;
+    };
     "settings.changed": { key: keyof SettingsState };
     "settings.synced": { source: "storage" };
     "settings.section.requested": { section: SettingsSectionId };

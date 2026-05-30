@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref, useTemplateRef, wat
 import { useElementBounding, useResizeObserver } from "@vueuse/core";
 
 import { useKernel } from "~/composables/useKernel";
+import { hasAppSettings, isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import type { AppHandle } from "~/types/app";
@@ -161,6 +162,38 @@ const disposeWindowCommands = [
       windowManager.close(id);
     },
   }),
+  kernel.commands.register({
+    id: "desktop:window.openSettings",
+    title: "Open App Settings",
+    scope: "shell",
+    run(ctx) {
+      const id = windowIdFromPayload(ctx, "desktop:window.openSettings");
+      if (id === null) return;
+
+      const record = windowManager.windows.find((entry) => entry.id === id);
+      if (record === undefined) {
+        debugWarn("[window-host]", "desktop:window.openSettings", "unknown window", id);
+        return;
+      }
+
+      const manifest = kernel.apps.list().find((entry) => entry.id === record.manifestId);
+      if (manifest === undefined || !hasAppSettings(manifest)) {
+        debugWarn(
+          "[window-host]",
+          "desktop:window.openSettings",
+          "manifest has no settings",
+          record.manifestId,
+        );
+        return;
+      }
+
+      windowManager.focus(id);
+      kernel.events.emit("app.settings.requested", {
+        manifestId: record.manifestId,
+        handleId: record.handleId,
+      });
+    },
+  }),
 ];
 
 function finderRevealFromArgs(
@@ -188,6 +221,27 @@ function settingsSectionFromArgs(
   }
 
   return isSettingsSectionId(args.section) ? args.section : null;
+}
+
+function appSettingsFromArgs(
+  manifestId: string,
+  args?: Readonly<Record<string, unknown>>,
+): { manifestId: string } | null {
+  if (!isAppSettingsLaunchArgs(args)) {
+    return null;
+  }
+
+  const manifest = kernel.apps.list().find((entry) => entry.id === manifestId);
+  if (manifest === undefined || !hasAppSettings(manifest)) {
+    return null;
+  }
+
+  return { manifestId };
+}
+
+function focusedHandleIdForManifest(manifestId: string): string | undefined {
+  return windowManager.windows.find((record) => record.manifestId === manifestId && record.focused)
+    ?.handleId;
 }
 
 function blogOpenFromArgs(
@@ -238,6 +292,24 @@ async function replaySettingsSectionAfterRestore(
   return true;
 }
 
+async function replayAppSettingsAfterRestore(
+  manifestId: string,
+  args?: Readonly<Record<string, unknown>>,
+): Promise<boolean> {
+  const request = appSettingsFromArgs(manifestId, args);
+  if (request === null) {
+    return false;
+  }
+
+  await nextTick();
+  const handleId = focusedHandleIdForManifest(manifestId);
+  kernel.events.emit("app.settings.requested", {
+    ...request,
+    ...(handleId === undefined ? {} : { handleId }),
+  });
+  return true;
+}
+
 async function replayBlogOpenAfterRestore(
   manifestId: string,
   args: Readonly<Record<string, unknown>> | undefined,
@@ -271,6 +343,7 @@ async function onLaunchRequested(
     const replayed =
       (await replayFinderRevealAfterRestore(manifest.id, args)) ||
       (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
+      (await replayAppSettingsAfterRestore(manifest.id, args)) ||
       (await replayBlogOpenAfterRestore(manifest.id, args, source));
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "restore — dropping launch args", manifest.id, args);
@@ -282,6 +355,7 @@ async function onLaunchRequested(
     const replayed =
       (await replayFinderRevealAfterRestore(manifest.id, args)) ||
       (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
+      (await replayAppSettingsAfterRestore(manifest.id, args)) ||
       (await replayBlogOpenAfterRestore(manifest.id, args, source));
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "focus — dropping launch args", manifest.id, args);

@@ -1,7 +1,8 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it, afterEach, vi } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick, type Component } from "vue";
 
+import type { AppManifest } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
 import Window from "./Window.vue";
@@ -26,9 +27,27 @@ function makeRecord(overrides: Partial<WindowRecord> = {}): WindowRecord {
   };
 }
 
-function mountWindow(record: WindowRecord = makeRecord()) {
+const StubIcon = defineComponent({ template: "<svg />" });
+
+function manifest(overrides: Partial<AppManifest> & { id: string }): AppManifest {
+  return {
+    name: overrides.id,
+    icon: StubIcon as Component,
+    category: "productivity",
+    component: () => Promise.resolve({ default: defineComponent({ template: "<div />" }) }),
+    ...overrides,
+  };
+}
+
+function mountWindow(record: WindowRecord = makeRecord(), manifests: readonly AppManifest[] = []) {
   const dispatch = vi.fn(async () => undefined);
   const kernel = {
+    apps: {
+      list: vi.fn(() => [...manifests]),
+      register: vi.fn(),
+      launch: vi.fn(),
+      unregister: vi.fn(),
+    },
     commands: {
       register: vi.fn(),
       unregister: vi.fn(),
@@ -107,5 +126,30 @@ describe("Window context menu", () => {
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual(["Minimize", "Restore", "Close"]);
+  });
+
+  it("shows Settings for apps with settings and dispatches the settings command", async () => {
+    const { wrapper, dispatch } = mountWindow(makeRecord(), [
+      manifest({ id: "notes", name: "Notes", settings: {} }),
+    ]);
+
+    dispatchContextMenu(wrapper.get(".window__titlebar").element);
+    await flushReka();
+
+    const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+    expect(items.map((node) => node.textContent?.trim())).toEqual([
+      "Minimize",
+      "Maximize",
+      "Settings",
+      "Close",
+    ]);
+
+    items[2]!.click();
+    await flushReka();
+
+    expect(dispatch).toHaveBeenCalledWith("desktop:window.openSettings", {
+      source: "menu",
+      payload: { windowId: "window-1" },
+    });
   });
 });

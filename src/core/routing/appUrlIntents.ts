@@ -6,6 +6,7 @@
  */
 
 import { debugWarn } from "~/core/debug";
+import { appSettingsLaunchArgs, APP_SETTINGS_PANE } from "~/core/apps/appSettings";
 import { blogPostPathFromSlug } from "~/core/routing/blogPaths";
 
 import type { Kernel } from "~/types/kernel";
@@ -60,12 +61,20 @@ function argsForApp(
   manifestId: string,
   searchParams: URLSearchParams,
 ): Readonly<Record<string, unknown>> | undefined {
-  if (manifestId !== "settings") {
-    return undefined;
+  const args: Record<string, unknown> = {};
+
+  if (searchParams.get("pane") === APP_SETTINGS_PANE) {
+    Object.assign(args, appSettingsLaunchArgs());
   }
 
-  const section = settingsSectionFromSearch(searchParams);
-  return section === null ? undefined : { section };
+  if (manifestId === "settings") {
+    const section = settingsSectionFromSearch(searchParams);
+    if (section !== null) {
+      args.section = section;
+    }
+  }
+
+  return Object.keys(args).length === 0 ? undefined : args;
 }
 
 function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {

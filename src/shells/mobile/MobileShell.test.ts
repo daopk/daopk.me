@@ -44,6 +44,13 @@ vi.mock("~/components/wallpaper/Wallpaper.vue", () => ({
 function makeKernel(
   manifests: AppManifest[],
 ): Pick<Kernel, "apps" | "processes" | "lifecycleCoordinator" | "events" | "widgets"> {
+  const listeners = new Map<string, Set<(payload: Record<string, unknown>) => void>>();
+  const emit = vi.fn((channel: string, payload: Record<string, unknown>) => {
+    for (const listener of listeners.get(channel) ?? []) {
+      listener(payload);
+    }
+  });
+
   return {
     apps: {
       list: () => manifests,
@@ -73,8 +80,15 @@ function makeKernel(
       emit: vi.fn(),
     },
     events: {
-      on: vi.fn(() => () => undefined),
-      emit: vi.fn(),
+      on: vi.fn((channel: string, listener: (payload: Record<string, unknown>) => void) => {
+        const bucket = listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
+        bucket.add(listener);
+        listeners.set(channel, bucket);
+        return (): void => {
+          bucket.delete(listener);
+        };
+      }),
+      emit,
       off: vi.fn(),
     },
     widgets: {
@@ -255,6 +269,37 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
     expect(wrapper.find(".home-screen__recents-fab").exists()).toBe(true);
     expect(currentKernel.processes.kill).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("replays app settings requests when a running app is resumed with settings args", async () => {
+    currentKernel = makeKernel([
+      manifest({ id: "calendar", name: "Calendar", settings: {} }),
+    ]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "calendar",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-manifest-id")).toBe("calendar");
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "calendar",
+      source: "api",
+      args: { pane: "settings" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(currentKernel.events.emit).toHaveBeenCalledWith("app.settings.requested", {
+      manifestId: "calendar",
+      handleId: "h-1",
+    });
 
     wrapper.unmount();
   });

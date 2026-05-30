@@ -1,0 +1,411 @@
+<script setup lang="ts">
+import { computed } from "vue";
+
+import { Button, Switch } from "~/components/ui";
+import { ArrowLeft, RotateCcw, Settings as SettingsIcon } from "~/icons/lucide";
+
+import {
+  CALENDAR_VIEW_MODES,
+  type CalendarPreferredViewMode,
+  type CalendarViewMode,
+} from "../calendarViews";
+import { colorLabel, EVENT_COLORS } from "../eventForm";
+import type {
+  CalendarAgendaDayCount,
+  CalendarDefaultEventDurationMinutes,
+  CalendarSettingsBindings,
+  CalendarWeekStart,
+} from "../useCalendarSettings";
+
+const props = withDefaults(
+  defineProps<{
+    readonly settings: CalendarSettingsBindings;
+    readonly showBack?: boolean;
+  }>(),
+  {
+    showBack: false,
+  },
+);
+
+const emit = defineEmits<{
+  back: [];
+}>();
+
+const preferredViewOptions: ReadonlyArray<{
+  readonly id: CalendarPreferredViewMode;
+  readonly label: string;
+}> = [
+  { id: "device", label: "Device default" },
+  ...CALENDAR_VIEW_MODES.map((view) => ({ id: view, label: viewLabel(view) })),
+];
+
+const weekStartOptions: ReadonlyArray<{ readonly id: CalendarWeekStart; readonly label: string }> =
+  [
+    { id: 1, label: "Monday" },
+    { id: 0, label: "Sunday" },
+  ];
+
+const agendaRangeOptions: readonly CalendarAgendaDayCount[] = [7, 14, 30];
+const durationOptions: readonly CalendarDefaultEventDurationMinutes[] = [30, 60, 90, 120];
+
+const preferredViewMode = computed(() => props.settings.preferredViewMode.value);
+const weekStartsOn = computed(() => props.settings.weekStartsOn.value);
+const agendaDayCount = computed(() => props.settings.agendaDayCount.value);
+const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value);
+const defaultEventDurationMinutes = computed(
+  () => props.settings.defaultEventDurationMinutes.value,
+);
+const defaultEventColor = computed(() => props.settings.defaultEventColor.value);
+
+function viewLabel(view: CalendarViewMode): string {
+  return `${view[0]!.toUpperCase()}${view.slice(1)}`;
+}
+</script>
+
+<template>
+  <main class="calendar-settings" aria-label="Calendar settings">
+    <header class="calendar-settings__header">
+      <Button
+        v-if="showBack"
+        size="sm"
+        :icon-start="ArrowLeft"
+        aria-label="Back to Calendar"
+        @click="emit('back')"
+      >
+        Back
+      </Button>
+      <div class="calendar-settings__title-group">
+        <SettingsIcon class="calendar-settings__title-icon" aria-hidden="true" />
+        <div>
+          <h2 class="calendar-settings__title">Calendar settings</h2>
+          <p class="calendar-settings__hint">Views, calendar labels, and new event defaults.</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="calendar-settings__group" aria-labelledby="calendar-settings-view">
+      <h3 id="calendar-settings-view" class="calendar-settings__group-title">View</h3>
+      <div
+        class="calendar-settings__option-grid"
+        role="radiogroup"
+        aria-labelledby="calendar-settings-view"
+      >
+        <button
+          v-for="option in preferredViewOptions"
+          :key="option.id"
+          type="button"
+          class="calendar-settings__choice"
+          :class="{ 'calendar-settings__choice--active': option.id === preferredViewMode }"
+          role="radio"
+          :aria-checked="option.id === preferredViewMode"
+          @click="settings.setPreferredViewMode(option.id)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </section>
+
+    <section class="calendar-settings__group" aria-labelledby="calendar-settings-week-start">
+      <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">Week start</h3>
+      <div
+        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+        role="radiogroup"
+        aria-labelledby="calendar-settings-week-start"
+      >
+        <button
+          v-for="option in weekStartOptions"
+          :key="option.id"
+          type="button"
+          class="calendar-settings__choice"
+          :class="{ 'calendar-settings__choice--active': option.id === weekStartsOn }"
+          role="radio"
+          :aria-checked="option.id === weekStartsOn"
+          @click="settings.setWeekStartsOn(option.id)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+    </section>
+
+    <section class="calendar-settings__group" aria-labelledby="calendar-settings-agenda">
+      <h3 id="calendar-settings-agenda" class="calendar-settings__group-title">Agenda range</h3>
+      <div
+        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+        role="radiogroup"
+        aria-labelledby="calendar-settings-agenda"
+      >
+        <button
+          v-for="days in agendaRangeOptions"
+          :key="days"
+          type="button"
+          class="calendar-settings__choice"
+          :class="{ 'calendar-settings__choice--active': days === agendaDayCount }"
+          role="radio"
+          :aria-checked="days === agendaDayCount"
+          @click="settings.setAgendaDayCount(days)"
+        >
+          {{ days }} days
+        </button>
+      </div>
+    </section>
+
+    <section class="calendar-settings__toggle-row" aria-labelledby="calendar-settings-lunar">
+      <div>
+        <h3 id="calendar-settings-lunar" class="calendar-settings__row-title">Lunar labels</h3>
+        <p class="calendar-settings__row-copy">Show Vietnamese lunar date labels in Calendar.</p>
+      </div>
+      <Switch
+        :model-value="showLunarCalendar"
+        :aria-label="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
+        @update:model-value="settings.setShowLunarCalendar"
+      />
+    </section>
+
+    <section class="calendar-settings__group" aria-labelledby="calendar-settings-duration">
+      <h3 id="calendar-settings-duration" class="calendar-settings__group-title">
+        New event duration
+      </h3>
+      <div
+        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+        role="radiogroup"
+        aria-labelledby="calendar-settings-duration"
+      >
+        <button
+          v-for="minutes in durationOptions"
+          :key="minutes"
+          type="button"
+          class="calendar-settings__choice"
+          :class="{ 'calendar-settings__choice--active': minutes === defaultEventDurationMinutes }"
+          role="radio"
+          :aria-checked="minutes === defaultEventDurationMinutes"
+          @click="settings.setDefaultEventDurationMinutes(minutes)"
+        >
+          {{ minutes }}m
+        </button>
+      </div>
+    </section>
+
+    <section class="calendar-settings__group" aria-labelledby="calendar-settings-color">
+      <h3 id="calendar-settings-color" class="calendar-settings__group-title">New event color</h3>
+      <div
+        class="calendar-settings__swatches"
+        role="radiogroup"
+        aria-labelledby="calendar-settings-color"
+      >
+        <button
+          v-for="color in EVENT_COLORS"
+          :key="color"
+          type="button"
+          class="calendar-settings__swatch"
+          :class="[
+            `calendar-settings__swatch--${color}`,
+            color === defaultEventColor && 'calendar-settings__swatch--active',
+          ]"
+          role="radio"
+          :aria-checked="color === defaultEventColor"
+          :aria-label="colorLabel(color)"
+          :title="colorLabel(color)"
+          @click="settings.setDefaultEventColor(color)"
+        />
+      </div>
+    </section>
+
+    <footer class="calendar-settings__footer">
+      <Button size="sm" :icon-start="RotateCcw" @click="settings.reset">Reset</Button>
+    </footer>
+  </main>
+</template>
+
+<style scoped lang="scss">
+.calendar-settings {
+  background: var(--color-bg);
+  block-size: 100%;
+  color: var(--color-fg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  inline-size: 100%;
+  overflow: auto;
+  padding: var(--space-xl);
+}
+
+.calendar-settings__header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-md);
+}
+
+.calendar-settings__title-group {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.calendar-settings__title-icon {
+  block-size: 22px;
+  color: var(--color-accent);
+  flex: 0 0 auto;
+  inline-size: 22px;
+}
+
+.calendar-settings__title,
+.calendar-settings__group-title,
+.calendar-settings__row-title {
+  margin: 0;
+}
+
+.calendar-settings__title {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.calendar-settings__hint,
+.calendar-settings__row-copy {
+  color: var(--color-fg-muted);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.calendar-settings__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.calendar-settings__group-title {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.calendar-settings__option-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.calendar-settings__option-grid--compact {
+  grid-template-columns: repeat(auto-fit, minmax(96px, max-content));
+}
+
+.calendar-settings__choice {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  cursor: pointer;
+  font: inherit;
+  min-block-size: 34px;
+  padding: var(--space-xs) var(--space-sm);
+  text-align: center;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+.calendar-settings__choice--active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset;
+}
+
+.calendar-settings__toggle-row {
+  align-items: center;
+  border-block: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--space-lg);
+  justify-content: space-between;
+  padding-block: var(--space-md);
+}
+
+.calendar-settings__row-title {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.calendar-settings__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.calendar-settings__swatch {
+  --calendar-settings-swatch: var(--color-accent);
+
+  background: var(--calendar-settings-swatch);
+  block-size: 30px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  inline-size: 30px;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+.calendar-settings__swatch--active {
+  border-color: var(--color-fg);
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--calendar-settings-swatch);
+}
+
+.calendar-settings__swatch--blue {
+  --calendar-settings-swatch: var(--color-accent);
+}
+
+.calendar-settings__swatch--green {
+  --calendar-settings-swatch: var(--color-success);
+}
+
+.calendar-settings__swatch--yellow {
+  --calendar-settings-swatch: color-mix(in srgb, var(--color-success) 42%, var(--color-error));
+}
+
+.calendar-settings__swatch--red {
+  --calendar-settings-swatch: var(--color-error);
+}
+
+.calendar-settings__swatch--purple {
+  --calendar-settings-swatch: var(--color-accent-sheen);
+}
+
+.calendar-settings__swatch--gray {
+  --calendar-settings-swatch: var(--color-fg-muted);
+}
+
+.calendar-settings__footer {
+  display: flex;
+  justify-content: flex-start;
+  margin-block-start: auto;
+}
+
+@media (max-width: 520px) {
+  .calendar-settings {
+    padding: var(--space-lg);
+  }
+
+  .calendar-settings__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .calendar-settings__option-grid,
+  .calendar-settings__option-grid--compact {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -92,6 +92,19 @@ describe("app URL intents", () => {
     });
   });
 
+  it("maps generic app settings panes to launch args", () => {
+    expect(parseAppUrlIntent("/apps/calendar?pane=settings")).toEqual({
+      kind: "app",
+      manifestId: "calendar",
+      args: { pane: "settings" },
+    });
+
+    expect(parseAppUrlIntent("/apps/calendar?pane=details")).toEqual({
+      kind: "app",
+      manifestId: "calendar",
+    });
+  });
+
   it("parses `/blog` as the Blog app index launch intent", () => {
     expect(parseAppUrlIntent("/blog")).toEqual({
       kind: "app",
@@ -136,7 +149,7 @@ describe("app URL intents", () => {
   });
 
   it("emits an app launch request for a registered app deep link", () => {
-    const { kernel, eventsEmit } = makeKernel(["about", "terminal", "settings"]);
+    const { kernel, eventsEmit } = makeKernel(["about", "terminal", "settings", "calendar"]);
 
     expect(consumeInitialAppUrlIntent(kernel, "/apps/settings?tab=background")).toBe(true);
 
@@ -144,6 +157,18 @@ describe("app URL intents", () => {
       manifestId: "settings",
       source: "deeplink",
       args: { section: "background" },
+    });
+  });
+
+  it("emits a generic app settings pane launch request", () => {
+    const { kernel, eventsEmit } = makeKernel(["calendar"]);
+
+    expect(consumeInitialAppUrlIntent(kernel, "/apps/calendar?pane=settings")).toBe(true);
+
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "calendar",
+      source: "deeplink",
+      args: { pane: "settings" },
     });
   });
 

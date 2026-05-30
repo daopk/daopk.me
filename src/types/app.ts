@@ -17,6 +17,10 @@ export interface WindowDefaults {
   centered?: boolean;
 }
 
+export interface AppSettingsManifest {
+  keywords?: readonly string[];
+}
+
 export interface AppManifest {
   id: string;
   name: string;
@@ -37,6 +41,7 @@ export interface AppManifest {
   component: () => Promise<{ default: Component }>;
   autorun?: boolean;
   keywords?: string[];
+  settings?: AppSettingsManifest;
 }
 
 export interface AppContext {
