@@ -15,7 +15,6 @@ import {
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
-import { SlidesAppIcon } from "~/icons/fluentColor";
 import { Play, Save } from "~/icons/lucide";
 import { AppContextInjectionKey } from "~/types/app";
 
@@ -47,6 +46,10 @@ let previewWriteHandle: ReturnType<typeof globalThis.setTimeout> | undefined;
 
 const dirty = computed(() => source.value !== savedSource.value);
 const canSave = computed(() => activeDeck.value !== null && dirty.value && !loading.value);
+const activeDeckTitle = computed(() => activeDeck.value?.title ?? "No deck selected");
+const activeDeckSubtitle = computed(() =>
+  activeDeck.value === null ? "Create or select a deck" : deckLabel(activeDeck.value),
+);
 const statusText = computed(() => {
   if (error.value.length > 0) {
     return error.value;
@@ -215,10 +218,9 @@ function messageFromError(value: unknown): string {
 <template>
   <AppFrame class="slides-app" layout="grid" :safe-area="false" aria-label="Slides">
     <AppToolbar class="slides-app__header">
-      <SlidesAppIcon class="slides-app__icon" aria-hidden="true" />
       <div class="slides-app__title">
-        <h1>Slides</h1>
-        <p>{{ activeDeck?.title ?? "Slidev decks in WebOS" }}</p>
+        <strong>{{ activeDeckTitle }}</strong>
+        <span>{{ activeDeckSubtitle }}</span>
       </div>
       <template #end>
         <ToolbarGroup class="slides-app__actions" label="Deck actions">
@@ -340,30 +342,25 @@ function messageFromError(value: unknown): string {
   padding: var(--space-md) var(--space-lg);
 }
 
-.slides-app__icon {
-  flex: 0 0 auto;
-  height: 32px;
-  width: 32px;
-}
-
 .slides-app__title {
   flex: 1 1 auto;
   min-width: 0;
 
-  h1,
-  p {
+  strong,
+  span {
+    display: block;
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  h1 {
+  strong {
     font-size: 16px;
     font-weight: 700;
   }
 
-  p {
+  span {
     color: var(--color-fg-muted);
     font-size: 12px;
   }

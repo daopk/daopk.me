@@ -24,7 +24,6 @@ import {
 import { Button } from "~/components/ui";
 import { useBreakpoint } from "~/composables/useBreakpoint";
 import { useVfs } from "~/composables/useVfs";
-import { CalendarAppIcon } from "~/icons/fluentColor";
 import {
   CalendarDays,
   CalendarRange,
@@ -469,7 +468,6 @@ function labelForStatus(status: CalendarStatus): string {
       <AppToolbar class="calendar__toolbar">
         <template #start>
           <div class="calendar__title-group">
-            <CalendarAppIcon class="calendar__app-icon" aria-hidden="true" />
             <div class="calendar__title-stack">
               <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
               <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
@@ -914,7 +912,6 @@ function labelForStatus(status: CalendarStatus): string {
   min-inline-size: 0;
 }
 
-.calendar__app-icon,
 .calendar__panel-icon {
   block-size: 20px;
   color: var(--color-accent);

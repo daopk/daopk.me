@@ -591,7 +591,7 @@ describe("Settings App.vue", () => {
 
     expect(wrapper.find(".sw-update-row").exists()).toBe(true);
     expect(wrapper.find(".settings__nav").exists()).toBe(true);
-    expect(wrapper.find(".settings__mobile-title").text()).toBe("Settings");
+    expect(wrapper.find(".settings__mobile-title").exists()).toBe(false);
     expect(wrapper.find(".settings__content").exists()).toBe(false);
     expect(wrapper.text()).toContain("Update available");
 

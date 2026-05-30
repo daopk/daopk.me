@@ -278,7 +278,6 @@ function labelForStatus(status: NotesStatus): string {
   >
     <aside v-if="showList" class="notes__sidebar" aria-label="Note list">
       <AppToolbar class="notes__sidebar-header" density="comfortable" variant="plain">
-        <h2 class="notes__title">Notes</h2>
         <template #end>
           <Button
             size="sm"
@@ -444,17 +443,6 @@ function labelForStatus(status: NotesStatus): string {
   border-block-end: 0;
   min-block-size: 64px;
   padding: var(--space-md);
-}
-
-.notes__title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.notes--compact .notes__title {
-  font-size: 28px;
-  font-weight: 700;
 }
 
 .notes__list {

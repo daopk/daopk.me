@@ -5,7 +5,7 @@ import { AppFrame, AppToolbar, DataTable, EmptyState, StatusBanner } from "~/com
 import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
-import { FinderFileIcon, FinderFolderIcon, TrashAppIcon } from "~/icons/fluentColor";
+import { FinderFileIcon, FinderFolderIcon } from "~/icons/fluentColor";
 import { formatBytes, formatDateTime } from "~/utils/format";
 import { AppContextInjectionKey } from "~/types/app";
 import type { TrashItem } from "~/types/trash";
@@ -223,15 +223,6 @@ function messageFromError(errorValue: unknown): string {
 <template>
   <AppFrame class="trash" layout="flex-column" aria-label="Trash">
     <AppToolbar class="trash__toolbar" density="comfortable" wrap>
-      <template #start>
-        <div class="trash__heading">
-          <TrashAppIcon class="trash__app-icon" aria-hidden="true" />
-          <div class="trash__heading-copy">
-            <h1>Trash</h1>
-            <p>{{ itemCountLabel }} / {{ formatBytes(totalBytes) }}</p>
-          </div>
-        </div>
-      </template>
       <template #end>
         <div class="trash__actions">
           <Button size="sm" :icon-start="RefreshCw" :loading="loading" @click="refresh">
@@ -282,13 +273,9 @@ function messageFromError(errorValue: unknown): string {
       <EmptyState
         v-else-if="items.length === 0"
         class="trash__empty"
-        title="Trash is empty."
+        title="No deleted items."
         description="Nothing to restore or remove."
-      >
-        <template #icon>
-          <TrashAppIcon class="trash__empty-icon" aria-hidden="true" />
-        </template>
-      </EmptyState>
+      />
 
       <DataTable v-else class="trash__table" label="Deleted items">
         <div class="trash__row trash__row--header" role="row">
@@ -432,35 +419,6 @@ function messageFromError(errorValue: unknown): string {
   padding: var(--space-sm) var(--space-md);
 }
 
-.trash__heading {
-  align-items: center;
-  display: flex;
-  gap: var(--space-sm);
-  min-inline-size: 0;
-
-  h1 {
-    font-size: 16px;
-    font-weight: 600;
-    line-height: 1.2;
-    margin: 0;
-  }
-
-  p {
-    color: var(--color-fg-muted);
-    margin: 2px 0 0;
-  }
-}
-
-.trash__app-icon {
-  block-size: 32px;
-  flex: 0 0 auto;
-  inline-size: 32px;
-}
-
-.trash__heading-copy {
-  min-inline-size: 0;
-}
-
 .trash__actions {
   align-items: center;
   display: inline-flex;
@@ -538,13 +496,6 @@ function messageFromError(errorValue: unknown): string {
   flex-direction: column;
   justify-content: center;
   text-align: center;
-}
-
-.trash__empty-icon {
-  block-size: 54px;
-  inline-size: 54px;
-  margin-block-end: var(--space-sm);
-  opacity: 0.85;
 }
 
 .trash__empty h2 {

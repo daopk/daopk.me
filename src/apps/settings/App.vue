@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
-import { AppFrame, ListButton, SectionHeader } from "~/components/kit";
+import { AppFrame, ListButton } from "~/components/kit";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
 import {
   SettingsAccountIcon as AccountIcon,
@@ -227,10 +227,6 @@ watch(
     </div>
 
     <nav v-if="showNav" class="settings__nav" aria-label="Settings sections">
-      <SectionHeader class="settings__nav-header">
-        <h2 class="settings__nav-title settings__mobile-title">Settings</h2>
-      </SectionHeader>
-
       <ListButton
         v-for="section in sections"
         :key="section.id"
@@ -327,23 +323,6 @@ watch(
 
 .settings--narrow > .settings__nav:first-child {
   grid-row: 1 / -1;
-}
-
-.settings__nav-header {
-  padding: var(--space-xs) var(--space-sm) var(--space-sm);
-}
-
-.settings__nav-title {
-  color: var(--color-fg);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.1;
-  margin: 0;
-}
-
-.settings--narrow .settings__nav-title {
-  font-size: 28px;
-  font-weight: 700;
 }
 
 .settings__nav-item {

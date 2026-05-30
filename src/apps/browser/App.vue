@@ -12,7 +12,6 @@ import {
   ToolbarGroup,
 } from "~/components/kit";
 import { Button, ContextMenu, ContextMenuItem } from "~/components/ui";
-import { BrowserAppIcon } from "~/icons/fluentColor";
 import {
   ArrowLeft,
   ArrowRight,
@@ -238,9 +237,6 @@ function openExternally(): void {
 
     <main class="browser__viewport">
       <EmptyState v-if="browser.current.value.kind === 'start'" class="browser__start">
-        <div class="browser__start-mark" aria-hidden="true">
-          <BrowserAppIcon :size="44" />
-        </div>
         <h2 class="browser__start-title">Start</h2>
         <ul class="browser__quick-links" aria-label="Quick links">
           <li v-for="link in BROWSER_QUICK_LINKS" :key="link.url">
@@ -496,17 +492,6 @@ function openExternally(): void {
   inline-size: 100%;
   justify-content: center;
   padding: var(--space-xl);
-}
-
-.browser__start-mark {
-  align-items: center;
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
-  border-radius: 50%;
-  display: inline-flex;
-  block-size: 72px;
-  inline-size: 72px;
-  justify-content: center;
 }
 
 .browser__start-title {

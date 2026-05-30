@@ -95,12 +95,6 @@ function durationDatetime(ms: number): string {
 <template>
   <AppFrame class="clock-app" layout="grid" :safe-area="false" aria-label="Clock">
     <div class="clock-app__topbar">
-      <header class="clock-app__header">
-        <div class="clock-app__title">
-          <Clock aria-hidden="true" />
-          <h2>Clock</h2>
-        </div>
-      </header>
       <TabList
         class="clock-app__tabs"
         :model-value="activeTab"
@@ -288,32 +282,6 @@ function durationDatetime(ms: number): string {
   grid-area: topbar;
   justify-content: space-between;
   padding: var(--space-md);
-}
-
-.clock-app__header {
-  align-items: center;
-  display: flex;
-  min-inline-size: 0;
-}
-
-.clock-app__title {
-  align-items: center;
-  display: inline-flex;
-  gap: var(--space-sm);
-  min-inline-size: 0;
-
-  svg {
-    block-size: 20px;
-    color: var(--color-accent);
-    inline-size: 20px;
-  }
-
-  h2 {
-    font-size: 15px;
-    font-weight: 650;
-    line-height: 1.2;
-    margin: 0;
-  }
 }
 
 .clock-app__tabs {
@@ -542,10 +510,6 @@ function durationDatetime(ms: number): string {
     padding-block-start: var(--space-sm);
     padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
     padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
-  }
-
-  .clock-app__header {
-    display: none;
   }
 
   .clock-app__tabs {

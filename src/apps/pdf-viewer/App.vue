@@ -22,7 +22,6 @@ import {
   ZoomIn,
   ZoomOut,
 } from "~/icons/lucide";
-import { PdfViewerAppIcon } from "~/icons/fluentColor";
 import { AppContextInjectionKey } from "~/types/app";
 
 import { usePdfViewer } from "./usePdfViewer";
@@ -123,10 +122,9 @@ function setCanvasRef(el: unknown): void {
     <AppToolbar class="pdf-viewer__toolbar" wrap>
       <template #start>
         <div class="pdf-viewer__document">
-          <PdfViewerAppIcon class="pdf-viewer__app-icon" aria-hidden="true" />
           <div class="pdf-viewer__document-text">
-            <strong>{{ viewer.title.value || "PDF Viewer" }}</strong>
-            <span>{{ sourceLabel }}</span>
+            <strong>{{ viewer.title.value || sourceLabel }}</strong>
+            <span v-if="viewer.title.value">{{ sourceLabel }}</span>
           </div>
         </div>
       </template>
@@ -226,9 +224,6 @@ function setCanvasRef(el: unknown): void {
         class="pdf-viewer__empty"
         title="Open a PDF"
       >
-        <template #icon>
-          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        </template>
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
       </EmptyState>
 
@@ -236,11 +231,7 @@ function setCanvasRef(el: unknown): void {
         v-else-if="viewer.status.value === 'loading'"
         class="pdf-viewer__empty"
         title="Loading..."
-      >
-        <template #icon>
-          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        </template>
-      </EmptyState>
+      />
 
       <EmptyState
         v-else-if="viewer.status.value === 'error'"
@@ -248,9 +239,6 @@ function setCanvasRef(el: unknown): void {
         role="alert"
         :title="viewer.error.value ?? undefined"
       >
-        <template #icon>
-          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        </template>
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
       </EmptyState>
 
@@ -298,12 +286,6 @@ function setCanvasRef(el: unknown): void {
   flex: 1 1 auto;
   gap: var(--space-sm);
   min-inline-size: 150px;
-}
-
-.pdf-viewer__app-icon {
-  block-size: 30px;
-  flex: 0 0 auto;
-  inline-size: 30px;
 }
 
 .pdf-viewer__document-text {
@@ -445,11 +427,6 @@ function setCanvasRef(el: unknown): void {
   margin: 0;
   max-inline-size: min(460px, 90vw);
   overflow-wrap: anywhere;
-}
-
-.pdf-viewer__empty-icon {
-  block-size: 56px;
-  inline-size: 56px;
 }
 
 .pdf-viewer__page {

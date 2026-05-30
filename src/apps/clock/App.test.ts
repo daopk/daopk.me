@@ -50,12 +50,11 @@ describe("Clock App", () => {
     wrapper.unmount();
   });
 
-  it("keeps the app title separate from tab navigation for mobile layout", () => {
+  it("keeps tab navigation in the topbar without duplicating the app title", () => {
     const wrapper = mount(ClockApp);
     const tablist = wrapper.find(".clock-app__topbar > [role='tablist']");
 
-    expect(wrapper.find(".clock-app__header h2").text()).toBe("Clock");
-    expect(wrapper.find(".clock-app__header [role='tablist']").exists()).toBe(false);
+    expect(wrapper.find(".clock-app__header").exists()).toBe(false);
     expect(tablist.attributes("aria-label")).toBe("Clock sections");
     expect(tablist.findAll('[role="tab"]')).toHaveLength(3);
 

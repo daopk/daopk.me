@@ -112,7 +112,7 @@ describe("Trash App.vue", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Trash is empty.");
+    expect(wrapper.text()).toContain("No deleted items.");
     expect(kernel.trash.list).toHaveBeenCalledWith({ handleId: "trash-handle" });
 
     wrapper.unmount();
@@ -134,7 +134,7 @@ describe("Trash App.vue", () => {
     await flushPromises();
 
     expect(kernel.trash.restore).toHaveBeenCalledWith("trash-1", { handleId: "trash-handle" });
-    expect(wrapper.text()).toContain("Trash is empty.");
+    expect(wrapper.text()).toContain("No deleted items.");
 
     wrapper.unmount();
   });
@@ -179,7 +179,7 @@ describe("Trash App.vue", () => {
     await flushPromises();
 
     expect(kernel.trash.empty).toHaveBeenCalledWith({ handleId: "trash-handle" });
-    expect(wrapper.text()).toContain("Trash is empty.");
+    expect(wrapper.text()).toContain("No deleted items.");
 
     wrapper.unmount();
   });

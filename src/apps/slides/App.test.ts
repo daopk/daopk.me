@@ -104,7 +104,7 @@ describe("Slides App.vue", () => {
 
     await flushPromises();
 
-    expect(wrapper.find("h1").text()).toBe("Slides");
+    expect(wrapper.find("h1").exists()).toBe(false);
     expect(wrapper.text()).toContain("Demo Deck");
     expect(wrapper.find('[aria-label="WebContainer log"]').text()).toContain("WebContainer");
     expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toContain(
