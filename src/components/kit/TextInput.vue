@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 interface TextInputProps {
   modelValue?: string;
   disabled?: boolean;
@@ -20,10 +22,27 @@ withDefaults(defineProps<TextInputProps>(), {
 defineEmits<{
   "update:modelValue": [next: string];
 }>();
+
+const inputRef = ref<HTMLInputElement | null>(null);
+
+function blur(): void {
+  inputRef.value?.blur();
+}
+
+function focus(options?: FocusOptions): void {
+  inputRef.value?.focus(options);
+}
+
+function select(): void {
+  inputRef.value?.select();
+}
+
+defineExpose({ blur, focus, select });
 </script>
 
 <template>
   <input
+    ref="inputRef"
     class="ds-kit-text-input"
     :class="[`ds-kit-text-input--${variant}`, invalid && 'ds-kit-text-input--invalid']"
     :type="type"

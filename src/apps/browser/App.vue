@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { inject, ref, watch } from "vue";
 
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  IconButton,
+  ListButton,
+  StatusBanner,
+  TextInput,
+  ToolbarGroup,
+} from "~/components/kit";
 import { Button, ContextMenu, ContextMenuItem } from "~/components/ui";
 import { BrowserAppIcon } from "~/icons/fluentColor";
 import {
@@ -84,77 +94,79 @@ function openExternally(): void {
 </script>
 
 <template>
-  <section class="browser" aria-label="Browser">
-    <header class="browser__toolbar">
-      <div class="browser__nav" aria-label="Navigation controls">
-        <ContextMenu :modal="false">
-          <template #trigger>
-            <Button
-              size="sm"
-              :icon-start="ArrowLeft"
-              :disabled="!browser.canGoBack.value"
-              aria-label="Back"
-              title="Back"
-              @click="goBack"
-            />
-          </template>
-          <template #items>
-            <ContextMenuItem v-if="browser.backHistory.value.length === 0" disabled>
-              No back history
-            </ContextMenuItem>
-            <ContextMenuItem
-              v-for="item in browser.backHistory.value"
-              :key="`back-${item.index}`"
-              @select="jumpToHistory(item.index)"
-            >
-              <span class="browser__history-item">
-                <span class="browser__history-title">{{ item.entry.title }}</span>
-                <span v-if="item.entry.kind === 'web'" class="browser__history-url">
-                  {{ item.entry.url }}
+  <AppFrame class="browser" layout="flex-column" :safe-area="false" aria-label="Browser">
+    <AppToolbar class="browser__toolbar" wrap>
+      <template #start>
+        <ToolbarGroup class="browser__nav" label="Navigation controls">
+          <ContextMenu :modal="false">
+            <template #trigger>
+              <IconButton
+                label="Back"
+                size="sm"
+                :icon="ArrowLeft"
+                :disabled="!browser.canGoBack.value"
+                title="Back"
+                @click="goBack"
+              />
+            </template>
+            <template #items>
+              <ContextMenuItem v-if="browser.backHistory.value.length === 0" disabled>
+                No back history
+              </ContextMenuItem>
+              <ContextMenuItem
+                v-for="item in browser.backHistory.value"
+                :key="`back-${item.index}`"
+                @select="jumpToHistory(item.index)"
+              >
+                <span class="browser__history-item">
+                  <span class="browser__history-title">{{ item.entry.title }}</span>
+                  <span v-if="item.entry.kind === 'web'" class="browser__history-url">
+                    {{ item.entry.url }}
+                  </span>
                 </span>
-              </span>
-            </ContextMenuItem>
-          </template>
-        </ContextMenu>
-        <ContextMenu :modal="false">
-          <template #trigger>
-            <Button
-              size="sm"
-              :icon-start="ArrowRight"
-              :disabled="!browser.canGoForward.value"
-              aria-label="Forward"
-              title="Forward"
-              @click="goForward"
-            />
-          </template>
-          <template #items>
-            <ContextMenuItem v-if="browser.forwardHistory.value.length === 0" disabled>
-              No forward history
-            </ContextMenuItem>
-            <ContextMenuItem
-              v-for="item in browser.forwardHistory.value"
-              :key="`forward-${item.index}`"
-              @select="jumpToHistory(item.index)"
-            >
-              <span class="browser__history-item">
-                <span class="browser__history-title">{{ item.entry.title }}</span>
-                <span v-if="item.entry.kind === 'web'" class="browser__history-url">
-                  {{ item.entry.url }}
+              </ContextMenuItem>
+            </template>
+          </ContextMenu>
+          <ContextMenu :modal="false">
+            <template #trigger>
+              <IconButton
+                label="Forward"
+                size="sm"
+                :icon="ArrowRight"
+                :disabled="!browser.canGoForward.value"
+                title="Forward"
+                @click="goForward"
+              />
+            </template>
+            <template #items>
+              <ContextMenuItem v-if="browser.forwardHistory.value.length === 0" disabled>
+                No forward history
+              </ContextMenuItem>
+              <ContextMenuItem
+                v-for="item in browser.forwardHistory.value"
+                :key="`forward-${item.index}`"
+                @select="jumpToHistory(item.index)"
+              >
+                <span class="browser__history-item">
+                  <span class="browser__history-title">{{ item.entry.title }}</span>
+                  <span v-if="item.entry.kind === 'web'" class="browser__history-url">
+                    {{ item.entry.url }}
+                  </span>
                 </span>
-              </span>
-            </ContextMenuItem>
-          </template>
-        </ContextMenu>
-        <Button
-          size="sm"
-          :icon-start="RefreshCw"
-          :disabled="!browser.canPreview.value"
-          aria-label="Reload"
-          title="Reload"
-          @click="browser.reload"
-        />
-        <Button size="sm" :icon-start="Home" aria-label="Home" title="Home" @click="goHome" />
-      </div>
+              </ContextMenuItem>
+            </template>
+          </ContextMenu>
+          <IconButton
+            label="Reload"
+            size="sm"
+            :icon="RefreshCw"
+            :disabled="!browser.canPreview.value"
+            title="Reload"
+            @click="browser.reload"
+          />
+          <IconButton label="Home" size="sm" :icon="Home" title="Home" @click="goHome" />
+        </ToolbarGroup>
+      </template>
 
       <form class="browser__address" role="search" @submit.prevent="submitAddress">
         <label class="browser__address-label" for="browser-address">URL</label>
@@ -173,10 +185,11 @@ function openExternally(): void {
           aria-hidden="true"
         />
         <Globe v-else class="browser__address-icon" aria-hidden="true" />
-        <input
+        <TextInput
           id="browser-address"
           v-model="addressInput"
           class="browser__address-input"
+          variant="plain"
           type="text"
           autocomplete="url"
           autocapitalize="off"
@@ -196,48 +209,57 @@ function openExternally(): void {
         />
       </form>
 
-      <Button
-        size="sm"
-        :icon-start="ExternalLink"
-        :disabled="browser.current.value.kind !== 'web'"
-        aria-label="Open externally"
-        title="Open externally"
-        @click="openExternally"
-      />
-    </header>
+      <template #end>
+        <IconButton
+          label="Open externally"
+          size="sm"
+          :icon="ExternalLink"
+          :disabled="browser.current.value.kind !== 'web'"
+          title="Open externally"
+          @click="openExternally"
+        />
+      </template>
+    </AppToolbar>
 
     <nav class="browser__bookmarks" aria-label="Bookmarks">
-      <button
+      <ListButton
         v-for="link in BROWSER_QUICK_LINKS"
         :key="link.url"
-        type="button"
         class="browser__bookmark"
-        :title="link.url"
+        :aria-label="`${link.label}: ${link.url}`"
         @click="openQuickLink(link.url)"
       >
-        <span class="browser__bookmark-icon" aria-hidden="true">{{ link.iconLabel }}</span>
+        <template #icon>
+          <span class="browser__bookmark-icon" aria-hidden="true">{{ link.iconLabel }}</span>
+        </template>
         <span class="browser__bookmark-label">{{ link.label }}</span>
-      </button>
+      </ListButton>
     </nav>
 
     <main class="browser__viewport">
-      <section v-if="browser.current.value.kind === 'start'" class="browser__start">
+      <EmptyState v-if="browser.current.value.kind === 'start'" class="browser__start">
         <div class="browser__start-mark" aria-hidden="true">
           <BrowserAppIcon :size="44" />
         </div>
         <h2 class="browser__start-title">Start</h2>
         <ul class="browser__quick-links" aria-label="Quick links">
           <li v-for="link in BROWSER_QUICK_LINKS" :key="link.url">
-            <button type="button" class="browser__quick-link" @click="openQuickLink(link.url)">
-              <span class="browser__quick-link-icon" aria-hidden="true">{{ link.iconLabel }}</span>
+            <ListButton class="browser__quick-link" @click="openQuickLink(link.url)">
+              <template #icon>
+                <span class="browser__quick-link-icon" aria-hidden="true">
+                  {{ link.iconLabel }}
+                </span>
+              </template>
               <span>{{ link.label }}</span>
-              <ExternalLink aria-hidden="true" :size="14" :stroke-width="2" />
-            </button>
+              <template #end>
+                <ExternalLink aria-hidden="true" :size="14" :stroke-width="2" />
+              </template>
+            </ListButton>
           </li>
         </ul>
-      </section>
+      </EmptyState>
 
-      <section v-else-if="browser.previewBlocked.value" class="browser__blocked">
+      <EmptyState v-else-if="browser.previewBlocked.value" class="browser__blocked">
         <div class="browser__blocked-mark" aria-hidden="true">
           <ExternalLink :size="32" :stroke-width="1.9" />
         </div>
@@ -251,7 +273,7 @@ function openExternally(): void {
         >
           Open externally
         </Button>
-      </section>
+      </EmptyState>
 
       <iframe
         v-else
@@ -277,11 +299,11 @@ function openExternally(): void {
       />
     </main>
 
-    <footer class="browser__status" role="status">
+    <StatusBanner as="footer" class="browser__status">
       <span v-if="browser.isLoading.value" class="browser__status-spinner" aria-hidden="true" />
       {{ browser.message.value }}
-    </footer>
-  </section>
+    </StatusBanner>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -364,6 +386,10 @@ function openExternally(): void {
   min-inline-size: 4ch;
   outline: none;
   padding: 0;
+}
+
+.browser__address-input:focus-visible {
+  outline: none;
 }
 
 .browser__bookmarks {
@@ -578,6 +604,9 @@ function openExternally(): void {
   align-items: center;
   background: var(--color-bg-subtle);
   border-block-start: 1px solid var(--color-border);
+  border-block-end: 0;
+  border-inline: 0;
+  border-radius: 0;
   color: var(--color-fg-muted);
   display: flex;
   flex: 0 0 auto;
@@ -615,9 +644,13 @@ function openExternally(): void {
     flex-wrap: wrap;
   }
 
-  .browser__address {
+  .browser__toolbar :deep(.ds-kit-toolbar__section--main) {
     flex-basis: 100%;
     order: 2;
+  }
+
+  .browser__address {
+    flex-basis: 100%;
   }
 
   .browser__bookmark-label {

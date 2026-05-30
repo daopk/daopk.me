@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { inject, nextTick, ref, useTemplateRef, watch } from "vue";
 
+import { AppFrame, TextInput } from "~/components/kit";
 import { useAppLifecycle } from "~/composables/useAppLifecycle";
 import { AppContextInjectionKey } from "~/types/app";
 import { useTerminalSession } from "./useTerminalSession";
+
+interface TerminalInputRef {
+  blur: () => void;
+  focus: (options?: FocusOptions) => void;
+}
 
 const ctx = inject(AppContextInjectionKey, null);
 const { onPhase } = useAppLifecycle(() => ctx?.handleId);
@@ -13,7 +19,7 @@ const { scrollback, cwd, submit, prevHistory, nextHistory, resetHistoryCursor } 
 
 const input = ref<string>("");
 const scrollbackRef = useTemplateRef<HTMLElement>("scrollbackRef");
-const inputRef = useTemplateRef<HTMLInputElement>("inputRef");
+const inputRef = useTemplateRef<TerminalInputRef>("inputRef");
 onPhase("suspended", () => {
   inputRef.value?.blur();
 });
@@ -70,7 +76,7 @@ function onInputEdit(): void {
 </script>
 
 <template>
-  <section class="terminal" :aria-label="'Terminal'">
+  <AppFrame class="terminal" layout="flex-column" :safe-area="false" :aria-label="'Terminal'">
     <ol
       ref="scrollbackRef"
       class="terminal__scrollback"
@@ -91,10 +97,11 @@ function onInputEdit(): void {
 
     <form class="terminal__prompt-row" @submit.prevent="onSubmit">
       <span class="terminal__prompt" aria-hidden="true">{{ cwd }} $</span>
-      <input
+      <TextInput
         ref="inputRef"
         v-model="input"
         class="terminal__input"
+        variant="plain"
         type="text"
         autocomplete="off"
         autocorrect="off"
@@ -105,7 +112,7 @@ function onInputEdit(): void {
         @input="onInputEdit"
       />
     </form>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -187,6 +194,7 @@ function onInputEdit(): void {
   color: inherit;
   flex: 1 1 auto;
   font: inherit;
+  min-block-size: 0;
   min-inline-size: 4ch;
   outline: none;
   padding: 0;

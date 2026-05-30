@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, watch } from "vue";
 
+import { AppFrame, EmptyState, ListButton, SectionHeader, StatusBanner } from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
@@ -114,29 +115,35 @@ function onPostSelect(post: BlogIndexPost): void {
 </script>
 
 <template>
-  <article class="blog" :aria-busy="busy ? 'true' : undefined" :data-handle-id="debugHandleId">
+  <AppFrame
+    as="article"
+    class="blog"
+    :safe-area="false"
+    :aria-busy="busy ? 'true' : undefined"
+    :data-handle-id="debugHandleId"
+  >
     <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
-      <header class="blog__index-header">
-        <h1>Latest posts</h1>
-      </header>
+      <SectionHeader class="blog__index-header" title="Latest posts" :level="1" />
 
-      <p v-if="blogIndex.loading.value" class="blog__status">Loading posts...</p>
-      <section v-else-if="blogIndex.loadFailed.value" class="blog__state" aria-live="polite">
+      <StatusBanner v-if="blogIndex.loading.value" class="blog__status">
+        Loading posts...
+      </StatusBanner>
+      <EmptyState v-else-if="blogIndex.loadFailed.value" class="blog__state" aria-live="polite">
         <h2>Could not load posts</h2>
         <p>Try opening Blog again.</p>
-      </section>
-      <section v-else-if="blogIndex.empty.value" class="blog__state" aria-live="polite">
+      </EmptyState>
+      <EmptyState v-else-if="blogIndex.empty.value" class="blog__state" aria-live="polite">
         <h2>No posts yet</h2>
-      </section>
+      </EmptyState>
       <ol v-else class="blog__index-list">
         <li v-for="post in blogIndex.posts.value" :key="post.slug">
-          <button class="blog__index-item" type="button" @click="onPostSelect(post)">
+          <ListButton class="blog__index-item" @click="onPostSelect(post)">
             <span v-if="post.date && post.formattedDate" class="blog__index-date">
               <time :datetime="post.date">{{ post.formattedDate }}</time>
             </span>
             <span class="blog__index-title">{{ post.title }}</span>
             <span v-if="post.excerpt" class="blog__index-excerpt">{{ post.excerpt }}</span>
-          </button>
+          </ListButton>
         </li>
       </ol>
     </section>
@@ -153,14 +160,16 @@ function onPostSelect(post: BlogIndexPost): void {
           All posts
         </Button>
         <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
-        <section v-else-if="blogPost.notFound.value" class="blog__state" aria-live="polite">
+        <EmptyState v-else-if="blogPost.notFound.value" class="blog__state" aria-live="polite">
           <h1>Post not found</h1>
           <p>The post "{{ missingLabel }}" is not available.</p>
-        </section>
-        <p v-else-if="blogPost.loadFailed.value" class="blog__error">Could not load blog post.</p>
+        </EmptyState>
+        <StatusBanner v-else-if="blogPost.loadFailed.value" class="blog__error" tone="error">
+          Could not load blog post.
+        </StatusBanner>
       </div>
     </template>
-  </article>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -199,7 +208,7 @@ function onPostSelect(post: BlogIndexPost): void {
   margin-block-end: var(--space-lg);
 }
 
-.blog__index-header h1 {
+.blog__index-header :deep(h1) {
   font-size: 28px;
   font-weight: 650;
   line-height: 1.15;

@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  IconButton,
+  ListButton,
+  StatusBanner,
+  Textarea,
+  TextInput,
+  ToolbarGroup,
+} from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
@@ -202,44 +213,45 @@ function messageFromError(value: unknown): string {
 </script>
 
 <template>
-  <section class="slides-app" aria-label="Slides">
-    <header class="slides-app__header">
+  <AppFrame class="slides-app" layout="grid" :safe-area="false" aria-label="Slides">
+    <AppToolbar class="slides-app__header">
       <SlidesAppIcon class="slides-app__icon" aria-hidden="true" />
       <div class="slides-app__title">
         <h1>Slides</h1>
         <p>{{ activeDeck?.title ?? "Slidev decks in WebOS" }}</p>
       </div>
-      <div class="slides-app__actions">
-        <Button
-          size="sm"
-          :icon-start="Save"
-          :disabled="!canSave"
-          :loading="loading && canSave"
-          aria-label="Save deck"
-          title="Save deck"
-          @click="saveDeck"
-        />
-        <Button
-          size="sm"
-          variant="primary"
-          :icon-start="Play"
-          :disabled="activeDeck === null || runtime.status.value === 'installing'"
-          :loading="runtime.status.value === 'booting' || runtime.status.value === 'starting'"
-          aria-label="Start preview"
-          title="Start preview"
-          @click="startPreview"
-        />
-      </div>
-    </header>
+      <template #end>
+        <ToolbarGroup class="slides-app__actions" label="Deck actions">
+          <IconButton
+            label="Save deck"
+            size="sm"
+            :icon="Save"
+            :disabled="!canSave"
+            aria-label="Save deck"
+            title="Save deck"
+            @click="saveDeck"
+          />
+          <IconButton
+            label="Start preview"
+            size="sm"
+            variant="subtle"
+            :icon="Play"
+            :disabled="activeDeck === null || runtime.status.value === 'installing'"
+            aria-label="Start preview"
+            title="Start preview"
+            @click="startPreview"
+          />
+        </ToolbarGroup>
+      </template>
+    </AppToolbar>
 
     <div class="slides-app__workspace">
       <aside class="slides-app__sidebar" aria-label="Slide decks">
         <form class="slides-app__new" @submit.prevent="createDeck">
           <label for="slides-new-title">New deck</label>
-          <input
+          <TextInput
             id="slides-new-title"
             v-model="titleDraft"
-            type="text"
             autocomplete="off"
             :disabled="loading"
           />
@@ -247,24 +259,26 @@ function messageFromError(value: unknown): string {
         </form>
 
         <nav class="slides-app__deck-list" aria-label="Decks">
-          <button
+          <ListButton
             v-for="deck in decks"
             :key="deck.filePath"
-            type="button"
             class="slides-app__deck"
             :class="{ 'slides-app__deck--active': isActive(deck) }"
+            :active="isActive(deck)"
             @click="openDeck(deck.filePath)"
           >
             <strong>{{ deck.title }}</strong>
             <span>{{ deckLabel(deck) }}</span>
-          </button>
+          </ListButton>
         </nav>
       </aside>
 
       <main class="slides-app__editor">
-        <textarea
+        <Textarea
           v-model="source"
           class="slides-app__textarea"
+          variant="plain"
+          resize="none"
           spellcheck="false"
           :disabled="activeDeck === null"
           aria-label="Slidev Markdown"
@@ -281,10 +295,10 @@ function messageFromError(value: unknown): string {
           allow="cross-origin-isolated; fullscreen"
           referrerpolicy="no-referrer"
         />
-        <div v-else class="slides-app__preview-state">
+        <EmptyState v-else class="slides-app__preview-state">
           <strong>{{ runtime.status.value }}</strong>
           <span>{{ statusText }}</span>
-        </div>
+        </EmptyState>
         <section class="slides-app__log" aria-label="WebContainer log">
           <header class="slides-app__log-header">
             <strong>WebContainer</strong>
@@ -300,10 +314,10 @@ function messageFromError(value: unknown): string {
       </aside>
     </div>
 
-    <footer class="slides-app__status" role="status">
+    <StatusBanner as="footer" class="slides-app__status">
       <span>{{ statusText }}</span>
-    </footer>
-  </section>
+    </StatusBanner>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -460,6 +474,10 @@ function messageFromError(value: unknown): string {
   width: 100%;
 }
 
+.slides-app__textarea:focus-visible {
+  outline: 0;
+}
+
 .slides-app__preview {
   background: var(--color-bg-subtle);
   border-left: 1px solid var(--color-border);
@@ -551,6 +569,9 @@ function messageFromError(value: unknown): string {
 .slides-app__status {
   background: var(--color-bg-subtle);
   border-top: 1px solid var(--color-border);
+  border-block-end: 0;
+  border-inline: 0;
+  border-radius: 0;
   color: var(--color-fg-muted);
   font-size: 12px;
   min-height: 28px;
