@@ -16,6 +16,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const POSTS_DIR = join(ROOT, "src/content/posts");
 const DIST_DIR = join(ROOT, "dist");
 const SEO_BLOG_DIR = join(DIST_DIR, "__seo/blog");
+const SEO_BLOG_INDEX_FILE = join(DIST_DIR, "__seo/blog-index.html");
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -624,7 +625,7 @@ async function main() {
 
   const sortedPosts = [...posts].sort(comparePostsNewestFirst);
 
-  await writeTextFile(join(SEO_BLOG_DIR, "index.html"), buildIndexDocument(sortedPosts));
+  await writeTextFile(SEO_BLOG_INDEX_FILE, buildIndexDocument(sortedPosts));
   await writeTextFile(join(DIST_DIR, "sitemap.xml"), buildSitemap(sortedPosts));
   await writeTextFile(
     join(DIST_DIR, "robots.txt"),

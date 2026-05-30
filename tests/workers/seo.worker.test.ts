@@ -25,7 +25,7 @@ function makeEnv(): {
   const fetch = vi.fn(async (input: Request | string) => {
     const url = typeof input === "string" ? new URL(input, "https://daopk.me") : new URL(input.url);
 
-    if (url.pathname === "/__seo/blog/index") {
+    if (url.pathname === "/__seo/blog-index") {
       return textResponse(`${SEO_BLOG_INDEX_ASSET_MARKER}<main>Latest posts</main>`);
     }
 
@@ -105,6 +105,31 @@ describe("SEO Worker", () => {
     );
   });
 
+  it("serves generated article headers to crawler HEAD requests", async () => {
+    const { env, fetch } = makeEnv();
+    const request = new Request("https://daopk.me/blog/building-a-tiny-web-os", {
+      headers: { "User-Agent": "Googlebot/2.1" },
+      method: "HEAD",
+    });
+
+    const response = await handleRequest(request, env);
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const firstCall = fetch.mock.calls[0];
+    if (!firstCall) {
+      throw new Error("Expected ASSETS.fetch to be called.");
+    }
+
+    const assetRequest = firstCall[0];
+    expect(assetRequest).toBeInstanceOf(Request);
+    expect((assetRequest as Request).method).toBe("GET");
+    expect(new URL((assetRequest as Request).url).pathname).toBe(
+      "/__seo/blog/building-a-tiny-web-os",
+    );
+  });
+
   it("serves generated blog index HTML to crawlers", async () => {
     const { env, fetch } = makeEnv();
     const request = new Request("https://daopk.me/blog", {
@@ -123,7 +148,7 @@ describe("SEO Worker", () => {
 
     const assetRequest = firstCall[0];
     expect(assetRequest).toBeInstanceOf(Request);
-    expect(new URL((assetRequest as Request).url).pathname).toBe("/__seo/blog/index");
+    expect(new URL((assetRequest as Request).url).pathname).toBe("/__seo/blog-index");
   });
 
   it("passes normal browser blog requests through to SPA assets", async () => {

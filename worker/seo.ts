@@ -53,7 +53,7 @@ function blogSlugFromPathname(pathname: string): string | null {
   return slug !== null && SLUG_PATTERN.test(slug) ? slug : null;
 }
 
-function responseFromHtml(html: string, response: Response): Response {
+function responseFromHtml(html: string | null, response: Response): Response {
   return new Response(html, {
     headers: response.headers,
     status: response.status,
@@ -69,7 +69,10 @@ async function fetchSeoPage(
   missingMessage: string,
 ): Promise<Response> {
   const assetUrl = new URL(pathname, request.url);
-  const response = await env.ASSETS.fetch(new Request(assetUrl, request));
+  const assetRequest = new Request(assetUrl, request);
+  const response = await env.ASSETS.fetch(
+    assetRequest.method === "HEAD" ? new Request(assetRequest, { method: "GET" }) : assetRequest,
+  );
 
   if (response.status === 404) {
     return noIndexResponse(missingMessage);
@@ -80,14 +83,14 @@ async function fetchSeoPage(
     return noIndexResponse(missingMessage);
   }
 
-  return withCrawlerHeaders(responseFromHtml(html, response));
+  return withCrawlerHeaders(responseFromHtml(request.method === "HEAD" ? null : html, response));
 }
 
 async function fetchSeoIndex(request: Request, env: SeoWorkerEnv): Promise<Response> {
   return fetchSeoPage(
     request,
     env,
-    "/__seo/blog/index",
+    "/__seo/blog-index",
     SEO_BLOG_INDEX_ASSET_MARKER,
     "Blog index not found.",
   );
