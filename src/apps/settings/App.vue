@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
+import { AppFrame, ListButton, SectionHeader } from "~/components/kit";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
 import {
   SettingsAccountIcon as AccountIcon,
@@ -42,6 +43,10 @@ interface SectionEntry {
   label: string;
   icon: Component;
   component: Component;
+}
+
+interface AppFrameRef {
+  element: HTMLElement | null;
 }
 
 const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
@@ -108,14 +113,15 @@ const componentMap: Record<SettingsSectionId, Component> = {
 
 const NARROW_BREAKPOINT = 500;
 
-const rootRef = useTemplateRef<HTMLElement>("rootRef");
+const rootRef = useTemplateRef<AppFrameRef>("rootRef");
+const rootElement = computed(() => rootRef.value?.element ?? null);
 const isNarrow = ref(false);
 const appContext = inject(AppContextInjectionKey, null);
 const appChrome = inject(AppChromeInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
 const { shellId } = useActiveShell();
 
-useResizeObserver(rootRef, ([entry]) => {
+useResizeObserver(rootElement, ([entry]) => {
   if (entry) {
     isNarrow.value = entry.contentRect.width < NARROW_BREAKPOINT;
   }
@@ -206,10 +212,13 @@ watch(
 </script>
 
 <template>
-  <section
+  <AppFrame
     ref="rootRef"
+    as="section"
     class="settings"
     :class="{ 'settings--narrow': isNarrow }"
+    layout="grid"
+    :safe-area="false"
     aria-label="Settings"
   >
     <div v-if="showNavInstallRow || showNavUpdateRow" class="settings__status-stack">
@@ -218,28 +227,26 @@ watch(
     </div>
 
     <nav v-if="showNav" class="settings__nav" aria-label="Settings sections">
-      <header class="settings__nav-header">
+      <SectionHeader class="settings__nav-header">
         <h2 class="settings__nav-title settings__mobile-title">Settings</h2>
-      </header>
+      </SectionHeader>
 
-      <button
+      <ListButton
         v-for="section in sections"
         :key="section.id"
-        type="button"
         class="settings__nav-item"
         :class="{ 'settings__nav-item--active': section.id === activeId }"
-        :aria-current="section.id === activeId ? 'page' : undefined"
+        :active="section.id === activeId"
         @click="select(section.id)"
       >
-        <component :is="section.icon" class="settings__nav-icon" aria-hidden="true" />
+        <template #icon>
+          <component :is="section.icon" class="settings__nav-icon" aria-hidden="true" />
+        </template>
         <span class="settings__nav-label">{{ section.label }}</span>
-        <component
-          v-if="isNarrow"
-          :is="NavChevronIcon"
-          class="settings__nav-chevron"
-          aria-hidden="true"
-        />
-      </button>
+        <template v-if="isNarrow" #end>
+          <component :is="NavChevronIcon" class="settings__nav-chevron" aria-hidden="true" />
+        </template>
+      </ListButton>
     </nav>
 
     <main v-if="showContent" class="settings__content">
@@ -249,7 +256,7 @@ watch(
       </div>
       <component :is="activeComponent" class="settings__section" />
     </main>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">

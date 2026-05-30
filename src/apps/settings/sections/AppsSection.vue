@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { EmptyState, ListButton, SectionHeader } from "~/components/kit";
 import { useKernel } from "~/composables/useKernel";
 import { appSettingsLaunchArgs, hasAppSettings } from "~/core/apps/appSettings";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
@@ -33,26 +34,29 @@ function openAppSettings(manifestId: string): void {
 
 <template>
   <section class="apps-settings" aria-labelledby="apps-settings-title">
-    <header class="apps-settings__header">
+    <SectionHeader class="apps-settings__header">
       <h2 id="apps-settings-title" class="apps-settings__title">Apps</h2>
-    </header>
+    </SectionHeader>
 
-    <div v-if="apps.length === 0" class="apps-settings__empty" role="status">
+    <EmptyState v-if="apps.length === 0" class="apps-settings__empty">
       No app settings available.
-    </div>
+    </EmptyState>
 
     <div v-else class="apps-settings__list">
-      <button
+      <ListButton
         v-for="app in apps"
         :key="app.id"
-        type="button"
         class="apps-settings__item"
         @click="openAppSettings(app.id)"
       >
-        <component :is="app.icon" class="apps-settings__icon" aria-hidden="true" />
+        <template #icon>
+          <component :is="app.icon" class="apps-settings__icon" aria-hidden="true" />
+        </template>
         <span class="apps-settings__name">{{ app.name }}</span>
-        <component :is="NavChevronIcon" class="apps-settings__chevron" aria-hidden="true" />
-      </button>
+        <template #end>
+          <component :is="NavChevronIcon" class="apps-settings__chevron" aria-hidden="true" />
+        </template>
+      </ListButton>
     </div>
   </section>
 </template>

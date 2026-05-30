@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 interface AppFrameProps {
   as?: keyof HTMLElementTagNameMap;
   background?: "default" | "subtle";
@@ -12,10 +14,15 @@ withDefaults(defineProps<AppFrameProps>(), {
   layout: "block",
   safeArea: true,
 });
+
+const element = ref<HTMLElement | null>(null);
+
+defineExpose({ element });
 </script>
 
 <template>
   <component
+    ref="element"
     :is="as"
     class="ds-kit-app-frame"
     :class="[

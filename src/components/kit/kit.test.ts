@@ -48,6 +48,7 @@ describe("kit components", () => {
     });
     expect(frame.classes()).toContain("ds-kit-app-frame--subtle");
     expect(frame.classes()).toContain("ds-kit-app-frame--flex-column");
+    expect((frame.vm as { element: Element | null }).element).toBe(frame.element);
 
     const panel = mount(Panel, {
       props: { variant: "elevated", padding: "lg" },

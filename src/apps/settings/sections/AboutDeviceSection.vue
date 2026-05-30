@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 
+import { Badge, Panel, SectionHeader } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
 import { useBreakpoint } from "~/composables/useBreakpoint";
 import { useKernel } from "~/composables/useKernel";
@@ -96,6 +97,19 @@ const softwareUpdateTone = computed<"muted" | "success" | "warning" | "danger">(
 
   return "muted";
 });
+const softwareUpdateBadgeTone = computed<"neutral" | "accent" | "success" | "danger">(() => {
+  switch (softwareUpdateTone.value) {
+    case "success":
+      return "success";
+    case "warning":
+      return "accent";
+    case "danger":
+      return "danger";
+    case "muted":
+      return "neutral";
+  }
+  return "neutral";
+});
 const softwareUpdateStatus = computed((): string => {
   switch (updateState.value.kind) {
     case "update-available":
@@ -134,14 +148,14 @@ function runSoftwareUpdateAction(): void {
 
 <template>
   <article class="about-device" aria-label="About this device">
-    <header class="about-device__header">
+    <SectionHeader class="about-device__header">
       <h2 class="about-device__title">About device</h2>
       <p class="about-device__hint">
         Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics.
       </p>
-    </header>
+    </SectionHeader>
 
-    <dl class="about-device__list">
+    <Panel as="dl" class="about-device__list" variant="plain" padding="none">
       <div class="about-device__row">
         <dt class="about-device__key">Build time</dt>
         <dd class="about-device__value">{{ buildTime }}</dd>
@@ -149,9 +163,13 @@ function runSoftwareUpdateAction(): void {
       <div class="about-device__row about-device__row--action">
         <dt class="about-device__key">Software update</dt>
         <dd class="about-device__value about-device__value--action">
-          <span class="about-device__update-status" :data-tone="softwareUpdateTone">
+          <Badge
+            class="about-device__update-status"
+            :tone="softwareUpdateBadgeTone"
+            :data-tone="softwareUpdateTone"
+          >
             {{ softwareUpdateStatus }}
-          </span>
+          </Badge>
           <Button
             size="sm"
             :variant="updateButtonVariant"
@@ -191,9 +209,13 @@ function runSoftwareUpdateAction(): void {
       <div class="about-device__row">
         <dt class="about-device__key">Active overrides</dt>
         <dd class="about-device__value">
-          <span class="about-device__badge" :data-empty="overrideCount === 0">
+          <Badge
+            class="about-device__badge"
+            :tone="overrideCount === 0 ? 'neutral' : 'accent'"
+            :data-empty="overrideCount === 0"
+          >
             {{ overrideCount }}
-          </span>
+          </Badge>
           <span v-if="overrideCount === 0" class="about-device__sub">
             (stylesheet defaults in use)
           </span>
@@ -227,7 +249,7 @@ function runSoftwareUpdateAction(): void {
           <code class="about-device__code about-device__code--wrap">{{ userAgent }}</code>
         </dd>
       </div>
-    </dl>
+    </Panel>
   </article>
 </template>
 

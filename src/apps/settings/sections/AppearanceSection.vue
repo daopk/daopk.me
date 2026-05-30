@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
+import { Panel, SectionHeader } from "~/components/kit";
 import { useKernel } from "~/composables/useKernel";
 import { useTheme } from "~/composables/useTheme";
 import type { ThemePreference } from "~/types/theme";
@@ -64,12 +65,18 @@ function selectAccent(presetId: string, value: string): void {
 
 <template>
   <article class="appearance" aria-label="Appearance settings">
-    <header class="appearance__header">
+    <SectionHeader class="appearance__header">
       <h2 class="appearance__title">Appearance</h2>
       <p class="appearance__hint">Theme + accent color. Live preview on change.</p>
-    </header>
+    </SectionHeader>
 
-    <section class="appearance__group" aria-labelledby="appearance-theme-label">
+    <Panel
+      as="section"
+      class="appearance__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="appearance-theme-label"
+    >
       <h3 id="appearance-theme-label" class="appearance__group-title">Theme</h3>
       <div
         class="appearance__theme-grid"
@@ -127,9 +134,15 @@ function selectAccent(presetId: string, value: string): void {
           />
         </button>
       </div>
-    </section>
+    </Panel>
 
-    <section class="appearance__group" aria-labelledby="appearance-accent-label">
+    <Panel
+      as="section"
+      class="appearance__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="appearance-accent-label"
+    >
       <h3 id="appearance-accent-label" class="appearance__group-title">Accent color</h3>
       <div class="appearance__swatches" role="radiogroup" aria-labelledby="appearance-accent-label">
         <button
@@ -155,7 +168,7 @@ function selectAccent(presetId: string, value: string): void {
       <p v-if="selectedAccent === 'custom'" class="appearance__custom-hint">
         Custom override applied via `kernel.theme.setOverride`.
       </p>
-    </section>
+    </Panel>
   </article>
 </template>
 

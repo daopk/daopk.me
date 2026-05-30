@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref } from "vue";
 import { SettingsPrivacyIcon as ShieldIcon } from "~/icons/fluentColor";
 import { X as RevokeIcon } from "~/icons/lucide";
 
+import { ActionRow, EmptyState, Panel, SectionHeader } from "~/components/kit";
 import { Button, Switch } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { permissionLabel } from "~/core/permissions/copy";
@@ -89,54 +90,67 @@ function setTelemetryEnabled(next: boolean): void {
 
 <template>
   <article class="privacy" aria-label="Privacy settings">
-    <header class="privacy__header">
+    <SectionHeader class="privacy__header">
       <h2 class="privacy__title">Privacy</h2>
       <p class="privacy__hint">
         Apps you've granted (or denied) sensitive capabilities. Revoke any decision to make the app
         ask again the next time it tries.
       </p>
-    </header>
+    </SectionHeader>
 
-    <section class="privacy__telemetry" aria-labelledby="privacy-telemetry-title">
-      <div class="privacy__telemetry-text">
-        <h3 id="privacy-telemetry-title" class="privacy__telemetry-title">Product telemetry</h3>
-        <p class="privacy__telemetry-copy">
-          Off by default. When enabled, WebOS records command counters and boot timing only; the
-          current transport does not send data anywhere.
-        </p>
-      </div>
+    <ActionRow as="section" class="privacy__telemetry" aria-labelledby="privacy-telemetry-title">
+      <template #copy>
+        <div class="privacy__telemetry-text">
+          <h3 id="privacy-telemetry-title" class="privacy__telemetry-title">Product telemetry</h3>
+          <p class="privacy__telemetry-copy">
+            Off by default. When enabled, WebOS records command counters and boot timing only; the
+            current transport does not send data anywhere.
+          </p>
+        </div>
+      </template>
       <Switch
         :model-value="telemetryEnabled"
         :aria-label="telemetryEnabled ? 'Disable product telemetry' : 'Enable product telemetry'"
         @update:model-value="setTelemetryEnabled"
       />
-    </section>
+    </ActionRow>
 
-    <section v-if="groups.length === 0" class="privacy__empty" aria-live="polite">
-      <ShieldIcon class="privacy__empty-icon" aria-hidden="true" />
+    <EmptyState v-if="groups.length === 0" class="privacy__empty" aria-live="polite">
+      <template #icon>
+        <ShieldIcon class="privacy__empty-icon" aria-hidden="true" />
+      </template>
       <p class="privacy__empty-text">
         No remembered permission decisions yet. They'll appear here after an app prompts you and you
         pick "Allow and remember" or "Don't allow".
       </p>
-    </section>
+    </EmptyState>
 
     <ul v-else class="privacy__app-list">
-      <li v-for="group in groups" :key="group.manifestId" class="privacy__app">
+      <Panel
+        v-for="group in groups"
+        :key="group.manifestId"
+        as="li"
+        class="privacy__app"
+        padding="none"
+        variant="elevated"
+      >
         <header class="privacy__app-header">
           <h3 class="privacy__app-name">{{ group.appName }}</h3>
           <p class="privacy__app-id">{{ group.manifestId }}</p>
         </header>
         <ul class="privacy__row-list">
-          <li v-for="row in group.rows" :key="row.permission" class="privacy__row">
-            <div class="privacy__row-text">
-              <span
-                class="privacy__row-decision"
-                :class="{ 'privacy__row-decision--denied': !row.granted }"
-              >
-                {{ describeDecision(row) }}
-              </span>
-              <span class="privacy__row-when">{{ describeWhen(row.decidedAt) }}</span>
-            </div>
+          <ActionRow v-for="row in group.rows" :key="row.permission" as="li" class="privacy__row">
+            <template #copy>
+              <div class="privacy__row-text">
+                <span
+                  class="privacy__row-decision"
+                  :class="{ 'privacy__row-decision--denied': !row.granted }"
+                >
+                  {{ describeDecision(row) }}
+                </span>
+                <span class="privacy__row-when">{{ describeWhen(row.decidedAt) }}</span>
+              </div>
+            </template>
             <Button
               variant="ghost"
               size="sm"
@@ -145,9 +159,9 @@ function setTelemetryEnabled(next: boolean): void {
               @click="revoke(row)"
               >Revoke</Button
             >
-          </li>
+          </ActionRow>
         </ul>
-      </li>
+      </Panel>
     </ul>
   </article>
 </template>

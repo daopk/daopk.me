@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { Upload as UploadIcon, Wallpaper as WallpaperIcon } from "~/icons/lucide";
 
+import { ActionRow, Badge, Panel, SectionHeader, StatusBanner } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
 import Switch from "~/components/ui/Switch.vue";
 import { useActiveShell } from "~/composables/useActiveShell";
@@ -137,15 +138,17 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <header class="background__header">
+    <SectionHeader class="background__header">
       <div class="background__title-lockup">
         <span class="background__title-icon" aria-hidden="true">
           <WallpaperIcon />
         </span>
         <h2 class="background__title">Background</h2>
       </div>
-      <span class="background__count">{{ wallpaperCountLabel }}</span>
-    </header>
+      <template #actions>
+        <Badge class="background__count">{{ wallpaperCountLabel }}</Badge>
+      </template>
+    </SectionHeader>
 
     <section class="background__hero" aria-labelledby="background-current-label">
       <BackgroundStagePreview
@@ -154,7 +157,7 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
         :wallpaper-effect-style="blurPreviewStyle"
       />
 
-      <aside class="background__control-panel">
+      <Panel as="aside" class="background__control-panel" variant="elevated" padding="none">
         <div class="background__current">
           <span id="background-current-label" class="background__meta-label">Current</span>
           <strong class="background__current-name">{{ activeTileName }}</strong>
@@ -188,29 +191,32 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
         </div>
 
         <section class="background__blur" aria-labelledby="background-blur-label">
-          <div class="background__toggle-row">
-            <div class="background__toggle-copy">
-              <h3 id="background-blur-label" class="background__group-title">Blur</h3>
-              <p class="background__hint">Soften the wallpaper behind the interface.</p>
-            </div>
+          <ActionRow as="div" class="background__toggle-row">
+            <template #copy>
+              <div class="background__toggle-copy">
+                <h3 id="background-blur-label" class="background__group-title">Blur</h3>
+                <p class="background__hint">Soften the wallpaper behind the interface.</p>
+              </div>
+            </template>
             <Switch
               data-testid="background-blur-switch"
               :model-value="blurEnabled"
               aria-labelledby="background-blur-label"
               @update:model-value="setBlurEnabled"
             />
-          </div>
+          </ActionRow>
         </section>
 
-        <p
+        <StatusBanner
           v-if="status"
+          as="p"
           class="background__status"
+          :tone="status.tone"
           :class="{ 'background__status--error': status.tone === 'error' }"
-          role="status"
         >
           {{ status.message }}
-        </p>
-      </aside>
+        </StatusBanner>
+      </Panel>
     </section>
 
     <section class="background__group" aria-labelledby="background-wallpaper-label">

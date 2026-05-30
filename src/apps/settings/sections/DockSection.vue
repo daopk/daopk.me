@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { ActionRow, Panel, SectionHeader } from "~/components/kit";
 import Switch from "~/components/ui/Switch.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -20,29 +21,37 @@ function setDockAutoHide(next: boolean): void {
 
 <template>
   <article class="dock-settings" aria-label="Dock settings">
-    <header class="dock-settings__header">
+    <SectionHeader class="dock-settings__header">
       <h2 class="dock-settings__title">Dock</h2>
       <p class="dock-settings__hint">Desktop Dock behavior for pointer-driven workspaces.</p>
-    </header>
+    </SectionHeader>
 
-    <section class="dock-settings__group" aria-labelledby="dock-autohide-group-label">
+    <Panel
+      as="section"
+      class="dock-settings__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="dock-autohide-group-label"
+    >
       <h3 id="dock-autohide-group-label" class="dock-settings__group-title">Visibility</h3>
-      <div class="dock-settings__toggle-row">
-        <span class="dock-settings__toggle-copy">
-          <span id="dock-autohide-label" class="dock-settings__toggle-label">
-            Automatically hide the Dock
+      <ActionRow as="div" class="dock-settings__toggle-row">
+        <template #copy>
+          <span class="dock-settings__toggle-copy">
+            <span id="dock-autohide-label" class="dock-settings__toggle-label">
+              Automatically hide the Dock
+            </span>
+            <span class="dock-settings__toggle-hint">
+              Reveal it by moving the pointer to the bottom edge.
+            </span>
           </span>
-          <span class="dock-settings__toggle-hint">
-            Reveal it by moving the pointer to the bottom edge.
-          </span>
-        </span>
+        </template>
         <Switch
           :model-value="currentDockAutoHide"
           aria-labelledby="dock-autohide-label"
           @update:model-value="setDockAutoHide"
         />
-      </div>
-    </section>
+      </ActionRow>
+    </Panel>
   </article>
 </template>
 

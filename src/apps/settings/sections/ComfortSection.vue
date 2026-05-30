@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
+import { Panel, SectionHeader } from "~/components/kit";
 import Card from "~/components/ui/Card.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -170,12 +171,18 @@ function selectSize(option: FontSizeOption): void {
 
 <template>
   <article class="comfort" aria-label="Comfort settings">
-    <header class="comfort__header">
+    <SectionHeader class="comfort__header">
       <h2 class="comfort__title">Comfort</h2>
       <p class="comfort__hint">Density, motion, and type preferences for the shell.</p>
-    </header>
+    </SectionHeader>
 
-    <section class="comfort__group" aria-labelledby="comfort-density-label">
+    <Panel
+      as="section"
+      class="comfort__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="comfort-density-label"
+    >
       <h3 id="comfort-density-label" class="comfort__group-title">Density</h3>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-density-label">
         <Card
@@ -210,9 +217,15 @@ function selectSize(option: FontSizeOption): void {
         Custom density scale applied via
         <code class="comfort__code">kernel.theme.setOverride</code>.
       </p>
-    </section>
+    </Panel>
 
-    <section class="comfort__group" aria-labelledby="comfort-motion-label">
+    <Panel
+      as="section"
+      class="comfort__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="comfort-motion-label"
+    >
       <h3 id="comfort-motion-label" class="comfort__group-title">Motion</h3>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-motion-label">
         <Card
@@ -238,9 +251,15 @@ function selectSize(option: FontSizeOption): void {
           />
         </Card>
       </div>
-    </section>
+    </Panel>
 
-    <section class="comfort__group" aria-labelledby="comfort-typography-label">
+    <Panel
+      as="section"
+      class="comfort__group"
+      variant="plain"
+      padding="none"
+      aria-labelledby="comfort-typography-label"
+    >
       <h3 id="comfort-typography-label" class="comfort__group-title">Typography</h3>
       <div class="comfort__subgroup" aria-labelledby="comfort-family-label">
         <h4 id="comfort-family-label" class="comfort__subgroup-title">Font family</h4>
@@ -307,7 +326,7 @@ function selectSize(option: FontSizeOption): void {
           <code class="comfort__code">kernel.theme.setOverride</code>.
         </p>
       </div>
-    </section>
+    </Panel>
   </article>
 </template>
 

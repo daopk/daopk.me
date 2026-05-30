@@ -10,6 +10,7 @@
 
 import { computed, ref } from "vue";
 
+import { Panel, SectionHeader, StatusBanner, TextInput } from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, CloudOff, KeyRound, Lock, LogOut, Shield, Trash2 } from "~/icons/lucide";
@@ -87,15 +88,21 @@ async function confirmDeleteAccount(): Promise<void> {
 
 <template>
   <article class="account" aria-label="Account settings">
-    <header class="account__header">
+    <SectionHeader class="account__header">
       <h2 class="account__title">Account</h2>
       <p class="account__hint">
         This account is local to this browser. Lock keeps your apps open; sign out closes them and
         returns to account unlock.
       </p>
-    </header>
+    </SectionHeader>
 
-    <section class="account__summary" aria-labelledby="account-current-title">
+    <Panel
+      as="section"
+      class="account__summary"
+      variant="elevated"
+      padding="none"
+      aria-labelledby="account-current-title"
+    >
       <div class="account__avatar" aria-hidden="true">
         <Shield class="account__avatar-icon" />
       </div>
@@ -125,27 +132,39 @@ async function confirmDeleteAccount(): Promise<void> {
           Sign Out
         </Button>
       </div>
-    </section>
+    </Panel>
 
-    <dl class="account__facts" aria-label="Current account details">
-      <div class="account__fact">
+    <Panel
+      as="dl"
+      class="account__facts"
+      variant="plain"
+      padding="none"
+      aria-label="Current account details"
+    >
+      <Panel as="div" class="account__fact" variant="elevated" padding="none">
         <dt class="account__fact-label">
           <KeyRound class="account__fact-icon" aria-hidden="true" />
           Protection
         </dt>
         <dd class="account__fact-value">{{ protectionLabel }}</dd>
-      </div>
+      </Panel>
 
-      <div class="account__fact">
+      <Panel as="div" class="account__fact" variant="elevated" padding="none">
         <dt class="account__fact-label">
           <CloudOff class="account__fact-icon" aria-hidden="true" />
           Storage
         </dt>
         <dd class="account__fact-value">{{ storageLabel }}</dd>
-      </div>
-    </dl>
+      </Panel>
+    </Panel>
 
-    <section class="account__danger" aria-labelledby="account-danger-title">
+    <Panel
+      as="section"
+      class="account__danger"
+      variant="elevated"
+      padding="none"
+      aria-labelledby="account-danger-title"
+    >
       <div class="account__danger-copy">
         <h3 id="account-danger-title" class="account__danger-title">Delete account</h3>
         <p class="account__danger-text">
@@ -154,14 +173,14 @@ async function confirmDeleteAccount(): Promise<void> {
       </div>
       <Button
         class="account__danger-button"
-        variant="secondary"
+        variant="danger"
         type="button"
         :icon-start="Trash2"
         @click="requestDeleteAccount"
       >
         Delete Account...
       </Button>
-    </section>
+    </Panel>
 
     <Dialog
       v-model:open="deleteDialogOpen"
@@ -171,15 +190,15 @@ async function confirmDeleteAccount(): Promise<void> {
       @close="cancelDeleteAccount"
     >
       <div class="account__delete-dialog">
-        <p class="account__delete-warning" role="alert">
+        <StatusBanner as="p" class="account__delete-warning" tone="warning" role="alert">
           <AlertCircle class="account__delete-warning-icon" aria-hidden="true" />
           This cannot be undone. Passkeys saved in your browser or device may need to be removed
           separately from your passkey manager.
-        </p>
+        </StatusBanner>
 
         <label class="account__delete-field">
           <span class="account__delete-label">Type {{ profile.displayName }} to confirm</span>
-          <input
+          <TextInput
             v-model="deleteConfirmationText"
             class="account__delete-input"
             autocomplete="off"
@@ -189,13 +208,22 @@ async function confirmDeleteAccount(): Promise<void> {
           />
         </label>
 
-        <p v-if="deleteError" class="account__delete-error" role="alert">{{ deleteError }}</p>
+        <StatusBanner
+          v-if="deleteError"
+          as="p"
+          class="account__delete-error"
+          tone="error"
+          role="alert"
+        >
+          {{ deleteError }}
+        </StatusBanner>
 
         <div class="account__dialog-actions">
           <Button size="sm" :disabled="deletingAccount" @click="cancelDeleteAccount">Cancel</Button>
           <Button
             size="sm"
             class="account__danger-button"
+            variant="danger"
             :disabled="!canConfirmDelete"
             :icon-start="Trash2"
             :loading="deletingAccount"
