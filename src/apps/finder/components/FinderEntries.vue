@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { Badge, EmptyState, StatusBanner } from "~/components/kit";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
 import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide";
@@ -230,11 +231,11 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   <ContextMenu :modal="false">
     <template #trigger>
       <section class="finder__browser" aria-label="Directory browser">
-        <div v-if="error" class="finder__notice" role="status">{{ error }}</div>
-        <div v-if="loading" class="finder__notice" role="status">Loading folder...</div>
-        <div v-else-if="!error && entries.length === 0" class="finder__empty">
+        <StatusBanner v-if="error" class="finder__notice" tone="error">{{ error }}</StatusBanner>
+        <StatusBanner v-if="loading" class="finder__notice">Loading folder...</StatusBanner>
+        <EmptyState v-else-if="!error && entries.length === 0" class="finder__empty">
           This folder is empty.
-        </div>
+        </EmptyState>
 
         <div
           v-if="entries.length > 0"
@@ -274,7 +275,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   entry.kind === "file" ? formatBytes(entry.size) : "-"
                 }}</span>
                 <span class="finder__entry-date">{{ formatModified(entry.updatedAt) }}</span>
-                <span v-if="entry.readonly" class="finder__entry-badge">Read only</span>
+                <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
               </div>
             </template>
             <template #items>

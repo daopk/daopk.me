@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "~/icons/lucide";
+import { AppToolbar, IconButton, SegmentedControl } from "~/components/kit";
+import type { SegmentedControlOption } from "~/components/kit";
 
 import type { FinderBreadcrumb, FinderViewMode } from "../useFinder";
 
@@ -15,19 +17,30 @@ const emit = defineEmits<{
   refresh: [];
   setViewMode: [mode: FinderViewMode];
 }>();
+
+const viewModeOptions: readonly SegmentedControlOption[] = [
+  { value: "list", label: "List", ariaLabel: "List view", icon: List },
+  { value: "grid", label: "Grid", ariaLabel: "Grid view", icon: Grid2X2 },
+];
+
+function onViewModeChange(value: string): void {
+  if (value === "list" || value === "grid") {
+    emit("setViewMode", value);
+  }
+}
 </script>
 
 <template>
-  <header class="finder__toolbar">
-    <button
-      type="button"
-      class="finder__icon-button"
-      :disabled="cwd === '/' || undefined"
-      aria-label="Go to parent folder"
-      @click="emit('goUp')"
-    >
-      <ArrowUp :size="16" aria-hidden="true" />
-    </button>
+  <AppToolbar class="finder__toolbar" wrap>
+    <template #start>
+      <IconButton
+        class="finder__icon-button"
+        label="Go to parent folder"
+        :icon="ArrowUp"
+        :disabled="cwd === '/'"
+        @click="emit('goUp')"
+      />
+    </template>
 
     <nav class="finder__breadcrumbs" aria-label="Current folder">
       <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
@@ -48,54 +61,27 @@ const emit = defineEmits<{
       </template>
     </nav>
 
-    <button
-      type="button"
-      class="finder__icon-button"
-      aria-label="Refresh folder"
-      @click="emit('refresh')"
-    >
-      <RefreshCw :size="16" aria-hidden="true" />
-    </button>
+    <template #end>
+      <IconButton
+        class="finder__icon-button"
+        label="Refresh folder"
+        :icon="RefreshCw"
+        @click="emit('refresh')"
+      />
 
-    <div class="finder__view-toggle" role="group" aria-label="View mode">
-      <button
-        type="button"
-        class="finder__toggle-button"
-        :class="{ 'finder__toggle-button--active': viewMode === 'list' }"
-        :aria-pressed="viewMode === 'list'"
-        aria-label="List view"
-        @click="emit('setViewMode', 'list')"
-      >
-        <List :size="16" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        class="finder__toggle-button"
-        :class="{ 'finder__toggle-button--active': viewMode === 'grid' }"
-        :aria-pressed="viewMode === 'grid'"
-        aria-label="Grid view"
-        @click="emit('setViewMode', 'grid')"
-      >
-        <Grid2X2 :size="16" aria-hidden="true" />
-      </button>
-    </div>
-  </header>
+      <SegmentedControl
+        class="finder__view-toggle"
+        :model-value="viewMode"
+        :options="viewModeOptions"
+        label="View mode"
+        :show-labels="false"
+        @update:model-value="onViewModeChange"
+      />
+    </template>
+  </AppToolbar>
 </template>
 
 <style scoped lang="scss">
-.finder__toolbar {
-  align-items: center;
-  background: var(--color-bg-subtle);
-  border-block-end: 1px solid var(--color-border);
-  display: flex;
-  flex: 0 0 auto;
-  gap: var(--space-xs);
-  min-block-size: 44px;
-  padding: var(--space-xs) var(--space-sm);
-}
-
-.finder__icon-button,
-.finder__toggle-button,
 .finder__breadcrumb {
   align-items: center;
   background: transparent;
@@ -108,37 +94,15 @@ const emit = defineEmits<{
   justify-content: center;
 }
 
-.finder__icon-button,
-.finder__toggle-button {
-  block-size: 32px;
-  inline-size: 32px;
-}
-
-.finder__icon-button:hover,
-.finder__toggle-button:hover,
 .finder__breadcrumb:hover,
-.finder__icon-button:focus-visible,
-.finder__toggle-button:focus-visible,
 .finder__breadcrumb:focus-visible {
   background: var(--color-bg-elevated);
   color: var(--color-fg);
 }
 
-.finder__icon-button:focus-visible,
-.finder__toggle-button:focus-visible,
 .finder__breadcrumb:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-}
-
-.finder__icon-button:disabled {
-  color: var(--color-fg-muted);
-  cursor: default;
-  opacity: 0.45;
-}
-
-.finder__icon-button:disabled:hover {
-  background: transparent;
 }
 
 .finder__breadcrumbs {
@@ -164,25 +128,5 @@ const emit = defineEmits<{
 .finder__breadcrumb-separator {
   color: var(--color-fg-muted);
   flex: 0 0 auto;
-}
-
-.finder__view-toggle {
-  align-items: center;
-  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  gap: 1px;
-  padding: 2px;
-}
-
-.finder__toggle-button--active {
-  background: var(--color-bg-elevated);
-  color: var(--color-fg);
-}
-
-@media (max-width: 640px) {
-  .finder__toolbar {
-    flex-wrap: wrap;
-  }
 }
 </style>

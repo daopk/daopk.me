@@ -2,6 +2,7 @@
 import { useResizeObserver } from "@vueuse/core";
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { AppToolbar, EmptyState, Textarea, TextInput } from "~/components/kit";
 import {
   Button,
   ContextMenu,
@@ -241,20 +242,6 @@ function closeMobileEditor(): void {
   mobileEditorOpen.value = false;
 }
 
-function onTitleInput(event: Event): void {
-  const target = event.target;
-  if (target instanceof HTMLInputElement) {
-    notes.setTitle(target.value);
-  }
-}
-
-function onDraftInput(event: Event): void {
-  const target = event.target;
-  if (target instanceof HTMLTextAreaElement) {
-    notes.setDraft(target.value);
-  }
-}
-
 function formatModified(timestamp: number): string {
   return formatDateTime(timestamp, "");
 }
@@ -290,23 +277,25 @@ function labelForStatus(status: NotesStatus): string {
     aria-label="Notes"
   >
     <aside v-if="showList" class="notes__sidebar" aria-label="Note list">
-      <header class="notes__sidebar-header">
+      <AppToolbar class="notes__sidebar-header" density="comfortable" variant="plain">
         <h2 class="notes__title">Notes</h2>
-        <Button
-          size="sm"
-          variant="primary"
-          :icon-start="Plus"
-          :loading="newButtonLoading"
-          :disabled="newButtonDisabled"
-          @click="createNote"
-        >
-          New
-        </Button>
-      </header>
+        <template #end>
+          <Button
+            size="sm"
+            variant="primary"
+            :icon-start="Plus"
+            :loading="newButtonLoading"
+            :disabled="newButtonDisabled"
+            @click="createNote"
+          >
+            New
+          </Button>
+        </template>
+      </AppToolbar>
 
-      <div v-if="notes.notes.value.length === 0" class="notes__list-empty" role="status">
+      <EmptyState v-if="notes.notes.value.length === 0" class="notes__list-empty">
         {{ statusText }}
-      </div>
+      </EmptyState>
       <ul v-else class="notes__list" aria-label="Notes">
         <li v-for="note in notes.notes.value" :key="note.path" class="notes__list-item">
           <ContextMenu :modal="false">
@@ -340,20 +329,22 @@ function labelForStatus(status: NotesStatus): string {
     </aside>
 
     <main v-if="showEditor" class="notes__editor" aria-label="Selected note">
-      <div v-if="!notes.hasSelection.value" class="notes__editor-empty">
-        <FileText class="notes__empty-icon" aria-hidden="true" />
+      <EmptyState v-if="!notes.hasSelection.value" class="notes__editor-empty">
+        <template #icon>
+          <FileText class="notes__empty-icon" aria-hidden="true" />
+        </template>
         <span>{{ statusText }}</span>
-      </div>
+      </EmptyState>
       <template v-else>
         <header class="notes__editor-header">
-          <input
+          <TextInput
             class="notes__title-input"
-            type="text"
-            :value="notes.title.value"
+            variant="plain"
+            :model-value="notes.title.value"
             aria-label="Note title"
             autocomplete="off"
             spellcheck="true"
-            @input="onTitleInput"
+            @update:model-value="notes.setTitle"
           />
           <div
             class="notes__status"
@@ -363,12 +354,14 @@ function labelForStatus(status: NotesStatus): string {
             {{ statusText }}
           </div>
         </header>
-        <textarea
+        <Textarea
           class="notes__textarea"
-          :value="notes.draft.value"
+          variant="plain"
+          resize="none"
+          :model-value="notes.draft.value"
           aria-label="Note body"
           spellcheck="true"
-          @input="onDraftInput"
+          @update:model-value="notes.setDraft"
         />
       </template>
     </main>
