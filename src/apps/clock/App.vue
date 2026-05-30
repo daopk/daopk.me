@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { AppFrame, TabList, TextInput } from "~/components/kit";
+import type { TabListOption } from "~/components/kit";
 import { Button } from "~/components/ui";
 import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "~/icons/lucide";
 
@@ -15,10 +17,16 @@ import {
 const clock = useClockApp();
 const activeTab = ref<ClockTab>("now");
 
-const tabs: Array<{ id: ClockTab; label: string; icon: typeof Clock }> = [
-  { id: "now", label: "Now", icon: Clock },
-  { id: "timer", label: "Timer", icon: Timer },
-  { id: "stopwatch", label: "Stopwatch", icon: Flag },
+const tabs: readonly TabListOption[] = [
+  { value: "now", label: "Now", icon: Clock, id: tabId("now"), panelId: panelId("now") },
+  { value: "timer", label: "Timer", icon: Timer, id: tabId("timer"), panelId: panelId("timer") },
+  {
+    value: "stopwatch",
+    label: "Stopwatch",
+    icon: Flag,
+    id: tabId("stopwatch"),
+    panelId: panelId("stopwatch"),
+  },
 ];
 
 const nowDate = computed(() => new Date(clock.currentMs.value));
@@ -45,6 +53,12 @@ function selectTab(tab: ClockTab): void {
   activeTab.value = tab;
 }
 
+function selectTabValue(tab: string): void {
+  if (tab === "now" || tab === "timer" || tab === "stopwatch") {
+    selectTab(tab);
+  }
+}
+
 function tabId(tab: ClockTab): string {
   return `clock-tab-${tab}`;
 }
@@ -55,11 +69,6 @@ function panelId(tab: ClockTab): string {
 
 function timerPartValue(part: TimerPart): number {
   return clock.timerParts.value[part];
-}
-
-function onTimerPartInput(part: TimerPart, event: Event): void {
-  const target = event.target as HTMLInputElement;
-  clock.setTimerPart(part, target.value);
 }
 
 function setTimerPreset(minutes: number): void {
@@ -84,7 +93,7 @@ function durationDatetime(ms: number): string {
 </script>
 
 <template>
-  <section class="clock-app" aria-label="Clock">
+  <AppFrame class="clock-app" layout="grid" :safe-area="false" aria-label="Clock">
     <div class="clock-app__topbar">
       <header class="clock-app__header">
         <div class="clock-app__title">
@@ -92,23 +101,15 @@ function durationDatetime(ms: number): string {
           <h2>Clock</h2>
         </div>
       </header>
-      <div class="clock-app__tabs" role="tablist" aria-label="Clock sections">
-        <button
-          v-for="tab in tabs"
-          :id="tabId(tab.id)"
-          :key="tab.id"
-          type="button"
-          class="clock-app__tab"
-          :class="{ 'clock-app__tab--active': activeTab === tab.id }"
-          role="tab"
-          :aria-selected="activeTab === tab.id"
-          :aria-controls="panelId(tab.id)"
-          @click="selectTab(tab.id)"
-        >
-          <component :is="tab.icon" aria-hidden="true" />
-          <span>{{ tab.label }}</span>
-        </button>
-      </div>
+      <TabList
+        class="clock-app__tabs"
+        :model-value="activeTab"
+        :tabs="tabs"
+        label="Clock sections"
+        item-class="clock-app__tab"
+        active-item-class="clock-app__tab--active"
+        @update:model-value="selectTabValue"
+      />
     </div>
 
     <main class="clock-app__body">
@@ -141,7 +142,7 @@ function durationDatetime(ms: number): string {
         <div class="clock-app__inputs" aria-label="Timer duration">
           <label class="clock-app__number-field">
             <span>Hours</span>
-            <input
+            <TextInput
               type="number"
               min="0"
               max="23"
@@ -149,13 +150,13 @@ function durationDatetime(ms: number): string {
               inputmode="numeric"
               aria-label="Timer hours"
               :disabled="!clock.timerCanEdit.value"
-              :value="timerPartValue('hours')"
-              @input="onTimerPartInput('hours', $event)"
+              :model-value="String(timerPartValue('hours'))"
+              @update:model-value="clock.setTimerPart('hours', $event)"
             />
           </label>
           <label class="clock-app__number-field">
             <span>Minutes</span>
-            <input
+            <TextInput
               type="number"
               min="0"
               max="59"
@@ -163,13 +164,13 @@ function durationDatetime(ms: number): string {
               inputmode="numeric"
               aria-label="Timer minutes"
               :disabled="!clock.timerCanEdit.value"
-              :value="timerPartValue('minutes')"
-              @input="onTimerPartInput('minutes', $event)"
+              :model-value="String(timerPartValue('minutes'))"
+              @update:model-value="clock.setTimerPart('minutes', $event)"
             />
           </label>
           <label class="clock-app__number-field">
             <span>Seconds</span>
-            <input
+            <TextInput
               type="number"
               min="0"
               max="59"
@@ -177,8 +178,8 @@ function durationDatetime(ms: number): string {
               inputmode="numeric"
               aria-label="Timer seconds"
               :disabled="!clock.timerCanEdit.value"
-              :value="timerPartValue('seconds')"
-              @input="onTimerPartInput('seconds', $event)"
+              :model-value="String(timerPartValue('seconds'))"
+              @update:model-value="clock.setTimerPart('seconds', $event)"
             />
           </label>
         </div>
@@ -258,7 +259,7 @@ function durationDatetime(ms: number): string {
         </ol>
       </section>
     </main>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">

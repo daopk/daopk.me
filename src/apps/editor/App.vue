@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, ref, watch } from "vue";
 
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  IconButton,
+  StatusBanner,
+  Textarea,
+  TextInput,
+} from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
 import { useVfs } from "~/composables/useVfs";
 import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
@@ -17,7 +26,7 @@ const vfs = useVfs();
 const editor = useEditor({ vfs });
 
 const pathInput = ref("");
-const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const textareaRef = ref<{ focus: (options?: FocusOptions) => void } | null>(null);
 const discardDialogOpen = ref(false);
 const pendingDiscardAction = ref<PendingDiscardAction | null>(null);
 const previewHtml = ref("");
@@ -209,13 +218,6 @@ function togglePreview(): void {
   editor.setPreviewOpen(!editor.previewOpen.value);
 }
 
-function onDraftInput(event: Event): void {
-  const target = event.target;
-  if (target instanceof HTMLTextAreaElement) {
-    editor.setDraft(target.value);
-  }
-}
-
 function onKeydown(event: KeyboardEvent): void {
   if (event.key.toLowerCase() === "s" && (event.metaKey || event.ctrlKey)) {
     event.preventDefault();
@@ -227,15 +229,14 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <section class="editor" aria-label="Editor" @keydown="onKeydown">
-    <header class="editor__toolbar">
+  <AppFrame class="editor" layout="flex-column" aria-label="Editor" @keydown="onKeydown">
+    <AppToolbar class="editor__toolbar" wrap>
       <form class="editor__path-form" @submit.prevent="requestOpen">
         <label class="editor__path-label" for="editor-path">Path</label>
-        <input
+        <TextInput
           id="editor-path"
           v-model="pathInput"
           class="editor__path-input"
-          type="text"
           autocomplete="off"
           autocapitalize="off"
           autocorrect="off"
@@ -253,54 +254,58 @@ function onKeydown(event: KeyboardEvent): void {
         </Button>
       </form>
 
-      <div class="editor__actions">
-        <Button
-          size="sm"
-          variant="primary"
-          :icon-start="Save"
-          :disabled="!editor.canSave.value"
-          :loading="editor.saving.value"
-          @click="save"
-        >
-          Save
-        </Button>
-        <Button
-          size="sm"
-          :icon-start="RefreshCw"
-          :disabled="!editor.dirty.value || editor.loading.value || editor.saving.value"
-          @click="requestRevert"
-        >
-          Revert
-        </Button>
-        <button
-          type="button"
-          class="editor__icon-toggle"
-          :class="{ 'editor__icon-toggle--active': editor.previewOpen.value && canPreview }"
-          :disabled="!canPreview"
-          :aria-pressed="editor.previewOpen.value && canPreview"
-          aria-label="Toggle Markdown preview"
-          @click="togglePreview"
-        >
-          <FileText :size="16" aria-hidden="true" />
-        </button>
-      </div>
-    </header>
+      <template #end>
+        <div class="editor__actions">
+          <Button
+            size="sm"
+            variant="primary"
+            :icon-start="Save"
+            :disabled="!editor.canSave.value"
+            :loading="editor.saving.value"
+            @click="save"
+          >
+            Save
+          </Button>
+          <Button
+            size="sm"
+            :icon-start="RefreshCw"
+            :disabled="!editor.dirty.value || editor.loading.value || editor.saving.value"
+            @click="requestRevert"
+          >
+            Revert
+          </Button>
+          <IconButton
+            class="editor__icon-toggle"
+            label="Toggle Markdown preview"
+            :icon="FileText"
+            :active="editor.previewOpen.value && canPreview"
+            :disabled="!canPreview"
+            :pressed="editor.previewOpen.value && canPreview"
+            @click="togglePreview"
+          />
+        </div>
+      </template>
+    </AppToolbar>
 
-    <div class="editor__status" :class="{ 'editor__status--error': statusIsError }" role="status">
+    <StatusBanner class="editor__status" :tone="statusIsError ? 'error' : 'info'">
       {{ statusText }}
-    </div>
+    </StatusBanner>
 
     <main class="editor__body" :class="editorClasses">
-      <div v-if="editor.currentPath.value === null" class="editor__empty">No file open.</div>
-      <textarea
+      <EmptyState v-if="editor.currentPath.value === null" class="editor__empty">
+        No file open.
+      </EmptyState>
+      <Textarea
         v-else
         ref="textareaRef"
         class="editor__textarea"
-        :value="editor.draft.value"
+        variant="plain"
+        resize="none"
+        :model-value="editor.draft.value"
         :readonly="editor.readOnly.value || editor.loading.value || editor.saving.value"
         :aria-label="`Editing ${editor.currentPath.value}`"
         spellcheck="false"
-        @input="onDraftInput"
+        @update:model-value="editor.setDraft"
       />
 
       <aside v-if="editor.previewOpen.value && canPreview" class="editor__preview">
@@ -318,10 +323,10 @@ function onKeydown(event: KeyboardEvent): void {
     >
       <div class="editor__dialog-actions">
         <Button size="sm" @click="cancelDiscard">Cancel</Button>
-        <Button size="sm" variant="primary" @click="confirmDiscard">Discard</Button>
+        <Button size="sm" variant="danger" @click="confirmDiscard">Discard</Button>
       </div>
     </Dialog>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">

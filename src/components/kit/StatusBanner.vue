@@ -1,19 +1,26 @@
 <script setup lang="ts">
 interface StatusBannerProps {
+  as?: keyof HTMLElementTagNameMap;
   tone?: "info" | "success" | "warning" | "error";
   role?: string;
 }
 
 withDefaults(defineProps<StatusBannerProps>(), {
+  as: "div",
   tone: "info",
   role: "status",
 });
 </script>
 
 <template>
-  <div class="ds-kit-status-banner" :class="`ds-kit-status-banner--${tone}`" :role="role">
+  <component
+    :is="as"
+    class="ds-kit-status-banner"
+    :class="`ds-kit-status-banner--${tone}`"
+    :role="role"
+  >
     <slot />
-  </div>
+  </component>
 </template>
 
 <style scoped lang="scss">

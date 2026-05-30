@@ -5,10 +5,14 @@ interface TabListProps {
   modelValue: string;
   tabs: readonly TabListOption[];
   label: string;
+  activeItemClass?: string;
+  itemClass?: string;
   size?: "sm" | "md";
 }
 
 withDefaults(defineProps<TabListProps>(), {
+  activeItemClass: undefined,
+  itemClass: undefined,
   size: "md",
 });
 
@@ -40,7 +44,11 @@ function selectTab(tab: TabListOption): void {
       :key="tab.value"
       type="button"
       class="ds-kit-tab-list__tab"
-      :class="{ 'ds-kit-tab-list__tab--active': modelValue === tab.value }"
+      :class="[
+        itemClass,
+        { 'ds-kit-tab-list__tab--active': modelValue === tab.value },
+        modelValue === tab.value && activeItemClass,
+      ]"
       role="tab"
       :aria-selected="modelValue === tab.value"
       :aria-controls="tab.panelId"

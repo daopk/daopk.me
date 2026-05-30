@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from "vue";
 
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  IconButton,
+  StatusBanner,
+  TextInput,
+  ToolbarGroup,
+} from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useVfs } from "~/composables/useVfs";
 import {
@@ -110,15 +119,17 @@ function setCanvasRef(el: unknown): void {
 </script>
 
 <template>
-  <section class="pdf-viewer" aria-label="PDF Viewer">
-    <header class="pdf-viewer__toolbar">
-      <div class="pdf-viewer__document">
-        <PdfViewerAppIcon class="pdf-viewer__app-icon" aria-hidden="true" />
-        <div class="pdf-viewer__document-text">
-          <strong>{{ viewer.title.value || "PDF Viewer" }}</strong>
-          <span>{{ sourceLabel }}</span>
+  <AppFrame class="pdf-viewer" layout="flex-column" aria-label="PDF Viewer">
+    <AppToolbar class="pdf-viewer__toolbar" wrap>
+      <template #start>
+        <div class="pdf-viewer__document">
+          <PdfViewerAppIcon class="pdf-viewer__app-icon" aria-hidden="true" />
+          <div class="pdf-viewer__document-text">
+            <strong>{{ viewer.title.value || "PDF Viewer" }}</strong>
+            <span>{{ sourceLabel }}</span>
+          </div>
         </div>
-      </div>
+      </template>
 
       <input
         ref="fileInput"
@@ -128,127 +139,130 @@ function setCanvasRef(el: unknown): void {
         @change="onFileChange"
       />
 
-      <div class="pdf-viewer__controls" aria-label="PDF controls">
-        <Button
-          size="sm"
-          :icon-start="Upload"
-          :disabled="busy"
-          aria-label="Open PDF"
-          title="Open PDF"
-          @click="openFilePicker"
-        />
+      <template #end>
+        <div class="pdf-viewer__controls" aria-label="PDF controls">
+          <ToolbarGroup label="Document">
+            <IconButton label="Open PDF" :icon="Upload" :disabled="busy" @click="openFilePicker" />
+          </ToolbarGroup>
 
-        <span class="pdf-viewer__separator" aria-hidden="true" />
+          <span class="pdf-viewer__separator" aria-hidden="true" />
 
-        <Button
-          size="sm"
-          :icon-start="ChevronLeft"
-          :disabled="!viewer.canGoPrevious.value || busy"
-          aria-label="Previous page"
-          title="Previous page"
-          @click="goPrevious"
-        />
-        <form class="pdf-viewer__page-form" @submit.prevent="submitPage">
-          <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
-          <input
-            id="pdf-viewer-page"
-            v-model="pageDraft"
-            class="pdf-viewer__page-input"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            :max="viewer.pageCount.value || undefined"
-            :disabled="!hasDocument || busy"
-            @blur="submitPage"
-          />
-          <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
-        </form>
-        <Button
-          size="sm"
-          :icon-start="ChevronRight"
-          :disabled="!viewer.canGoNext.value || busy"
-          aria-label="Next page"
-          title="Next page"
-          @click="goNext"
-        />
+          <ToolbarGroup label="Pages">
+            <IconButton
+              label="Previous page"
+              :icon="ChevronLeft"
+              :disabled="!viewer.canGoPrevious.value || busy"
+              @click="goPrevious"
+            />
+            <form class="pdf-viewer__page-form" @submit.prevent="submitPage">
+              <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
+              <TextInput
+                id="pdf-viewer-page"
+                v-model="pageDraft"
+                class="pdf-viewer__page-input"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                :max="viewer.pageCount.value || undefined"
+                :disabled="!hasDocument || busy"
+                @blur="submitPage"
+              />
+              <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
+            </form>
+            <IconButton
+              label="Next page"
+              :icon="ChevronRight"
+              :disabled="!viewer.canGoNext.value || busy"
+              @click="goNext"
+            />
+          </ToolbarGroup>
 
-        <span class="pdf-viewer__separator" aria-hidden="true" />
+          <span class="pdf-viewer__separator" aria-hidden="true" />
 
-        <Button
-          size="sm"
-          :icon-start="ZoomOut"
-          :disabled="!hasDocument || busy"
-          aria-label="Zoom out"
-          title="Zoom out"
-          @click="zoomOut"
-        />
-        <span class="pdf-viewer__zoom" aria-live="polite">{{ viewer.zoomLabel.value }}</span>
-        <Button
-          size="sm"
-          :icon-start="ZoomIn"
-          :disabled="!hasDocument || busy"
-          aria-label="Zoom in"
-          title="Zoom in"
-          @click="zoomIn"
-        />
-        <Button
-          size="sm"
-          :icon-start="Maximize2"
-          :disabled="!hasDocument || busy"
-          aria-label="Fit width"
-          title="Fit width"
-          @click="fitWidth"
-        />
-        <Button
-          size="sm"
-          :icon-start="RotateCw"
-          :disabled="!hasDocument || busy"
-          aria-label="Rotate clockwise"
-          title="Rotate clockwise"
-          @click="rotateClockwise"
-        />
-        <Button
-          size="sm"
-          :icon-start="Download"
-          :disabled="!viewer.canDownload.value || busy"
-          aria-label="Download PDF"
-          title="Download PDF"
-          @click="download"
-        />
-      </div>
-    </header>
+          <ToolbarGroup label="Zoom and page tools">
+            <IconButton
+              label="Zoom out"
+              :icon="ZoomOut"
+              :disabled="!hasDocument || busy"
+              @click="zoomOut"
+            />
+            <span class="pdf-viewer__zoom" aria-live="polite">{{ viewer.zoomLabel.value }}</span>
+            <IconButton
+              label="Zoom in"
+              :icon="ZoomIn"
+              :disabled="!hasDocument || busy"
+              @click="zoomIn"
+            />
+            <IconButton
+              label="Fit width"
+              :icon="Maximize2"
+              :disabled="!hasDocument || busy"
+              @click="fitWidth"
+            />
+            <IconButton
+              label="Rotate clockwise"
+              :icon="RotateCw"
+              :disabled="!hasDocument || busy"
+              @click="rotateClockwise"
+            />
+            <IconButton
+              label="Download PDF"
+              :icon="Download"
+              :disabled="!viewer.canDownload.value || busy"
+              @click="download"
+            />
+          </ToolbarGroup>
+        </div>
+      </template>
+    </AppToolbar>
 
     <main
       :ref="setViewportRef"
       class="pdf-viewer__viewport"
       :class="{ 'pdf-viewer__viewport--empty': !hasDocument }"
     >
-      <section v-if="viewer.status.value === 'idle'" class="pdf-viewer__empty">
-        <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        <h2>Open a PDF</h2>
+      <EmptyState
+        v-if="viewer.status.value === 'idle'"
+        class="pdf-viewer__empty"
+        title="Open a PDF"
+      >
+        <template #icon>
+          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
+        </template>
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
-      </section>
+      </EmptyState>
 
-      <section v-else-if="viewer.status.value === 'loading'" class="pdf-viewer__empty">
-        <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        <h2>Loading...</h2>
-      </section>
+      <EmptyState
+        v-else-if="viewer.status.value === 'loading'"
+        class="pdf-viewer__empty"
+        title="Loading..."
+      >
+        <template #icon>
+          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
+        </template>
+      </EmptyState>
 
-      <section v-else-if="viewer.status.value === 'error'" class="pdf-viewer__empty" role="alert">
-        <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
-        <h2>{{ viewer.error.value }}</h2>
+      <EmptyState
+        v-else-if="viewer.status.value === 'error'"
+        class="pdf-viewer__empty"
+        role="alert"
+        :title="viewer.error.value ?? undefined"
+      >
+        <template #icon>
+          <PdfViewerAppIcon class="pdf-viewer__empty-icon" aria-hidden="true" />
+        </template>
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
-      </section>
+      </EmptyState>
 
       <div v-show="hasDocument" class="pdf-viewer__page">
         <canvas :ref="setCanvasRef" class="pdf-viewer__canvas" aria-label="PDF page" />
       </div>
     </main>
 
-    <footer class="pdf-viewer__status" role="status">
+    <StatusBanner as="footer" class="pdf-viewer__status">
       {{ viewer.message.value }}
-    </footer>
-  </section>
+    </StatusBanner>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">

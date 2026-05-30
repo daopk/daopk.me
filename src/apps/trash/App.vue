@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, type Component } from "vue";
 
+import { AppFrame, AppToolbar, DataTable, EmptyState, StatusBanner } from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
@@ -220,31 +221,35 @@ function messageFromError(errorValue: unknown): string {
 </script>
 
 <template>
-  <section class="trash" aria-label="Trash">
-    <header class="trash__toolbar">
-      <div class="trash__heading">
-        <TrashAppIcon class="trash__app-icon" aria-hidden="true" />
-        <div class="trash__heading-copy">
-          <h1>Trash</h1>
-          <p>{{ itemCountLabel }} / {{ formatBytes(totalBytes) }}</p>
+  <AppFrame class="trash" layout="flex-column" aria-label="Trash">
+    <AppToolbar class="trash__toolbar" density="comfortable" wrap>
+      <template #start>
+        <div class="trash__heading">
+          <TrashAppIcon class="trash__app-icon" aria-hidden="true" />
+          <div class="trash__heading-copy">
+            <h1>Trash</h1>
+            <p>{{ itemCountLabel }} / {{ formatBytes(totalBytes) }}</p>
+          </div>
         </div>
-      </div>
-      <div class="trash__actions">
-        <Button size="sm" :icon-start="RefreshCw" :loading="loading" @click="refresh">
-          Refresh
-        </Button>
-        <Button
-          size="sm"
-          class="trash__danger-button"
-          :icon-start="Trash2"
-          :disabled="!hasItems"
-          :loading="emptying"
-          @click="requestEmptyTrash"
-        >
-          Empty Trash...
-        </Button>
-      </div>
-    </header>
+      </template>
+      <template #end>
+        <div class="trash__actions">
+          <Button size="sm" :icon-start="RefreshCw" :loading="loading" @click="refresh">
+            Refresh
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            :icon-start="Trash2"
+            :disabled="!hasItems"
+            :loading="emptying"
+            @click="requestEmptyTrash"
+          >
+            Empty Trash...
+          </Button>
+        </div>
+      </template>
+    </AppToolbar>
 
     <dl v-if="hasItems" class="trash__summary" aria-label="Trash summary">
       <div>
@@ -266,21 +271,26 @@ function messageFromError(errorValue: unknown): string {
     </dl>
 
     <main class="trash__content">
-      <div v-if="error" class="trash__notice" role="alert">
+      <StatusBanner v-if="error" class="trash__notice" tone="error" role="alert">
         <AlertCircle class="trash__notice-icon" aria-hidden="true" />
         <span>{{ error }}</span>
-      </div>
+      </StatusBanner>
 
-      <div v-if="loading && items.length === 0" class="trash__state" role="status">
+      <EmptyState v-if="loading && items.length === 0" class="trash__state">
         Loading deleted items...
-      </div>
-      <div v-else-if="items.length === 0" class="trash__empty" role="status">
-        <TrashAppIcon class="trash__empty-icon" aria-hidden="true" />
-        <h2>Trash is empty.</h2>
-        <p>Nothing to restore or remove.</p>
-      </div>
+      </EmptyState>
+      <EmptyState
+        v-else-if="items.length === 0"
+        class="trash__empty"
+        title="Trash is empty."
+        description="Nothing to restore or remove."
+      >
+        <template #icon>
+          <TrashAppIcon class="trash__empty-icon" aria-hidden="true" />
+        </template>
+      </EmptyState>
 
-      <div v-else class="trash__table" role="table" aria-label="Deleted items">
+      <DataTable v-else class="trash__table" label="Deleted items">
         <div class="trash__row trash__row--header" role="row">
           <span role="columnheader">Name</span>
           <span role="columnheader">Original Location</span>
@@ -334,7 +344,7 @@ function messageFromError(errorValue: unknown): string {
               </Button>
               <Button
                 size="sm"
-                class="trash__danger-button"
+                variant="danger"
                 :icon-start="Trash2"
                 :aria-label="`Delete ${item.name} permanently`"
                 :loading="mutatingId === item.id"
@@ -346,7 +356,7 @@ function messageFromError(errorValue: unknown): string {
             </span>
           </span>
         </div>
-      </div>
+      </DataTable>
     </main>
 
     <Dialog
@@ -362,7 +372,7 @@ function messageFromError(errorValue: unknown): string {
         </Button>
         <Button
           size="sm"
-          class="trash__danger-button"
+          variant="danger"
           :icon-start="Trash2"
           :loading="mutatingId === pendingPermanentDelete?.id"
           @click="confirmRemovePermanently"
@@ -383,7 +393,7 @@ function messageFromError(errorValue: unknown): string {
         <Button size="sm" :disabled="emptying" @click="cancelEmptyTrash">Cancel</Button>
         <Button
           size="sm"
-          class="trash__danger-button"
+          variant="danger"
           :icon-start="Trash2"
           :loading="emptying"
           @click="confirmEmptyTrash"
@@ -392,7 +402,7 @@ function messageFromError(errorValue: unknown): string {
         </Button>
       </div>
     </Dialog>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -455,10 +465,6 @@ function messageFromError(errorValue: unknown): string {
   align-items: center;
   display: inline-flex;
   gap: var(--space-xs);
-}
-
-.trash__danger-button {
-  color: var(--color-error-soft);
 }
 
 .trash__summary {

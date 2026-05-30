@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 interface TextareaProps {
   modelValue?: string;
   disabled?: boolean;
@@ -22,10 +24,19 @@ withDefaults(defineProps<TextareaProps>(), {
 defineEmits<{
   "update:modelValue": [next: string];
 }>();
+
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
+
+function focus(options?: FocusOptions): void {
+  textareaRef.value?.focus(options);
+}
+
+defineExpose({ focus });
 </script>
 
 <template>
   <textarea
+    ref="textareaRef"
     class="ds-kit-textarea"
     :class="[
       `ds-kit-textarea--${variant}`,
