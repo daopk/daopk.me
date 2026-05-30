@@ -96,6 +96,18 @@ describe("Window context menu", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders the app icon before the window title", () => {
+    const { wrapper } = mountWindow(makeRecord(), [manifest({ id: "notes", name: "Notes" })]);
+
+    const titlebar = wrapper.get(".window__titlebar");
+    const icon = titlebar.get(".window__title-icon");
+    const title = titlebar.get(".window__title");
+
+    expect(icon.element.compareDocumentPosition(title.element)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it("opens command-backed titlebar actions", async () => {
     const { wrapper, dispatch } = mountWindow();
 

@@ -267,6 +267,12 @@ function dispatchWindowCommand(id: string): void {
           @pointerdown="record.maximized ? null : drag.onPointerDown($event)"
           @dblclick="onMaximize"
         >
+          <component
+            :is="manifest.icon"
+            v-if="manifest"
+            class="window__title-icon"
+            aria-hidden="true"
+          />
           <span :id="titleId" class="window__title">{{ record.title }}</span>
           <button
             type="button"
@@ -385,6 +391,12 @@ function dispatchWindowCommand(id: string): void {
 
 .window--focused .window__titlebar {
   color: var(--window-titlebar-fg);
+}
+
+.window__title-icon {
+  block-size: 16px;
+  flex: 0 0 auto;
+  inline-size: 16px;
 }
 
 .window__title {
