@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 import { Button, Switch } from "~/components/ui";
-import { ArrowLeft, RotateCcw, Settings as SettingsIcon } from "~/icons/lucide";
+import { ArrowLeft, RotateCcw } from "~/icons/lucide";
 
 import {
   CALENDAR_VIEW_MODES,
@@ -21,9 +21,11 @@ const props = withDefaults(
   defineProps<{
     readonly settings: CalendarSettingsBindings;
     readonly showBack?: boolean;
+    readonly showHeader?: boolean;
   }>(),
   {
     showBack: false,
+    showHeader: true,
   },
 );
 
@@ -64,155 +66,173 @@ function viewLabel(view: CalendarViewMode): string {
 
 <template>
   <main class="calendar-settings" aria-label="Calendar settings">
-    <header class="calendar-settings__header">
-      <Button
-        v-if="showBack"
-        size="sm"
-        :icon-start="ArrowLeft"
-        aria-label="Back to Calendar"
-        @click="emit('back')"
-      >
-        Back
-      </Button>
-      <div class="calendar-settings__title-group">
-        <SettingsIcon class="calendar-settings__title-icon" aria-hidden="true" />
-        <div>
-          <h2 class="calendar-settings__title">Calendar settings</h2>
-          <p class="calendar-settings__hint">Views, calendar labels, and new event defaults.</p>
-        </div>
+    <header v-if="showHeader" class="calendar-settings__header">
+      <div class="calendar-settings__header-main">
+        <Button
+          v-if="showBack"
+          class="calendar-settings__action-button"
+          size="md"
+          :icon-start="ArrowLeft"
+          aria-label="Back to Calendar"
+          @click="emit('back')"
+        >
+          Back
+        </Button>
+        <h2 class="calendar-settings__title">Calendar settings</h2>
       </div>
+      <Button
+        class="calendar-settings__action-button"
+        size="md"
+        :icon-start="RotateCcw"
+        @click="settings.reset"
+      >
+        Reset
+      </Button>
     </header>
 
-    <section class="calendar-settings__group" aria-labelledby="calendar-settings-view">
-      <h3 id="calendar-settings-view" class="calendar-settings__group-title">View</h3>
-      <div
-        class="calendar-settings__option-grid"
-        role="radiogroup"
-        aria-labelledby="calendar-settings-view"
-      >
-        <button
-          v-for="option in preferredViewOptions"
-          :key="option.id"
-          type="button"
-          class="calendar-settings__choice"
-          :class="{ 'calendar-settings__choice--active': option.id === preferredViewMode }"
-          role="radio"
-          :aria-checked="option.id === preferredViewMode"
-          @click="settings.setPreferredViewMode(option.id)"
+    <div class="calendar-settings__content">
+      <section class="calendar-settings__group" aria-labelledby="calendar-settings-view">
+        <h3 id="calendar-settings-view" class="calendar-settings__group-title">View</h3>
+        <div
+          class="calendar-settings__option-grid"
+          role="radiogroup"
+          aria-labelledby="calendar-settings-view"
         >
-          {{ option.label }}
-        </button>
-      </div>
-    </section>
+          <button
+            v-for="option in preferredViewOptions"
+            :key="option.id"
+            type="button"
+            class="calendar-settings__choice"
+            :class="{ 'calendar-settings__choice--active': option.id === preferredViewMode }"
+            role="radio"
+            :aria-checked="option.id === preferredViewMode"
+            @click="settings.setPreferredViewMode(option.id)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </section>
 
-    <section class="calendar-settings__group" aria-labelledby="calendar-settings-week-start">
-      <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">Week start</h3>
-      <div
-        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
-        role="radiogroup"
-        aria-labelledby="calendar-settings-week-start"
-      >
-        <button
-          v-for="option in weekStartOptions"
-          :key="option.id"
-          type="button"
-          class="calendar-settings__choice"
-          :class="{ 'calendar-settings__choice--active': option.id === weekStartsOn }"
-          role="radio"
-          :aria-checked="option.id === weekStartsOn"
-          @click="settings.setWeekStartsOn(option.id)"
+      <section class="calendar-settings__group" aria-labelledby="calendar-settings-week-start">
+        <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">
+          Week start
+        </h3>
+        <div
+          class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+          role="radiogroup"
+          aria-labelledby="calendar-settings-week-start"
         >
-          {{ option.label }}
-        </button>
-      </div>
-    </section>
+          <button
+            v-for="option in weekStartOptions"
+            :key="option.id"
+            type="button"
+            class="calendar-settings__choice"
+            :class="{ 'calendar-settings__choice--active': option.id === weekStartsOn }"
+            role="radio"
+            :aria-checked="option.id === weekStartsOn"
+            @click="settings.setWeekStartsOn(option.id)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </section>
 
-    <section class="calendar-settings__group" aria-labelledby="calendar-settings-agenda">
-      <h3 id="calendar-settings-agenda" class="calendar-settings__group-title">Agenda range</h3>
-      <div
-        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
-        role="radiogroup"
-        aria-labelledby="calendar-settings-agenda"
-      >
-        <button
-          v-for="days in agendaRangeOptions"
-          :key="days"
-          type="button"
-          class="calendar-settings__choice"
-          :class="{ 'calendar-settings__choice--active': days === agendaDayCount }"
-          role="radio"
-          :aria-checked="days === agendaDayCount"
-          @click="settings.setAgendaDayCount(days)"
+      <section class="calendar-settings__group" aria-labelledby="calendar-settings-agenda">
+        <h3 id="calendar-settings-agenda" class="calendar-settings__group-title">Agenda range</h3>
+        <div
+          class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+          role="radiogroup"
+          aria-labelledby="calendar-settings-agenda"
         >
-          {{ days }} days
-        </button>
-      </div>
-    </section>
+          <button
+            v-for="days in agendaRangeOptions"
+            :key="days"
+            type="button"
+            class="calendar-settings__choice"
+            :class="{ 'calendar-settings__choice--active': days === agendaDayCount }"
+            role="radio"
+            :aria-checked="days === agendaDayCount"
+            @click="settings.setAgendaDayCount(days)"
+          >
+            {{ days }} days
+          </button>
+        </div>
+      </section>
 
-    <section class="calendar-settings__toggle-row" aria-labelledby="calendar-settings-lunar">
-      <div>
-        <h3 id="calendar-settings-lunar" class="calendar-settings__row-title">Lunar labels</h3>
-        <p class="calendar-settings__row-copy">Show Vietnamese lunar date labels in Calendar.</p>
-      </div>
-      <Switch
-        :model-value="showLunarCalendar"
-        :aria-label="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
-        @update:model-value="settings.setShowLunarCalendar"
-      />
-    </section>
-
-    <section class="calendar-settings__group" aria-labelledby="calendar-settings-duration">
-      <h3 id="calendar-settings-duration" class="calendar-settings__group-title">
-        New event duration
-      </h3>
-      <div
-        class="calendar-settings__option-grid calendar-settings__option-grid--compact"
-        role="radiogroup"
-        aria-labelledby="calendar-settings-duration"
-      >
-        <button
-          v-for="minutes in durationOptions"
-          :key="minutes"
-          type="button"
-          class="calendar-settings__choice"
-          :class="{ 'calendar-settings__choice--active': minutes === defaultEventDurationMinutes }"
-          role="radio"
-          :aria-checked="minutes === defaultEventDurationMinutes"
-          @click="settings.setDefaultEventDurationMinutes(minutes)"
-        >
-          {{ minutes }}m
-        </button>
-      </div>
-    </section>
-
-    <section class="calendar-settings__group" aria-labelledby="calendar-settings-color">
-      <h3 id="calendar-settings-color" class="calendar-settings__group-title">New event color</h3>
-      <div
-        class="calendar-settings__swatches"
-        role="radiogroup"
-        aria-labelledby="calendar-settings-color"
-      >
-        <button
-          v-for="color in EVENT_COLORS"
-          :key="color"
-          type="button"
-          class="calendar-settings__swatch"
-          :class="[
-            `calendar-settings__swatch--${color}`,
-            color === defaultEventColor && 'calendar-settings__swatch--active',
-          ]"
-          role="radio"
-          :aria-checked="color === defaultEventColor"
-          :aria-label="colorLabel(color)"
-          :title="colorLabel(color)"
-          @click="settings.setDefaultEventColor(color)"
+      <section class="calendar-settings__toggle-row" aria-labelledby="calendar-settings-lunar">
+        <div>
+          <h3 id="calendar-settings-lunar" class="calendar-settings__row-title">Lunar labels</h3>
+          <p class="calendar-settings__row-copy">Show Vietnamese lunar date labels in Calendar.</p>
+        </div>
+        <Switch
+          :model-value="showLunarCalendar"
+          :aria-label="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
+          @update:model-value="settings.setShowLunarCalendar"
         />
-      </div>
-    </section>
+      </section>
 
-    <footer class="calendar-settings__footer">
-      <Button size="sm" :icon-start="RotateCcw" @click="settings.reset">Reset</Button>
-    </footer>
+      <section class="calendar-settings__group" aria-labelledby="calendar-settings-duration">
+        <h3 id="calendar-settings-duration" class="calendar-settings__group-title">
+          New event duration
+        </h3>
+        <div
+          class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+          role="radiogroup"
+          aria-labelledby="calendar-settings-duration"
+        >
+          <button
+            v-for="minutes in durationOptions"
+            :key="minutes"
+            type="button"
+            class="calendar-settings__choice"
+            :class="{
+              'calendar-settings__choice--active': minutes === defaultEventDurationMinutes,
+            }"
+            role="radio"
+            :aria-checked="minutes === defaultEventDurationMinutes"
+            @click="settings.setDefaultEventDurationMinutes(minutes)"
+          >
+            {{ minutes }}m
+          </button>
+        </div>
+      </section>
+
+      <section class="calendar-settings__group" aria-labelledby="calendar-settings-color">
+        <h3 id="calendar-settings-color" class="calendar-settings__group-title">New event color</h3>
+        <div
+          class="calendar-settings__swatches"
+          role="radiogroup"
+          aria-labelledby="calendar-settings-color"
+        >
+          <button
+            v-for="color in EVENT_COLORS"
+            :key="color"
+            type="button"
+            class="calendar-settings__swatch"
+            :class="[
+              `calendar-settings__swatch--${color}`,
+              color === defaultEventColor && 'calendar-settings__swatch--active',
+            ]"
+            role="radio"
+            :aria-checked="color === defaultEventColor"
+            :aria-label="colorLabel(color)"
+            :title="colorLabel(color)"
+            @click="settings.setDefaultEventColor(color)"
+          />
+        </div>
+      </section>
+
+      <footer v-if="!showHeader" class="calendar-settings__footer">
+        <Button
+          class="calendar-settings__action-button"
+          size="md"
+          :icon-start="RotateCcw"
+          @click="settings.reset"
+        >
+          Reset
+        </Button>
+      </footer>
+    </div>
   </main>
 </template>
 
@@ -223,30 +243,28 @@ function viewLabel(view: CalendarViewMode): string {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
   inline-size: 100%;
-  overflow: auto;
-  padding: var(--space-xl);
+  min-block-size: 0;
+  overflow: hidden;
 }
 
 .calendar-settings__header {
   align-items: center;
+  background: var(--color-bg-subtle);
+  border-block-end: 1px solid var(--color-border);
   display: flex;
+  flex: 0 0 auto;
   gap: var(--space-md);
+  justify-content: space-between;
+  min-block-size: 52px;
+  padding: var(--space-xs) var(--space-sm);
 }
 
-.calendar-settings__title-group {
+.calendar-settings__header-main {
   align-items: center;
   display: flex;
   gap: var(--space-sm);
   min-inline-size: 0;
-}
-
-.calendar-settings__title-icon {
-  block-size: 22px;
-  color: var(--color-accent);
-  flex: 0 0 auto;
-  inline-size: 22px;
 }
 
 .calendar-settings__title,
@@ -256,17 +274,34 @@ function viewLabel(view: CalendarViewMode): string {
 }
 
 .calendar-settings__title {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 1.2;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.calendar-settings__hint,
+.calendar-settings__action-button {
+  min-block-size: 36px;
+}
+
 .calendar-settings__row-copy {
   color: var(--color-fg-muted);
   font-size: 13px;
   line-height: 1.35;
   margin: 0;
+}
+
+.calendar-settings__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-block-size: 0;
+  overflow: auto;
+  padding: var(--space-xl);
 }
 
 .calendar-settings__group {
@@ -394,13 +429,8 @@ function viewLabel(view: CalendarViewMode): string {
 }
 
 @media (max-width: 520px) {
-  .calendar-settings {
+  .calendar-settings__content {
     padding: var(--space-lg);
-  }
-
-  .calendar-settings__header {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .calendar-settings__option-grid,

@@ -419,7 +419,7 @@ describe("Calendar App.vue", () => {
 
     await flushPromises();
 
-    expect(wrapper.text()).toContain("Calendar settings");
+    expect(wrapper.find(".calendar-settings__header").exists()).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith("Calendar settings");
     expect(backAction?.ariaLabel).toBe("Back to Calendar");
 

@@ -433,6 +433,7 @@ function labelForStatus(status: CalendarStatus): string {
       v-if="settingsPaneOpen"
       :settings="calendarSettings"
       :show-back="!isMobile"
+      :show-header="!isMobile"
       @back="closeSettings"
     />
 
