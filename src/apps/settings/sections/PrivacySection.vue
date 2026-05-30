@@ -9,6 +9,10 @@ import { useKernel } from "~/composables/useKernel";
 import { permissionLabel } from "~/core/permissions/copy";
 import type { PermissionLedgerEntry } from "~/types/permissions";
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 interface GroupedApp {
   manifestId: string;
   appName: string;
@@ -90,7 +94,7 @@ function setTelemetryEnabled(next: boolean): void {
 
 <template>
   <article class="privacy" aria-label="Privacy settings">
-    <SectionHeader class="privacy__header">
+    <SectionHeader v-if="props.showHeader" class="privacy__header">
       <h2 class="privacy__title">Privacy</h2>
       <p class="privacy__hint">
         Apps you've granted (or denied) sensitive capabilities. Revoke any decision to make the app

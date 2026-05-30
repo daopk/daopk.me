@@ -8,6 +8,10 @@ import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
 import type { SettingsState } from "~/types/settings";
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const kernel = useKernel();
 const settings = useSettings();
 
@@ -171,7 +175,7 @@ function selectSize(option: FontSizeOption): void {
 
 <template>
   <article class="comfort" aria-label="Comfort settings">
-    <SectionHeader class="comfort__header">
+    <SectionHeader v-if="props.showHeader" class="comfort__header">
       <h2 class="comfort__title">Comfort</h2>
       <p class="comfort__hint">Density, motion, and type preferences for the shell.</p>
     </SectionHeader>

@@ -145,7 +145,9 @@ const activeComponent = computed<Component>(() => componentMap[activeId.value]);
 const activeLabel = computed(() => sectionEntries[activeId.value].label);
 
 const narrowPanelOpen = ref(false);
-const usesSectionChrome = computed(() => isNarrow.value && narrowPanelOpen.value);
+const usesSectionChrome = computed(
+  () => appChrome !== null && isNarrow.value && narrowPanelOpen.value,
+);
 
 const showNav = computed(() => !isNarrow.value || !narrowPanelOpen.value);
 const showContent = computed(() => !isNarrow.value || narrowPanelOpen.value);
@@ -250,7 +252,11 @@ watch(
         <PwaInstallRow v-if="showContentInstallRow" />
         <ServiceWorkerUpdateRow v-if="showContentUpdateRow" />
       </div>
-      <component :is="activeComponent" class="settings__section" />
+      <component
+        :is="activeComponent"
+        class="settings__section"
+        :show-header="!usesSectionChrome"
+      />
     </main>
   </AppFrame>
 </template>

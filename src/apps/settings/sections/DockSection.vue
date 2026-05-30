@@ -9,6 +9,10 @@ import { useSettings } from "~/composables/useSettings";
 const kernel = useKernel();
 const settings = useSettings();
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const currentDockAutoHide = computed(() => settings.dockAutoHide);
 
 function setDockAutoHide(next: boolean): void {
@@ -21,7 +25,7 @@ function setDockAutoHide(next: boolean): void {
 
 <template>
   <article class="dock-settings" aria-label="Dock settings">
-    <SectionHeader class="dock-settings__header">
+    <SectionHeader v-if="props.showHeader" class="dock-settings__header">
       <h2 class="dock-settings__title">Dock</h2>
       <p class="dock-settings__hint">Desktop Dock behavior for pointer-driven workspaces.</p>
     </SectionHeader>

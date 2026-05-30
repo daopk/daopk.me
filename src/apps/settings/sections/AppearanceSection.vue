@@ -7,6 +7,10 @@ import { useKernel } from "~/composables/useKernel";
 import { useTheme } from "~/composables/useTheme";
 import type { ThemePreference } from "~/types/theme";
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const kernel = useKernel();
 const { preference, setTheme } = useTheme();
 
@@ -65,7 +69,7 @@ function selectAccent(presetId: string, value: string): void {
 
 <template>
   <article class="appearance" aria-label="Appearance settings">
-    <SectionHeader class="appearance__header">
+    <SectionHeader v-if="props.showHeader" class="appearance__header">
       <h2 class="appearance__title">Appearance</h2>
       <p class="appearance__hint">Theme + accent color. Live preview on change.</p>
     </SectionHeader>

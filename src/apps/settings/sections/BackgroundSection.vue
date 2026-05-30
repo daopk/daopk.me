@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { Upload as UploadIcon, Wallpaper as WallpaperIcon } from "~/icons/lucide";
+import { Upload as UploadIcon } from "~/icons/lucide";
 
 import { ActionRow, Badge, Panel, SectionHeader, StatusBanner } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
@@ -13,6 +13,10 @@ import BackgroundStagePreview from "./background/BackgroundStagePreview.vue";
 import BackgroundTileGrid from "./background/BackgroundTileGrid.vue";
 import { useWallpaperBlur } from "./background/useWallpaperBlur";
 import { previewStyleForTile, useWallpaperTiles } from "./background/wallpaperTiles";
+
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
 
 const kernel = useKernel();
 const { shellId } = useActiveShell();
@@ -138,13 +142,8 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <SectionHeader class="background__header">
-      <div class="background__title-lockup">
-        <span class="background__title-icon" aria-hidden="true">
-          <WallpaperIcon />
-        </span>
-        <h2 class="background__title">Background</h2>
-      </div>
+    <SectionHeader v-if="props.showHeader" class="background__header">
+      <h2 class="background__title">Background</h2>
       <template #actions>
         <Badge class="background__count">{{ wallpaperCountLabel }}</Badge>
       </template>
@@ -267,27 +266,6 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
   display: flex;
   gap: var(--space-md);
   justify-content: space-between;
-}
-
-.background__title-lockup {
-  align-items: center;
-  display: flex;
-  gap: var(--space-sm);
-  min-inline-size: 0;
-}
-
-.background__title-icon {
-  align-items: center;
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  block-size: 34px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 22%, var(--color-border));
-  border-radius: var(--radius-sm);
-  color: var(--color-accent);
-  display: flex;
-  flex: 0 0 auto;
-  inline-size: 34px;
-  justify-content: center;
-  padding: 8px;
 }
 
 .background__title {

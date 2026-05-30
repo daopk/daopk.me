@@ -9,6 +9,10 @@ import type { AppManifest } from "~/types/app";
 
 const HIDDEN_PREFIX = "_";
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const kernel = useKernel();
 
 const apps = computed<readonly AppManifest[]>(() =>
@@ -33,8 +37,8 @@ function openAppSettings(manifestId: string): void {
 </script>
 
 <template>
-  <section class="apps-settings" aria-labelledby="apps-settings-title">
-    <SectionHeader class="apps-settings__header">
+  <section class="apps-settings" aria-label="Apps settings">
+    <SectionHeader v-if="props.showHeader" class="apps-settings__header">
       <h2 id="apps-settings-title" class="apps-settings__title">Apps</h2>
     </SectionHeader>
 

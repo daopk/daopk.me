@@ -15,6 +15,10 @@ import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, CloudOff, KeyRound, Lock, LogOut, Shield, Trash2 } from "~/icons/lucide";
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const kernel = useKernel();
 const profile = kernel.profile.current();
 const deleteDialogOpen = ref(false);
@@ -88,7 +92,7 @@ async function confirmDeleteAccount(): Promise<void> {
 
 <template>
   <article class="account" aria-label="Account settings">
-    <SectionHeader class="account__header">
+    <SectionHeader v-if="props.showHeader" class="account__header">
       <h2 class="account__title">Account</h2>
       <p class="account__hint">
         This account is local to this browser. Lock keeps your apps open; sign out closes them and

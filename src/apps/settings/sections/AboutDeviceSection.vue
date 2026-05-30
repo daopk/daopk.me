@@ -17,6 +17,10 @@ const { reduced } = useReducedMotion();
 const updateState = serviceWorkerUpdateController.state;
 const updateCheckState = serviceWorkerUpdateController.checkState;
 
+const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
+  showHeader: true,
+});
+
 const overridesRef = ref<Record<string, string>>({ ...kernel.theme.currentOverrides() });
 
 const stopTokens = kernel.events.on("tokens.changed", () => {
@@ -148,7 +152,7 @@ function runSoftwareUpdateAction(): void {
 
 <template>
   <article class="about-device" aria-label="About this device">
-    <SectionHeader class="about-device__header">
+    <SectionHeader v-if="props.showHeader" class="about-device__header">
       <h2 class="about-device__title">About device</h2>
       <p class="about-device__hint">
         Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics.

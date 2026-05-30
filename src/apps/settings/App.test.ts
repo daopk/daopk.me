@@ -646,6 +646,7 @@ describe("Settings App.vue", () => {
     expect(wrapper.find(".settings__nav").exists()).toBe(false);
     expect(wrapper.find(".settings__content").exists()).toBe(true);
     expect(wrapper.find(".settings__content-header").exists()).toBe(false);
+    expect(wrapper.find(".appearance__header").exists()).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith("Appearance");
     expect(backAction?.ariaLabel).toBe("Back to Settings");
 
