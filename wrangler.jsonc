@@ -1,8 +1,11 @@
 {
   "name": "me",
+  "main": "./worker/seo.ts",
   "compatibility_date": "2025-06-15",
   "assets": {
     "directory": "./dist/",
+    "binding": "ASSETS",
+    "run_worker_first": ["/blog/*", "/__seo/*"],
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "single-page-application",
   },

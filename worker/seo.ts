@@ -1,0 +1,90 @@
+import { isbot } from "isbot";
+
+export interface AssetBinding {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
+}
+
+export interface SeoWorkerEnv {
+  ASSETS: AssetBinding;
+}
+
+const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
+const SLUG_PATTERN = /^[a-z0-9-]+$/;
+
+function appendVary(value: string | null, token: string): string {
+  if (value === null || value.trim().length === 0) {
+    return token;
+  }
+
+  const parts = value.split(",").map((part) => part.trim().toLowerCase());
+  return parts.includes(token.toLowerCase()) ? value : `${value}, ${token}`;
+}
+
+function noIndexResponse(message: string, status = 404): Response {
+  return new Response(message, {
+    status,
+    headers: {
+      "Cache-Control": "public, max-age=0, must-revalidate",
+      "Content-Type": "text/plain;charset=utf-8",
+      Vary: "User-Agent",
+      "X-Robots-Tag": "noindex",
+    },
+  });
+}
+
+function withCrawlerHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Vary", appendVary(headers.get("Vary"), "User-Agent"));
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
+}
+
+export function isCrawlerRequest(request: Request): boolean {
+  return isbot(request.headers.get("User-Agent"));
+}
+
+function blogSlugFromPathname(pathname: string): string | null {
+  const slug = BLOG_ROUTE_PATTERN.exec(pathname)?.[1] ?? null;
+  return slug !== null && SLUG_PATTERN.test(slug) ? slug : null;
+}
+
+async function fetchSeoPost(request: Request, env: SeoWorkerEnv, slug: string): Promise<Response> {
+  const assetUrl = new URL(`/__seo/blog/${slug}.html`, request.url);
+  const response = await env.ASSETS.fetch(new Request(assetUrl, request));
+
+  if (response.status === 404) {
+    return noIndexResponse("Blog post not found.");
+  }
+
+  return withCrawlerHeaders(response);
+}
+
+export async function handleRequest(request: Request, env: SeoWorkerEnv): Promise<Response> {
+  const url = new URL(request.url);
+
+  if (url.pathname.startsWith("/__seo/")) {
+    return noIndexResponse("Not found.");
+  }
+
+  if (!url.pathname.startsWith("/blog/")) {
+    return env.ASSETS.fetch(request);
+  }
+
+  if (!isCrawlerRequest(request)) {
+    return env.ASSETS.fetch(request);
+  }
+
+  const slug = blogSlugFromPathname(url.pathname);
+  if (slug === null) {
+    return noIndexResponse("Blog post not found.");
+  }
+
+  return fetchSeoPost(request, env, slug);
+}
+
+export default {
+  fetch: handleRequest,
+};

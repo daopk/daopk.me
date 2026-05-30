@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vue-tsc -b && vite build && node scripts/generate-blog-seo-assets.mjs",
     "preview": "vite preview",
     "icons:generate": "node scripts/generate-fluent-color-icons.mjs",
     "lint": "oxlint .",
@@ -29,6 +29,7 @@
     "comlink": "^4.4.2",
     "focus-trap-vue": "^4.1.0",
     "idb": "^8.0.3",
+    "isbot": "^5.1.40",
     "minisearch": "^7.2.0",
     "motion-v": "^2.2.1",
     "pdfjs-dist": "^5.7.284",
@@ -41,8 +42,8 @@
     "remark-rehype": "^11.1.2",
     "shiki": "^4.1.0",
     "unified": "^11.0.5",
-    "vue": "^3.5.34",
-    "vue-router": "^5.0.7"
+    "vue": "^3.5.35",
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@iconify-json/fluent-color": "^1.2.21",
@@ -55,15 +56,15 @@
     "axe-core": "^4.11.4",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.9.0",
-    "oxfmt": "^0.51.0",
-    "oxlint": "^1.66.0",
+    "oxfmt": "^0.52.0",
+    "oxlint": "^1.67.0",
     "sass-embedded": "^1.100.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.14",
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "4.1.7",
     "vue-axe": "^3.1.2",
-    "vue-tsc": "^3.3.1",
+    "vue-tsc": "^3.3.2",
     "workbox-build": "^7.4.1",
     "workbox-window": "^7.4.1"
   }
