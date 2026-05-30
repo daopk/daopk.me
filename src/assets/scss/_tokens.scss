@@ -44,6 +44,7 @@
   --dock-indicator-size: 4px;
   --dock-indicator-offset: 4px;
   --dock-indicator-bg: var(--color-accent);
+  --dock-icon-shadow: none;
 
   --home-screen-padding-inline: var(--space-lg);
   --home-screen-padding-block: var(--space-xl);
@@ -130,6 +131,7 @@
   --menubar-bg-translucent: color-mix(in srgb, var(--color-bg) 70%, transparent);
   --color-bg: #f8f8fc;
   --color-bg-elevated: #ffffff;
+  --dock-bg: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
   --color-bg-subtle: #ececf6;
   --color-fg: #12121a;
   --color-fg-muted: rgb(18 18 26 / 0.62);
@@ -140,6 +142,8 @@
   --shadow-sm: 0 1px 2px rgb(18 18 26 / 0.06), 0 1px 3px rgb(18 18 26 / 0.04);
   --shadow-md: 0 8px 20px rgb(18 18 26 / 0.1), 0 4px 8px rgb(18 18 26 / 0.06);
   --shadow-lg: 0 24px 48px rgb(18 18 26 / 0.14), 0 8px 24px rgb(18 18 26 / 0.08);
+  --dock-icon-shadow: drop-shadow(0 1px 1px rgb(18 18 26 / 0.18))
+    drop-shadow(0 2px 3px rgb(18 18 26 / 0.12));
   --shadow-accent-sm: 0 0 22px rgb(183 148 214 / 0.35);
   --shadow-accent-lg: 0 0 42px rgb(90 45 130 / 0.45);
   --duration-fast: 120ms;
