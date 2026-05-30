@@ -117,7 +117,6 @@ function onPostSelect(post: BlogIndexPost): void {
   <article class="blog" :aria-busy="busy ? 'true' : undefined" :data-handle-id="debugHandleId">
     <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
       <header class="blog__index-header">
-        <p class="blog__eyebrow">Blog</p>
         <h1>Latest posts</h1>
       </header>
 
@@ -155,7 +154,6 @@ function onPostSelect(post: BlogIndexPost): void {
         </Button>
         <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
         <section v-else-if="blogPost.notFound.value" class="blog__state" aria-live="polite">
-          <p class="blog__eyebrow">Blog</p>
           <h1>Post not found</h1>
           <p>The post "{{ missingLabel }}" is not available.</p>
         </section>
@@ -361,11 +359,4 @@ function onPostSelect(post: BlogIndexPost): void {
   margin: 0;
 }
 
-.blog__eyebrow {
-  color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 700;
-  margin-block-end: var(--space-xs) !important;
-  text-transform: uppercase;
-}
 </style>

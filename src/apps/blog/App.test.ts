@@ -163,6 +163,7 @@ New body`,
     await waitForIndexItems(wrapper);
 
     expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
+    expect(wrapper.find(".blog__eyebrow").exists()).toBe(false);
     expect(wrapper.findAll(".blog__index-title").map((row) => row.text())).toEqual([
       "New Post",
       "Old Post",
