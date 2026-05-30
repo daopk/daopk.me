@@ -202,6 +202,21 @@ describe("useFinder", () => {
     expect(finder.currentDirectoryReadonly.value).toBe(false);
   });
 
+  it("can load a directory without selecting the first entry", async () => {
+    const finder = useFinder({
+      vfs: makeVfs({
+        "/": [entry("/home", "directory"), entry("/readme.md")],
+      }),
+      autoSelectFirstEntry: false,
+    });
+
+    await expect(finder.refresh()).resolves.toBe(true);
+
+    expect(finder.entries.value).toHaveLength(2);
+    expect(finder.selectedPath.value).toBeNull();
+    expect(finder.selectedEntry.value).toBeNull();
+  });
+
   it("tracks current directory read-only state", async () => {
     const vfs = makeVfs({
       "/portfolio": [entry("/portfolio/about.md")],
@@ -241,6 +256,25 @@ describe("useFinder", () => {
 
     expect(finder.cwd.value).toBe("/home");
     expect(finder.selectedPath.value).toBe("/home/b.md");
+  });
+
+  it("does not restore remembered selection when auto-selection is disabled", async () => {
+    const finder = useFinder({
+      vfs: makeVfs({
+        "/": [entry("/home", "directory"), entry("/tmp", "directory")],
+        "/home": [entry("/home/a.md"), entry("/home/b.md")],
+      }),
+      autoSelectFirstEntry: false,
+    });
+
+    await finder.refresh();
+    await finder.openDirectory("/home");
+    finder.select("/home/b.md");
+    await finder.goUp();
+    await finder.openDirectory("/home");
+
+    expect(finder.cwd.value).toBe("/home");
+    expect(finder.selectedPath.value).toBeNull();
   });
 
   it("moves selection with clamped indexes", async () => {

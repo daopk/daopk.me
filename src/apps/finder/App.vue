@@ -2,6 +2,7 @@
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { Button, Dialog } from "~/components/ui";
+import { useActiveShell } from "~/composables/useActiveShell";
 import { useVfs } from "~/composables/useVfs";
 import { useKernel } from "~/composables/useKernel";
 import { isEditableVfsTextFile } from "~/core/vfs/fileTypes";
@@ -18,6 +19,7 @@ import { useFinder } from "./useFinder";
 const ctx = inject(AppContextInjectionKey, null);
 const kernel = useKernel();
 const vfs = useVfs();
+const { isMobile } = useActiveShell();
 const finder = useFinder({
   vfs,
   trash: {
@@ -28,6 +30,7 @@ const finder = useFinder({
   },
   initialPath: typeof ctx?.args.path === "string" ? ctx.args.path : "/",
   initialReveal: typeof ctx?.args.reveal === "string" ? ctx.args.reveal : undefined,
+  autoSelectFirstEntry: computed(() => !isMobile.value),
 });
 const preview = useFinderPreview({ vfs });
 
@@ -89,9 +92,19 @@ onUnmounted(() => {
 });
 
 watch(
-  selectedEntry,
-  (entry) => {
-    void preview.load(entry);
+  [selectedEntry, isMobile],
+  ([entry, mobile]) => {
+    void preview.load(mobile ? null : entry);
+  },
+  { immediate: true },
+);
+
+watch(
+  isMobile,
+  (mobile) => {
+    if (mobile) {
+      finder.select(null);
+    }
   },
   { immediate: true },
 );
@@ -303,6 +316,7 @@ async function copyPath(path: string): Promise<void> {
       />
 
       <FinderPreviewPane
+        v-if="!isMobile"
         :html="previewHtml"
         :image-url="previewImageUrl"
         :kind="previewKind"
@@ -362,7 +376,7 @@ async function copyPath(path: string): Promise<void> {
 @media (max-width: 640px) {
   .finder__body {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(220px, 1fr) minmax(180px, auto);
+    grid-template-rows: minmax(0, 1fr);
   }
 }
 </style>

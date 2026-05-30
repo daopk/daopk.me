@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from "vue";
+import { computed, ref, unref, type ComputedRef, type MaybeRef, type Ref } from "vue";
 
 import { VfsError } from "~/core/vfs/errors";
 import { splitFilename } from "~/core/vfs/fileNames";
@@ -63,6 +63,7 @@ export interface UseFinderOptions {
   readonly trash?: FinderTrashClient;
   readonly initialPath?: string;
   readonly initialReveal?: string;
+  readonly autoSelectFirstEntry?: MaybeRef<boolean>;
 }
 
 export function useFinder({
@@ -70,6 +71,7 @@ export function useFinder({
   trash,
   initialPath = "/",
   initialReveal,
+  autoSelectFirstEntry = true,
 }: UseFinderOptions): FinderBindings {
   const cwd = ref<string>(safeNormalize(initialPath));
   const entries = ref<readonly VfsDirEntry[]>([]);
@@ -133,13 +135,22 @@ export function useFinder({
         return false;
       }
 
+      const shouldAutoSelectFirstEntry = unref(autoSelectFirstEntry);
       const preferredPath =
         revealPath ??
-        (normalized === cwd.value ? selectedPath.value : selectionByDirectory.get(normalized));
+        (shouldAutoSelectFirstEntry
+          ? normalized === cwd.value
+            ? selectedPath.value
+            : selectionByDirectory.get(normalized)
+          : null);
       cwd.value = normalized;
       currentDirectory.value = nextStat;
       entries.value = nextEntries;
-      selectedPath.value = chooseSelection(nextEntries, preferredPath);
+      selectedPath.value = chooseSelection(
+        nextEntries,
+        preferredPath,
+        shouldAutoSelectFirstEntry,
+      );
 
       return true;
     } catch (loadError) {
@@ -469,12 +480,13 @@ function safeNormalizeOptional(path: string | undefined): string | null {
 function chooseSelection(
   entries: readonly VfsDirEntry[],
   preferredPath: string | null | undefined,
+  autoSelectFirstEntry = true,
 ) {
   if (preferredPath && entries.some((entry) => entry.path === preferredPath)) {
     return preferredPath;
   }
 
-  return entries[0]?.path ?? null;
+  return autoSelectFirstEntry ? (entries[0]?.path ?? null) : null;
 }
 
 function buildBreadcrumbs(path: string): readonly FinderBreadcrumb[] {

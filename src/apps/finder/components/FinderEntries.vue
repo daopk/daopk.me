@@ -17,6 +17,16 @@ import {
 
 const GRID_KEYBOARD_COLUMNS = 4;
 const GRID_MIN_COLUMN_WIDTH = 120;
+const TOUCH_TAP_MAX_DURATION_MS = 500;
+const TOUCH_TAP_MAX_MOVEMENT_PX = 12;
+
+interface EntryPointerStart {
+  readonly path: string;
+  readonly pointerId: number;
+  readonly at: number;
+  readonly x: number;
+  readonly y: number;
+}
 
 const props = defineProps<{
   readonly activeDescendant?: string;
@@ -52,6 +62,7 @@ const entriesRef = ref<HTMLElement | null>(null);
 const gridColumns = ref(GRID_KEYBOARD_COLUMNS);
 let gridResizeObserver: ResizeObserver | undefined;
 let observedEntriesEl: HTMLElement | null = null;
+let entryPointerStart: EntryPointerStart | null = null;
 
 onMounted(() => {
   void nextTick(syncGridObserver);
@@ -109,6 +120,76 @@ function entryId(index: number): string {
 
 function canMutateEntry(entry: VfsDirEntry): boolean {
   return !props.mutationDisabled && !entry.readonly;
+}
+
+function isTouchLikePointer(event: PointerEvent): boolean {
+  return event.pointerType === "touch" || event.pointerType === "pen";
+}
+
+function eventTime(event: PointerEvent): number {
+  return event.timeStamp > 0
+    ? event.timeStamp
+    : typeof performance === "undefined"
+      ? Date.now()
+      : performance.now();
+}
+
+function distanceBetween(
+  a: { readonly x: number; readonly y: number },
+  b: { readonly x: number; readonly y: number },
+): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function onEntryPointerDown(entry: VfsDirEntry, event: PointerEvent): void {
+  if (!isTouchLikePointer(event) || event.isPrimary === false) {
+    return;
+  }
+
+  entryPointerStart = {
+    path: entry.path,
+    pointerId: event.pointerId,
+    at: eventTime(event),
+    x: event.clientX,
+    y: event.clientY,
+  };
+}
+
+function onEntryPointerUp(entry: VfsDirEntry, event: PointerEvent): void {
+  if (!isTouchLikePointer(event)) {
+    return;
+  }
+
+  const pointerStart = entryPointerStart;
+  entryPointerStart = null;
+  if (
+    entry.kind !== "directory" ||
+    pointerStart === null ||
+    pointerStart.pointerId !== event.pointerId ||
+    pointerStart.path !== entry.path
+  ) {
+    return;
+  }
+
+  const tap = { x: event.clientX, y: event.clientY };
+  const duration = eventTime(event) - pointerStart.at;
+  const moved = distanceBetween(pointerStart, tap);
+  if (duration > TOUCH_TAP_MAX_DURATION_MS || moved > TOUCH_TAP_MAX_MOVEMENT_PX) {
+    return;
+  }
+
+  emit("openEntry", entry);
+}
+
+function onEntryPointerCancel(event: PointerEvent): void {
+  if (entryPointerStart?.pointerId === event.pointerId) {
+    entryPointerStart = null;
+  }
+}
+
+function onEntryContextMenu(entry: VfsDirEntry): void {
+  entryPointerStart = null;
+  emit("entryContextMenu", entry);
 }
 
 function onBrowserKeydown(event: KeyboardEvent): void {
@@ -183,8 +264,11 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                 role="option"
                 :aria-selected="selectedPath === entry.path"
                 @click="emit('entryClick', entry)"
-                @contextmenu.stop="emit('entryContextMenu', entry)"
+                @contextmenu.stop="onEntryContextMenu(entry)"
                 @dblclick="emit('entryDoubleClick', entry)"
+                @pointercancel="onEntryPointerCancel"
+                @pointerdown="onEntryPointerDown(entry, $event)"
+                @pointerup="onEntryPointerUp(entry, $event)"
               >
                 <component
                   :is="entryIcon(entry)"

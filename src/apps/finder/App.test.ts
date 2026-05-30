@@ -237,6 +237,26 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
+interface PointerInit {
+  pointerId?: number;
+  pointerType?: "mouse" | "touch" | "pen";
+  clientX?: number;
+  clientY?: number;
+  isPrimary?: boolean;
+}
+
+function makePointerEvent(type: string, init: PointerInit = {}): PointerEvent {
+  const ev = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent;
+  Object.defineProperties(ev, {
+    pointerId: { value: init.pointerId ?? 1 },
+    pointerType: { value: init.pointerType ?? "touch" },
+    clientX: { value: init.clientX ?? 0 },
+    clientY: { value: init.clientY ?? 0 },
+    isPrimary: { value: init.isPrimary ?? true },
+  });
+  return ev;
+}
+
 async function flushReka(): Promise<void> {
   await nextTick();
   await nextTick();
@@ -245,6 +265,15 @@ async function flushReka(): Promise<void> {
 
 function menuItems(): HTMLElement[] {
   return Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+}
+
+function emitShellChanged(kernel: Kernel, shellId: "desktop" | "mobile"): void {
+  kernel.events.emit("shell.changed", {
+    shellId,
+    profile: {
+      formFactor: shellId === "mobile" ? "mobile" : "desktop",
+    },
+  });
 }
 
 describe("Finder App.vue", () => {
@@ -279,6 +308,21 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
+  it("does not auto-select entries or render the preview pane on mobile", async () => {
+    const kernel = makeKernel({
+      "/": [entry("/home", "directory"), entry("/readme.md")],
+    });
+    const wrapper = mountFinder(kernel);
+
+    emitShellChanged(kernel, "mobile");
+    await flushPromises();
+
+    expect(wrapper.find(".finder__entry--selected").exists()).toBe(false);
+    expect(wrapper.find(".finder__preview").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("opens the selected directory with Enter", async () => {
     const wrapper = mountFinder(
       makeKernel({
@@ -292,7 +336,34 @@ describe("Finder App.vue", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("note.txt");
-    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual(["note.txt"]);
+    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual([
+      "note.txt",
+    ]);
+
+    wrapper.unmount();
+  });
+
+  it("opens selected directories from a touch tap without a dblclick event", async () => {
+    const wrapper = mountFinder(
+      makeKernel({
+        "/": [entry("/home", "directory")],
+        "/home": [entry("/home/note.txt")],
+      }),
+    );
+
+    await flushPromises();
+    const selectedEntry = wrapper.get(".finder__entry").element;
+    selectedEntry.dispatchEvent(
+      makePointerEvent("pointerdown", { pointerId: 7, clientX: 12, clientY: 16 }),
+    );
+    selectedEntry.dispatchEvent(
+      makePointerEvent("pointerup", { pointerId: 7, clientX: 12, clientY: 16 }),
+    );
+    await flushPromises();
+
+    expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual([
+      "note.txt",
+    ]);
 
     wrapper.unmount();
   });
