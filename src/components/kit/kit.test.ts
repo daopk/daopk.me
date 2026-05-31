@@ -216,5 +216,9 @@ describe("kit components", () => {
     });
     expect(table.attributes("role")).toBe("table");
     expect(table.attributes("aria-label")).toBe("Deleted items");
+    expect(table.classes()).toContain("ds-kit-data-table--plain");
+
+    const lined = mount(DataTable, { props: { label: "Recent files", variant: "lined" } });
+    expect(lined.classes()).toContain("ds-kit-data-table--lined");
   });
 });

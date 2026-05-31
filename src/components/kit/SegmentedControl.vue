@@ -70,8 +70,8 @@ function selectOption(option: SegmentedControlOption): void {
   border-radius: var(--radius-md);
   display: inline-flex;
   flex: 0 0 auto;
-  gap: 1px;
-  padding: 2px;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
 }
 
 .ds-kit-segmented-control__item {
@@ -93,22 +93,22 @@ function selectOption(option: SegmentedControlOption): void {
 }
 
 .ds-kit-segmented-control--sm .ds-kit-segmented-control__item {
-  block-size: 28px;
-  font-size: 12px;
+  block-size: var(--control-height-sm);
+  font-size: var(--font-size-xs);
 }
 
 .ds-kit-segmented-control--md .ds-kit-segmented-control__item {
-  block-size: 32px;
-  font-size: 13px;
+  block-size: var(--control-height-md);
+  font-size: var(--font-size-sm);
 }
 
 .ds-kit-segmented-control--icon-only.ds-kit-segmented-control--sm .ds-kit-segmented-control__item {
-  inline-size: 28px;
+  inline-size: var(--control-height-sm);
   padding: 0;
 }
 
 .ds-kit-segmented-control--icon-only.ds-kit-segmented-control--md .ds-kit-segmented-control__item {
-  inline-size: 32px;
+  inline-size: var(--control-height-md);
   padding: 0;
 }
 

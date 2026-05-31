@@ -69,15 +69,15 @@ function selectTab(tab: TabListOption): void {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
 }
 
 .ds-kit-tab-list__tab {
   align-items: center;
   background: transparent;
   border: 0;
-  border-radius: calc(var(--radius-md) - 2px);
+  border-radius: calc(var(--radius-md) - var(--space-2xs));
   color: var(--color-fg-muted);
   cursor: pointer;
   display: inline-flex;
@@ -93,13 +93,13 @@ function selectTab(tab: TabListOption): void {
 }
 
 .ds-kit-tab-list--sm .ds-kit-tab-list__tab {
-  block-size: 28px;
-  font-size: 12px;
+  block-size: var(--control-height-sm);
+  font-size: var(--font-size-xs);
 }
 
 .ds-kit-tab-list--md .ds-kit-tab-list__tab {
-  block-size: 32px;
-  font-size: 13px;
+  block-size: var(--control-height-md);
+  font-size: var(--font-size-sm);
 }
 
 .ds-kit-tab-list__tab:hover,

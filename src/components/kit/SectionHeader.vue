@@ -60,16 +60,16 @@ const props = withDefaults(defineProps<SectionHeaderProps>(), {
 }
 
 .ds-kit-section-header__title {
-  font-size: 18px;
-  font-weight: 650;
-  line-height: 1.2;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--leading-tight);
   margin: 0;
 }
 
 .ds-kit-section-header__subtitle {
   color: var(--color-fg-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-normal);
   margin: 0;
 }
 

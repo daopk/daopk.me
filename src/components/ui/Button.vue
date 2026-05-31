@@ -66,12 +66,12 @@ withDefaults(defineProps<ButtonProps>(), {
 }
 
 .ds-button--sm {
-  font-size: 12px;
-  padding: 2px var(--space-sm);
+  font-size: var(--font-size-xs);
+  padding: var(--space-2xs) var(--space-sm);
 }
 
 .ds-button--md {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   padding: var(--space-xs) var(--space-md);
 }
 

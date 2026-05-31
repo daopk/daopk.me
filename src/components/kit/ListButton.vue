@@ -54,7 +54,7 @@ withDefaults(defineProps<ListButtonProps>(), {
   font: inherit;
   gap: var(--space-sm);
   inline-size: 100%;
-  min-block-size: 38px;
+  min-block-size: max(38px, var(--control-height-md));
   min-inline-size: 0;
   padding: var(--space-sm);
   text-align: start;
@@ -91,7 +91,7 @@ withDefaults(defineProps<ListButtonProps>(), {
 .ds-kit-list-button__copy {
   display: grid;
   flex: 1 1 auto;
-  gap: 2px;
+  gap: var(--space-2xs);
   min-inline-size: 0;
 }
 
@@ -104,12 +104,12 @@ withDefaults(defineProps<ListButtonProps>(), {
 }
 
 .ds-kit-list-button__title {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .ds-kit-list-button__meta {
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .ds-kit-list-button__end {

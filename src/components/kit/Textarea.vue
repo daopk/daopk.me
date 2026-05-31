@@ -57,7 +57,7 @@ defineExpose({ focus });
   color: var(--color-fg);
   font: inherit;
   inline-size: 100%;
-  line-height: 1.6;
+  line-height: var(--leading-relaxed);
   min-block-size: 0;
   min-inline-size: 0;
 }

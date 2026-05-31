@@ -65,13 +65,13 @@ withDefaults(defineProps<IconButtonProps>(), {
 }
 
 .ds-kit-icon-button--sm {
-  block-size: 28px;
-  inline-size: 28px;
+  block-size: var(--control-height-sm);
+  inline-size: var(--control-height-sm);
 }
 
 .ds-kit-icon-button--md {
-  block-size: 32px;
-  inline-size: 32px;
+  block-size: var(--control-height-md);
+  inline-size: var(--control-height-md);
 }
 
 .ds-kit-icon-button--ghost {

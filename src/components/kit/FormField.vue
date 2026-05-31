@@ -43,14 +43,14 @@ const props = withDefaults(defineProps<FormFieldProps>(), {
   align-items: center;
   color: var(--color-fg-muted);
   display: inline-flex;
-  font-size: 12px;
-  gap: 2px;
+  font-size: var(--font-size-xs);
+  gap: var(--space-2xs);
 }
 
 .ds-kit-form-field__message {
   color: var(--color-fg-muted);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--font-size-xs);
+  line-height: var(--leading-snug);
 }
 
 .ds-kit-form-field__message--error {

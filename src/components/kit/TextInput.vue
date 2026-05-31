@@ -59,7 +59,7 @@ defineExpose({ blur, focus, select });
   color: var(--color-fg);
   font: inherit;
   inline-size: 100%;
-  min-block-size: 34px;
+  min-block-size: var(--control-height-md);
   min-inline-size: 0;
 }
 

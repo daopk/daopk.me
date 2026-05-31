@@ -88,7 +88,7 @@ function onCommit(next: number[]): void {
 .ds-slider__track {
   background-color: var(--color-bg-subtle);
   block-size: 3px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   flex-grow: 1;
   position: relative;
 }
@@ -96,14 +96,14 @@ function onCommit(next: number[]): void {
 .ds-slider__range {
   background-color: var(--color-accent);
   block-size: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   position: absolute;
 }
 
 .ds-slider__thumb {
   background-color: var(--color-accent);
   block-size: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   display: block;
   inline-size: 16px;

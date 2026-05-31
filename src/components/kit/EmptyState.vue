@@ -53,12 +53,12 @@ withDefaults(defineProps<EmptyStateProps>(), {
 
 .ds-kit-empty-state__title {
   color: var(--color-fg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .ds-kit-empty-state__description {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-normal);
   max-inline-size: 34ch;
 }
 </style>

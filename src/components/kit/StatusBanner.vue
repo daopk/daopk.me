@@ -28,7 +28,7 @@ withDefaults(defineProps<StatusBannerProps>(), {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-fg-muted);
-  line-height: 1.45;
+  line-height: var(--leading-snug);
   padding: var(--space-sm) var(--space-md);
 }
 

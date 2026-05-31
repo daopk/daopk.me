@@ -50,14 +50,14 @@ withDefaults(defineProps<ActionRowProps>(), {
 }
 
 .ds-kit-action-row__title {
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .ds-kit-action-row__description {
   color: var(--color-fg-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-normal);
 }
 
 .ds-kit-action-row__control {

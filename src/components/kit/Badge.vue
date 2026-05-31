@@ -28,8 +28,8 @@ withDefaults(defineProps<BadgeProps>(), {
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   display: inline-flex;
-  font-weight: 500;
-  line-height: 1.2;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-tight);
   max-inline-size: 100%;
   min-inline-size: 0;
   overflow: hidden;
@@ -38,13 +38,13 @@ withDefaults(defineProps<BadgeProps>(), {
 }
 
 .ds-kit-badge--sm {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   padding: 1px var(--space-xs);
 }
 
 .ds-kit-badge--md {
-  font-size: 13px;
-  padding: 2px var(--space-sm);
+  font-size: var(--font-size-sm);
+  padding: var(--space-2xs) var(--space-sm);
 }
 
 .ds-kit-badge--neutral {

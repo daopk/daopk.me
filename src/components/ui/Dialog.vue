@@ -119,15 +119,15 @@ function onEscapeKeyDown(event: Event): void {
 }
 
 .ds-dialog__title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   margin: 0 0 var(--space-xs);
 }
 
 .ds-dialog__description {
   color: var(--color-fg-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-normal);
   margin: 0 0 var(--space-md);
 }
 

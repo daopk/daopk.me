@@ -53,7 +53,7 @@ function onUpdateOpen(value: boolean): void {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   color: var(--color-fg);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   min-inline-size: 180px;
   outline: none;
   padding: var(--space-xs);
@@ -71,10 +71,14 @@ function onUpdateOpen(value: boolean): void {
     display: flex;
     gap: var(--space-sm);
     inline-size: 100%;
-    line-height: 1.4;
+    line-height: var(--leading-snug);
     outline: none;
     padding: var(--space-sm) var(--space-sm);
     user-select: none;
+
+    @media (pointer: coarse) {
+      min-block-size: 44px;
+    }
 
     &[data-highlighted],
     &:hover {
