@@ -247,7 +247,7 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp();
 
     const items = wrapper.findAll(".settings__nav-item");
-    expect(items).toHaveLength(7);
+    expect(items).toHaveLength(8);
 
     const labels = items.map((item) => item.find(".settings__nav-label").text());
     expect(labels).toEqual([
@@ -257,6 +257,7 @@ describe("Settings App.vue", () => {
       "Dock",
       "Account",
       "Privacy",
+      "Apps",
       "About device",
     ]);
 
@@ -355,8 +356,7 @@ describe("Settings App.vue", () => {
     wrapper.unmount();
   });
 
-  it("renders mobile app settings entries and launches the selected app settings pane", async () => {
-    setShellViewportWidth(390);
+  it("renders shared app entries with launch and optional settings actions", async () => {
     const kernel = makeFakeKernel([
       makeApp({
         id: "notes",
@@ -387,15 +387,31 @@ describe("Settings App.vue", () => {
     await appsItem?.trigger("click");
 
     const appItems = wrapper.findAll(".apps-settings__item");
-    expect(appItems).toHaveLength(1);
+    expect(appItems).toHaveLength(2);
     expect(appItems[0]?.text()).toContain("Calendar");
+    expect(appItems[1]?.text()).toContain("Notes");
+    expect(appItems[0]?.text()).not.toContain("Settings");
+    expect(appItems[1]?.text()).not.toContain("No settings");
+    expect(wrapper.text()).not.toContain("Hidden Settings");
+    expect(wrapper.text()).not.toContain("Template");
 
-    await appItems[0]?.trigger("click");
+    const settingsButtons = wrapper.findAll(".apps-settings__settings-action");
+    const launchButtons = wrapper.findAll(".apps-settings__launch-action");
+    expect(settingsButtons).toHaveLength(1);
+    expect(launchButtons).toHaveLength(2);
+    await settingsButtons[0]?.trigger("click");
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "calendar",
       source: "api",
       args: { pane: "settings" },
+    });
+
+    await appItems[1]?.find(".apps-settings__launch-action").trigger("click");
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "notes",
+      source: "api",
     });
 
     wrapper.unmount();
@@ -436,7 +452,8 @@ describe("Settings App.vue", () => {
       [3, "dock-settings", "Automatically hide the Dock"],
       [4, "account", "Lock Session"],
       [5, "privacy", "Privacy"],
-      [6, "about-device", "Boot count"],
+      [6, "apps-settings", "No apps available"],
+      [7, "about-device", "Boot count"],
     ];
 
     for (const [idx, rootClass, marker] of expectations) {

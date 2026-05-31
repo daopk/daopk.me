@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { onUnmounted, shallowRef } from "vue";
 
-import { EmptyState, ListButton, SectionHeader } from "~/components/kit";
+import { EmptyState, IconButton, SectionHeader } from "~/components/kit";
 import { useKernel } from "~/composables/useKernel";
 import { appSettingsLaunchArgs, hasAppSettings } from "~/core/apps/appSettings";
-import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
+import { ExternalLink as LaunchIcon, Settings as SettingsIcon } from "~/icons/lucide";
 import type { AppManifest } from "~/types/app";
 
 const HIDDEN_PREFIX = "_";
@@ -15,17 +15,33 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 
 const kernel = useKernel();
 
-const apps = computed<readonly AppManifest[]>(() =>
-  kernel.apps
+const apps = shallowRef<readonly AppManifest[]>(visibleApps());
+
+const stopRegistered = kernel.events.on("app.registered", refreshApps);
+const stopUnregistered = kernel.events.on("app.unregistered", refreshApps);
+
+onUnmounted(() => {
+  stopRegistered();
+  stopUnregistered();
+});
+
+function visibleApps(): AppManifest[] {
+  return kernel.apps
     .list()
-    .filter(
-      (manifest) =>
-        manifest.hidden !== true &&
-        !manifest.id.startsWith(HIDDEN_PREFIX) &&
-        hasAppSettings(manifest),
-    )
-    .sort((left, right) => left.name.localeCompare(right.name)),
-);
+    .filter((manifest) => manifest.hidden !== true && !manifest.id.startsWith(HIDDEN_PREFIX))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function refreshApps(): void {
+  apps.value = visibleApps();
+}
+
+function launchApp(manifestId: string): void {
+  kernel.events.emit("app.launch.requested", {
+    manifestId,
+    source: "api",
+  });
+}
 
 function openAppSettings(manifestId: string): void {
   kernel.events.emit("app.launch.requested", {
@@ -43,25 +59,38 @@ function openAppSettings(manifestId: string): void {
     </SectionHeader>
 
     <EmptyState v-if="apps.length === 0" class="apps-settings__empty">
-      No app settings available.
+      No apps available.
     </EmptyState>
 
-    <div v-else class="apps-settings__list">
-      <ListButton
-        v-for="app in apps"
-        :key="app.id"
-        class="apps-settings__item"
-        @click="openAppSettings(app.id)"
-      >
-        <template #icon>
+    <ul v-else class="apps-settings__list">
+      <li v-for="app in apps" :key="app.id" class="apps-settings__item">
+        <div class="apps-settings__identity">
           <component :is="app.icon" class="apps-settings__icon" aria-hidden="true" />
-        </template>
-        <span class="apps-settings__name">{{ app.name }}</span>
-        <template #end>
-          <component :is="NavChevronIcon" class="apps-settings__chevron" aria-hidden="true" />
-        </template>
-      </ListButton>
-    </div>
+          <span class="apps-settings__copy">
+            <span class="apps-settings__name">{{ app.name }}</span>
+            <span class="apps-settings__category">{{ app.category }}</span>
+          </span>
+        </div>
+
+        <div class="apps-settings__actions">
+          <IconButton
+            v-if="hasAppSettings(app)"
+            class="apps-settings__settings-action"
+            :icon="SettingsIcon"
+            :label="`Open ${app.name} settings`"
+            variant="subtle"
+            @click="openAppSettings(app.id)"
+          />
+          <IconButton
+            class="apps-settings__launch-action"
+            :icon="LaunchIcon"
+            :label="`Open ${app.name}`"
+            variant="subtle"
+            @click="launchApp(app.id)"
+          />
+        </div>
+      </li>
+    </ul>
   </section>
 </template>
 
@@ -96,6 +125,9 @@ function openAppSettings(manifestId: string): void {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .apps-settings__item {
@@ -104,27 +136,18 @@ function openAppSettings(manifestId: string): void {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-fg);
-  cursor: pointer;
   display: flex;
-  font: inherit;
-  gap: var(--space-sm);
+  gap: var(--space-md);
+  justify-content: space-between;
   min-block-size: 54px;
   padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-sm);
-  text-align: start;
-  transition:
-    background-color 120ms var(--ease),
-    border-color 120ms var(--ease);
 }
 
-.apps-settings__item:hover,
-.apps-settings__item:focus-visible {
-  background: var(--color-bg);
-  border-color: color-mix(in srgb, var(--color-accent) 36%, var(--color-border));
-}
-
-.apps-settings__item:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+.apps-settings__identity {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  min-inline-size: 0;
 }
 
 .apps-settings__icon {
@@ -134,31 +157,57 @@ function openAppSettings(manifestId: string): void {
   inline-size: 38px;
 }
 
-.apps-settings__name {
+.apps-settings__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.apps-settings__name,
+.apps-settings__category {
   flex: 1 1 auto;
-  font-weight: 550;
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.apps-settings__chevron {
-  block-size: 16px;
-  color: var(--color-fg-subtle, var(--color-fg-muted));
+.apps-settings__name {
+  font-weight: 550;
+}
+
+.apps-settings__category {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.apps-settings__actions {
+  align-items: center;
+  display: flex;
   flex: 0 0 auto;
-  inline-size: 16px;
+  gap: var(--space-xs);
+}
+
+.apps-settings__settings-action,
+.apps-settings__launch-action {
+  flex: 0 0 auto;
 }
 
 @media (max-width: 520px) {
   .apps-settings {
     padding: var(--space-lg) var(--space-md);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
   .apps-settings__item {
-    transition: none;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: var(--space-md);
+  }
+
+  .apps-settings__actions {
+    align-self: flex-end;
   }
 }
 </style>
