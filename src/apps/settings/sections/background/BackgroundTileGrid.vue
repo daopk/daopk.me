@@ -137,8 +137,8 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
   position: relative;
   text-align: start;
   transition:
-    border-color 120ms var(--ease),
-    box-shadow 120ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
   width: 100%;
 }
 
@@ -223,8 +223,8 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
   padding: 4px;
   position: absolute;
   transition:
-    background-color 120ms var(--ease),
-    opacity 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease);
 }
 
 .background__tile-wrapper:hover .background__tile-remove,

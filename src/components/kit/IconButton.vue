@@ -60,8 +60,8 @@ withDefaults(defineProps<IconButtonProps>(), {
   min-inline-size: 0;
   padding: 0;
   transition:
-    background-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ds-kit-icon-button--sm {

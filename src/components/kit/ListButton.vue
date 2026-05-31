@@ -59,9 +59,9 @@ withDefaults(defineProps<ListButtonProps>(), {
   padding: var(--space-sm);
   text-align: start;
   transition:
-    background-color 120ms var(--ease),
-    border-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ds-kit-list-button:hover,

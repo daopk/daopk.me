@@ -650,9 +650,9 @@ onUnmounted(() => {
   padding: 0 var(--space-md);
   text-align: start;
   transition:
-    background-color 120ms var(--ease),
-    border-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .auth-gate__profile:hover {

@@ -254,10 +254,7 @@ watch(
           :key="frame.frameId"
           :frame="frame"
           :title="titleFor(frame.manifestId)"
-          :is-current="
-            frame.frameId === nav.foreground.value &&
-            !switcherActive
-          "
+          :is-current="frame.frameId === nav.foreground.value && !switcherActive"
           :is-foreground-frame="frame.frameId === nav.foreground.value"
           :aria-hidden="switcherActive ? 'true' : undefined"
           :inert="switcherActive ? true : undefined"
@@ -337,7 +334,7 @@ watch(
 @media (prefers-reduced-motion: reduce) {
   .app-switcher-enter-active,
   .app-switcher-leave-active {
-    transition-duration: 120ms;
+    transition-duration: var(--duration-fast);
   }
 
   .app-switcher-enter-from,

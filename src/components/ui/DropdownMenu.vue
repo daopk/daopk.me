@@ -59,7 +59,7 @@ function onUpdateOpen(value: boolean): void {
 
 <style lang="scss">
 .ds-dropdown-menu {
-  animation: ds-dropdown-menu-in 120ms var(--ease) both;
+  animation: ds-dropdown-menu-in var(--duration-fast) var(--ease) both;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

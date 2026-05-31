@@ -102,7 +102,7 @@ const dragStyle = computed(() =>
   position: relative;
   transform: translate(var(--dock-drag-x), var(--dock-drag-y)) scale(1);
   transition:
-    opacity 120ms var(--ease),
+    opacity var(--duration-fast) var(--ease),
     transform 180ms var(--ease);
 }
 
@@ -200,7 +200,7 @@ const dragStyle = computed(() =>
   block-size: calc(var(--dock-icon-size) * 0.6);
   filter: var(--dock-icon-shadow);
   inline-size: calc(var(--dock-icon-size) * 0.6);
-  transition: filter 120ms var(--ease);
+  transition: filter var(--duration-fast) var(--ease);
 }
 
 .dock-item__indicator {

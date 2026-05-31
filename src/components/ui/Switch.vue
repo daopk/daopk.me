@@ -39,8 +39,8 @@ defineEmits<{
   padding: 0;
   position: relative;
   transition:
-    background-color 120ms var(--ease),
-    border-color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
 
   &:focus-visible {
     outline: 2px solid var(--color-accent);
@@ -68,7 +68,7 @@ defineEmits<{
   inset-block-start: 1px;
   inset-inline-start: 1px;
   position: absolute;
-  transition: inset-inline-start 120ms var(--ease);
+  transition: inset-inline-start var(--duration-fast) var(--ease);
 }
 
 .ds-switch[data-state="checked"] .ds-switch__thumb {

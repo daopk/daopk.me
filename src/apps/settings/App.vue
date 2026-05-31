@@ -346,8 +346,8 @@ watch(
   position: relative;
   text-align: start;
   transition:
-    background-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .settings__nav-item:hover,
@@ -395,9 +395,9 @@ watch(
   inline-size: 34px;
   padding: 5px;
   transition:
-    background-color 120ms var(--ease),
-    opacity 120ms var(--ease),
-    transform 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .settings__nav-item:hover .settings__nav-icon,

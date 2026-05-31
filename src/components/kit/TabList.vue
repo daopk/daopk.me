@@ -87,9 +87,9 @@ function selectTab(tab: TabListOption): void {
   min-inline-size: 0;
   padding: 0 var(--space-sm);
   transition:
-    background-color 120ms var(--ease),
-    box-shadow 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ds-kit-tab-list--sm .ds-kit-tab-list__tab {

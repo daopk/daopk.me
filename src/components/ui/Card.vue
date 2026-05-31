@@ -51,8 +51,8 @@ withDefaults(defineProps<CardProps>(), {
 .ds-card--interactive {
   cursor: pointer;
   transition:
-    border-color 120ms var(--ease),
-    box-shadow 120ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 
   &:hover,
   &:focus-visible {

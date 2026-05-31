@@ -58,7 +58,7 @@ function onUpdateOpen(value: boolean): void {
   outline: none;
   padding: var(--space-xs);
   z-index: var(--context-menu-z);
-  animation: ds-context-menu-in 120ms var(--ease) both;
+  animation: ds-context-menu-in var(--duration-fast) var(--ease) both;
 
   &:focus-visible {
     outline: none;

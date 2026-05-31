@@ -88,8 +88,8 @@ function selectOption(option: SegmentedControlOption): void {
   min-inline-size: 0;
   padding: 0 var(--space-sm);
   transition:
-    background-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .ds-kit-segmented-control--sm .ds-kit-segmented-control__item {

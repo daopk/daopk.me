@@ -239,9 +239,9 @@ function selectAccent(presetId: string, value: string): void {
   position: relative;
   text-align: start;
   transition:
-    border-color 120ms var(--ease),
-    box-shadow 120ms var(--ease),
-    transform 120ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
 }
 
 .appearance__theme-card:hover,
@@ -429,8 +429,8 @@ function selectAccent(presetId: string, value: string): void {
   padding: 0;
   position: relative;
   transition:
-    transform 120ms var(--ease),
-    border-color 120ms var(--ease);
+    transform var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
 }
 
 .appearance__swatch:hover,

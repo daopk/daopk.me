@@ -525,7 +525,7 @@ function datetimeValue(timestamp: number): string {
     156px;
   min-inline-size: 724px;
   padding: var(--space-xs) var(--space-md);
-  transition: background-color 120ms var(--ease);
+  transition: background-color var(--duration-fast) var(--ease);
 }
 
 .trash__row:hover {

@@ -79,8 +79,8 @@ function dispatchCommand(id: string): void {
   min-block-size: calc(var(--menubar-height) - 6px);
   padding: 0 var(--space-sm);
   transition:
-    background-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .brand:hover,

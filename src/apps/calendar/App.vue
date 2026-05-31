@@ -988,9 +988,9 @@ function labelForStatus(status: CalendarStatus): string {
   display: inline-flex;
   justify-content: center;
   transition:
-    background-color 120ms var(--ease),
-    border-color 120ms var(--ease),
-    color 120ms var(--ease);
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 
   &:focus-visible {
     outline: 2px solid var(--color-accent);

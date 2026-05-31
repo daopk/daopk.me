@@ -172,7 +172,7 @@ defineExpose({ scrollEl });
   .home-screen__recents-fab {
     transition:
       background var(--duration-fast) var(--ease),
-      opacity 120ms var(--ease),
+      opacity var(--duration-fast) var(--ease),
       transform var(--duration-fast) var(--ease);
   }
 }

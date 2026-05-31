@@ -72,7 +72,7 @@ function visibleApps(): AppManifest[] {
   margin: 0;
   min-block-size: calc(var(--menubar-height) - 6px);
   padding: 0 var(--space-sm);
-  transition: background-color 120ms var(--ease);
+  transition: background-color var(--duration-fast) var(--ease);
 }
 
 .apps-trigger:hover,

@@ -236,8 +236,8 @@ function onPostSelect(post: BlogIndexPost): void {
   padding: var(--space-md);
   text-align: start;
   transition:
-    border-color 120ms var(--ease),
-    background-color 120ms var(--ease);
+    border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
 }
 
 .blog__index-item:hover,

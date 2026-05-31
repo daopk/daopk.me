@@ -107,7 +107,7 @@ function onCommit(next: number[]): void {
   box-shadow: var(--shadow-sm);
   display: block;
   inline-size: 16px;
-  transition: box-shadow 120ms var(--ease);
+  transition: box-shadow var(--duration-fast) var(--ease);
 
   &:hover {
     box-shadow: var(--shadow-md);
