@@ -167,6 +167,21 @@ describe("HomeScreen multi-page (M1.4)", () => {
     expect(icons[2].props("launching")).toBe(false);
   });
 
+  it("marks desktop-only manifests as unavailable on the mobile home screen", () => {
+    currentKernel = makeKernel([
+      manifest({ id: "slides", name: "Slides", supportedShells: ["desktop"] }),
+    ]);
+
+    const wrapper = mount(HomeScreen, {
+      props: { recentsAvailable: false },
+    });
+
+    const icon = wrapper.findComponent(HomeScreenIcon);
+    expect(icon.props("unsupported")).toBe(true);
+    expect(icon.props("unavailableReason")).toContain("not supported on mobile");
+    expect(wrapper.find("button.home-icon").attributes("disabled")).toBeDefined();
+  });
+
   it("mounts MobileWidgetsPage on page 2 (M1.4 commit B)", () => {
     const wrapper = mount(HomeScreen, {
       props: { recentsAvailable: false },

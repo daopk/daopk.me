@@ -15,9 +15,13 @@ const props = withDefaults(
      * unchanged.
      */
     launching?: boolean;
+    unsupported?: boolean;
+    unavailableReason?: string;
   }>(),
   {
     launching: false,
+    unsupported: false,
+    unavailableReason: undefined,
   },
 );
 
@@ -26,9 +30,10 @@ const emit = defineEmits<{
 }>();
 
 const iconComponent = computed<Component>(() => props.manifest.icon);
+const disabled = computed<boolean>(() => props.launching || props.unsupported);
 
 function onActivate(): void {
-  if (props.launching) {
+  if (disabled.value) {
     return;
   }
   emit("launch", props.manifest.id);
@@ -39,10 +44,12 @@ function onActivate(): void {
   <button
     type="button"
     class="home-icon"
-    :class="{ 'home-icon--launching': launching }"
+    :class="{ 'home-icon--launching': launching, 'home-icon--unsupported': unsupported }"
     :data-manifest-id="manifest.id"
     :aria-busy="launching ? 'true' : undefined"
-    :disabled="launching || undefined"
+    :aria-disabled="unsupported ? 'true' : undefined"
+    :disabled="disabled || undefined"
+    :title="unavailableReason"
     @click="onActivate"
     @keydown.enter.prevent="onActivate"
     @keydown.space.prevent="onActivate"
@@ -77,9 +84,13 @@ function onActivate(): void {
     border-radius: var(--home-screen-icon-radius);
   }
 
-  // the UA's heavier disabled chrome. Cursor stays default — the
+  // Keep disabled styling owned by launch / unsupported states.
   &:disabled {
     cursor: default;
+  }
+
+  &.home-icon--unsupported {
+    cursor: not-allowed;
   }
 }
 
@@ -107,6 +118,12 @@ function onActivate(): void {
   .home-icon--launching & > :first-child {
     opacity: 0.35;
     transition: opacity var(--duration-fast) var(--ease);
+  }
+
+  .home-icon--unsupported & {
+    box-shadow: none;
+    filter: grayscale(1);
+    opacity: 0.42;
   }
 }
 
@@ -156,5 +173,10 @@ function onActivate(): void {
   text-overflow: ellipsis;
   text-shadow: var(--home-screen-label-shadow);
   white-space: nowrap;
+
+  .home-icon--unsupported & {
+    opacity: 0.68;
+    text-shadow: none;
+  }
 }
 </style>

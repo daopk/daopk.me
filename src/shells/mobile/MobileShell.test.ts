@@ -159,6 +159,35 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
+  it("shows a fullscreen unsupported state for desktop-only apps without launching them", async () => {
+    currentKernel = makeKernel([
+      manifest({ id: "slides", name: "Slides", supportedShells: ["desktop"] }),
+    ]);
+
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "slides",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(0);
+    expect(wrapper.find(".unsupported-app-view").exists()).toBe(true);
+    expect(wrapper.find(".unsupported-app-view").text()).toContain(
+      "Slides is not supported on mobile",
+    );
+    expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
+
+    await wrapper.find(".unsupported-app-view__back").trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".unsupported-app-view").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("does NOT call `document.startViewTransition` for nav launch (M1.3.5 — R16 fix dropped VT from nav)", async () => {
     const vtSpy = vi.fn((cb: () => void | Promise<void>) => {
       cb();

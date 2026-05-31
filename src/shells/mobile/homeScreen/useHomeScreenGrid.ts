@@ -1,10 +1,13 @@
 import { computed, type ComputedRef } from "vue";
 
+import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 export interface HomeScreenSlot {
   readonly manifest: AppManifest;
+  readonly unsupported: boolean;
+  readonly unavailableReason?: string;
 }
 
 export interface UseHomeScreenGrid {
@@ -18,7 +21,19 @@ export function useHomeScreenGrid(kernel: Kernel): UseHomeScreenGrid {
     .list()
     .filter((manifest) => !manifest.id.startsWith(HIDDEN_PREFIX) && manifest.hidden !== true);
 
-  const slots = computed<HomeScreenSlot[]>(() => manifests.map((manifest) => ({ manifest })));
+  const slots = computed<HomeScreenSlot[]>(() =>
+    manifests.map((manifest) => {
+      const unsupported = !appSupportsShell(manifest, "mobile");
+
+      return {
+        manifest,
+        unsupported,
+        ...(unsupported
+          ? { unavailableReason: appUnsupportedShellMessage(manifest, "mobile") }
+          : {}),
+      };
+    }),
+  );
 
   return { slots };
 }

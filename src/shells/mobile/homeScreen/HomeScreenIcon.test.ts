@@ -97,6 +97,26 @@ describe("HomeScreenIcon", () => {
     expect(wrapper.emitted("launch")).toBeUndefined();
   });
 
+  it("renders unsupported apps as disabled and suppresses launch", async () => {
+    const wrapper = mount(HomeScreenIcon, {
+      props: {
+        manifest: manifest(),
+        unsupported: true,
+        unavailableReason: "Alpha is not supported on mobile.",
+      },
+    });
+
+    const button = wrapper.find("button.home-icon");
+    expect(button.classes()).toContain("home-icon--unsupported");
+    expect(button.attributes("disabled")).toBeDefined();
+    expect(button.attributes("aria-disabled")).toBe("true");
+    expect(button.attributes("title")).toBe("Alpha is not supported on mobile.");
+
+    await button.trigger("click");
+
+    expect(wrapper.emitted("launch")).toBeUndefined();
+  });
+
   it("M1.3.6: resumes emitting `launch` once launching flips back to false", async () => {
     const wrapper = mount(HomeScreenIcon, {
       props: { manifest: manifest(), launching: true },

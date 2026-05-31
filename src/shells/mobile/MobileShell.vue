@@ -4,14 +4,17 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
 import HomeScreen from "./homeScreen/HomeScreen.vue";
 import AppView from "./AppView.vue";
+import UnsupportedAppView from "./UnsupportedAppView.vue";
 import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
 import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromptHost.vue";
 import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
 import { isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
+import { appSupportsShell } from "~/core/apps/shellSupport";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
+import type { AppManifest } from "~/types/app";
 
 const kernel = useKernel();
 const nav = useMobileNavigation();
@@ -30,7 +33,9 @@ const showSwitcher = ref(false);
 
 const switcherActive = computed(() => showSwitcher.value && nav.depth.value > 0);
 
-const isHome = computed(() => nav.foreground.value === null);
+const unsupportedManifest = ref<AppManifest | null>(null);
+
+const isHome = computed(() => nav.foreground.value === null && unsupportedManifest.value === null);
 
 type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
   scrollEl: HTMLElement | null;
@@ -94,6 +99,20 @@ const lastLaunchedManifestId = ref<string | null>(null);
 
 const launchingManifestIds = ref<ReadonlySet<string>>(new Set<string>());
 
+function manifestFor(manifestId: string): AppManifest | null {
+  return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
+}
+
+function unsupportedManifestFor(manifestId: string): AppManifest | null {
+  const manifest = manifestFor(manifestId);
+
+  if (!manifest || appSupportsShell(manifest, "mobile")) {
+    return null;
+  }
+
+  return manifest;
+}
+
 function addLaunching(manifestId: string): void {
   const next = new Set(launchingManifestIds.value);
   next.add(manifestId);
@@ -110,6 +129,17 @@ function clearLaunching(manifestId: string): void {
 }
 
 function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>): void {
+  const unsupported = unsupportedManifestFor(manifestId);
+
+  if (unsupported) {
+    unsupportedManifest.value = unsupported;
+    showSwitcher.value = false;
+    clearLaunching(manifestId);
+    return;
+  }
+
+  unsupportedManifest.value = null;
+
   const willResume = nav.stack.some((frame) => frame.manifestId === manifestId);
 
   if (!willResume) {
@@ -137,6 +167,16 @@ function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>):
 }
 
 function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): void {
+  const unsupported = unsupportedManifestFor(manifestId);
+
+  if (unsupported) {
+    unsupportedManifest.value = unsupported;
+    showSwitcher.value = false;
+    clearLaunching(manifestId);
+    return;
+  }
+
+  unsupportedManifest.value = null;
   addLaunching(manifestId);
   void nav.spawnNew(manifestId, args).then(
     () => {
@@ -155,6 +195,10 @@ function onBack(): void {
 
 function onHide(): void {
   nav.goHome();
+}
+
+function onUnsupportedBack(): void {
+  unsupportedManifest.value = null;
 }
 
 function onSelect(frameId: string): void {
@@ -214,13 +258,22 @@ watch(
           :key="frame.frameId"
           :frame="frame"
           :title="titleFor(frame.manifestId)"
-          :is-current="frame.frameId === nav.foreground.value && !switcherActive"
+          :is-current="
+            frame.frameId === nav.foreground.value &&
+            !switcherActive &&
+            unsupportedManifest === null
+          "
           :is-foreground-frame="frame.frameId === nav.foreground.value"
-          :aria-hidden="switcherActive ? 'true' : undefined"
-          :inert="switcherActive ? true : undefined"
+          :aria-hidden="switcherActive || unsupportedManifest !== null ? 'true' : undefined"
+          :inert="switcherActive || unsupportedManifest !== null ? true : undefined"
           @back="onBack"
           @hide="onHide"
           @recents="openSwitcher"
+        />
+        <UnsupportedAppView
+          v-if="unsupportedManifest !== null"
+          :manifest="unsupportedManifest"
+          @back="onUnsupportedBack"
         />
       </div>
       <Transition name="app-switcher">

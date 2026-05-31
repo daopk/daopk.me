@@ -1,5 +1,6 @@
 import type { Component, InjectionKey } from "vue";
 
+import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 
 export type AppPermission =
@@ -35,6 +36,10 @@ export interface AppManifest {
   category: "system" | "productivity" | "media" | "dev" | "other";
   hidden?: boolean;
   singleton?: boolean;
+  /**
+   * Shells that can run this app. Omit to support every shell.
+   */
+  supportedShells?: readonly ShellId[];
   defaultWindow?: WindowDefaults;
   permissions?: AppPermission[];
   widgets?: readonly WidgetManifest[];

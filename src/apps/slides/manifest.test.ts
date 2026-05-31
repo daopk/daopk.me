@@ -9,6 +9,7 @@ describe("slidesManifest", () => {
       name: "Slides",
       category: "productivity",
       singleton: true,
+      supportedShells: ["desktop"],
       permissions: ["vfs.read", "vfs.write", "network.fetch"],
       keywords: expect.arrayContaining(["slidev", "deck", "presentation"]),
     });

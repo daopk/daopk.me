@@ -8,6 +8,7 @@ export const slidesManifest: AppManifest = {
   icon: SlidesAppIcon,
   category: "productivity",
   singleton: true,
+  supportedShells: ["desktop"],
   permissions: ["vfs.read", "vfs.write", "network.fetch"],
   defaultWindow: { width: 1120, height: 720, centered: true },
   component: () => import("./App.vue"),
