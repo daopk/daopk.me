@@ -104,7 +104,10 @@ describe("PDF Viewer App.vue", () => {
     const viewer = makeViewer();
     const wrapper = mountPdfViewer(viewer);
 
-    expect(wrapper.text()).toContain("Open a PDF");
+    expect(wrapper.text()).toContain("Choose file");
+    expect(wrapper.text()).not.toContain("Open a PDF");
+    expect(wrapper.find(".pdf-viewer__toolbar").exists()).toBe(false);
+    expect(wrapper.find(".pdf-viewer__status").exists()).toBe(false);
     expect(wrapper.find(".pdf-viewer__page").attributes("style")).toContain("display: none");
     expect(mocks.usePdfViewer).toHaveBeenCalledWith({
       vfs: expect.anything(),
@@ -128,6 +131,8 @@ describe("PDF Viewer App.vue", () => {
       vfs: expect.anything(),
       initialPath: "/docs/spec.pdf",
     });
+    expect(wrapper.find(".pdf-viewer__toolbar").exists()).toBe(true);
+    expect(wrapper.find(".pdf-viewer__status").exists()).toBe(true);
     expect(wrapper.text()).toContain("spec.pdf");
     expect(wrapper.text()).toContain("/docs/spec.pdf");
 
@@ -152,7 +157,13 @@ describe("PDF Viewer App.vue", () => {
   });
 
   it("wires toolbar controls to viewer actions", async () => {
-    const viewer = makeViewer({ status: "ready", title: "book.pdf", pageNumber: 1, pageCount: 3 });
+    const viewer = makeViewer({
+      status: "ready",
+      title: "book.pdf",
+      sourceKind: "file",
+      pageNumber: 1,
+      pageCount: 3,
+    });
     const wrapper = mountPdfViewer(viewer);
 
     await wrapper.find('button[aria-label="Next page"]').trigger("click");

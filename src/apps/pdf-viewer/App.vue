@@ -37,6 +37,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const pageDraft = ref("1");
 
 const hasDocument = computed(() => viewer.pageCount.value > 0);
+const showChrome = computed(() => viewer.sourceKind.value !== "empty");
 const busy = computed(
   () => viewer.status.value === "loading" || viewer.status.value === "rendering",
 );
@@ -119,7 +120,15 @@ function setCanvasRef(el: unknown): void {
 
 <template>
   <AppFrame class="pdf-viewer" layout="flex-column" aria-label="PDF Viewer">
-    <AppToolbar class="pdf-viewer__toolbar" wrap>
+    <input
+      ref="fileInput"
+      class="pdf-viewer__file-input"
+      type="file"
+      accept="application/pdf,.pdf"
+      @change="onFileChange"
+    />
+
+    <AppToolbar v-if="showChrome" class="pdf-viewer__toolbar" wrap>
       <template #start>
         <div class="pdf-viewer__document">
           <div class="pdf-viewer__document-text">
@@ -128,14 +137,6 @@ function setCanvasRef(el: unknown): void {
           </div>
         </div>
       </template>
-
-      <input
-        ref="fileInput"
-        class="pdf-viewer__file-input"
-        type="file"
-        accept="application/pdf,.pdf"
-        @change="onFileChange"
-      />
 
       <template #end>
         <div class="pdf-viewer__controls" aria-label="PDF controls">
@@ -221,8 +222,7 @@ function setCanvasRef(el: unknown): void {
     >
       <EmptyState
         v-if="viewer.status.value === 'idle'"
-        class="pdf-viewer__empty"
-        title="Open a PDF"
+        class="pdf-viewer__empty pdf-viewer__empty--idle"
       >
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
       </EmptyState>
@@ -242,12 +242,18 @@ function setCanvasRef(el: unknown): void {
         <Button variant="primary" :icon-start="Upload" @click="openFilePicker">Choose file</Button>
       </EmptyState>
 
+      <EmptyState
+        v-else-if="viewer.status.value === 'ready' && !hasDocument"
+        class="pdf-viewer__empty"
+        :title="viewer.message.value"
+      />
+
       <div v-show="hasDocument" class="pdf-viewer__page">
         <canvas :ref="setCanvasRef" class="pdf-viewer__canvas" aria-label="PDF page" />
       </div>
     </main>
 
-    <StatusBanner as="footer" class="pdf-viewer__status">
+    <StatusBanner v-if="showChrome" as="footer" class="pdf-viewer__status">
       {{ viewer.message.value }}
     </StatusBanner>
   </AppFrame>
@@ -406,6 +412,7 @@ function setCanvasRef(el: unknown): void {
 
 .pdf-viewer__viewport--empty {
   align-items: center;
+  background: var(--color-bg);
   display: grid;
   justify-items: center;
 }
@@ -427,6 +434,10 @@ function setCanvasRef(el: unknown): void {
   margin: 0;
   max-inline-size: min(460px, 90vw);
   overflow-wrap: anywhere;
+}
+
+.pdf-viewer__empty--idle {
+  padding: var(--space-lg);
 }
 
 .pdf-viewer__page {
