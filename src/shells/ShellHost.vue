@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, useTemplateRef } from "vue";
+import { computed, nextTick, onMounted, useTemplateRef, watchEffect } from "vue";
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
 import { runAutorunManifests } from "~/core/boot/autorun";
@@ -15,6 +15,22 @@ const hostRef = useTemplateRef<HTMLElement>("hostRef");
 const bootstrapSticky = peekShellStickyOverride();
 
 const picked = computed<PickedShell>(() => pickShell(breakpoint.profile.value, bootstrapSticky));
+
+// Mirror the active shell + pointer onto <html> so token-level rules
+// (control-height touch density in `_tokens.scss`) and app styles can react
+// without prop drilling. Kept here because ShellHost is the canonical place
+// that resolves which shell is live.
+watchEffect(() => {
+  const root = document.documentElement;
+  root.dataset.shell = picked.value.shellId;
+
+  const pointer = breakpoint.profile.value.pointerCoarse;
+  if (pointer) {
+    root.dataset.pointer = pointer;
+  } else {
+    delete root.dataset.pointer;
+  }
+});
 
 let lastReadyShellId: PickedShell["shellId"] | null = null;
 
