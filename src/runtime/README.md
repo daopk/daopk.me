@@ -86,3 +86,49 @@ export default defineComponent({
 The import map is injected **only at build time**. Under `npm run dev` there is
 no import map, so external apps are testable under `npm run preview` (or a real
 deploy), not the dev server. The host app itself works normally in dev.
+
+## Install security model
+
+Trusted-ESM external apps run arbitrary code with full access to the workspace.
+There is no sandbox; the controls are layered admission checks, not isolation:
+
+- **HTTPS-only** manifest URL and entry module (`installExternalApp` + the
+  validator). The manifest is fetched with `credentials: "omit"`.
+- **Reserved ids**: ids in `BUILTIN_APP_IDS` (and any `_`-prefixed id) are
+  rejected so an install can never shadow a built-in / first-party app. The
+  live registry (`kernel.apps.list()`) is also checked at install time.
+- **Manifest validation** (`externalManifest.ts`): category/permission
+  whitelists, window clamping, unknown fields stripped, no `autorun`.
+- **Install consent**: an informational dialog shows identity, entry origin, and
+  requested permissions. It does **not** pre-grant anything — runtime permission
+  prompts still gate every capability the first time it is used.
+- **Optional origin allowlist** (`originAllowlist.ts`): leave
+  `EXTERNAL_APP_ORIGIN_ALLOWLIST` empty to allow any HTTPS origin (default), or
+  populate it to restrict the app **entry** origin to a trusted set. A future
+  user-facing setting can override it per device.
+
+## Update / upgrade flow
+
+Installing a manifest whose `id` matches an already-installed external app is an
+**upsert**: the store record is replaced and the app is unregistered then
+re-registered so the new loader closure / metadata take effect. The App Store
+reflects this — an installed app at a different catalog `version` shows
+**Update**, the same version shows **Reinstall**. Authors ship an update by
+publishing a new immutable entry URL and bumping `version` in the manifest.
+
+## Production CORS + import-map checklist
+
+Typecheck/lint cannot catch import-map or CORS regressions; verify against a
+built `preview`/deploy:
+
+1. `npm run build` then `npm run preview`.
+2. View source on `/` — confirm the injected `<script type="importmap">` maps
+   `vue` and `@daopk/sdk` to the real hashed `/assets/*` chunks, with matching
+   `<link rel="modulepreload">` tags.
+3. Install a real external app (Settings > Apps or the App Store) and launch it.
+4. In DevTools → Network, confirm **one** `daopk-vue-runtime-*.js` request is
+   shared by host and app (no second Vue copy from the app's origin).
+5. Confirm the app's cross-origin entry responds with
+   `Access-Control-Allow-Origin` (COEP `credentialless` requires it).
+6. Confirm `useKernel()` / injected `AppContext` work inside the app (they break
+   silently if a second Vue or injection-key symbol leaked in).

@@ -6,6 +6,7 @@ import type { ExternalAppManifest } from "~/types/externalApp";
 import { externalToAppManifest } from "./externalAppAdapter";
 import { validateExternalManifest } from "./externalManifest";
 import { type InstalledAppRecord, useInstalledAppsStore } from "./InstalledAppsStore";
+import { EXTERNAL_APP_ORIGIN_ALLOWLIST, isExternalOriginAllowed } from "./originAllowlist";
 
 type InstalledAppsStore = ReturnType<typeof useInstalledAppsStore>;
 type SettingsStore = ReturnType<typeof useSettingsStore>;
@@ -28,6 +29,7 @@ export type InstallFailureReason =
   | "invalid-url"
   | "fetch-failed"
   | "invalid-manifest"
+  | "blocked-origin"
   | "id-conflict"
   | "declined";
 
@@ -41,6 +43,11 @@ export interface InstallExternalAppDeps {
   confirm: InstallConsent;
   store?: InstalledAppsStore;
   fetchImpl?: typeof fetch;
+  /**
+   * Origins allowed to run external apps. Empty (default) allows any HTTPS
+   * origin; a non-empty list restricts the app's ENTRY origin to exact matches.
+   */
+  allowlist?: readonly string[];
 }
 
 export interface UninstallExternalAppDeps {
@@ -101,6 +108,16 @@ export async function installExternalApp(
   }
   const manifest = validation.manifest;
 
+  const entryOrigin = new URL(manifest.entry).origin;
+  const allowlist = deps.allowlist ?? EXTERNAL_APP_ORIGIN_ALLOWLIST;
+  if (!isExternalOriginAllowed(entryOrigin, allowlist)) {
+    return {
+      ok: false,
+      reason: "blocked-origin",
+      error: `Apps from "${entryOrigin}" are not allowed on this device.`,
+    };
+  }
+
   const store = deps.store ?? useInstalledAppsStore();
   const alreadyRegistered = deps.kernel.apps.list().some((m) => m.id === manifest.id);
   const isUpdate = store.isExternalApp(manifest.id);
@@ -115,7 +132,7 @@ export async function installExternalApp(
   const consented = await deps.confirm({
     manifest,
     manifestUrl: manifestUrl.href,
-    entryOrigin: new URL(manifest.entry).origin,
+    entryOrigin,
     isUpdate,
   });
   if (!consented) {

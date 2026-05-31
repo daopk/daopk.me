@@ -220,6 +220,44 @@ describe("installExternalApp", () => {
     expect(store.get("hello-world")?.manifest.version).toBe("2.0.0");
     expect(order.filter((o) => o === "unregister:hello-world").length).toBeGreaterThanOrEqual(1);
   });
+
+  it("blocks an entry origin missing from a non-empty allowlist", async () => {
+    const store = useInstalledAppsStore();
+    store.hydrate();
+    const { kernel, manifests } = createFakeKernel();
+    const confirm = vi.fn(async () => true);
+
+    const result = await installExternalApp("https://apps.example.com/m.json", {
+      kernel,
+      store,
+      confirm,
+      allowlist: ["https://trusted.example.com"],
+      fetchImpl: vi.fn(async () => jsonResponse(externalManifest())) as unknown as typeof fetch,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe("blocked-origin");
+    expect(confirm).not.toHaveBeenCalled();
+    expect(store.has("hello-world")).toBe(false);
+    expect(manifests.has("hello-world")).toBe(false);
+  });
+
+  it("allows an entry origin present in the allowlist", async () => {
+    const store = useInstalledAppsStore();
+    store.hydrate();
+    const { kernel } = createFakeKernel();
+
+    const result = await installExternalApp("https://apps.example.com/m.json", {
+      kernel,
+      store,
+      confirm: vi.fn(async () => true),
+      allowlist: ["https://apps.example.com"],
+      fetchImpl: vi.fn(async () => jsonResponse(externalManifest())) as unknown as typeof fetch,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(store.has("hello-world")).toBe(true);
+  });
 });
 
 describe("uninstallExternalApp", () => {

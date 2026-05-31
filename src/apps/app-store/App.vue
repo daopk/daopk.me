@@ -60,8 +60,20 @@ async function load(): Promise<void> {
   }
 }
 
-function isInstalled(id: string): boolean {
-  return installedAppsStore.isExternalApp(id);
+type InstallAction = "Install" | "Update" | "Reinstall";
+
+/**
+ * Reflect install state in the action: a not-installed app reads "Install", an
+ * installed app whose catalog version differs reads "Update", and an installed
+ * app at the same version reads "Reinstall". Version equality is exact-string
+ * (no semver ordering) — any difference is treated as an available update.
+ */
+function actionLabel(listing: AppStoreListing): InstallAction {
+  const installed = installedAppsStore.get(listing.id);
+  if (!installed) {
+    return "Install";
+  }
+  return installed.manifest.version === listing.version ? "Reinstall" : "Update";
 }
 
 function settleConsent(value: boolean): void {
@@ -157,13 +169,13 @@ async function install(listing: AppStoreListing): Promise<void> {
           <Button
             class="app-store__install"
             size="sm"
-            :variant="isInstalled(listing.id) ? 'secondary' : 'primary'"
+            :variant="actionLabel(listing) === 'Reinstall' ? 'secondary' : 'primary'"
             :icon-start="Download"
             :loading="installingId === listing.id"
             :disabled="installingId !== null && installingId !== listing.id"
             @click="install(listing)"
           >
-            {{ isInstalled(listing.id) ? "Reinstall" : "Install" }}
+            {{ actionLabel(listing) }}
           </Button>
         </li>
       </ul>
