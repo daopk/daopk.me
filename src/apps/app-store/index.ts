@@ -1,0 +1,1 @@
+export { appStoreManifest } from "./manifest";

@@ -1,10 +1,30 @@
 <script setup lang="ts">
-import { onUnmounted, shallowRef } from "vue";
+import { onUnmounted, ref, shallowRef } from "vue";
 
-import { EmptyState, IconButton, SectionHeader } from "~/components/kit";
+import {
+  Badge,
+  EmptyState,
+  IconButton,
+  SectionHeader,
+  StatusBanner,
+  TextInput,
+} from "~/components/kit";
+import InstallConsentDialog from "~/components/app/InstallConsentDialog.vue";
+import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { appSettingsLaunchArgs, hasAppSettings } from "~/core/apps/appSettings";
-import { ExternalLink as LaunchIcon, Settings as SettingsIcon } from "~/icons/lucide";
+import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
+import {
+  installExternalApp,
+  type InstallConsentInfo,
+  uninstallExternalApp,
+} from "~/core/apps/installExternalApp";
+import {
+  Download,
+  ExternalLink as LaunchIcon,
+  Settings as SettingsIcon,
+  Trash2,
+} from "~/icons/lucide";
 import type { AppManifest } from "~/types/app";
 
 const HIDDEN_PREFIX = "_";
@@ -14,15 +34,29 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 });
 
 const kernel = useKernel();
+const installedAppsStore = useInstalledAppsStore();
 
 const apps = shallowRef<readonly AppManifest[]>(visibleApps());
 
 const stopRegistered = kernel.events.on("app.registered", refreshApps);
 const stopUnregistered = kernel.events.on("app.unregistered", refreshApps);
 
+const installUrl = ref("");
+const installing = ref(false);
+const installError = ref("");
+
+const consentOpen = ref(false);
+const consentInfo = ref<InstallConsentInfo | null>(null);
+let consentResolve: ((value: boolean) => void) | null = null;
+
+const uninstallOpen = ref(false);
+const uninstallTarget = ref<AppManifest | null>(null);
+const uninstalling = ref(false);
+
 onUnmounted(() => {
   stopRegistered();
   stopUnregistered();
+  settleConsent(false);
 });
 
 function visibleApps(): AppManifest[] {
@@ -36,11 +70,12 @@ function refreshApps(): void {
   apps.value = visibleApps();
 }
 
+function isExternal(id: string): boolean {
+  return installedAppsStore.isExternalApp(id);
+}
+
 function launchApp(manifestId: string): void {
-  kernel.events.emit("app.launch.requested", {
-    manifestId,
-    source: "api",
-  });
+  kernel.events.emit("app.launch.requested", { manifestId, source: "api" });
 }
 
 function openAppSettings(manifestId: string): void {
@@ -50,11 +85,104 @@ function openAppSettings(manifestId: string): void {
     args: appSettingsLaunchArgs(),
   });
 }
+
+function settleConsent(value: boolean): void {
+  consentOpen.value = false;
+  const resolve = consentResolve;
+  consentResolve = null;
+  resolve?.(value);
+}
+
+function requestConsent(info: InstallConsentInfo): Promise<boolean> {
+  consentInfo.value = info;
+  consentOpen.value = true;
+  return new Promise<boolean>((resolve) => {
+    consentResolve = resolve;
+  });
+}
+
+async function submitInstall(): Promise<void> {
+  const url = installUrl.value.trim();
+  if (installing.value || url === "") {
+    return;
+  }
+  installing.value = true;
+  installError.value = "";
+
+  const result = await installExternalApp(url, { kernel, confirm: requestConsent });
+
+  installing.value = false;
+  if (result.ok) {
+    installUrl.value = "";
+  } else if (result.reason !== "declined") {
+    installError.value = result.error;
+  }
+}
+
+function requestUninstall(app: AppManifest): void {
+  uninstallTarget.value = app;
+  uninstallOpen.value = true;
+}
+
+function cancelUninstall(): void {
+  if (uninstalling.value) {
+    return;
+  }
+  uninstallOpen.value = false;
+  uninstallTarget.value = null;
+}
+
+async function confirmUninstall(): Promise<void> {
+  const target = uninstallTarget.value;
+  if (!target || uninstalling.value) {
+    return;
+  }
+  uninstalling.value = true;
+  await uninstallExternalApp(target.id, { kernel });
+  uninstalling.value = false;
+  uninstallOpen.value = false;
+  uninstallTarget.value = null;
+}
 </script>
 
 <template>
   <section class="apps-settings" aria-label="Apps settings">
     <SectionHeader v-if="props.showHeader" size="page" title="Apps" />
+
+    <form class="apps-settings__install" @submit.prevent="submitInstall">
+      <label class="apps-settings__install-label" for="apps-install-url">Install from URL</label>
+      <div class="apps-settings__install-row">
+        <TextInput
+          id="apps-install-url"
+          v-model="installUrl"
+          class="apps-settings__install-input"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          :spellcheck="false"
+          :disabled="installing"
+          placeholder="https://example.com/app.json"
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          :icon-start="Download"
+          :loading="installing"
+          :disabled="installUrl.trim() === ''"
+        >
+          Install
+        </Button>
+      </div>
+      <StatusBanner
+        v-if="installError"
+        as="p"
+        class="apps-settings__install-error"
+        tone="error"
+        role="alert"
+      >
+        {{ installError }}
+      </StatusBanner>
+    </form>
 
     <EmptyState v-if="apps.length === 0" class="apps-settings__empty">
       No apps available.
@@ -65,7 +193,12 @@ function openAppSettings(manifestId: string): void {
         <div class="apps-settings__identity">
           <component :is="app.icon" class="apps-settings__icon" aria-hidden="true" />
           <span class="apps-settings__copy">
-            <span class="apps-settings__name">{{ app.name }}</span>
+            <span class="apps-settings__name">
+              <span class="apps-settings__name-text">{{ app.name }}</span>
+              <Badge v-if="isExternal(app.id)" class="apps-settings__badge" tone="accent">
+                External
+              </Badge>
+            </span>
             <span class="apps-settings__category">
               {{ app.category
               }}<span v-if="app.version" class="apps-settings__version"> · v{{ app.version }}</span>
@@ -89,9 +222,50 @@ function openAppSettings(manifestId: string): void {
             variant="subtle"
             @click="launchApp(app.id)"
           />
+          <IconButton
+            v-if="isExternal(app.id)"
+            class="apps-settings__uninstall-action"
+            :icon="Trash2"
+            :label="`Uninstall ${app.name}`"
+            variant="subtle"
+            @click="requestUninstall(app)"
+          />
         </div>
       </li>
     </ul>
+
+    <InstallConsentDialog
+      v-model:open="consentOpen"
+      :info="consentInfo"
+      @confirm="settleConsent(true)"
+      @cancel="settleConsent(false)"
+    />
+
+    <Dialog
+      v-model:open="uninstallOpen"
+      :title="uninstallTarget ? `Uninstall ${uninstallTarget.name}?` : 'Uninstall app?'"
+      :dismissible="!uninstalling"
+      @close="cancelUninstall"
+    >
+      <div class="apps-settings__uninstall-dialog">
+        <StatusBanner as="p" tone="warning" role="alert">
+          This closes the app, removes it from this browser, revokes its permissions, and unpins it
+          from the dock.
+        </StatusBanner>
+        <div class="apps-settings__dialog-actions">
+          <Button size="sm" :disabled="uninstalling" @click="cancelUninstall">Cancel</Button>
+          <Button
+            size="sm"
+            variant="danger"
+            :icon-start="Trash2"
+            :loading="uninstalling"
+            @click="confirmUninstall"
+          >
+            Uninstall
+          </Button>
+        </div>
+      </div>
+    </Dialog>
   </section>
 </template>
 
@@ -102,6 +276,33 @@ function openAppSettings(manifestId: string): void {
   flex-direction: column;
   gap: var(--space-md);
   padding: var(--space-xl);
+}
+
+.apps-settings__install {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.apps-settings__install-label {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.apps-settings__install-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.apps-settings__install-input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.apps-settings__install-error {
+  font-size: 13px;
+  margin: 0;
 }
 
 .apps-settings__empty {
@@ -152,23 +353,34 @@ function openAppSettings(manifestId: string): void {
   min-inline-size: 0;
 }
 
-.apps-settings__name,
-.apps-settings__category {
+.apps-settings__name {
+  align-items: center;
+  display: flex;
   flex: 1 1 auto;
+  gap: var(--space-xs);
   min-inline-size: 0;
+}
+
+.apps-settings__name-text {
+  font-weight: 550;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.apps-settings__name {
-  font-weight: 550;
+.apps-settings__badge {
+  flex: 0 0 auto;
 }
 
 .apps-settings__category {
   color: var(--color-fg-muted);
+  flex: 1 1 auto;
   font-size: 12px;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: capitalize;
+  white-space: nowrap;
 }
 
 .apps-settings__version {
@@ -183,8 +395,21 @@ function openAppSettings(manifestId: string): void {
 }
 
 .apps-settings__settings-action,
-.apps-settings__launch-action {
+.apps-settings__launch-action,
+.apps-settings__uninstall-action {
   flex: 0 0 auto;
+}
+
+.apps-settings__uninstall-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.apps-settings__dialog-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
 }
 
 @media (max-width: 520px) {

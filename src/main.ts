@@ -5,6 +5,7 @@ import "~/core/boot/syncPreflightTheme";
 import "~/assets/scss/base.scss";
 
 import App from "~/App.vue";
+import { appStoreManifest } from "~/apps/app-store";
 import { blogManifest } from "~/apps/blog";
 import { browserManifest } from "~/apps/browser";
 import { calendarManifest } from "~/apps/calendar";
@@ -56,6 +57,8 @@ kernel.apps.register(photosManifest);
 kernel.apps.register(terminalManifest);
 
 kernel.apps.register(settingsManifest);
+
+kernel.apps.register(appStoreManifest);
 
 kernel.apps.register(trashManifest);
 

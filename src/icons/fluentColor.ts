@@ -28,6 +28,7 @@ export const SlidesAppIcon = createFluentIcon("document-32", "FluentSlidesAppIco
 export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminalAppIcon");
 export const SettingsAppIcon = createFluentIcon("settings-32", "FluentSettingsAppIcon");
 export const TemplateAppIcon = createFluentIcon("apps-32", "FluentTemplateAppIcon");
+export const AppStoreAppIcon = createFluentIcon("apps-list-detail-24", "FluentAppStoreAppIcon");
 export const TrashAppIcon = createPaletteIcon(
   {
     width: 32,
@@ -78,6 +79,7 @@ export const fluentColorIconComponents = {
   TerminalAppIcon,
   SettingsAppIcon,
   TemplateAppIcon,
+  AppStoreAppIcon,
   TrashAppIcon,
   FinderFolderIcon,
   FinderFileIcon,
