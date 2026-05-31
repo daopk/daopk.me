@@ -318,6 +318,34 @@ describe("Photo gallery — dynamic index from R2", () => {
     await expect(response.json()).resolves.toEqual([]);
   });
 
+  it("excludes folder markers and non-image objects from the index", async () => {
+    const { env } = makeEnv(DEFAULT_OBJECTS, [
+      {
+        key: "2026/japan.jpg",
+        body: "japan-bytes",
+        contentType: "image/jpeg",
+        uploaded: "2026-05-31T13:45:14.164Z",
+      },
+      {
+        key: "2026/",
+        body: "",
+        contentType: "application/octet-stream",
+        uploaded: "2026-05-31T13:44:17.720Z",
+      },
+      {
+        key: "notes.txt",
+        body: "hello",
+        contentType: "text/plain",
+        uploaded: "2026-05-31T10:00:00.000Z",
+      },
+    ]);
+
+    const response = await handleRequest(browser("/photos/index.json"), env);
+    const index = (await response.json()) as Array<{ key: string }>;
+
+    expect(index.map((entry) => entry.key)).toEqual(["2026/japan.jpg"]);
+  });
+
   it("follows the list cursor across pages", async () => {
     const list = vi
       .fn()

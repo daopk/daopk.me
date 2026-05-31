@@ -157,6 +157,13 @@ async function buildPhotosIndex(env: WorkerEnv): Promise<PhotosIndexEntry[]> {
   do {
     const page = await env.PHOTOS.list({ cursor, include: ["httpMetadata"] });
     for (const object of page.objects) {
+      // Only surface keys the image route can actually serve. This skips the
+      // zero-byte `prefix/` folder markers the R2 dashboard creates and any
+      // non-image objects, keeping the index in sync with `servePhoto`.
+      if (!PHOTO_FILE_PATTERN.test(`/photos/${object.key}`)) {
+        continue;
+      }
+
       entries.push({
         key: object.key,
         url: `/photos/${object.key}`,
