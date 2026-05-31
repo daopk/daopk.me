@@ -5,14 +5,18 @@ import {
   AppFrame,
   AppToolbar,
   EmptyState,
+  FormField,
   IconButton,
   ListButton,
+  ScrollArea,
+  Spinner,
   StatusBanner,
   Textarea,
   TextInput,
   ToolbarGroup,
+  ToolbarTitle,
 } from "~/components/kit";
-import { Button } from "~/components/ui";
+import { Button, Dialog, DialogActions } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
 import { Play, Save } from "~/icons/lucide";
@@ -42,6 +46,8 @@ const titleDraft = ref("Untitled Slides");
 const loading = ref(false);
 const message = ref("Loading decks...");
 const error = ref("");
+const discardDialogOpen = ref(false);
+const pendingDeckTarget = ref<string | null>(null);
 
 let previewWriteHandle: ReturnType<typeof globalThis.setTimeout> | undefined;
 
@@ -140,7 +146,9 @@ async function openDeck(
   target: string,
   options: { readonly skipDirtyCheck?: boolean } = {},
 ): Promise<void> {
-  if (!options.skipDirtyCheck && dirty.value && !window.confirm("Discard unsaved slide changes?")) {
+  if (!options.skipDirtyCheck && dirty.value) {
+    pendingDeckTarget.value = target;
+    discardDialogOpen.value = true;
     return;
   }
 
@@ -195,6 +203,20 @@ async function startPreview(): Promise<void> {
   }
 }
 
+function confirmDiscardOpen(): void {
+  const target = pendingDeckTarget.value;
+  discardDialogOpen.value = false;
+  pendingDeckTarget.value = null;
+  if (target !== null) {
+    void openDeck(target, { skipDirtyCheck: true });
+  }
+}
+
+function cancelDiscardOpen(): void {
+  discardDialogOpen.value = false;
+  pendingDeckTarget.value = null;
+}
+
 function isActive(deck: SlidesDeck): boolean {
   return activeDeck.value?.filePath === deck.filePath;
 }
@@ -215,10 +237,11 @@ function clearPreviewWrite(): void {
 <template>
   <AppFrame class="slides-app" layout="grid" :safe-area="false" aria-label="Slides">
     <AppToolbar class="slides-app__header">
-      <div class="slides-app__title">
-        <strong>{{ activeDeckTitle }}</strong>
-        <span>{{ activeDeckSubtitle }}</span>
-      </div>
+      <ToolbarTitle
+        class="slides-app__title"
+        :title="activeDeckTitle"
+        :subtitle="activeDeckSubtitle"
+      />
       <template #end>
         <ToolbarGroup class="slides-app__actions" label="Deck actions">
           <IconButton
@@ -247,17 +270,18 @@ function clearPreviewWrite(): void {
     <div class="slides-app__workspace">
       <aside class="slides-app__sidebar" aria-label="Slide decks">
         <form class="slides-app__new" @submit.prevent="createDeck">
-          <label for="slides-new-title">New deck</label>
-          <TextInput
-            id="slides-new-title"
-            v-model="titleDraft"
-            autocomplete="off"
-            :disabled="loading"
-          />
+          <FormField label="New deck" for="slides-new-title">
+            <TextInput
+              id="slides-new-title"
+              v-model="titleDraft"
+              autocomplete="off"
+              :disabled="loading"
+            />
+          </FormField>
           <Button type="submit" size="sm" :disabled="loading">Create</Button>
         </form>
 
-        <nav class="slides-app__deck-list" aria-label="Decks">
+        <ScrollArea as="nav" class="slides-app__deck-list" aria-label="Decks">
           <ListButton
             v-for="deck in decks"
             :key="deck.filePath"
@@ -269,7 +293,7 @@ function clearPreviewWrite(): void {
             <strong>{{ deck.title }}</strong>
             <span>{{ deckLabel(deck) }}</span>
           </ListButton>
-        </nav>
+        </ScrollArea>
       </aside>
 
       <main class="slides-app__editor">
@@ -295,6 +319,9 @@ function clearPreviewWrite(): void {
           referrerpolicy="no-referrer"
         />
         <EmptyState v-else class="slides-app__preview-state">
+          <template v-if="loading || runtime.status.value === 'installing'" #icon>
+            <Spinner />
+          </template>
           <strong>{{ runtime.status.value }}</strong>
           <span>{{ statusText }}</span>
         </EmptyState>
@@ -303,11 +330,11 @@ function clearPreviewWrite(): void {
             <strong>WebContainer</strong>
             <span>{{ runtime.logs.value.length }} lines</span>
           </header>
-          <ol v-if="runtime.logs.value.length > 0" class="slides-app__log-list">
+          <ScrollArea v-if="runtime.logs.value.length > 0" as="ol" class="slides-app__log-list">
             <li v-for="(entry, index) in runtime.logs.value" :key="`${index}:${entry}`">
               {{ entry }}
             </li>
-          </ol>
+          </ScrollArea>
           <p v-else class="slides-app__log-empty">No runtime logs yet.</p>
         </section>
       </aside>
@@ -316,6 +343,18 @@ function clearPreviewWrite(): void {
     <StatusBanner as="footer" class="slides-app__status">
       <span>{{ statusText }}</span>
     </StatusBanner>
+
+    <Dialog
+      v-model:open="discardDialogOpen"
+      title="Discard unsaved changes?"
+      description="Switching decks will discard the unsaved slide changes."
+      @close="cancelDiscardOpen"
+    >
+      <DialogActions>
+        <Button size="sm" @click="cancelDiscardOpen">Cancel</Button>
+        <Button size="sm" variant="danger" @click="confirmDiscardOpen">Discard</Button>
+      </DialogActions>
+    </Dialog>
   </AppFrame>
 </template>
 
@@ -342,25 +381,6 @@ function clearPreviewWrite(): void {
 .slides-app__title {
   flex: 1 1 auto;
   min-width: 0;
-
-  strong,
-  span {
-    display: block;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  strong {
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  span {
-    color: var(--color-fg-muted);
-    font-size: 12px;
-  }
 }
 
 .slides-app__actions {
@@ -375,43 +395,26 @@ function clearPreviewWrite(): void {
   min-height: 0;
 }
 
-.slides-app__sidebar,
-.slides-app__preview {
-  min-height: 0;
-  overflow: auto;
-}
-
 .slides-app__sidebar {
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-height: 0;
+  overflow: hidden;
   padding: var(--space-md);
 }
 
 .slides-app__new {
   display: grid;
   gap: var(--space-sm);
-
-  label {
-    color: var(--color-fg-muted);
-    font-size: 12px;
-  }
-
-  input {
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    color: var(--color-fg);
-    font: inherit;
-    min-width: 0;
-    padding: var(--space-sm);
-  }
 }
 
 .slides-app__deck-list {
   display: grid;
+  flex: 1 1 auto;
   gap: var(--space-xs);
+  min-height: 0;
 }
 
 .slides-app__deck {
@@ -421,7 +424,7 @@ function clearPreviewWrite(): void {
   color: var(--color-fg);
   display: grid;
   font: inherit;
-  gap: 2px;
+  gap: var(--space-2xs);
   padding: var(--space-sm);
   text-align: left;
 
@@ -434,7 +437,7 @@ function clearPreviewWrite(): void {
 
   span {
     color: var(--color-fg-muted);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -477,6 +480,7 @@ function clearPreviewWrite(): void {
   border-left: 1px solid var(--color-border);
   display: grid;
   grid-template-rows: minmax(0, 1fr) minmax(132px, 30%);
+  min-height: 0;
   min-width: 0;
   overflow: hidden;
 }
@@ -529,7 +533,7 @@ function clearPreviewWrite(): void {
   }
 
   strong {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   span {
@@ -546,7 +550,6 @@ function clearPreviewWrite(): void {
   line-height: 1.5;
   margin: 0;
   min-height: 0;
-  overflow: auto;
   padding: var(--space-sm) var(--space-md);
 }
 
@@ -567,7 +570,7 @@ function clearPreviewWrite(): void {
   border-inline: 0;
   border-radius: 0;
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-height: 28px;
   padding-block-start: var(--space-sm);
   padding-block-end: calc(var(--space-sm) + var(--mobile-shell-app-bottom-padding, 0px));

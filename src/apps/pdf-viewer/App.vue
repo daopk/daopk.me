@@ -6,9 +6,13 @@ import {
   AppToolbar,
   EmptyState,
   IconButton,
+  ScrollArea,
+  Separator,
+  Spinner,
   StatusBanner,
   TextInput,
   ToolbarGroup,
+  ToolbarTitle,
 } from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useVfs } from "~/composables/useVfs";
@@ -110,7 +114,11 @@ function download(): void {
 }
 
 function setViewportRef(el: unknown): void {
-  viewer.viewportEl.value = el instanceof HTMLElement ? el : null;
+  const node =
+    el !== null && typeof el === "object" && "element" in el
+      ? (el as { element: HTMLElement | null }).element
+      : el;
+  viewer.viewportEl.value = node instanceof HTMLElement ? node : null;
 }
 
 function setCanvasRef(el: unknown): void {
@@ -130,12 +138,11 @@ function setCanvasRef(el: unknown): void {
 
     <AppToolbar v-if="showChrome" class="pdf-viewer__toolbar" wrap>
       <template #start>
-        <div class="pdf-viewer__document">
-          <div class="pdf-viewer__document-text">
-            <strong>{{ viewer.title.value || sourceLabel }}</strong>
-            <span v-if="viewer.title.value">{{ sourceLabel }}</span>
-          </div>
-        </div>
+        <ToolbarTitle
+          class="pdf-viewer__document"
+          :title="viewer.title.value || sourceLabel"
+          :subtitle="viewer.title.value ? sourceLabel : undefined"
+        />
       </template>
 
       <template #end>
@@ -144,7 +151,7 @@ function setCanvasRef(el: unknown): void {
             <IconButton label="Open PDF" :icon="Upload" :disabled="busy" @click="openFilePicker" />
           </ToolbarGroup>
 
-          <span class="pdf-viewer__separator" aria-hidden="true" />
+          <Separator orientation="vertical" decorative />
 
           <ToolbarGroup label="Pages">
             <IconButton
@@ -176,7 +183,7 @@ function setCanvasRef(el: unknown): void {
             />
           </ToolbarGroup>
 
-          <span class="pdf-viewer__separator" aria-hidden="true" />
+          <Separator orientation="vertical" decorative />
 
           <ToolbarGroup label="Zoom and page tools">
             <IconButton
@@ -215,8 +222,10 @@ function setCanvasRef(el: unknown): void {
       </template>
     </AppToolbar>
 
-    <main
+    <ScrollArea
       :ref="setViewportRef"
+      as="main"
+      axis="both"
       class="pdf-viewer__viewport"
       :class="{ 'pdf-viewer__viewport--empty': !hasDocument }"
     >
@@ -231,7 +240,11 @@ function setCanvasRef(el: unknown): void {
         v-else-if="viewer.status.value === 'loading'"
         class="pdf-viewer__empty"
         title="Loading..."
-      />
+      >
+        <template #icon>
+          <Spinner />
+        </template>
+      </EmptyState>
 
       <EmptyState
         v-else-if="viewer.status.value === 'error'"
@@ -251,7 +264,7 @@ function setCanvasRef(el: unknown): void {
       <div v-show="hasDocument" class="pdf-viewer__page">
         <canvas :ref="setCanvasRef" class="pdf-viewer__canvas" aria-label="PDF page" />
       </div>
-    </main>
+    </ScrollArea>
 
     <StatusBanner v-if="showChrome" as="footer" class="pdf-viewer__status">
       {{ viewer.message.value }}
@@ -266,7 +279,7 @@ function setCanvasRef(el: unknown): void {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   min-block-size: 0;
 }
@@ -286,35 +299,8 @@ function setCanvasRef(el: unknown): void {
 }
 
 .pdf-viewer__document {
-  align-items: center;
-  display: flex;
   flex: 1 1 auto;
-  gap: var(--space-sm);
   min-inline-size: 150px;
-}
-
-.pdf-viewer__document-text {
-  display: grid;
-  gap: 2px;
-  min-inline-size: 0;
-}
-
-.pdf-viewer__document-text strong,
-.pdf-viewer__document-text span {
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pdf-viewer__document-text strong {
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.pdf-viewer__document-text span {
-  color: var(--color-fg-muted);
-  font-size: 12px;
 }
 
 .pdf-viewer__file-input,
@@ -335,13 +321,6 @@ function setCanvasRef(el: unknown): void {
   gap: var(--space-xs);
 }
 
-.pdf-viewer__separator {
-  background: var(--color-border);
-  block-size: 24px;
-  inline-size: 1px;
-  margin-inline: 2px;
-}
-
 .pdf-viewer__page-form {
   align-items: center;
   display: flex;
@@ -349,27 +328,16 @@ function setCanvasRef(el: unknown): void {
 }
 
 .pdf-viewer__page-input {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-fg);
-  font: inherit;
   inline-size: 54px;
-  min-block-size: 28px;
+  min-block-size: var(--control-height-sm);
   padding: 0 var(--space-xs);
   text-align: center;
-}
-
-.pdf-viewer__page-input:focus-visible {
-  border-color: var(--color-accent);
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
 }
 
 .pdf-viewer__page-total,
 .pdf-viewer__zoom {
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-inline-size: 42px;
   text-align: center;
   white-space: nowrap;
@@ -406,7 +374,6 @@ function setCanvasRef(el: unknown): void {
   background-size: 16px 16px;
   flex: 1 1 auto;
   min-block-size: 0;
-  overflow: auto;
 }
 
 .pdf-viewer__viewport--empty {
@@ -424,15 +391,6 @@ function setCanvasRef(el: unknown): void {
   justify-items: center;
   padding: var(--space-xl);
   text-align: center;
-}
-
-.pdf-viewer__empty h2 {
-  color: var(--color-fg);
-  font-size: 16px;
-  font-weight: 650;
-  margin: 0;
-  max-inline-size: min(460px, 90vw);
-  overflow-wrap: anywhere;
 }
 
 .pdf-viewer__empty--idle {
@@ -459,7 +417,7 @@ function setCanvasRef(el: unknown): void {
   border-block-start: 1px solid var(--color-border);
   color: var(--color-fg-muted);
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-block-size: 28px;
   overflow: hidden;
   padding-block: var(--space-xs);
