@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
-import { nextTick, ref, shallowRef, watch, type WatchStopHandle } from "vue";
+import { ref, watch, type WatchStopHandle } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import {
   TOKEN_OVERRIDES_KV_NAMESPACE,
   TOKEN_OVERRIDES_KV_PRIMARY_KEY,
 } from "~/core/storage/constants";
-import { KVStore } from "~/core/storage/KVStore";
+import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
 
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -52,50 +52,25 @@ function diffKeys(prev: Record<string, string>, next: Record<string, string>): s
 }
 
 export const useTokenOverridesStore = defineStore("kernel-token-overrides", () => {
-  /** Suppress watcher feedback during cross-tab merges. */
-  let suppressKvWatch = false;
-
-  const kvRef = shallowRef<KVStore<Record<string, string>>>();
-
   const hooksRef = ref<TokenOverridesHydrateHooks | undefined>();
 
   const overrides = ref<Record<string, string>>({});
 
   let persistStop: WatchStopHandle | undefined;
-  let disposeKv: undefined | (() => void);
-  let persistFlushHandle: ReturnType<typeof globalThis.setTimeout> | undefined;
 
   function snapshot(): Record<string, string> {
     return { ...overrides.value };
   }
 
-  function runPersistCommit(): void {
-    const store = kvRef.value;
-    if (!store || suppressKvWatch) {
-      return;
-    }
-    store.set(TOKEN_OVERRIDES_KV_PRIMARY_KEY, snapshot());
-  }
-
-  function cancelPersistDebounced(): void {
-    if (persistFlushHandle !== undefined) {
-      clearTimeout(persistFlushHandle);
-      persistFlushHandle = undefined;
-    }
-  }
-
-  function schedulePersist(): void {
-    cancelPersistDebounced();
-    persistFlushHandle = globalThis.setTimeout(() => {
-      persistFlushHandle = undefined;
-      runPersistCommit();
-    }, PERSIST_DEBOUNCE_MS);
-  }
-
-  function persistImmediate(): void {
-    cancelPersistDebounced();
-    runPersistCommit();
-  }
+  const persistence = createKvBackedStore<Record<string, string>>({
+    primaryKey: TOKEN_OVERRIDES_KV_PRIMARY_KEY,
+    version: 1,
+    debounceMs: PERSIST_DEBOUNCE_MS,
+    snapshot,
+    onRemoteChange: () => {
+      handleRemoteKvNotification();
+    },
+  });
 
   function applyKvPayload(next: Record<string, string>): void {
     const prev = overrides.value;
@@ -104,19 +79,15 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
       return;
     }
 
-    suppressKvWatch = true;
-    overrides.value = next;
-    void nextTick(() => {
-      suppressKvWatch = false;
+    persistence.runSuppressedUntilNextTick(() => {
+      overrides.value = next;
     });
 
     hooksRef.value?.onTokensChanged?.(changed);
   }
 
   function handleRemoteKvNotification(): void {
-    // Order matters — apply the remote payload BEFORE notifying the
-    // and the kernel would emit nothing (covered by the cross-tab
-    const raw = kvRef.value?.get(TOKEN_OVERRIDES_KV_PRIMARY_KEY);
+    const raw = persistence.read();
     if (raw) {
       applyKvPayload(coerceOverrides(raw));
     }
@@ -132,7 +103,7 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = { ...overrides.value, [key]: value };
     hooksRef.value?.onTokensChanged?.([key]);
-    schedulePersist();
+    persistence.schedule();
   }
 
   function unset(key: string): void {
@@ -143,7 +114,7 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     delete next[key];
     overrides.value = next;
     hooksRef.value?.onTokensChanged?.([key]);
-    schedulePersist();
+    persistence.schedule();
   }
 
   function setMany(patch: Record<string, string>): void {
@@ -164,7 +135,7 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = next;
     hooksRef.value?.onTokensChanged?.(changed);
-    schedulePersist();
+    persistence.schedule();
   }
 
   function reset(): void {
@@ -175,11 +146,11 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = {};
     hooksRef.value?.onTokensChanged?.(changed);
-    schedulePersist();
+    persistence.schedule();
   }
 
   function flush(): void {
-    persistImmediate();
+    persistence.flush();
   }
 
   function hydrate(initialHooks?: TokenOverridesHydrateHooks): void {
@@ -188,50 +159,35 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     // Tear down any prior hydration so re-init (HMR, tests) starts clean.
     persistStop?.();
     persistStop = undefined;
-    disposeKv?.();
-    disposeKv = undefined;
-    kvRef.value?.dispose();
 
-    kvRef.value = new KVStore<Record<string, string>>(
+    persistence.start(
       initialHooks?.storageNamespace ?? activeProfileKvNamespace(TOKEN_OVERRIDES_KV_NAMESPACE),
-      {
-        version: 1,
-        onRemoteChange(): void {
-          handleRemoteKvNotification();
-        },
-      },
     );
 
-    const persisted = kvRef.value.get(TOKEN_OVERRIDES_KV_PRIMARY_KEY);
+    const persisted = persistence.read();
     const loaded = persisted !== null ? coerceOverrides(persisted) : {};
 
-    suppressKvWatch = true;
-    overrides.value = loaded;
-    suppressKvWatch = false;
+    persistence.runSuppressed(() => {
+      overrides.value = loaded;
+    });
 
     persistStop = watch(
       overrides,
       (): void => {
-        if (!kvRef.value || suppressKvWatch) {
+        if (!persistence.kv.value || persistence.isSuppressed) {
           return;
         }
-        schedulePersist();
+        persistence.schedule();
       },
       { flush: "post", deep: true },
     );
-
-    disposeKv = (): void => {
-      persistStop?.();
-      persistStop = undefined;
-      kvRef.value?.dispose();
-      kvRef.value = undefined;
-    };
   }
 
   function dispose(): void {
-    persistImmediate();
-    disposeKv?.();
-    disposeKv = undefined;
+    persistence.flush();
+    persistStop?.();
+    persistStop = undefined;
+    persistence.dispose();
     hooksRef.value = undefined;
   }
 

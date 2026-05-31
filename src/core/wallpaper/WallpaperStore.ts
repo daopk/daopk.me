@@ -3,8 +3,8 @@ import { ref, shallowRef, type Ref } from "vue";
 
 import { debugWarn } from "~/core/debug";
 import { activeProfileIdbName, activeProfileKvNamespace } from "~/core/profile/storageScope";
+import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
 import { IndexedDBStore } from "~/core/storage/IndexedDBStore";
-import { KVStore } from "~/core/storage/KVStore";
 import {
   WALLPAPER_BLOB_CAP_BYTES,
   WALLPAPER_COUNT_CAP,
@@ -66,35 +66,31 @@ export interface WallpaperStoreHydrateHooks {
 }
 
 export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
-  const kvRef = shallowRef<KVStore<WallpapersState>>();
   const idbRef = shallowRef<IndexedDBStore<Blob>>();
   const hooksRef = ref<WallpaperStoreHydrateHooks | undefined>();
 
   const index: Ref<readonly UserWallpaperMeta[]> = ref([]);
 
-  let suppressKvWatch = false;
-  let disposeKv: undefined | (() => void);
-
-  function persistImmediate(): void {
-    const store = kvRef.value;
-    if (!store || suppressKvWatch) {
-      return;
-    }
-    store.set(WALLPAPERS_KV_PRIMARY_KEY, { index: [...index.value] });
-  }
+  const persistence = createKvBackedStore<WallpapersState>({
+    primaryKey: WALLPAPERS_KV_PRIMARY_KEY,
+    version: 1,
+    snapshot: () => ({ index: [...index.value] }),
+    onRemoteChange: () => {
+      handleRemoteKvNotification();
+    },
+  });
 
   function applyState(next: WallpapersState): void {
-    suppressKvWatch = true;
-    index.value = [...next.index];
-    suppressKvWatch = false;
+    persistence.runSuppressed(() => {
+      index.value = [...next.index];
+    });
     hooksRef.value?.onIndexChanged?.();
   }
 
   function handleRemoteKvNotification(): void {
     hooksRef.value?.onStorageSynced?.();
-    const store = kvRef.value;
-    const raw = store?.get(WALLPAPERS_KV_PRIMARY_KEY);
-    if (raw === null || raw === undefined) {
+    const raw = persistence.read();
+    if (raw === null) {
       applyState({ ...DEFAULT_STATE });
       return;
     }
@@ -154,7 +150,7 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
     };
 
     index.value = [...index.value, meta];
-    persistImmediate();
+    persistence.commit();
     hooksRef.value?.onIndexChanged?.();
 
     return { ok: true, meta };
@@ -172,7 +168,7 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
     const before = index.value.length;
     index.value = index.value.filter((entry) => entry.id !== id);
     if (index.value.length !== before) {
-      persistImmediate();
+      persistence.commit();
       hooksRef.value?.onIndexChanged?.();
     }
   }
@@ -206,51 +202,36 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
       }
     }
     index.value = [];
-    persistImmediate();
+    persistence.commit();
     hooksRef.value?.onIndexChanged?.();
   }
 
   function hydrate(initialHooks?: WallpaperStoreHydrateHooks): void {
     hooksRef.value = initialHooks;
 
-    disposeKv?.();
-    disposeKv = undefined;
-
-    kvRef.value?.dispose();
-    kvRef.value = new KVStore<WallpapersState>(
+    persistence.start(
       initialHooks?.storageNamespace ?? activeProfileKvNamespace(WALLPAPERS_KV_NAMESPACE),
-      {
-        version: 1,
-        onRemoteChange(): void {
-          handleRemoteKvNotification();
-        },
-      },
     );
 
+    idbRef.value?.close();
     idbRef.value = new IndexedDBStore<Blob>(
       initialHooks?.dbName ?? activeProfileIdbName(WALLPAPERS_IDB_DB_NAME, "wallpapers"),
       WALLPAPERS_IDB_STORE_NAME,
       WALLPAPERS_IDB_VERSION,
     );
 
-    const persisted = kvRef.value.get(WALLPAPERS_KV_PRIMARY_KEY);
+    const persisted = persistence.read();
     const loaded = persisted !== null ? coerceState(persisted) : { ...DEFAULT_STATE };
 
-    suppressKvWatch = true;
-    index.value = [...loaded.index];
-    suppressKvWatch = false;
-
-    disposeKv = (): void => {
-      kvRef.value?.dispose();
-      kvRef.value = undefined;
-      idbRef.value?.close();
-      idbRef.value = undefined;
-    };
+    persistence.runSuppressed(() => {
+      index.value = [...loaded.index];
+    });
   }
 
   function dispose(): void {
-    disposeKv?.();
-    disposeKv = undefined;
+    persistence.dispose();
+    idbRef.value?.close();
+    idbRef.value = undefined;
     hooksRef.value = undefined;
   }
 
