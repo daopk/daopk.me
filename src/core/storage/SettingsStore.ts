@@ -19,6 +19,7 @@ export const DEFAULT_DOCK_PINNED_APP_IDS = [
   "browser",
   "editor",
   "notes",
+  "photos",
   "pdf-viewer",
   "terminal",
   "settings",

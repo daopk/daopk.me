@@ -22,6 +22,7 @@ export const ClockAppIcon = createFluentIcon("clock-32", "FluentClockAppIcon");
 export const FinderAppIcon = createFluentIcon("document-folder-24", "FluentFinderAppIcon");
 export const EditorAppIcon = createFluentIcon("edit-32", "FluentEditorAppIcon");
 export const NotesAppIcon = createFluentIcon("notebook-32", "FluentNotesAppIcon");
+export const PhotosAppIcon = createFluentIcon("image-24", "FluentPhotosAppIcon");
 export const PdfViewerAppIcon = createFluentIcon("document-32", "FluentPdfViewerAppIcon");
 export const SlidesAppIcon = createFluentIcon("document-32", "FluentSlidesAppIcon");
 export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminalAppIcon");
@@ -71,6 +72,7 @@ export const fluentColorIconComponents = {
   FinderAppIcon,
   EditorAppIcon,
   NotesAppIcon,
+  PhotosAppIcon,
   PdfViewerAppIcon,
   SlidesAppIcon,
   TerminalAppIcon,

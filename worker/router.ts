@@ -11,15 +11,43 @@ export interface R2ObjectBody {
   writeHttpMetadata?(headers: Headers): void;
 }
 
+/** Minimal slice of an R2 object's listing metadata (no body). */
+export interface R2Object {
+  readonly key: string;
+  readonly size: number;
+  readonly uploaded: Date;
+  readonly httpMetadata?: { contentType?: string };
+}
+
+/** Minimal slice of the Cloudflare R2 `list()` result we rely on. */
+export interface R2Objects {
+  readonly objects: readonly R2Object[];
+  readonly truncated: boolean;
+  readonly cursor?: string;
+}
+
+export interface R2ListOptions {
+  readonly prefix?: string;
+  readonly cursor?: string;
+  readonly include?: readonly "httpMetadata"[];
+}
+
 /** Minimal slice of the Cloudflare R2 bucket binding we rely on. */
 export interface R2Bucket {
   get(key: string): Promise<R2ObjectBody | null>;
+}
+
+/** R2 bucket binding that we additionally enumerate via `list()`. */
+export interface R2ListableBucket extends R2Bucket {
+  list(options?: R2ListOptions): Promise<R2Objects>;
 }
 
 export interface WorkerEnv {
   ASSETS: AssetBinding;
   /** R2 bucket holding the published blog content + prerendered SEO pages. */
   BLOG: R2Bucket;
+  /** R2 bucket holding gallery images served verbatim under `/photos/*`. */
+  PHOTOS: R2ListableBucket;
 }
 
 const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
@@ -32,6 +60,11 @@ const R2_SITEMAP_KEY = "sitemap.xml";
 const R2_SEO_INDEX_KEY = "seo/blog-index.html";
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+
+// Photo gallery served verbatim from the PHOTOS bucket under /photos/*.
+const PHOTOS_INDEX_PATHNAME = "/photos/index.json";
+const PHOTO_FILE_PATTERN = /^\/photos\/([a-z0-9][a-z0-9/_-]*\.(?:jpe?g|png|webp|gif|avif))$/i;
+const PHOTO_CACHE_CONTROL = "public, max-age=3600";
 
 function appendVary(value: string | null, token: string): string {
   if (value === null || value.trim().length === 0) {
@@ -108,6 +141,58 @@ async function serveSeoPage(
   return new Response(body, { headers });
 }
 
+export interface PhotosIndexEntry {
+  readonly key: string;
+  readonly url: string;
+  readonly size: number;
+  readonly uploaded: string;
+  readonly contentType: string;
+}
+
+/** Enumerate the PHOTOS bucket (paginated) into a newest-first gallery index. */
+async function buildPhotosIndex(env: WorkerEnv): Promise<PhotosIndexEntry[]> {
+  const entries: PhotosIndexEntry[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const page = await env.PHOTOS.list({ cursor, include: ["httpMetadata"] });
+    for (const object of page.objects) {
+      entries.push({
+        key: object.key,
+        url: `/photos/${object.key}`,
+        size: object.size,
+        uploaded: object.uploaded.toISOString(),
+        contentType: object.httpMetadata?.contentType ?? "application/octet-stream",
+      });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
+
+  entries.sort((a, b) => b.uploaded.localeCompare(a.uploaded));
+  return entries;
+}
+
+/** Serve a stored image verbatim from the PHOTOS bucket, or a 404 when absent. */
+async function servePhoto(env: WorkerEnv, key: string, request: Request): Promise<Response> {
+  const object = await env.PHOTOS.get(key);
+  if (object === null) {
+    return noIndexResponse("Photo not found.");
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata?.(headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/octet-stream");
+  }
+  headers.set("Cache-Control", PHOTO_CACHE_CONTROL);
+  if (object.httpEtag !== undefined) {
+    headers.set("ETag", object.httpEtag);
+  }
+
+  const body = request.method === "HEAD" ? null : object.body;
+  return new Response(body, { headers });
+}
+
 export async function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url);
   const { pathname } = url;
@@ -138,6 +223,23 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
       (await serveR2Asset(env, R2_SITEMAP_KEY, "application/xml;charset=utf-8", request)) ??
       env.ASSETS.fetch(request)
     );
+  }
+
+  // Photo gallery: a dynamic index built from the bucket listing, plus the
+  // image bytes themselves. Both are served same-origin to any user agent.
+  if (pathname === PHOTOS_INDEX_PATHNAME) {
+    const index = await buildPhotosIndex(env);
+    return new Response(JSON.stringify(index), {
+      headers: {
+        "Cache-Control": DEFAULT_CACHE_CONTROL,
+        "Content-Type": "application/json;charset=utf-8",
+      },
+    });
+  }
+
+  const photoKey = PHOTO_FILE_PATTERN.exec(pathname)?.[1] ?? null;
+  if (photoKey !== null) {
+    return servePhoto(env, photoKey, request);
   }
 
   // Everything outside /blog is a normal static asset / SPA route.

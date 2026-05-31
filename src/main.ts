@@ -13,6 +13,7 @@ import { editorManifest } from "~/apps/editor";
 import { finderManifest } from "~/apps/finder";
 import { notesManifest } from "~/apps/notes";
 import { pdfViewerManifest } from "~/apps/pdf-viewer";
+import { photosManifest } from "~/apps/photos";
 import { slidesManifest } from "~/apps/slides";
 import { settingsManifest } from "~/apps/settings";
 import { terminalManifest } from "~/apps/terminal";
@@ -49,6 +50,8 @@ kernel.apps.register(notesManifest);
 kernel.apps.register(slidesManifest);
 
 kernel.apps.register(pdfViewerManifest);
+
+kernel.apps.register(photosManifest);
 
 kernel.apps.register(terminalManifest);
 
