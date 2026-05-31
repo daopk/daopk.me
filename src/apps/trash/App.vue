@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, type Component } from "vue";
 
-import { AppFrame, AppToolbar, DataTable, EmptyState, StatusBanner } from "~/components/kit";
-import { Button, Dialog } from "~/components/ui";
+import {
+  AppFrame,
+  AppToolbar,
+  DataTable,
+  EmptyState,
+  GroupLabel,
+  ScrollArea,
+  Spinner,
+  StatusBanner,
+} from "~/components/kit";
+import { Button, Dialog, DialogActions } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
 import { FinderFileIcon, FinderFolderIcon } from "~/icons/fluentColor";
@@ -241,19 +250,19 @@ function datetimeValue(timestamp: number): string {
 
     <dl v-if="hasItems" class="trash__summary" aria-label="Trash summary">
       <div>
-        <dt>Items</dt>
+        <GroupLabel as="dt">Items</GroupLabel>
         <dd>{{ items.length }}</dd>
       </div>
       <div>
-        <dt>Files</dt>
+        <GroupLabel as="dt">Files</GroupLabel>
         <dd>{{ fileCount }}</dd>
       </div>
       <div>
-        <dt>Folders</dt>
+        <GroupLabel as="dt">Folders</GroupLabel>
         <dd>{{ folderCount }}</dd>
       </div>
       <div>
-        <dt>Total size</dt>
+        <GroupLabel as="dt">Total size</GroupLabel>
         <dd>{{ formatBytes(totalBytes) }}</dd>
       </div>
     </dl>
@@ -265,6 +274,7 @@ function datetimeValue(timestamp: number): string {
       </StatusBanner>
 
       <EmptyState v-if="loading && items.length === 0" class="trash__state">
+        <template #icon><Spinner /></template>
         Loading deleted items...
       </EmptyState>
       <EmptyState
@@ -274,73 +284,75 @@ function datetimeValue(timestamp: number): string {
         description="Nothing to restore or remove."
       />
 
-      <DataTable v-else class="trash__table" label="Deleted items">
-        <div class="trash__row trash__row--header" role="row">
-          <span role="columnheader">Name</span>
-          <span role="columnheader">Original Location</span>
-          <span role="columnheader">Kind</span>
-          <span role="columnheader">Size</span>
-          <span role="columnheader">Deleted</span>
-          <span role="columnheader">Actions</span>
-        </div>
+      <ScrollArea v-else class="trash__scroll" axis="both">
+        <DataTable class="trash__table" label="Deleted items">
+          <div class="trash__row trash__row--header" role="row">
+            <span role="columnheader">Name</span>
+            <span role="columnheader">Original Location</span>
+            <span role="columnheader">Kind</span>
+            <span role="columnheader">Size</span>
+            <span role="columnheader">Deleted</span>
+            <span role="columnheader">Actions</span>
+          </div>
 
-        <div v-for="item in sortedItems" :key="item.id" class="trash__row" role="row">
-          <span
-            class="trash__cell trash__cell--name"
-            role="cell"
-            data-label="Name"
-            :title="item.name"
-          >
-            <span class="trash__item-main">
-              <component :is="itemIcon(item)" class="trash__item-icon" aria-hidden="true" />
-              <span class="trash__item-name">{{ item.name }}</span>
+          <div v-for="item in sortedItems" :key="item.id" class="trash__row" role="row">
+            <span
+              class="trash__cell trash__cell--name"
+              role="cell"
+              data-label="Name"
+              :title="item.name"
+            >
+              <span class="trash__item-main">
+                <component :is="itemIcon(item)" class="trash__item-icon" aria-hidden="true" />
+                <span class="trash__item-name">{{ item.name }}</span>
+              </span>
             </span>
-          </span>
-          <span
-            class="trash__cell trash__cell--path"
-            role="cell"
-            data-label="Original Location"
-            :title="item.originalPath"
-          >
-            {{ item.originalPath }}
-          </span>
-          <span class="trash__cell trash__cell--meta" role="cell" data-label="Kind">
-            {{ kindLabel(item) }}
-          </span>
-          <span class="trash__cell trash__cell--meta" role="cell" data-label="Size">
-            {{ item.kind === "file" ? formatBytes(item.size) : "-" }}
-          </span>
-          <span class="trash__cell trash__cell--meta" role="cell" data-label="Deleted">
-            <time :datetime="datetimeValue(item.deletedAt)">{{
-              formatDeletedAt(item.deletedAt)
-            }}</time>
-          </span>
-          <span class="trash__cell trash__cell--actions" role="cell" data-label="Actions">
-            <span class="trash__item-actions">
-              <Button
-                size="sm"
-                :icon-start="RotateCw"
-                :loading="mutatingId === item.id"
-                :disabled="emptying"
-                @click="restore(item)"
-              >
-                Restore
-              </Button>
-              <Button
-                size="sm"
-                variant="danger"
-                :icon-start="Trash2"
-                :aria-label="`Delete ${item.name} permanently`"
-                :loading="mutatingId === item.id"
-                :disabled="emptying"
-                @click="requestRemovePermanently(item)"
-              >
-                Delete...
-              </Button>
+            <span
+              class="trash__cell trash__cell--path"
+              role="cell"
+              data-label="Original Location"
+              :title="item.originalPath"
+            >
+              {{ item.originalPath }}
             </span>
-          </span>
-        </div>
-      </DataTable>
+            <span class="trash__cell trash__cell--meta" role="cell" data-label="Kind">
+              {{ kindLabel(item) }}
+            </span>
+            <span class="trash__cell trash__cell--meta" role="cell" data-label="Size">
+              {{ item.kind === "file" ? formatBytes(item.size) : "-" }}
+            </span>
+            <span class="trash__cell trash__cell--meta" role="cell" data-label="Deleted">
+              <time :datetime="datetimeValue(item.deletedAt)">{{
+                formatDeletedAt(item.deletedAt)
+              }}</time>
+            </span>
+            <span class="trash__cell trash__cell--actions" role="cell" data-label="Actions">
+              <span class="trash__item-actions">
+                <Button
+                  size="sm"
+                  :icon-start="RotateCw"
+                  :loading="mutatingId === item.id"
+                  :disabled="emptying"
+                  @click="restore(item)"
+                >
+                  Restore
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  :icon-start="Trash2"
+                  :aria-label="`Delete ${item.name} permanently`"
+                  :loading="mutatingId === item.id"
+                  :disabled="emptying"
+                  @click="requestRemovePermanently(item)"
+                >
+                  Delete...
+                </Button>
+              </span>
+            </span>
+          </div>
+        </DataTable>
+      </ScrollArea>
     </main>
 
     <Dialog
@@ -350,7 +362,7 @@ function datetimeValue(timestamp: number): string {
       :dismissible="mutatingId === null"
       @close="cancelPermanentDelete"
     >
-      <div class="trash__dialog-actions">
+      <DialogActions>
         <Button size="sm" :disabled="mutatingId !== null" @click="cancelPermanentDelete">
           Cancel
         </Button>
@@ -363,7 +375,7 @@ function datetimeValue(timestamp: number): string {
         >
           Delete Permanently
         </Button>
-      </div>
+      </DialogActions>
     </Dialog>
 
     <Dialog
@@ -373,7 +385,7 @@ function datetimeValue(timestamp: number): string {
       :dismissible="!emptying"
       @close="cancelEmptyTrash"
     >
-      <div class="trash__dialog-actions">
+      <DialogActions>
         <Button size="sm" :disabled="emptying" @click="cancelEmptyTrash">Cancel</Button>
         <Button
           size="sm"
@@ -384,7 +396,7 @@ function datetimeValue(timestamp: number): string {
         >
           Empty Trash
         </Button>
-      </div>
+      </DialogActions>
     </Dialog>
   </AppFrame>
 </template>
@@ -396,7 +408,7 @@ function datetimeValue(timestamp: number): string {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   min-block-size: 0;
 }
@@ -432,21 +444,14 @@ function datetimeValue(timestamp: number): string {
 .trash__summary div {
   background: var(--color-bg);
   display: grid;
-  gap: 2px;
+  gap: var(--space-2xs);
   min-inline-size: 0;
   padding: var(--space-sm) var(--space-md);
 }
 
-.trash__summary dt {
-  color: var(--color-fg-muted);
-  font-size: 11px;
-  margin: 0;
-  text-transform: uppercase;
-}
-
 .trash__summary dd {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -492,24 +497,15 @@ function datetimeValue(timestamp: number): string {
   text-align: center;
 }
 
-.trash__empty h2 {
-  color: var(--color-fg);
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.trash__empty p {
-  margin: var(--space-xs) 0 0;
+.trash__scroll {
+  flex: 1 1 auto;
+  min-block-size: 0;
 }
 
 .trash__table {
   align-content: start;
   display: grid;
-  flex: 1 1 auto;
   grid-auto-rows: minmax(46px, auto);
-  min-block-size: 0;
-  overflow: auto;
 }
 
 .trash__row {
@@ -532,8 +528,8 @@ function datetimeValue(timestamp: number): string {
 .trash__row--header {
   background: color-mix(in srgb, var(--color-bg-subtle) 86%, var(--color-bg));
   color: var(--color-fg-muted);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -570,7 +566,7 @@ function datetimeValue(timestamp: number): string {
 
 .trash__item-name {
   color: var(--color-fg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .trash__cell--path,
@@ -580,7 +576,7 @@ function datetimeValue(timestamp: number): string {
 
 .trash__cell--path {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .trash__item-actions {
@@ -589,13 +585,6 @@ function datetimeValue(timestamp: number): string {
   gap: var(--space-xs);
   justify-content: flex-end;
   min-inline-size: max-content;
-}
-
-.trash__dialog-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  margin-block-start: var(--space-md);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -650,8 +639,8 @@ function datetimeValue(timestamp: number): string {
   .trash__cell::before {
     color: var(--color-fg-muted);
     content: attr(data-label);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
   }
 
   .trash__item-actions {
@@ -661,8 +650,7 @@ function datetimeValue(timestamp: number): string {
 
 @media (max-width: 420px) {
   .trash__actions,
-  .trash__item-actions,
-  .trash__dialog-actions {
+  .trash__item-actions {
     align-items: stretch;
     flex-direction: column;
   }

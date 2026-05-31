@@ -6,11 +6,13 @@ import {
   AppToolbar,
   EmptyState,
   IconButton,
+  ScrollArea,
+  Spinner,
   StatusBanner,
   Textarea,
   TextInput,
 } from "~/components/kit";
-import { Button, Dialog } from "~/components/ui";
+import { Button, Dialog, DialogActions } from "~/components/ui";
 import { useVfs } from "~/composables/useVfs";
 import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
 import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
@@ -275,7 +277,7 @@ function onKeydown(event: KeyboardEvent): void {
             Revert
           </Button>
           <IconButton
-            class="editor__icon-toggle"
+            size="sm"
             label="Toggle Markdown preview"
             :icon="FileText"
             :active="editor.previewOpen.value && canPreview"
@@ -308,11 +310,14 @@ function onKeydown(event: KeyboardEvent): void {
         @update:model-value="editor.setDraft"
       />
 
-      <aside v-if="editor.previewOpen.value && canPreview" class="editor__preview">
-        <div v-if="previewLoading" class="editor__preview-message">Rendering preview...</div>
+      <ScrollArea v-if="editor.previewOpen.value && canPreview" as="aside" class="editor__preview">
+        <div v-if="previewLoading" class="editor__preview-message">
+          <Spinner size="sm" />
+          <span>Rendering preview...</span>
+        </div>
         <div v-else-if="previewMessage" class="editor__preview-message">{{ previewMessage }}</div>
         <div v-else class="editor__preview-content" v-html="previewHtml" />
-      </aside>
+      </ScrollArea>
     </main>
 
     <Dialog
@@ -321,10 +326,10 @@ function onKeydown(event: KeyboardEvent): void {
       description="Unsaved changes in the current file will be lost."
       @close="cancelDiscard"
     >
-      <div class="editor__dialog-actions">
+      <DialogActions>
         <Button size="sm" @click="cancelDiscard">Cancel</Button>
         <Button size="sm" variant="danger" @click="confirmDiscard">Discard</Button>
-      </div>
+      </DialogActions>
     </Dialog>
   </AppFrame>
 </template>
@@ -336,7 +341,7 @@ function onKeydown(event: KeyboardEvent): void {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   min-block-size: 0;
 }
@@ -363,23 +368,14 @@ function onKeydown(event: KeyboardEvent): void {
 .editor__path-label {
   color: var(--color-fg-muted);
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .editor__path-input {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-fg);
   flex: 1 1 auto;
-  font: inherit;
-  min-block-size: 30px;
   min-inline-size: 120px;
-  padding: 0 var(--space-sm);
 }
 
-.editor__path-input:focus-visible,
-.editor__icon-toggle:focus-visible,
 .editor__textarea:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -392,35 +388,11 @@ function onKeydown(event: KeyboardEvent): void {
   gap: var(--space-xs);
 }
 
-.editor__icon-toggle {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-  block-size: 30px;
-  color: var(--color-fg-muted);
-  cursor: pointer;
-  display: inline-flex;
-  inline-size: 30px;
-  justify-content: center;
-}
-
-.editor__icon-toggle:hover,
-.editor__icon-toggle--active {
-  background: var(--color-bg-elevated);
-  color: var(--color-fg);
-}
-
-.editor__icon-toggle:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
 .editor__status {
   border-block-end: 1px solid var(--color-border);
   color: var(--color-fg-muted);
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-block-size: 30px;
   overflow: hidden;
   padding: var(--space-xs) var(--space-md);
@@ -471,14 +443,14 @@ function onKeydown(event: KeyboardEvent): void {
 
 .editor__preview {
   border-inline-start: 1px solid var(--color-border);
-  min-block-size: 0;
-  min-inline-size: 0;
-  overflow: auto;
   padding: var(--space-md);
 }
 
 .editor__preview-message {
+  align-items: center;
   color: var(--color-fg-muted);
+  display: flex;
+  gap: var(--space-xs);
 }
 
 .editor__preview-content {
@@ -516,13 +488,6 @@ function onKeydown(event: KeyboardEvent): void {
 
 .editor__preview-content :deep(code) {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-
-.editor__dialog-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
-  margin-block-start: var(--space-md);
 }
 
 @media (max-width: 640px) {
