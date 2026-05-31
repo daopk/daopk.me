@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { AppFrame, TabList, TextInput } from "~/components/kit";
+import { AppFrame, Badge, FormField, ScrollArea, TabList, TextInput } from "~/components/kit";
 import type { TabListOption } from "~/components/kit";
 import { Button } from "~/components/ui";
 import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "~/icons/lucide";
@@ -100,13 +100,11 @@ function durationDatetime(ms: number): string {
         :model-value="activeTab"
         :tabs="tabs"
         label="Clock sections"
-        item-class="clock-app__tab"
-        active-item-class="clock-app__tab--active"
         @update:model-value="selectTabValue"
       />
     </div>
 
-    <main class="clock-app__body">
+    <ScrollArea as="main" class="clock-app__body">
       <section
         v-show="activeTab === 'now'"
         :id="panelId('now')"
@@ -130,12 +128,11 @@ function durationDatetime(ms: number): string {
           <time :datetime="`PT${Math.floor(clock.timerRemainingMs.value / 1000)}S`">
             {{ clock.timerDisplay.value }}
           </time>
-          <span v-if="timerFinished" class="clock-app__status" role="status">Time's up</span>
+          <Badge v-if="timerFinished" tone="accent" size="md" role="status">Time's up</Badge>
         </div>
 
         <div class="clock-app__inputs" aria-label="Timer duration">
-          <label class="clock-app__number-field">
-            <span>Hours</span>
+          <FormField class="clock-app__number-field" label="Hours">
             <TextInput
               type="number"
               min="0"
@@ -147,9 +144,8 @@ function durationDatetime(ms: number): string {
               :model-value="String(timerPartValue('hours'))"
               @update:model-value="clock.setTimerPart('hours', $event)"
             />
-          </label>
-          <label class="clock-app__number-field">
-            <span>Minutes</span>
+          </FormField>
+          <FormField class="clock-app__number-field" label="Minutes">
             <TextInput
               type="number"
               min="0"
@@ -161,9 +157,8 @@ function durationDatetime(ms: number): string {
               :model-value="String(timerPartValue('minutes'))"
               @update:model-value="clock.setTimerPart('minutes', $event)"
             />
-          </label>
-          <label class="clock-app__number-field">
-            <span>Seconds</span>
+          </FormField>
+          <FormField class="clock-app__number-field" label="Seconds">
             <TextInput
               type="number"
               min="0"
@@ -175,7 +170,7 @@ function durationDatetime(ms: number): string {
               :model-value="String(timerPartValue('seconds'))"
               @update:model-value="clock.setTimerPart('seconds', $event)"
             />
-          </label>
+          </FormField>
         </div>
 
         <div class="clock-app__presets" aria-label="Timer presets">
@@ -245,14 +240,19 @@ function durationDatetime(ms: number): string {
           <Button :icon-start="RotateCcw" @click="clock.resetStopwatch">Reset</Button>
         </div>
 
-        <ol v-if="clock.laps.value.length > 0" class="clock-app__laps" aria-label="Stopwatch laps">
+        <ScrollArea
+          v-if="clock.laps.value.length > 0"
+          as="ol"
+          class="clock-app__laps"
+          aria-label="Stopwatch laps"
+        >
           <li v-for="(lap, index) in clock.laps.value" :key="`${lap}-${index}`">
             <span>Lap {{ clock.laps.value.length - index }}</span>
             <time :datetime="durationDatetime(lap)">{{ formatStopwatchDurationMs(lap) }}</time>
           </li>
-        </ol>
+        </ScrollArea>
       </section>
-    </main>
+    </ScrollArea>
   </AppFrame>
 </template>
 
@@ -284,50 +284,9 @@ function durationDatetime(ms: number): string {
   padding: var(--space-md);
 }
 
-.clock-app__tabs {
-  align-items: center;
-  background: var(--color-bg-subtle);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-}
-
-.clock-app__tab {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: calc(var(--radius-md) - 2px);
-  color: var(--color-fg-muted);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 13px;
-  gap: var(--space-xs);
-  min-block-size: 30px;
-  padding: 0 var(--space-sm);
-
-  svg {
-    block-size: 14px;
-    inline-size: 14px;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-}
-
-.clock-app__tab--active {
-  background: var(--color-bg-elevated);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-fg);
-}
-
 .clock-app__body {
   grid-area: body;
   min-block-size: 0;
-  overflow: auto;
 }
 
 .clock-app__panel {
@@ -346,7 +305,7 @@ function durationDatetime(ms: number): string {
 .clock-app__now-time,
 .clock-app__readout time {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   line-height: 1;
 }
 
@@ -356,14 +315,14 @@ function durationDatetime(ms: number): string {
 
 .clock-app__now-date {
   color: var(--color-fg);
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
   margin: 0;
 }
 
 .clock-app__timezone {
   color: var(--color-fg-muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   margin: 0;
 }
 
@@ -379,8 +338,7 @@ function durationDatetime(ms: number): string {
   }
 }
 
-.clock-app__readout--finished time,
-.clock-app__status {
+.clock-app__readout--finished time {
   color: var(--color-accent);
 }
 
@@ -394,11 +352,6 @@ function durationDatetime(ms: number): string {
   line-height: 1;
 }
 
-.clock-app__status {
-  font-size: 13px;
-  font-weight: 650;
-}
-
 .clock-app__inputs {
   display: grid;
   gap: var(--space-sm);
@@ -406,39 +359,10 @@ function durationDatetime(ms: number): string {
   justify-content: center;
 }
 
-.clock-app__number-field {
-  display: grid;
-  gap: var(--space-xs);
-
-  span {
-    color: var(--color-fg-muted);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  input {
-    background: var(--color-bg-elevated);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    color: var(--color-fg);
-    font: inherit;
-    font-variant-numeric: tabular-nums;
-    inline-size: 100%;
-    min-block-size: 38px;
-    padding: 0 var(--space-sm);
-    text-align: center;
-
-    &:focus {
-      border-color: var(--color-accent);
-      outline: 2px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
-      outline-offset: 1px;
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.65;
-    }
-  }
+.clock-app__number-field input {
+  font-variant-numeric: tabular-nums;
+  min-block-size: 38px;
+  text-align: center;
 }
 
 .clock-app__presets,
@@ -458,13 +382,12 @@ function durationDatetime(ms: number): string {
   list-style: none;
   margin: 0;
   max-block-size: 180px;
-  overflow: auto;
   padding: 0;
 
   li {
     align-items: center;
     display: flex;
-    font-size: 13px;
+    font-size: var(--font-size-sm);
     justify-content: space-between;
     padding: var(--space-sm) var(--space-md);
   }
@@ -479,7 +402,7 @@ function durationDatetime(ms: number): string {
 
   time {
     font-variant-numeric: tabular-nums;
-    font-weight: 650;
+    font-weight: var(--font-weight-bold);
   }
 }
 
@@ -518,32 +441,6 @@ function durationDatetime(ms: number): string {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     inline-size: 100%;
     padding: 3px;
-  }
-
-  .clock-app__tab {
-    flex-direction: column;
-    font-size: 12px;
-    gap: 3px;
-    justify-content: center;
-    min-block-size: 48px;
-    min-inline-size: 0;
-    padding: 0 var(--space-xs);
-
-    svg {
-      block-size: 16px;
-      inline-size: 16px;
-    }
-
-    span {
-      min-inline-size: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  }
-
-  .clock-app__body {
-    overscroll-behavior: contain;
   }
 
   .clock-app__panel {
@@ -601,10 +498,6 @@ function durationDatetime(ms: number): string {
   .clock-app {
     --clock-now-size: 52px;
     --clock-readout-size: 44px;
-  }
-
-  .clock-app__tab {
-    min-block-size: 44px;
   }
 
   .clock-app__panel {
