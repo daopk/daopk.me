@@ -139,7 +139,7 @@ function buildPostDocument({ html, metadata, slug }) {
       "@type": "Person",
       name: metadata.author,
     },
-    dateModified: metadata.date ?? undefined,
+    dateModified: (metadata.updated ?? metadata.date) ?? undefined,
     datePublished: metadata.date ?? undefined,
     description: metadata.description,
     headline: title,
@@ -458,17 +458,29 @@ function buildIndexDocument(posts) {
 }
 
 function buildSitemap(posts) {
-  const latestPostDate = posts.find((post) => post.metadata.date !== null)?.metadata.date ?? null;
-  const indexLastmod = latestPostDate === null ? "" : `\n    <lastmod>${latestPostDate}</lastmod>`;
+  // Effective last-modified of a post is its `updated` date when present (a
+  // meaningful edit), otherwise its publish `date`. The blog index reflects the
+  // freshest of all posts so Google reprioritizes it when anything changes.
+  const latestLastmod =
+    posts
+      .map((post) => post.metadata.updated ?? post.metadata.date)
+      .filter((date) => date !== null)
+      .sort()
+      .at(-1) ?? null;
+  const homeEntry = `  <url>\n    <loc>${escapeHtml(SITE_ORIGIN)}/</loc>\n  </url>`;
+  const indexLastmod = latestLastmod === null ? "" : `\n    <lastmod>${latestLastmod}</lastmod>`;
   const indexEntry = `  <url>\n    <loc>${escapeHtml(SITE_ORIGIN)}/blog</loc>${indexLastmod}\n  </url>`;
   const postEntries = posts
     .map((post) => {
       const loc = `${SITE_ORIGIN}/blog/${post.slug}`;
-      const lastmod = post.metadata.date ? `\n    <lastmod>${post.metadata.date}</lastmod>` : "";
+      const lastmodDate = post.metadata.updated ?? post.metadata.date;
+      const lastmod = lastmodDate ? `\n    <lastmod>${lastmodDate}</lastmod>` : "";
       return `  <url>\n    <loc>${escapeHtml(loc)}</loc>${lastmod}\n  </url>`;
     })
     .join("\n");
-  const entries = [indexEntry, postEntries].filter((entry) => entry.length > 0).join("\n");
+  const entries = [homeEntry, indexEntry, postEntries]
+    .filter((entry) => entry.length > 0)
+    .join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
 }
