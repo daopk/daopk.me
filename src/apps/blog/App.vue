@@ -1,19 +1,26 @@
 <script setup lang="ts">
-import { computed, inject, onUnmounted, ref, watch } from "vue";
+import { computed, inject, onUnmounted, ref } from "vue";
 
-import { AppFrame, EmptyState, ListButton, SectionHeader, StatusBanner } from "~/components/kit";
+import {
+  AppFrame,
+  EmptyState,
+  ListButton,
+  ScrollArea,
+  SectionHeader,
+  StatusBanner,
+  useAppChrome,
+} from "~/components/kit";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { ArrowLeft } from "~/icons/lucide";
-import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
+import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
 
 import { useBlogIndex, type BlogIndexPost } from "./useBlogIndex";
 import { useBlogPost } from "./useBlogPost";
 
 const ctx = inject(AppContextInjectionKey, null);
-const appChrome = inject(AppChromeInjectionKey, null);
 const kernel = useKernel();
 const vfs = useVfs();
 
@@ -31,6 +38,7 @@ const initialSlug =
   typeof ctx?.args.slug === "string" && ctx.args.slug.length > 0 ? ctx.args.slug : null;
 const view = ref<"index" | "post">(initialSlug === null ? "index" : "post");
 const missingLabel = computed(() => blogPost.slug.value ?? "post");
+const notFoundDescription = computed(() => `The post "${missingLabel.value}" is not available.`);
 const busy = computed(
   () =>
     (view.value === "index" && blogIndex.status.value === "loading") ||
@@ -50,28 +58,16 @@ const stopOpenRequests = kernel.events.on("blog.open.requested", (payload) => {
   });
 });
 
-watch(
-  () => [view.value, blogPost.metadata.value.title] as const,
-  ([nextView, title]) => {
-    if (nextView === "post") {
-      appChrome?.setTitle(title ?? "Blog");
-      appChrome?.setBackAction({
-        ariaLabel: "Back to Blog",
-        handler: openIndex,
-      });
-      return;
-    }
-
-    appChrome?.setTitle(null);
-    appChrome?.setBackAction(null);
-  },
-  { immediate: true },
+const chromeTitle = computed(() =>
+  view.value === "post" ? (blogPost.metadata.value.title ?? "Blog") : null,
 );
+const chromeBackAction = computed<AppChromeBackAction | null>(() =>
+  view.value === "post" ? { ariaLabel: "Back to Blog", handler: openIndex } : null,
+);
+const chrome = useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
 
 onUnmounted(() => {
   stopOpenRequests();
-  appChrome?.setTitle(null);
-  appChrome?.setBackAction(null);
 });
 
 function replaceBrowserPath(pathname: string): void {
@@ -122,66 +118,77 @@ function onPostSelect(post: BlogIndexPost): void {
     :aria-busy="busy ? 'true' : undefined"
     :data-handle-id="debugHandleId"
   >
-    <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
-      <SectionHeader class="blog__index-header" title="Latest posts" :level="1" />
+    <ScrollArea class="blog__scroll">
+      <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
+        <SectionHeader class="blog__index-header" title="Latest posts" :level="1" size="page" />
 
-      <StatusBanner v-if="blogIndex.loading.value" class="blog__status">
-        Loading posts...
-      </StatusBanner>
-      <EmptyState v-else-if="blogIndex.loadFailed.value" class="blog__state" aria-live="polite">
-        <h2>Could not load posts</h2>
-        <p>Try opening Blog again.</p>
-      </EmptyState>
-      <EmptyState v-else-if="blogIndex.empty.value" class="blog__state" aria-live="polite">
-        <h2>No posts yet</h2>
-      </EmptyState>
-      <ol v-else class="blog__index-list">
-        <li v-for="post in blogIndex.posts.value" :key="post.slug">
-          <ListButton class="blog__index-item" @click="onPostSelect(post)">
-            <span v-if="post.date && post.formattedDate" class="blog__index-date">
-              <time :datetime="post.date">{{ post.formattedDate }}</time>
-            </span>
-            <span class="blog__index-title">{{ post.title }}</span>
-            <span v-if="post.excerpt" class="blog__index-excerpt">{{ post.excerpt }}</span>
-          </ListButton>
-        </li>
-      </ol>
-    </section>
-
-    <template v-else>
-      <div class="blog__post-shell">
-        <Button
-          v-if="appChrome === null"
-          class="blog__back"
-          variant="ghost"
-          size="sm"
-          :icon-start="ArrowLeft"
-          @click="openIndex"
-        >
-          All posts
-        </Button>
-        <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
-        <EmptyState v-else-if="blogPost.notFound.value" class="blog__state" aria-live="polite">
-          <h1>Post not found</h1>
-          <p>The post "{{ missingLabel }}" is not available.</p>
-        </EmptyState>
-        <StatusBanner v-else-if="blogPost.loadFailed.value" class="blog__error" tone="error">
-          Could not load blog post.
+        <StatusBanner v-if="blogIndex.loading.value" class="blog__status">
+          Loading posts...
         </StatusBanner>
-      </div>
-    </template>
+        <EmptyState
+          v-else-if="blogIndex.loadFailed.value"
+          class="blog__state"
+          aria-live="polite"
+          title="Could not load posts"
+          description="Try opening Blog again."
+        />
+        <EmptyState
+          v-else-if="blogIndex.empty.value"
+          class="blog__state"
+          aria-live="polite"
+          title="No posts yet"
+        />
+        <ol v-else class="blog__index-list">
+          <li v-for="post in blogIndex.posts.value" :key="post.slug">
+            <ListButton class="blog__index-item" @click="onPostSelect(post)">
+              <span v-if="post.date && post.formattedDate" class="blog__index-date">
+                <time :datetime="post.date">{{ post.formattedDate }}</time>
+              </span>
+              <span class="blog__index-title">{{ post.title }}</span>
+              <span v-if="post.excerpt" class="blog__index-excerpt">{{ post.excerpt }}</span>
+            </ListButton>
+          </li>
+        </ol>
+      </section>
+
+      <template v-else>
+        <div class="blog__post-shell">
+          <Button
+            v-if="!chrome.available"
+            class="blog__back"
+            variant="ghost"
+            size="sm"
+            :icon-start="ArrowLeft"
+            @click="openIndex"
+          >
+            All posts
+          </Button>
+          <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
+          <EmptyState
+            v-else-if="blogPost.notFound.value"
+            class="blog__state"
+            aria-live="polite"
+            title="Post not found"
+            :description="notFoundDescription"
+          />
+          <StatusBanner v-else-if="blogPost.loadFailed.value" class="blog__error" tone="error">
+            Could not load blog post.
+          </StatusBanner>
+        </div>
+      </template>
+    </ScrollArea>
   </AppFrame>
 </template>
 
 <style scoped lang="scss">
 .blog {
-  block-size: 100%;
   color: var(--color-fg);
   font-size: 15px;
-  inline-size: 100%;
   line-height: 1.65;
-  overflow-x: hidden;
-  overflow-y: auto;
+}
+
+.blog__scroll {
+  block-size: 100%;
   padding-block-end: calc(var(--space-xl) + var(--mobile-shell-app-bottom-padding, 0px));
   padding-block-start: var(--space-lg);
   padding-inline-end: calc(var(--space-xl) + var(--mobile-shell-app-safe-area-right, 0px));
@@ -207,13 +214,6 @@ function onPostSelect(post: BlogIndexPost): void {
 
 .blog__index-header {
   margin-block-end: var(--space-lg);
-}
-
-.blog__index-header :deep(h1) {
-  font-size: 28px;
-  font-weight: 650;
-  line-height: 1.15;
-  margin: 0;
 }
 
 .blog__index-list {
@@ -253,18 +253,18 @@ function onPostSelect(post: BlogIndexPost): void {
 
 .blog__index-date {
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .blog__index-title {
-  font-size: 18px;
-  font-weight: 650;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   line-height: 1.25;
 }
 
 .blog__index-excerpt {
   color: var(--color-fg-muted);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.55;
 }
 
@@ -348,21 +348,6 @@ function onPostSelect(post: BlogIndexPost): void {
   padding-block-start: var(--space-xl);
 }
 
-.blog__state h1 {
-  font-size: 24px;
-  font-weight: 650;
-  line-height: 1.2;
-  margin: 0 0 var(--space-sm);
-}
-
-.blog__state h2 {
-  font-size: 22px;
-  font-weight: 650;
-  line-height: 1.2;
-  margin: 0 0 var(--space-sm);
-}
-
-.blog__state p,
 .blog__error,
 .blog__status {
   color: var(--color-fg-muted);

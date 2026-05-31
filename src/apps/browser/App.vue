@@ -7,6 +7,8 @@ import {
   EmptyState,
   IconButton,
   ListButton,
+  ScrollArea,
+  Spinner,
   StatusBanner,
   TextInput,
   ToolbarGroup,
@@ -220,7 +222,7 @@ function openExternally(): void {
       </template>
     </AppToolbar>
 
-    <nav class="browser__bookmarks" aria-label="Bookmarks">
+    <ScrollArea as="nav" axis="horizontal" class="browser__bookmarks" aria-label="Bookmarks">
       <ListButton
         v-for="link in BROWSER_QUICK_LINKS"
         :key="link.url"
@@ -233,11 +235,14 @@ function openExternally(): void {
         </template>
         <span class="browser__bookmark-label">{{ link.label }}</span>
       </ListButton>
-    </nav>
+    </ScrollArea>
 
     <main class="browser__viewport">
-      <EmptyState v-if="browser.current.value.kind === 'start'" class="browser__start">
-        <h2 class="browser__start-title">Start</h2>
+      <EmptyState
+        v-if="browser.current.value.kind === 'start'"
+        class="browser__start"
+        title="Start"
+      >
         <ul class="browser__quick-links" aria-label="Quick links">
           <li v-for="link in BROWSER_QUICK_LINKS" :key="link.url">
             <ListButton class="browser__quick-link" @click="openQuickLink(link.url)">
@@ -255,11 +260,16 @@ function openExternally(): void {
         </ul>
       </EmptyState>
 
-      <EmptyState v-else-if="browser.previewBlocked.value" class="browser__blocked">
-        <div class="browser__blocked-mark" aria-hidden="true">
-          <ExternalLink :size="32" :stroke-width="1.9" />
-        </div>
-        <h2 class="browser__blocked-title">This site could not be embedded.</h2>
+      <EmptyState
+        v-else-if="browser.previewBlocked.value"
+        class="browser__blocked"
+        title="This site could not be embedded."
+      >
+        <template #icon>
+          <span class="browser__blocked-mark" aria-hidden="true">
+            <ExternalLink :size="32" :stroke-width="1.9" />
+          </span>
+        </template>
         <p class="browser__blocked-copy">{{ browser.current.value.url }}</p>
         <Button
           variant="primary"
@@ -296,7 +306,7 @@ function openExternally(): void {
     </main>
 
     <StatusBanner as="footer" class="browser__status">
-      <span v-if="browser.isLoading.value" class="browser__status-spinner" aria-hidden="true" />
+      <Spinner v-if="browser.isLoading.value" size="sm" />
       {{ browser.message.value }}
     </StatusBanner>
   </AppFrame>
@@ -309,7 +319,7 @@ function openExternally(): void {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   min-block-size: 0;
 }
@@ -396,7 +406,6 @@ function openExternally(): void {
   flex: 0 0 auto;
   gap: var(--space-xs);
   min-block-size: 38px;
-  overflow-x: auto;
   padding-block: var(--space-xs);
   padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
   padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
@@ -433,12 +442,12 @@ function openExternally(): void {
   align-items: center;
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-accent) 24%, transparent);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   color: var(--color-accent);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   justify-content: center;
 }
 
@@ -462,7 +471,7 @@ function openExternally(): void {
 
 .browser__history-title {
   color: var(--color-fg);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -492,12 +501,6 @@ function openExternally(): void {
   inline-size: 100%;
   justify-content: center;
   padding: var(--space-xl);
-}
-
-.browser__start-title {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0;
 }
 
 .browser__quick-links {
@@ -555,7 +558,7 @@ function openExternally(): void {
   align-items: center;
   background: color-mix(in srgb, var(--color-fg-muted) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-fg-muted) 22%, transparent);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   color: var(--color-fg-muted);
   display: inline-flex;
   block-size: 64px;
@@ -563,15 +566,9 @@ function openExternally(): void {
   justify-content: center;
 }
 
-.browser__blocked-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0;
-}
-
 .browser__blocked-copy {
   color: var(--color-fg-muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   margin: 0;
   max-inline-size: min(56ch, 100%);
   overflow-wrap: anywhere;
@@ -595,7 +592,7 @@ function openExternally(): void {
   color: var(--color-fg-muted);
   display: flex;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   gap: var(--space-xs);
   min-block-size: 28px;
   overflow: hidden;
@@ -605,22 +602,6 @@ function openExternally(): void {
   padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.browser__status-spinner {
-  animation: browser-spin 700ms linear infinite;
-  block-size: 12px;
-  border: 2px solid color-mix(in srgb, var(--color-fg-muted) 32%, transparent);
-  border-block-start-color: var(--color-accent);
-  border-radius: 50%;
-  flex: 0 0 auto;
-  inline-size: 12px;
-}
-
-@keyframes browser-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (max-width: 640px) {
@@ -640,12 +621,6 @@ function openExternally(): void {
 
   .browser__bookmark-label {
     max-inline-size: 10ch;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .browser__status-spinner {
-    animation-duration: 0ms;
   }
 }
 </style>
