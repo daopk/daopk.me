@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, nextTick, ref, useTemplateRef, watch } from "vue";
 
-import { AppFrame, TextInput } from "~/components/kit";
+import { AppFrame, ScrollArea, TextInput } from "~/components/kit";
 import { useAppLifecycle } from "~/composables/useAppLifecycle";
 import { AppContextInjectionKey } from "~/types/app";
 import { useTerminalSession } from "./useTerminalSession";
@@ -18,14 +18,14 @@ const { scrollback, cwd, submit, prevHistory, nextHistory, resetHistoryCursor } 
   useTerminalSession(ctx?.handleId ?? "default");
 
 const input = ref<string>("");
-const scrollbackRef = useTemplateRef<HTMLElement>("scrollbackRef");
+const scrollbackRef = useTemplateRef<{ element: HTMLElement | null }>("scrollbackRef");
 const inputRef = useTemplateRef<TerminalInputRef>("inputRef");
 onPhase("suspended", () => {
   inputRef.value?.blur();
 });
 
 function scrollToBottom(): void {
-  const el = scrollbackRef.value;
+  const el = scrollbackRef.value?.element;
   if (!el) {
     return;
   }
@@ -77,8 +77,9 @@ function onInputEdit(): void {
 
 <template>
   <AppFrame class="terminal" layout="flex-column" :safe-area="false" :aria-label="'Terminal'">
-    <ol
+    <ScrollArea
       ref="scrollbackRef"
+      as="ol"
       class="terminal__scrollback"
       role="log"
       aria-live="polite"
@@ -93,7 +94,7 @@ function onInputEdit(): void {
         <span v-if="entry.kind === 'input'" class="terminal__prompt" aria-hidden="true">$</span>
         <span class="terminal__text">{{ entry.text }}</span>
       </li>
-    </ol>
+    </ScrollArea>
 
     <form class="terminal__prompt-row" @submit.prevent="onSubmit">
       <span class="terminal__prompt" aria-hidden="true">{{ cwd }} $</span>
@@ -123,7 +124,7 @@ function onInputEdit(): void {
   display: flex;
   flex-direction: column;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   line-height: 1.45;
 }
@@ -132,8 +133,6 @@ function onInputEdit(): void {
   flex: 1 1 auto;
   list-style: none;
   margin: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
   padding-block: var(--space-sm);
   padding-inline-end: calc(var(--space-md) + var(--mobile-shell-app-safe-area-right, 0px));
   padding-inline-start: calc(var(--space-md) + var(--mobile-shell-app-safe-area-left, 0px));

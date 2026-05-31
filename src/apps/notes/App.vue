@@ -2,19 +2,28 @@
 import { useResizeObserver } from "@vueuse/core";
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
-import { AppFrame, AppToolbar, EmptyState, Textarea, TextInput } from "~/components/kit";
+import {
+  AppFrame,
+  AppToolbar,
+  EmptyState,
+  ScrollArea,
+  Textarea,
+  TextInput,
+  useAppChrome,
+} from "~/components/kit";
 import {
   Button,
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
   Dialog,
+  DialogActions,
 } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
 import { FileText, Plus } from "~/icons/lucide";
 import { formatDateTime } from "~/utils/format";
-import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
+import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
 
 import {
   isNotesMarkdownPath,
@@ -32,7 +41,6 @@ interface AppFrameRef {
 
 const kernel = useKernel();
 const appContext = inject(AppContextInjectionKey, null);
-const appChrome = inject(AppChromeInjectionKey, null);
 const vfs = useVfs();
 const notes = useNotes({
   vfs: {
@@ -117,28 +125,18 @@ onMounted(() => {
 onUnmounted(() => {
   stopWillKill();
   stopOpenRequests();
-  appChrome?.setTitle(null);
-  appChrome?.setBackAction(null);
   notes.dispose({ flush: closeFlush === undefined });
 });
 
-watch(
-  () => [isCompact.value, mobileEditorOpen.value, notes.title.value] as const,
-  ([compact, editorOpen, title]) => {
-    if (compact && editorOpen) {
-      appChrome?.setTitle(title || "Notes");
-      appChrome?.setBackAction({
-        ariaLabel: "Back to Notes",
-        handler: closeMobileEditor,
-      });
-      return;
-    }
-
-    appChrome?.setTitle(null);
-    appChrome?.setBackAction(null);
-  },
-  { immediate: true },
+const chromeTitle = computed(() =>
+  isCompact.value && mobileEditorOpen.value ? notes.title.value || "Notes" : null,
 );
+const chromeBackAction = computed<AppChromeBackAction | null>(() =>
+  isCompact.value && mobileEditorOpen.value
+    ? { ariaLabel: "Back to Notes", handler: closeMobileEditor }
+    : null,
+);
+useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
 
 watch(
   () => notes.hasSelection.value,
@@ -302,7 +300,7 @@ function labelForStatus(status: NotesStatus): string {
       <EmptyState v-if="notes.notes.value.length === 0" class="notes__list-empty">
         {{ statusText }}
       </EmptyState>
-      <ul v-else class="notes__list" aria-label="Notes">
+      <ScrollArea v-else as="ul" class="notes__list" aria-label="Notes">
         <li v-for="note in notes.notes.value" :key="note.path" class="notes__list-item">
           <ContextMenu :modal="false">
             <template #trigger>
@@ -331,7 +329,7 @@ function labelForStatus(status: NotesStatus): string {
             </template>
           </ContextMenu>
         </li>
-      </ul>
+      </ScrollArea>
     </aside>
 
     <main v-if="showEditor" class="notes__editor" aria-label="Selected note">
@@ -378,12 +376,12 @@ function labelForStatus(status: NotesStatus): string {
       :description="deleteDescription"
       @close="cancelDeleteNote"
     >
-      <div class="notes__dialog-actions">
+      <DialogActions>
         <Button size="sm" :disabled="deletingNote" @click="cancelDeleteNote">Cancel</Button>
         <Button size="sm" variant="primary" :loading="deletingNote" @click="confirmDeleteNote">
           Move to Trash
         </Button>
-      </div>
+      </DialogActions>
     </Dialog>
   </AppFrame>
 </template>
@@ -394,7 +392,7 @@ function labelForStatus(status: NotesStatus): string {
   block-size: 100%;
   color: var(--color-fg);
   display: grid;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
   inline-size: 100%;
   min-block-size: 0;
@@ -457,7 +455,6 @@ function labelForStatus(status: NotesStatus): string {
   list-style: none;
   margin: 0;
   min-block-size: 0;
-  overflow: auto;
   padding: var(--space-xs);
 }
 
@@ -477,7 +474,7 @@ function labelForStatus(status: NotesStatus): string {
   color: var(--color-fg);
   cursor: pointer;
   display: grid;
-  gap: 2px;
+  gap: var(--space-2xs);
   inline-size: 100%;
   min-block-size: 52px;
   padding: var(--space-sm);
@@ -512,7 +509,7 @@ function labelForStatus(status: NotesStatus): string {
 }
 
 .notes__note-title {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -520,13 +517,13 @@ function labelForStatus(status: NotesStatus): string {
 }
 
 .notes--compact .notes__note-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1.25;
 }
 
 .notes__note-meta {
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,7 +531,7 @@ function labelForStatus(status: NotesStatus): string {
 }
 
 .notes--compact .notes__note-meta {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .notes__list-empty,
@@ -590,8 +587,8 @@ function labelForStatus(status: NotesStatus): string {
   border: 0;
   color: var(--color-fg);
   font: inherit;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
   inline-size: 100%;
   min-block-size: 34px;
   padding: 0;
@@ -604,7 +601,7 @@ function labelForStatus(status: NotesStatus): string {
 
 .notes__status {
   color: var(--color-fg-muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   min-block-size: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -631,11 +628,5 @@ function labelForStatus(status: NotesStatus): string {
   font-size: 16px;
   line-height: 1.65;
   padding: var(--space-sm) var(--space-md) var(--space-lg);
-}
-
-.notes__dialog-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
 }
 </style>
