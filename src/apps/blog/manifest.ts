@@ -7,7 +7,7 @@ export const blogManifest: AppManifest = {
   name: "Blog",
   icon: BlogAppIcon,
   category: "system",
-  permissions: ["vfs.read"],
+  permissions: ["vfs.read", "vfs.write", "network.fetch"],
   defaultWindow: { width: 720, height: 520, centered: true },
   component: () => import("./App.vue"),
   keywords: ["blog", "post", "writing", "article", "markdown"],

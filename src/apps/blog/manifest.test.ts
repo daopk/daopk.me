@@ -9,4 +9,9 @@ describe("blogManifest", () => {
     expect(blogManifest.category).toBe("system");
     expect(blogManifest.permissions).toContain("vfs.read");
   });
+
+  it("requests write + network access for the read-through GitHub content cache", () => {
+    expect(blogManifest.permissions).toContain("vfs.write");
+    expect(blogManifest.permissions).toContain("network.fetch");
+  });
 });

@@ -13,6 +13,7 @@ import {
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
+import { createBlogContentSource } from "~/core/blog/blogContentSource";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { ArrowLeft } from "~/icons/lucide";
 import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
@@ -24,13 +25,18 @@ const ctx = inject(AppContextInjectionKey, null);
 const kernel = useKernel();
 const vfs = useVfs();
 
-const blogIndex = useBlogIndex({
-  list: vfs.list,
-  readText: vfs.readText,
+const blogSource = createBlogContentSource({
+  vfs: {
+    readText: vfs.readText,
+    writeText: vfs.writeText,
+    mkdir: vfs.mkdir,
+  },
 });
+
+const blogIndex = useBlogIndex({ source: blogSource });
 const blogPost = useBlogPost({
   args: ctx?.args,
-  readText: vfs.readText,
+  source: blogSource,
 });
 
 const debugHandleId = import.meta.env.DEV ? ctx?.handleId : undefined;
@@ -164,6 +170,13 @@ function onPostSelect(post: BlogIndexPost): void {
             All posts
           </Button>
           <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
+          <StatusBanner
+            v-else-if="blogPost.status.value === 'loading'"
+            class="blog__status"
+            aria-live="polite"
+          >
+            Loading post...
+          </StatusBanner>
           <EmptyState
             v-else-if="blogPost.notFound.value"
             class="blog__state"

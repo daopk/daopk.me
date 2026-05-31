@@ -1,5 +1,5 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import rehypeSanitize from "rehype-sanitize";
@@ -9,17 +9,15 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 
+import { comparePostsNewestFirst, escapeHtml, readBlogPosts } from "./lib/blogPosts.mjs";
+
 const SITE_ORIGIN = "https://daopk.me";
 const SITE_NAME = "daopk.me";
-const DEFAULT_AUTHOR = "daopk";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const POSTS_DIR = join(ROOT, "src/content/posts");
+const POSTS_DIR = join(ROOT, "blog");
 const DIST_DIR = join(ROOT, "dist");
 const SEO_BLOG_DIR = join(DIST_DIR, "__seo/blog");
 const SEO_BLOG_INDEX_FILE = join(DIST_DIR, "__seo/blog-index.html");
-const SLUG_PATTERN = /^[a-z0-9-]+$/;
-const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const markdownSanitizeSchema = {
   allowComments: false,
@@ -89,126 +87,6 @@ const markdownSanitizeSchema = {
     "ul",
   ],
 };
-
-function escapeHtml(value) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function unquoteScalar(value) {
-  const trimmed = value.trim();
-  const quote = trimmed[0];
-  return (quote === `"` || quote === "'") && trimmed.endsWith(quote)
-    ? trimmed.slice(1, -1)
-    : trimmed;
-}
-
-function validDate(value) {
-  if (!DATE_PATTERN.test(value)) {
-    return null;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  return date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-    ? value
-    : null;
-}
-
-function formatPostDate(value) {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    year: "numeric",
-  }).format(date);
-}
-
-function titleFromSlug(slug) {
-  return slug
-    .split("-")
-    .map((part) => (part.length === 0 ? part : `${part[0].toUpperCase()}${part.slice(1)}`))
-    .join(" ");
-}
-
-function firstMarkdownH1(source) {
-  const match = /^#\s+(.+?)\s*#*\s*$/m.exec(source);
-  return match?.[1]?.trim() || null;
-}
-
-function normalizeWhitespace(value) {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function plainTextFromMarkdown(source) {
-  return normalizeWhitespace(
-    source
-      .replace(/```[\s\S]*?```/g, " ")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/^\s*[-*+]\s+/gm, "")
-      .replace(/^>\s?/gm, "")
-      .replace(/[*_~#>]/g, " "),
-  );
-}
-
-function truncateDescription(value) {
-  const normalized = normalizeWhitespace(value);
-
-  if (normalized.length <= 170) {
-    return normalized;
-  }
-
-  const truncated = normalized.slice(0, 171);
-  const lastSpace = truncated.lastIndexOf(" ");
-  const base = lastSpace > 90 ? truncated.slice(0, lastSpace) : normalized.slice(0, 170);
-  return `${base.trim()}...`;
-}
-
-function parsePostSource(slug, source) {
-  const match = FRONTMATTER_PATTERN.exec(source);
-  const frontmatter = {};
-  const body = match ? source.slice(match[0].length) : source;
-
-  if (match) {
-    for (const line of match[1].split(/\r?\n/)) {
-      const separator = line.indexOf(":");
-      if (separator === -1) {
-        continue;
-      }
-
-      const key = line.slice(0, separator).trim();
-      const value = unquoteScalar(line.slice(separator + 1));
-      frontmatter[key] = value;
-    }
-  }
-
-  const date = frontmatter.date === undefined ? null : validDate(frontmatter.date);
-  const title = frontmatter.title?.trim() || firstMarkdownH1(body) || titleFromSlug(slug);
-  const description = truncateDescription(frontmatter.description || plainTextFromMarkdown(body));
-
-  return {
-    body,
-    metadata: {
-      author: frontmatter.author?.trim() || DEFAULT_AUTHOR,
-      date,
-      description,
-      formattedDate: date === null ? null : formatPostDate(date),
-      title,
-    },
-  };
-}
 
 function stripLeadingH1(html) {
   return html.replace(/^<h1(?:\s[^>]*)?>[\s\S]*?<\/h1>\s*/i, "");
@@ -391,20 +269,6 @@ function buildPostDocument({ html, metadata, slug }) {
   </body>
 </html>
 `;
-}
-
-function comparePostsNewestFirst(a, b) {
-  if (a.metadata.date !== b.metadata.date) {
-    if (a.metadata.date === null) {
-      return 1;
-    }
-    if (b.metadata.date === null) {
-      return -1;
-    }
-    return b.metadata.date.localeCompare(a.metadata.date);
-  }
-
-  return a.slug.localeCompare(b.slug);
 }
 
 function buildIndexDocument(posts) {
@@ -602,25 +466,17 @@ async function writeTextFile(path, content) {
 }
 
 async function main() {
-  const files = (await readdir(POSTS_DIR)).filter((file) => file.endsWith(".md")).sort();
+  const parsedPosts = await readBlogPosts(POSTS_DIR);
   const posts = [];
 
   await mkdir(SEO_BLOG_DIR, { recursive: true });
 
-  for (const file of files) {
-    const slug = basename(file, ".md");
+  for (const post of parsedPosts) {
+    const html = await renderMarkdownToHtml(post.body);
+    const document = buildPostDocument({ html, metadata: post.metadata, slug: post.slug });
 
-    if (!SLUG_PATTERN.test(slug)) {
-      throw new Error(`Invalid blog post slug "${slug}". Slugs must match ${SLUG_PATTERN}.`);
-    }
-
-    const source = await readFile(join(POSTS_DIR, file), "utf8");
-    const parsed = parsePostSource(slug, source);
-    const html = await renderMarkdownToHtml(parsed.body);
-    const document = buildPostDocument({ html, metadata: parsed.metadata, slug });
-
-    await writeTextFile(join(SEO_BLOG_DIR, `${slug}.html`), document);
-    posts.push({ slug, metadata: parsed.metadata });
+    await writeTextFile(join(SEO_BLOG_DIR, `${post.slug}.html`), document);
+    posts.push({ slug: post.slug, metadata: post.metadata });
   }
 
   const sortedPosts = [...posts].sort(comparePostsNewestFirst);

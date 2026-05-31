@@ -10,7 +10,6 @@ import { resetAutorunLatch } from "~/core/boot/autorun";
 import { debugLog, debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import { AppRegistry } from "~/core/kernel/AppRegistry";
-import { seedBuiltinBlogPosts } from "~/core/kernel/builtinBlogPosts";
 import { CommandRegistry } from "~/core/kernel/CommandRegistry";
 import { registerBuiltinCommands } from "~/core/kernel/builtinCommands";
 import { EventBus } from "~/core/kernel/EventBus";
@@ -327,18 +326,6 @@ function buildKernel(): Kernel {
         const nextSearchAdapter = await createSearchAdapter(kernel, {
           vfsIndexer: new VfsSearchIndexer({ vfs: vfsInternal, events: bus }),
         });
-
-        if (generation !== initGeneration) {
-          nextSearchAdapter.dispose();
-
-          return;
-        }
-
-        try {
-          await seedBuiltinBlogPosts(vfsInternal);
-        } catch (error: unknown) {
-          debugWarn("[blog]", "failed to seed built-in blog posts", error);
-        }
 
         if (generation !== initGeneration) {
           nextSearchAdapter.dispose();

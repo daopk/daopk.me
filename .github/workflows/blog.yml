@@ -1,0 +1,64 @@
+name: Publish blog
+
+# Adding or editing a post is just committing a markdown file under blog/.
+# This workflow regenerates blog/index.json (the runtime manifest the app
+# fetches) and redeploys the prerendered SEO assets to Cloudflare. The path
+# filter only watches *.md, so the index.json commit below never re-triggers.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "blog/**/*.md"
+
+# Serialize publishes so two quick pushes can't race the index.json commit.
+concurrency:
+  group: blog-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate blog index
+        run: pnpm blog:index
+
+      - name: Commit blog/index.json
+        run: |
+          if [[ -n "$(git status --porcelain blog/index.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add blog/index.json
+            git commit -m "chore(blog): regenerate index.json [skip ci]"
+            git push
+          else
+            echo "blog/index.json already up to date."
+          fi
+
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy to Cloudflare
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

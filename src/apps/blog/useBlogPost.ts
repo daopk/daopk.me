@@ -1,10 +1,11 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
+import type { BlogContentSource } from "~/core/blog/blogContentSource";
+import { formatBlogDate, validBlogDate } from "~/core/blog/blogDate";
 import { debugWarn } from "~/core/debug";
 import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
 import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-import { blogPostPathFromSlug } from "~/core/routing/blogPaths";
-import { VfsError } from "~/core/vfs/errors";
+import { isBlogPostSlug } from "~/core/routing/blogPaths";
 
 export interface BlogLaunchArgs {
   readonly slug?: unknown;
@@ -16,7 +17,7 @@ export type BlogPostStatus = "idle" | "loading" | "ready" | "not-found" | "error
 export interface BlogPostOptions {
   readonly args?: BlogLaunchArgs;
   readonly createRenderer?: () => Promise<MarkdownRenderer>;
-  readonly readText: (path: string) => Promise<string | null>;
+  readonly source: Pick<BlogContentSource, "readPostCache" | "fetchPost">;
 }
 
 export interface BlogPostMetadata {
@@ -32,7 +33,6 @@ interface ParsedBlogPost {
 }
 
 const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const EMPTY_METADATA: BlogPostMetadata = Object.freeze({
   date: null,
   description: null,
@@ -44,27 +44,9 @@ function stringArg(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function resolveBlogPath(args: BlogLaunchArgs | undefined): {
-  readonly path: string | null;
-  readonly slug: string | null;
-} {
+function resolveSlug(args: BlogLaunchArgs | undefined): string | null {
   const slug = stringArg(args?.slug);
-  if (slug === null) {
-    return { path: null, slug: null };
-  }
-
-  const canonicalPath = blogPostPathFromSlug(slug);
-  const requestedPath = stringArg(args?.path);
-  return {
-    slug,
-    path: requestedPath === canonicalPath ? requestedPath : canonicalPath,
-  };
-}
-
-function isNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof VfsError && (error.code === "NOT_FOUND" || error.code === "MOUNT_NOT_FOUND")
-  );
+  return slug !== null && isBlogPostSlug(slug) ? slug : null;
 }
 
 function unquoteScalar(value: string): string {
@@ -73,32 +55,6 @@ function unquoteScalar(value: string): string {
   return (quote === `"` || quote === "'") && trimmed.endsWith(quote)
     ? trimmed.slice(1, -1)
     : trimmed;
-}
-
-function validDate(value: string): string | null {
-  if (!DATE_PATTERN.test(value)) {
-    return null;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day));
-  return date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month! - 1 &&
-    date.getUTCDate() === day
-    ? value
-    : null;
-}
-
-function formatPostDate(value: string): string {
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day));
-
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    year: "numeric",
-  }).format(date);
 }
 
 export function parseBlogPostSource(source: string): ParsedBlogPost {
@@ -120,7 +76,7 @@ export function parseBlogPostSource(source: string): ParsedBlogPost {
     const key = line.slice(0, separator).trim();
     const value = unquoteScalar(line.slice(separator + 1));
     if (key === "date") {
-      date = validDate(value);
+      date = validBlogDate(value);
     } else if (key === "description") {
       description = value.length > 0 ? value : null;
     } else if (key === "title") {
@@ -133,7 +89,7 @@ export function parseBlogPostSource(source: string): ParsedBlogPost {
     metadata: {
       date,
       description,
-      formattedDate: date === null ? null : formatPostDate(date),
+      formattedDate: date === null ? null : formatBlogDate(date),
       title,
     },
   };
@@ -184,16 +140,14 @@ function decoratePostHtml(html: string, metadata: BlogPostMetadata): string {
 export function useBlogPost({
   args,
   createRenderer = createMarkdownRenderer,
-  readText,
+  source: contentSource,
 }: BlogPostOptions) {
   const html = ref("");
   const metadata = ref<BlogPostMetadata>(EMPTY_METADATA);
   const status = ref<BlogPostStatus>("idle");
   const source = ref("");
 
-  const resolved = resolveBlogPath(args);
-  const slug = ref<string | null>(resolved.slug);
-  const path = ref<string | null>(resolved.path);
+  const slug = ref<string | null>(resolveSlug(args));
 
   const notFound = computed(() => status.value === "not-found");
   const loadFailed = computed(() => status.value === "error");
@@ -220,62 +174,86 @@ export function useBlogPost({
     return next;
   }
 
+  async function renderSource(markdown: string, run: number): Promise<void> {
+    const parsed = parseBlogPostSource(markdown);
+    const activeRenderer = await getRenderer();
+    const result = await activeRenderer.render(parsed.body);
+
+    if (disposed || run !== refreshRun) {
+      return;
+    }
+
+    source.value = markdown;
+    metadata.value = parsed.metadata;
+    html.value = decoratePostHtml(result.html, parsed.metadata);
+    status.value = "ready";
+  }
+
   async function refresh(): Promise<void> {
     const run = ++refreshRun;
     html.value = "";
     metadata.value = EMPTY_METADATA;
     source.value = "";
 
-    if (path.value === null) {
+    const currentSlug = slug.value;
+    if (currentSlug === null) {
       status.value = "not-found";
       return;
     }
 
     status.value = "loading";
 
+    let cached: string | null = null;
     try {
-      const markdown = await readText(path.value);
+      cached = await contentSource.readPostCache(currentSlug);
+    } catch (error) {
+      debugWarn("[blog] failed to read cached blog post", error);
+    }
 
+    if (disposed || run !== refreshRun) {
+      return;
+    }
+
+    if (cached !== null) {
+      await renderSource(cached, run);
+      if (disposed || run !== refreshRun) {
+        return;
+      }
+    }
+
+    try {
+      const fresh = await contentSource.fetchPost(currentSlug);
       if (disposed || run !== refreshRun) {
         return;
       }
 
-      if (markdown === null) {
-        status.value = "not-found";
+      if (fresh === null) {
+        // Remote 404: nothing cached means the post does not exist; an existing
+        // cache keeps rendering (post may have been unpublished while cached).
+        if (cached === null) {
+          status.value = "not-found";
+        }
         return;
       }
 
-      source.value = markdown;
-      const parsed = parseBlogPostSource(markdown);
-      const activeRenderer = await getRenderer();
-      const result = await activeRenderer.render(parsed.body);
-
-      if (disposed || run !== refreshRun) {
-        return;
+      if (fresh !== cached) {
+        await renderSource(fresh, run);
       }
-
-      metadata.value = parsed.metadata;
-      html.value = decoratePostHtml(result.html, parsed.metadata);
-      status.value = "ready";
     } catch (error) {
       if (disposed || run !== refreshRun) {
         return;
       }
-
-      if (isNotFoundError(error)) {
-        status.value = "not-found";
+      if (cached !== null) {
+        debugWarn("[blog] serving cached blog post; refresh failed", error);
         return;
       }
-
-      debugWarn("[blog] failed to load or render VFS markdown", error);
+      debugWarn("[blog] failed to load or render blog post", error);
       status.value = "error";
     }
   }
 
   function open(nextArgs: BlogLaunchArgs | undefined): void {
-    const next = resolveBlogPath(nextArgs);
-    slug.value = next.slug;
-    path.value = next.path;
+    slug.value = resolveSlug(nextArgs);
     void refresh();
   }
 
@@ -301,7 +279,6 @@ export function useBlogPost({
     metadata,
     notFound,
     open,
-    path,
     refresh,
     slug,
     source,

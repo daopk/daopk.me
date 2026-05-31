@@ -10,7 +10,6 @@ import {
   type AppContext,
 } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
-import { VfsError } from "~/core/vfs/errors";
 
 import Blog from "./App.vue";
 
@@ -21,8 +20,59 @@ vi.mock("~/core/debug", () => ({
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   window.history.replaceState(null, "", "/");
 });
+
+interface BlogIndexFixture {
+  readonly slug: string;
+  readonly title?: string | null;
+  readonly date?: string | null;
+  readonly description?: string | null;
+}
+
+interface BlogFetchFixture {
+  readonly index?: readonly BlogIndexFixture[];
+  readonly posts?: Readonly<Record<string, string>>;
+}
+
+const POST_SLUG_PATTERN = /\/([a-z0-9-]+)\.md$/;
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") {
+    return input;
+  }
+  return input instanceof URL ? input.href : input.url;
+}
+
+function stubBlogFetch(fixture: BlogFetchFixture = {}) {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = requestUrl(input);
+
+    if (url.endsWith("/index.json")) {
+      if (fixture.index === undefined) {
+        return new Response("Not found", { status: 404 });
+      }
+      return new Response(JSON.stringify(fixture.index), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    const match = POST_SLUG_PATTERN.exec(url);
+    if (match) {
+      const body = fixture.posts?.[match[1]!];
+      return body === undefined
+        ? new Response("Not found", { status: 404 })
+        : new Response(body, { status: 200 });
+    }
+
+    return new Response("Not found", { status: 404 });
+  });
+
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
 
 async function waitForContent(wrapper: VueWrapper, timeoutMs = 1500): Promise<void> {
   await vi.waitFor(
@@ -72,40 +122,13 @@ const blogIndexContext: AppContext = Object.freeze({
   args: Object.freeze({}),
 });
 
-type BlogKernelSource = string | null | Readonly<Record<string, string | null>>;
-
-function entriesFromSourceMap(source: Readonly<Record<string, string | null>>) {
-  return Object.keys(source).map((path) => ({
-    kind: "file" as const,
-    name: path.split("/").pop() ?? path,
-    path,
-    readonly: false,
-    size: source[path]?.length ?? 0,
-    updatedAt: 0,
-  }));
-}
-
-function makeKernel(source: BlogKernelSource = "# Field Notes\n\nBlog body") {
+function makeKernel() {
   return {
     vfs: {
       stat: vi.fn(async () => null),
-      list: vi.fn(async () =>
-        typeof source === "object" && source !== null ? entriesFromSourceMap(source) : [],
-      ),
+      list: vi.fn(async () => []),
       read: vi.fn(async () => null),
-      readText: vi.fn(async (path: string) => {
-        if (source === null) {
-          throw new VfsError("NOT_FOUND", `Path not found: ${path}`, { path });
-        }
-        if (typeof source === "object") {
-          const value = source[path];
-          if (value === undefined || value === null) {
-            throw new VfsError("NOT_FOUND", `Path not found: ${path}`, { path });
-          }
-          return value;
-        }
-        return source;
-      }),
+      readText: vi.fn(async () => null),
       write: vi.fn(async () => null),
       writeText: vi.fn(async () => null),
       mkdir: vi.fn(async () => null),
@@ -160,23 +183,13 @@ function blogOpenListener(
 
 describe("Blog app", () => {
   it("renders the latest-post index when launched without a slug", async () => {
-    const wrapper = mount(
-      wrap(
-        makeKernel({
-          "/home/posts/old-post.md": `---
-title: "Old Post"
-date: "2026-05-01"
----
-Old body`,
-          "/home/posts/new-post.md": `---
-title: "New Post"
-date: "2026-05-30"
----
-New body`,
-        }),
-        blogIndexContext,
-      ),
-    );
+    stubBlogFetch({
+      index: [
+        { slug: "old-post", title: "Old Post", date: "2026-05-01" },
+        { slug: "new-post", title: "New Post", date: "2026-05-30" },
+      ],
+    });
+    const wrapper = mount(wrap(makeKernel(), blogIndexContext));
 
     await waitForIndexItems(wrapper);
 
@@ -191,18 +204,17 @@ New body`,
   it("opens an index item in the reader and returns to the index", async () => {
     window.history.replaceState({ preserved: true }, "", "/");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
-    const wrapper = mount(
-      wrap(
-        makeKernel({
-          "/home/posts/new-post.md": `---
+    stubBlogFetch({
+      index: [{ slug: "new-post", title: "New Post", date: "2026-05-30" }],
+      posts: {
+        "new-post": `---
 title: "New Post"
 date: "2026-05-30"
 ---
 New body`,
-        }),
-        blogIndexContext,
-      ),
-    );
+      },
+    });
+    const wrapper = mount(wrap(makeKernel(), blogIndexContext));
 
     await waitForIndexItems(wrapper);
     await wrapper.find(".blog__index-item").trigger("click");
@@ -224,13 +236,16 @@ New body`,
   it("replaces the URL for blog.open.requested events with valid slugs", async () => {
     window.history.replaceState({ preserved: "event" }, "", "/apps/blog");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
-    const kernel = makeKernel({
-      "/home/posts/event-post.md": `---
+    stubBlogFetch({
+      posts: {
+        "event-post": `---
 title: "Event Post"
 date: "2026-05-30"
 ---
 Event body`,
+      },
     });
+    const kernel = makeKernel();
     const wrapper = mount(wrap(kernel, blogIndexContext));
 
     blogOpenListener(kernel)({
@@ -247,7 +262,8 @@ Event body`,
 
   it("does not create post URLs for unsafe or missing blog slugs", async () => {
     const replaceSpy = vi.spyOn(window.history, "replaceState");
-    const kernel = makeKernel(null);
+    stubBlogFetch();
+    const kernel = makeKernel();
     mount(wrap(kernel, blogIndexContext));
     const openBlog = blogOpenListener(kernel);
 
@@ -264,7 +280,8 @@ Event body`,
     expect(window.location.pathname).toBe("/blog");
   });
 
-  it("renders the seeded VFS post from launch args", async () => {
+  it("renders the fetched post from launch args and probes the VFS cache", async () => {
+    stubBlogFetch({ posts: { "field-notes": "# Field Notes\n\nNetwork body" } });
     const kernel = makeKernel();
     const wrapper = mount(wrap(kernel));
 
@@ -284,6 +301,10 @@ Event body`,
         backAction = action;
       }),
     };
+    stubBlogFetch({
+      index: [],
+      posts: { "field-notes": "# Field Notes\n\nNetwork body" },
+    });
     const wrapper = mount(wrap(makeKernel(), blogContext, { appChrome }));
 
     await waitForContent(wrapper);
@@ -298,7 +319,8 @@ Event body`,
   });
 
   it("renders an in-app 404 for a missing post", async () => {
-    const wrapper = mount(wrap(makeKernel(null)));
+    stubBlogFetch();
+    const wrapper = mount(wrap(makeKernel()));
 
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain("Post not found");
@@ -307,6 +329,7 @@ Event body`,
   });
 
   it("propagates injected handleId onto the article in dev", async () => {
+    stubBlogFetch({ posts: { "field-notes": "# Field Notes\n\nNetwork body" } });
     const wrapper = mount(wrap());
 
     await waitForContent(wrapper);

@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 
+import type { BlogContentSource } from "~/core/blog/blogContentSource";
+import { BlogNetworkError } from "~/core/blog/blogContentSource";
 import { debugWarn } from "~/core/debug";
 import { renderMarkdownToHtml } from "~/core/markdown/MarkdownPipeline";
 import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-import { VfsError } from "~/core/vfs/errors";
 
 import { parseBlogPostSource, useBlogPost, type BlogPostOptions } from "./useBlogPost";
 
@@ -40,16 +41,24 @@ function renderer(overrides: Partial<MarkdownRenderer> = {}): MarkdownRenderer {
   };
 }
 
-function mountHarness(options: Partial<BlogPostOptions> = {}) {
+type PostSource = Pick<BlogContentSource, "readPostCache" | "fetchPost">;
+
+function mountHarness(
+  options: Partial<BlogPostOptions> & { source?: Partial<PostSource> } = {},
+) {
   let state: ReturnType<typeof useBlogPost> | undefined;
-  const readText = options.readText ?? vi.fn(async () => "# Field Notes\n\nSeeded body");
+  const source: PostSource = {
+    readPostCache: options.source?.readPostCache ?? vi.fn(async () => null),
+    fetchPost: options.source?.fetchPost ?? vi.fn(async () => "# Field Notes\n\nNetwork body"),
+  };
+
   const Harness = defineComponent({
     setup() {
       state = useBlogPost({
-        args: { slug: "field-notes", path: "/home/posts/field-notes.md" },
+        args: { slug: "field-notes" },
         createRenderer: async () => renderer(),
         ...options,
-        readText,
+        source,
       });
 
       return () =>
@@ -63,12 +72,11 @@ function mountHarness(options: Partial<BlogPostOptions> = {}) {
   const wrapper = mount(Harness);
 
   return {
-    readText,
+    source,
     get state() {
       if (!state) {
         throw new Error("Harness state was not initialized.");
       }
-
       return state;
     },
     wrapper,
@@ -80,30 +88,32 @@ describe("useBlogPost", () => {
     vi.clearAllMocks();
   });
 
-  it("renders markdown for a valid blog launch slug", async () => {
-    const readText = vi.fn(async () => "# Field Notes\n\nSeeded body");
-    const { state } = mountHarness({ readText });
+  it("fetches and renders markdown for a valid slug", async () => {
+    const { state, source } = mountHarness();
 
     await vi.waitFor(() => {
       expect(state.status.value).toBe("ready");
     });
 
-    expect(readText).toHaveBeenCalledWith("/home/posts/field-notes.md");
+    expect(source.fetchPost).toHaveBeenCalledWith("field-notes");
     expect(state.html.value).toContain("<h1");
     expect(state.html.value).toContain("Field Notes");
   });
 
   it("renders frontmatter title and date without exposing frontmatter", async () => {
-    const readText = vi.fn(
-      async () =>
-        `---
+    const { state } = mountHarness({
+      source: {
+        fetchPost: vi.fn(
+          async () =>
+            `---
 title: "Meta Title"
 date: "2026-05-30"
 ---
 
 This is the body.`,
-    );
-    const { state } = mountHarness({ readText });
+        ),
+      },
+    });
 
     await vi.waitFor(() => {
       expect(state.status.value).toBe("ready");
@@ -122,18 +132,21 @@ This is the body.`,
     expect(state.html.value).not.toContain("---");
   });
 
-  it("parses quoted title/date frontmatter and strips duplicate leading H1", async () => {
-    const readText = vi.fn(
-      async () =>
-        `---
+  it("strips a duplicate leading H1 when a frontmatter title is present", async () => {
+    const { state } = mountHarness({
+      source: {
+        fetchPost: vi.fn(
+          async () =>
+            `---
 title: "Meta Title"
 date: "2026-05-30"
 ---
 # Duplicate Heading
 
 Body`,
-    );
-    const { state } = mountHarness({ readText });
+        ),
+      },
+    });
 
     await vi.waitFor(() => {
       expect(state.status.value).toBe("ready");
@@ -162,32 +175,33 @@ Body`),
     });
   });
 
-  it("shows not-found for an invalid slug without reading VFS", async () => {
-    const readText = vi.fn(async () => "# No");
+  it("shows not-found for an invalid slug without touching the network", async () => {
+    const readPostCache = vi.fn(async () => null);
+    const fetchPost = vi.fn(async () => "# No");
     const createRenderer = vi.fn(async () => renderer());
     const { state } = mountHarness({
       args: { slug: "FIELD-NOTES" },
       createRenderer,
-      readText,
+      source: { readPostCache, fetchPost },
     });
 
     await vi.waitFor(() => {
       expect(state.status.value).toBe("not-found");
     });
 
-    expect(readText).not.toHaveBeenCalled();
+    expect(readPostCache).not.toHaveBeenCalled();
+    expect(fetchPost).not.toHaveBeenCalled();
     expect(createRenderer).not.toHaveBeenCalled();
   });
 
-  it("shows not-found for a missing VFS post", async () => {
+  it("shows not-found when the remote returns a 404 and nothing is cached", async () => {
     const createRenderer = vi.fn(async () => renderer());
     const { state } = mountHarness({
       createRenderer,
-      readText: vi.fn(async () => {
-        throw new VfsError("NOT_FOUND", "Path not found", {
-          path: "/home/posts/nope.md",
-        });
-      }),
+      source: {
+        readPostCache: vi.fn(async () => null),
+        fetchPost: vi.fn(async () => null),
+      },
     });
 
     await vi.waitFor(() => {
@@ -198,11 +212,35 @@ Body`),
     expect(state.html.value).toBe("");
   });
 
-  it("sets a generic error for non-404 read failures", async () => {
+  it("renders the cached post and keeps it when the network refresh fails", async () => {
     const { state } = mountHarness({
-      readText: vi.fn(async () => {
-        throw new VfsError("ADAPTER_UNAVAILABLE", "Adapter down");
-      }),
+      source: {
+        readPostCache: vi.fn(async () => "# Cached Notes\n\nCached body"),
+        fetchPost: vi.fn(async () => {
+          throw new BlogNetworkError("offline");
+        }),
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(state.status.value).toBe("ready");
+    });
+
+    expect(state.html.value).toContain("Cached Notes");
+    expect(debugWarn).toHaveBeenCalledWith(
+      "[blog] serving cached blog post; refresh failed",
+      expect.anything(),
+    );
+  });
+
+  it("sets an error when there is no cache and the network fails", async () => {
+    const { state } = mountHarness({
+      source: {
+        readPostCache: vi.fn(async () => null),
+        fetchPost: vi.fn(async () => {
+          throw new BlogNetworkError("offline");
+        }),
+      },
     });
 
     await vi.waitFor(() => {
@@ -210,8 +248,8 @@ Body`),
     });
 
     expect(debugWarn).toHaveBeenCalledWith(
-      "[blog] failed to load or render VFS markdown",
-      expect.objectContaining({ code: "ADAPTER_UNAVAILABLE" }),
+      "[blog] failed to load or render blog post",
+      expect.anything(),
     );
   });
 
@@ -221,7 +259,10 @@ Body`),
     const createRenderer = vi.fn(() => pendingRenderer.promise);
     const { state, wrapper } = mountHarness({
       createRenderer,
-      readText: vi.fn(async () => "# Late"),
+      source: {
+        readPostCache: vi.fn(async () => null),
+        fetchPost: vi.fn(async () => "# Late"),
+      },
     });
 
     await vi.waitFor(() => {
@@ -236,7 +277,6 @@ Body`),
     });
 
     expect(state.html.value).toBe("");
-    expect(state.status.value).toBe("loading");
     expect(debugWarn).not.toHaveBeenCalled();
   });
 });

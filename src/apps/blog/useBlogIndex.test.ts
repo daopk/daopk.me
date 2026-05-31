@@ -2,142 +2,105 @@ import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 
+import type { BlogContentSource, BlogIndexEntry } from "~/core/blog/blogContentSource";
+import { BlogNetworkError } from "~/core/blog/blogContentSource";
 import { debugWarn } from "~/core/debug";
-import { VfsError, type VfsDirEntry } from "~/core/vfs";
 
-import { parseBlogIndexPost, useBlogIndex, type BlogIndexOptions } from "./useBlogIndex";
+import { blogIndexPostFromEntry, useBlogIndex } from "./useBlogIndex";
 
 vi.mock("~/core/debug", () => ({
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));
 
-function entry(name: string, kind: VfsDirEntry["kind"] = "file"): VfsDirEntry {
+type IndexSource = Pick<BlogContentSource, "readIndexCache" | "fetchIndex">;
+
+function entry(overrides: Partial<BlogIndexEntry> & { slug: string }): BlogIndexEntry {
   return {
-    kind,
-    name,
-    path: `/home/posts/${name}`,
-    readonly: false,
-    size: 0,
-    updatedAt: 0,
+    title: null,
+    date: null,
+    description: null,
+    ...overrides,
   };
 }
 
-function mountHarness(options: Partial<BlogIndexOptions> = {}) {
+function mountHarness(source: IndexSource) {
   let state: ReturnType<typeof useBlogIndex> | undefined;
-  const list = options.list ?? vi.fn(async () => []);
-  const readText = options.readText ?? vi.fn(async () => null);
   const Harness = defineComponent({
     setup() {
-      state = useBlogIndex({
-        list,
-        readText,
-      });
-
-      return () =>
-        h("div", {
-          "data-status": state?.status.value,
-        });
+      state = useBlogIndex({ source });
+      return () => h("div", { "data-status": state?.status.value });
     },
   });
 
   const wrapper = mount(Harness);
 
   return {
-    list,
-    readText,
     get state() {
       if (!state) {
         throw new Error("Harness state was not initialized.");
       }
-
       return state;
     },
     wrapper,
   };
 }
 
+describe("blogIndexPostFromEntry", () => {
+  it("derives display fields from a manifest entry", () => {
+    expect(
+      blogIndexPostFromEntry({
+        slug: "hello-world",
+        title: "Hello World",
+        date: "2026-05-30",
+        description: "A short summary.",
+      }),
+    ).toEqual({
+      date: "2026-05-30",
+      excerpt: "A short summary.",
+      formattedDate: "May 30, 2026",
+      path: "/home/posts/hello-world.md",
+      slug: "hello-world",
+      title: "Hello World",
+    });
+  });
+
+  it("falls back to a slug-derived title and drops invalid dates", () => {
+    const post = blogIndexPostFromEntry({
+      slug: "no-meta-post",
+      title: null,
+      date: "2026-99-99",
+      description: null,
+    });
+
+    expect(post.title).toBe("No Meta Post");
+    expect(post.date).toBeNull();
+    expect(post.formattedDate).toBeNull();
+    expect(post.excerpt).toBe("");
+  });
+});
+
 describe("useBlogIndex", () => {
-  it("lists valid markdown posts newest first", async () => {
-    const sources = new Map([
-      [
-        "/home/posts/old-post.md",
-        `---
-title: "Old Post"
-date: "2026-05-01"
----
-Old body`,
-      ],
-      [
-        "/home/posts/new-post.md",
-        `---
-title: "New Post"
-date: "2026-05-30"
----
-New body`,
-      ],
-      ["/home/posts/no-date.md", "# No Date\n\nFallback body"],
-    ]);
-    const readText = vi.fn(async (path: string) => sources.get(path) ?? null);
-    const { state, list } = mountHarness({
-      list: vi.fn(async () => [
-        entry("old-post.md"),
-        entry("FIELD-NOTES.md"),
-        entry("new-post.md"),
-        entry("drafts", "directory"),
-        entry("no-date.md"),
+  it("renders fetched posts newest first", async () => {
+    const { state } = mountHarness({
+      readIndexCache: vi.fn(async () => null),
+      fetchIndex: vi.fn(async () => [
+        entry({ slug: "old-post", title: "Old Post", date: "2026-05-01" }),
+        entry({ slug: "new-post", title: "New Post", date: "2026-05-30" }),
       ]),
-      readText,
     });
 
     await vi.waitFor(() => {
       expect(state.status.value).toBe("ready");
     });
 
-    expect(list).toHaveBeenCalledWith("/home/posts");
-    expect(readText).toHaveBeenCalledWith("/home/posts/old-post.md");
-    expect(readText).toHaveBeenCalledWith("/home/posts/new-post.md");
-    expect(readText).toHaveBeenCalledWith("/home/posts/no-date.md");
-    expect(readText).not.toHaveBeenCalledWith("/home/posts/FIELD-NOTES.md");
-    expect(state.posts.value.map((post) => post.slug)).toEqual(["new-post", "old-post", "no-date"]);
+    expect(state.posts.value.map((post) => post.slug)).toEqual(["new-post", "old-post"]);
   });
 
-  it("uses frontmatter description as the excerpt when available", () => {
-    expect(
-      parseBlogIndexPost(
-        "described-post",
-        "/home/posts/described-post.md",
-        `---
-title: "Described"
-description: "A custom summary."
----
-# Ignored H1
-
-Body text`,
-      ),
-    ).toMatchObject({
-      excerpt: "A custom summary.",
-      title: "Described",
-    });
-  });
-
-  it("shows empty when there are no valid posts", async () => {
+  it("shows empty when the manifest has no posts", async () => {
     const { state } = mountHarness({
-      list: vi.fn(async () => [entry("FIELD-NOTES.md"), entry("drafts", "directory")]),
-    });
-
-    await vi.waitFor(() => {
-      expect(state.status.value).toBe("empty");
-    });
-
-    expect(state.posts.value).toEqual([]);
-  });
-
-  it("treats a missing posts directory as empty", async () => {
-    const { state } = mountHarness({
-      list: vi.fn(async () => {
-        throw new VfsError("NOT_FOUND", "Path not found", { path: "/home/posts" });
-      }),
+      readIndexCache: vi.fn(async () => null),
+      fetchIndex: vi.fn(async () => []),
     });
 
     await vi.waitFor(() => {
@@ -145,10 +108,11 @@ Body text`,
     });
   });
 
-  it("sets a generic error for non-404 index failures", async () => {
+  it("shows error when there is no cache and the network fails", async () => {
     const { state } = mountHarness({
-      list: vi.fn(async () => {
-        throw new VfsError("ADAPTER_UNAVAILABLE", "Adapter down");
+      readIndexCache: vi.fn(async () => null),
+      fetchIndex: vi.fn(async () => {
+        throw new BlogNetworkError("offline");
       }),
     });
 
@@ -156,9 +120,41 @@ Body text`,
       expect(state.loadFailed.value).toBe(true);
     });
 
+    expect(debugWarn).toHaveBeenCalledWith("[blog] failed to load blog index", expect.anything());
+  });
+
+  it("serves the cached index when the network refresh fails", async () => {
+    const { state } = mountHarness({
+      readIndexCache: vi.fn(async () => [entry({ slug: "cached-post", title: "Cached" })]),
+      fetchIndex: vi.fn(async () => {
+        throw new BlogNetworkError("offline");
+      }),
+    });
+
+    await vi.waitFor(() => {
+      expect(state.status.value).toBe("ready");
+    });
+
+    expect(state.posts.value.map((post) => post.slug)).toEqual(["cached-post"]);
     expect(debugWarn).toHaveBeenCalledWith(
-      "[blog] failed to load blog index",
-      expect.objectContaining({ code: "ADAPTER_UNAVAILABLE" }),
+      "[blog] serving cached blog index; refresh failed",
+      expect.anything(),
     );
+  });
+
+  it("replaces the cached index with fresh network results", async () => {
+    const { state } = mountHarness({
+      readIndexCache: vi.fn(async () => [entry({ slug: "stale-post", title: "Stale" })]),
+      fetchIndex: vi.fn(async () => [
+        entry({ slug: "stale-post", title: "Stale" }),
+        entry({ slug: "fresh-post", title: "Fresh", date: "2026-06-01" }),
+      ]),
+    });
+
+    await vi.waitFor(() => {
+      expect(state.posts.value).toHaveLength(2);
+    });
+
+    expect(state.posts.value.map((post) => post.slug)).toEqual(["fresh-post", "stale-post"]);
   });
 });

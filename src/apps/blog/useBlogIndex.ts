@@ -1,10 +1,9 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
+import type { BlogContentSource, BlogIndexEntry } from "~/core/blog/blogContentSource";
+import { formatBlogDate, validBlogDate } from "~/core/blog/blogDate";
 import { debugWarn } from "~/core/debug";
-import { BLOG_POSTS_ROOT, isBlogPostSlug } from "~/core/routing/blogPaths";
-import { VfsError, type VfsDirEntry } from "~/core/vfs";
-
-import { parseBlogPostSource } from "./useBlogPost";
+import { BLOG_POSTS_ROOT, blogPostPathFromSlug } from "~/core/routing/blogPaths";
 
 export type BlogIndexStatus = "idle" | "loading" | "ready" | "empty" | "error";
 
@@ -18,20 +17,7 @@ export interface BlogIndexPost {
 }
 
 export interface BlogIndexOptions {
-  readonly list: (path: string) => Promise<readonly VfsDirEntry[] | null>;
-  readonly readText: (path: string) => Promise<string | null>;
-}
-
-const POST_FILE_PATTERN = /^(.+)\.md$/;
-const EXCERPT_LIMIT = 170;
-
-function slugFromEntry(entry: VfsDirEntry): string | null {
-  if (entry.kind !== "file") {
-    return null;
-  }
-
-  const slug = POST_FILE_PATTERN.exec(entry.name)?.[1] ?? null;
-  return slug !== null && isBlogPostSlug(slug) ? slug : null;
+  readonly source: Pick<BlogContentSource, "readIndexCache" | "fetchIndex">;
 }
 
 function titleFromSlug(slug: string): string {
@@ -39,47 +25,6 @@ function titleFromSlug(slug: string): string {
     .split("-")
     .map((part) => (part.length === 0 ? part : `${part[0]!.toUpperCase()}${part.slice(1)}`))
     .join(" ");
-}
-
-function firstMarkdownH1(source: string): string | null {
-  return /^#\s+(.+?)\s*#*\s*$/m.exec(source)?.[1]?.trim() || null;
-}
-
-function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function plainTextFromMarkdown(source: string): string {
-  return normalizeWhitespace(
-    source
-      .replace(/```[\s\S]*?```/g, " ")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-      .replace(/^#{1,6}\s+/gm, "")
-      .replace(/^\s*[-*+]\s+/gm, "")
-      .replace(/^>\s?/gm, "")
-      .replace(/[*_~#>]/g, " "),
-  );
-}
-
-function truncateExcerpt(value: string): string {
-  const normalized = normalizeWhitespace(value);
-
-  if (normalized.length <= EXCERPT_LIMIT) {
-    return normalized;
-  }
-
-  const truncated = normalized.slice(0, EXCERPT_LIMIT + 1);
-  const lastSpace = truncated.lastIndexOf(" ");
-  const base = lastSpace > 90 ? truncated.slice(0, lastSpace) : normalized.slice(0, EXCERPT_LIMIT);
-  return `${base.trim()}...`;
-}
-
-function isNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof VfsError && (error.code === "NOT_FOUND" || error.code === "MOUNT_NOT_FOUND")
-  );
 }
 
 function comparePosts(a: BlogIndexPost, b: BlogIndexPost): number {
@@ -96,22 +41,24 @@ function comparePosts(a: BlogIndexPost, b: BlogIndexPost): number {
   return a.slug.localeCompare(b.slug);
 }
 
-export function parseBlogIndexPost(slug: string, path: string, source: string): BlogIndexPost {
-  const parsed = parseBlogPostSource(source);
-  const title = parsed.metadata.title ?? firstMarkdownH1(parsed.body) ?? titleFromSlug(slug);
-  const excerptSource = parsed.metadata.description ?? plainTextFromMarkdown(parsed.body);
+export function blogIndexPostFromEntry(entry: BlogIndexEntry): BlogIndexPost {
+  const date = validBlogDate(entry.date);
 
   return {
-    date: parsed.metadata.date,
-    excerpt: truncateExcerpt(excerptSource),
-    formattedDate: parsed.metadata.formattedDate,
-    path,
-    slug,
-    title,
+    date,
+    excerpt: entry.description ?? "",
+    formattedDate: date === null ? null : formatBlogDate(date),
+    path: blogPostPathFromSlug(entry.slug) ?? `${BLOG_POSTS_ROOT}/${entry.slug}.md`,
+    slug: entry.slug,
+    title: entry.title ?? titleFromSlug(entry.slug),
   };
 }
 
-export function useBlogIndex({ list, readText }: BlogIndexOptions) {
+function postsFromEntries(entries: readonly BlogIndexEntry[]): readonly BlogIndexPost[] {
+  return entries.map(blogIndexPostFromEntry).sort(comparePosts);
+}
+
+export function useBlogIndex({ source }: BlogIndexOptions) {
   const posts = ref<readonly BlogIndexPost[]>([]);
   const status = ref<BlogIndexStatus>("idle");
 
@@ -122,61 +69,46 @@ export function useBlogIndex({ list, readText }: BlogIndexOptions) {
   let disposed = false;
   let refreshRun = 0;
 
+  function applyEntries(entries: readonly BlogIndexEntry[]): void {
+    const next = postsFromEntries(entries);
+    posts.value = next;
+    status.value = next.length === 0 ? "empty" : "ready";
+  }
+
   async function refresh(): Promise<void> {
     const run = ++refreshRun;
-    posts.value = [];
     status.value = "loading";
 
+    // Read-through cache first so a returning visitor sees posts instantly and
+    // offline, then revalidate from the network.
+    let hasCache = false;
     try {
-      const entries = await list(BLOG_POSTS_ROOT);
-
+      const cached = await source.readIndexCache();
       if (disposed || run !== refreshRun) {
         return;
       }
+      if (cached !== null) {
+        hasCache = true;
+        applyEntries(cached);
+      }
+    } catch (error) {
+      debugWarn("[blog] failed to read cached blog index", error);
+    }
 
-      if (entries === null) {
-        status.value = "empty";
+    try {
+      const fresh = await source.fetchIndex();
+      if (disposed || run !== refreshRun) {
         return;
       }
-
-      const nextPosts: BlogIndexPost[] = [];
-      for (const entry of entries) {
-        const slug = slugFromEntry(entry);
-        if (slug === null) {
-          continue;
-        }
-
-        try {
-          const source = await readText(entry.path);
-          if (disposed || run !== refreshRun) {
-            return;
-          }
-          if (source === null) {
-            continue;
-          }
-
-          nextPosts.push(parseBlogIndexPost(slug, entry.path, source));
-        } catch (error) {
-          if (isNotFoundError(error)) {
-            continue;
-          }
-          throw error;
-        }
-      }
-
-      nextPosts.sort(comparePosts);
-      posts.value = nextPosts;
-      status.value = nextPosts.length === 0 ? "empty" : "ready";
+      applyEntries(fresh);
     } catch (error) {
       if (disposed || run !== refreshRun) {
         return;
       }
-
-      if (isNotFoundError(error)) {
-        status.value = "empty";
+      if (hasCache) {
+        debugWarn("[blog] serving cached blog index; refresh failed", error);
         return;
       }
-
       debugWarn("[blog] failed to load blog index", error);
       status.value = "error";
     }

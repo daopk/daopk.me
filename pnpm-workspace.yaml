@@ -1,6 +1,10 @@
 allowBuilds:
   "@parcel/watcher": false
   esbuild: true
-  vue-demi: set this to true or false
+  sharp: true
+  vue-demi: false
+  # workerd ships wrangler's local dev runtime; deploys don't need its binary,
+  # so skip the heavy postinstall download.
+  workerd: false
 packages:
   - .

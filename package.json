@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build && node scripts/generate-blog-seo-assets.mjs",
+    "build": "vue-tsc -b && vite build && node scripts/generate-blog-index.mjs && node scripts/generate-blog-seo-assets.mjs",
     "preview": "vite preview",
+    "blog:index": "node scripts/generate-blog-index.mjs",
+    "deploy": "wrangler deploy",
     "icons:generate": "node scripts/generate-fluent-color-icons.mjs",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
@@ -66,6 +68,7 @@
     "vue-axe": "^3.1.2",
     "vue-tsc": "^3.3.2",
     "workbox-build": "^7.4.1",
-    "workbox-window": "^7.4.1"
+    "workbox-window": "^7.4.1",
+    "wrangler": "^4.95.0"
   }
 }
