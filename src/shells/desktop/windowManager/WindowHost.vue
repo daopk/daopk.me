@@ -3,12 +3,12 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref, useTemplateRef, wat
 import { useElementBounding, useResizeObserver } from "@vueuse/core";
 
 import { useKernel } from "~/composables/useKernel";
-import { hasAppSettings, isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
+import { hasAppSettings } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
+import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
 import type { AppHandle } from "~/types/app";
 import type { CommandContext } from "~/types/command";
-import { isSettingsSectionId, type SettingsSectionId } from "~/types/settings";
 
 import SnapPreview from "./SnapPreview.vue";
 import Window from "./Window.vue";
@@ -196,132 +196,34 @@ const disposeWindowCommands = [
   }),
 ];
 
-function finderRevealFromArgs(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): { path: string; reveal?: string; source: "spotlight" } | null {
-  if (manifestId !== "finder" || typeof args?.path !== "string") {
-    return null;
-  }
-
-  const reveal = typeof args.reveal === "string" ? args.reveal : undefined;
-  return {
-    path: args.path,
-    ...(reveal === undefined ? {} : { reveal }),
-    source: "spotlight",
-  };
-}
-
-function settingsSectionFromArgs(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): SettingsSectionId | null {
-  if (manifestId !== "settings" || typeof args?.section !== "string") {
-    return null;
-  }
-
-  return isSettingsSectionId(args.section) ? args.section : null;
-}
-
-function appSettingsFromArgs(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): { manifestId: string } | null {
-  if (!isAppSettingsLaunchArgs(args)) {
-    return null;
-  }
-
-  const manifest = kernel.apps.list().find((entry) => entry.id === manifestId);
-  if (manifest === undefined || !hasAppSettings(manifest)) {
-    return null;
-  }
-
-  return { manifestId };
-}
-
 function focusedHandleIdForManifest(manifestId: string): string | undefined {
   return windowManager.windows.find((record) => record.manifestId === manifestId && record.focused)
     ?.handleId;
 }
 
-function blogOpenFromArgs(
+function manifestHasSettings(manifestId: string): boolean {
+  const manifest = kernel.apps.list().find((entry) => entry.id === manifestId);
+  return manifest !== undefined && hasAppSettings(manifest);
+}
+
+async function replayAppResume(
   manifestId: string,
   args: Readonly<Record<string, unknown>> | undefined,
   source: AppLaunchSource,
-): KernelEventPayloads["blog.open.requested"] | null {
-  if (manifestId !== "blog") {
-    return null;
-  }
-
-  if (args === undefined && source !== "deeplink") {
-    return null;
-  }
-
-  return {
+): Promise<boolean> {
+  const emission = resolveAppResume({
+    manifestId,
+    ...(args === undefined ? {} : { args }),
     source,
-    ...(typeof args?.slug === "string" ? { slug: args.slug } : {}),
-    ...(typeof args?.path === "string" ? { path: args.path } : {}),
-  };
-}
-
-async function replayFinderRevealAfterRestore(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): Promise<boolean> {
-  const reveal = finderRevealFromArgs(manifestId, args);
-  if (reveal === null) {
-    return false;
-  }
-
-  await nextTick();
-  kernel.events.emit("finder.reveal.requested", reveal);
-  return true;
-}
-
-async function replaySettingsSectionAfterRestore(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): Promise<boolean> {
-  const section = settingsSectionFromArgs(manifestId, args);
-  if (section === null) {
-    return false;
-  }
-
-  await nextTick();
-  kernel.events.emit("settings.section.requested", { section });
-  return true;
-}
-
-async function replayAppSettingsAfterRestore(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): Promise<boolean> {
-  const request = appSettingsFromArgs(manifestId, args);
-  if (request === null) {
-    return false;
-  }
-
-  await nextTick();
-  const handleId = focusedHandleIdForManifest(manifestId);
-  kernel.events.emit("app.settings.requested", {
-    ...request,
-    ...(handleId === undefined ? {} : { handleId }),
+    resolveHandleId: focusedHandleIdForManifest,
+    manifestHasSettings,
   });
-  return true;
-}
-
-async function replayBlogOpenAfterRestore(
-  manifestId: string,
-  args: Readonly<Record<string, unknown>> | undefined,
-  source: AppLaunchSource,
-): Promise<boolean> {
-  const request = blogOpenFromArgs(manifestId, args, source);
-  if (request === null) {
+  if (emission === null) {
     return false;
   }
 
   await nextTick();
-  kernel.events.emit("blog.open.requested", request);
+  emitAppResume(kernel.events, emission);
   return true;
 }
 
@@ -340,11 +242,7 @@ async function onLaunchRequested(
 
   // is intentionally NOT rewritten — that would violate AppContext.args
   if (windowManager.restoreAllForManifest(manifest.id)) {
-    const replayed =
-      (await replayFinderRevealAfterRestore(manifest.id, args)) ||
-      (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
-      (await replayAppSettingsAfterRestore(manifest.id, args)) ||
-      (await replayBlogOpenAfterRestore(manifest.id, args, source));
+    const replayed = await replayAppResume(manifest.id, args, source);
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "restore — dropping launch args", manifest.id, args);
     }
@@ -352,11 +250,7 @@ async function onLaunchRequested(
   }
 
   if (windowManager.focusTopOfManifest(manifest.id)) {
-    const replayed =
-      (await replayFinderRevealAfterRestore(manifest.id, args)) ||
-      (await replaySettingsSectionAfterRestore(manifest.id, args)) ||
-      (await replayAppSettingsAfterRestore(manifest.id, args)) ||
-      (await replayBlogOpenAfterRestore(manifest.id, args, source));
+    const replayed = await replayAppResume(manifest.id, args, source);
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "focus — dropping launch args", manifest.id, args);
     }

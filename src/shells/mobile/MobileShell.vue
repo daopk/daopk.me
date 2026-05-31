@@ -9,8 +9,9 @@ import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromp
 import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
-import { isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
+import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
+import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
 import type { AppManifest } from "~/types/app";
@@ -21,7 +22,7 @@ const { titleFor } = useAppViewTitle();
 const homeLabelContrastStyle = useWallpaperLabelContrast("mobile");
 
 const disposeLaunchListener = kernel.events.on("app.launch.requested", (payload) => {
-  onLaunch(payload.manifestId, payload.args);
+  onLaunch(payload.manifestId, payload.args, payload.source);
 });
 
 const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
@@ -100,6 +101,11 @@ function manifestFor(manifestId: string): AppManifest | null {
   return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
 }
 
+function manifestHasSettings(manifestId: string): boolean {
+  const manifest = manifestFor(manifestId);
+  return manifest !== null && hasAppSettings(manifest);
+}
+
 function unsupportedManifestFor(manifestId: string): AppManifest | null {
   const manifest = manifestFor(manifestId);
 
@@ -132,7 +138,11 @@ function clearLaunching(manifestId: string): void {
   launchingManifestIds.value = next;
 }
 
-function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>): void {
+function onLaunch(
+  manifestId: string,
+  args?: Readonly<Record<string, unknown>>,
+  source: AppResumeSource = "api",
+): void {
   const unsupported = unsupportedManifestFor(manifestId);
 
   if (unsupported) {
@@ -153,12 +163,17 @@ function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>):
       if (!willResume) {
         clearLaunching(manifestId);
       }
-      if (willResume && isAppSettingsLaunchArgs(args)) {
-        const frame = nav.stack.find((entry) => entry.manifestId === manifestId);
-        kernel.events.emit("app.settings.requested", {
+      if (willResume) {
+        const emission = resolveAppResume({
           manifestId,
-          ...(frame === undefined ? {} : { handleId: frame.handleId }),
+          ...(args === undefined ? {} : { args }),
+          source,
+          resolveHandleId: (id) => nav.stack.find((entry) => entry.manifestId === id)?.handleId,
+          manifestHasSettings,
         });
+        if (emission !== null) {
+          emitAppResume(kernel.events, emission);
+        }
       }
       lastLaunchedManifestId.value = manifestId;
     },
