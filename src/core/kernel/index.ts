@@ -122,6 +122,7 @@ const bootState: KernelBootFacade = reactive<KernelBootFacade>({
   status: "idle",
   progressFraction: 0,
   phaseLabel: "",
+  error: null,
   scheduleIdleAfterShellReady: idleScheduler.schedule,
 });
 

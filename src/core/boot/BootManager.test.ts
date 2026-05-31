@@ -13,6 +13,7 @@ function makeBootFacade(): KernelBootFacade {
     status: "idle",
     progressFraction: 0,
     phaseLabel: "",
+    error: null,
     scheduleIdleAfterShellReady: vi.fn(() => () => undefined),
   };
 }
@@ -39,7 +40,8 @@ describe("BootManager telemetry", () => {
   it("records a boot.finished envelope when boot completes", async () => {
     const track = vi.fn();
     const phases = [phase("A"), phase("B")];
-    const manager = new BootManager(makeKernel(track), makeBootFacade(), phases);
+    const facade = makeBootFacade();
+    const manager = new BootManager(makeKernel(track), facade, phases);
 
     await manager.boot();
 
@@ -51,6 +53,7 @@ describe("BootManager telemetry", () => {
         status: "complete",
       },
     });
+    expect(facade.error).toBeNull();
   });
 
   it("records failed status without swallowing the failed facade state", async () => {
@@ -73,5 +76,51 @@ describe("BootManager telemetry", () => {
         status: "failed",
       },
     });
+  });
+
+  it("surfaces the phase error on the facade so the host can show it", async () => {
+    const facade = makeBootFacade();
+    const failure = new Error("disk on fire");
+    const manager = new BootManager(makeKernel(), facade, [
+      phase("A", () => {
+        throw failure;
+      }),
+    ]);
+
+    await manager.boot();
+
+    expect(facade.status).toBe("failed");
+    expect(facade.error).toBe(failure);
+  });
+
+  it("normalizes a non-Error thrown value into an Error on the facade", async () => {
+    const facade = makeBootFacade();
+    const manager = new BootManager(makeKernel(), facade, [
+      phase("A", () => {
+        throw "stringy failure";
+      }),
+    ]);
+
+    await manager.boot();
+
+    expect(facade.error).toBeInstanceOf(Error);
+    expect(facade.error?.message).toBe("stringy failure");
+  });
+
+  it("clears the failure error on reset so a retry starts clean", async () => {
+    const facade = makeBootFacade();
+    const manager = new BootManager(makeKernel(), facade, [
+      phase("A", () => {
+        throw new Error("boom");
+      }),
+    ]);
+
+    await manager.boot();
+    expect(facade.error).toBeInstanceOf(Error);
+
+    manager.reset();
+
+    expect(facade.status).toBe("idle");
+    expect(facade.error).toBeNull();
   });
 });

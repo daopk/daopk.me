@@ -45,6 +45,7 @@ export class BootManager implements BootDisposable {
       this.facade.status = "idle";
       this.facade.progressFraction = 0;
       this.facade.phaseLabel = "";
+      this.facade.error = null;
     }
   }
 
@@ -94,6 +95,7 @@ export class BootManager implements BootDisposable {
 
     this.facade.status = "running";
     this.facade.phaseLabel = "Starting…";
+    this.facade.error = null;
 
     try {
       for (const phase of this.phases) {
@@ -123,6 +125,7 @@ export class BootManager implements BootDisposable {
       }
 
       this.facade.status = "failed";
+      this.facade.error = error instanceof Error ? error : new Error(String(error));
       this.trackFinished("failed", startedAt);
       debugWarn("[boot]", "phase failure", error);
     }

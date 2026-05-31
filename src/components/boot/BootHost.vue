@@ -7,6 +7,7 @@ interface Props {
   progressFraction: number;
   phaseLabel: string;
   bootStatus: BootStatus;
+  errorMessage?: string;
 }
 
 const props = defineProps<Props>();
@@ -62,7 +63,9 @@ function onRetryClick(): void {
       <p class="boot-host__wordmark">WebOS</p>
 
       <template v-if="isFailed()">
-        <p class="boot-host__error">Boot failed. Check console for details.</p>
+        <p class="boot-host__error">
+          {{ props.errorMessage || "Boot failed. Check console for details." }}
+        </p>
         <button ref="retryRef" class="boot-host__retry" type="button" @click="onRetryClick">
           Retry
         </button>

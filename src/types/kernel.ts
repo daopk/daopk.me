@@ -316,6 +316,14 @@ export interface KernelBootFacade {
   progressFraction: number;
 
   phaseLabel: string;
+
+  /**
+   * The error that caused the most recent phase failure, or `null` when the
+   * boot is idle/running/complete. Set when `status` becomes `"failed"` and
+   * cleared on the next run and on `reset()`, letting the boot UI surface the
+   * actual cause instead of a generic message.
+   */
+  error: Error | null;
   scheduleIdleAfterShellReady(cb: () => void): () => void;
 }
 

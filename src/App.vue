@@ -70,6 +70,7 @@ onMounted(() => {
         :progress-fraction="bootReactive.progressFraction"
         :phase-label="bootReactive.phaseLabel"
         :boot-status="bootReactive.status"
+        :error-message="bootReactive.error?.message"
         @retry="handleBootRetry"
       />
       <ShellHost v-else key="shell-hosted" />
