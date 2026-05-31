@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount, type VueWrapper } from "@vue/test-utils";
 
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeBackAction,
+  type AppChromeController,
+  type AppContext,
+} from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 import { VfsError } from "~/core/vfs/errors";
 
@@ -111,12 +117,24 @@ function makeKernel(source: BlogKernelSource = "# Field Notes\n\nBlog body") {
   } as unknown as Kernel;
 }
 
-function wrap(kernel: Kernel = makeKernel(), context: AppContext = blogContext) {
+function wrap(
+  kernel: Kernel = makeKernel(),
+  context: AppContext = blogContext,
+  options: { readonly appChrome?: AppChromeController } = {},
+) {
   return defineComponent({
-    provide: () => ({
-      [KernelInjectionKey as unknown as symbol]: kernel,
-      [AppContextInjectionKey as unknown as symbol]: context,
-    }),
+    provide: () => {
+      const provide: Record<symbol, unknown> = {
+        [KernelInjectionKey as symbol]: kernel,
+        [AppContextInjectionKey as symbol]: context,
+      };
+
+      if (options.appChrome !== undefined) {
+        provide[AppChromeInjectionKey as symbol] = options.appChrome;
+      }
+
+      return provide;
+    },
     render() {
       return h(Blog);
     },
@@ -256,6 +274,27 @@ Event body`,
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/posts/field-notes.md", {
       handleId: "h-blog-test",
     });
+  });
+
+  it("hides the in-content back link when mobile app chrome provides back navigation", async () => {
+    let backAction: AppChromeBackAction | null = null;
+    const appChrome: AppChromeController = {
+      setTitle: vi.fn(),
+      setBackAction: vi.fn((action) => {
+        backAction = action;
+      }),
+    };
+    const wrapper = mount(wrap(makeKernel(), blogContext, { appChrome }));
+
+    await waitForContent(wrapper);
+
+    expect(wrapper.find(".blog__back").exists()).toBe(false);
+    expect(backAction?.ariaLabel).toBe("Back to Blog");
+
+    backAction?.handler();
+    await waitForIndex(wrapper);
+
+    expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
   });
 
   it("renders an in-app 404 for a missing post", async () => {

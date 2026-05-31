@@ -151,6 +151,7 @@ function onPostSelect(post: BlogIndexPost): void {
     <template v-else>
       <div class="blog__post-shell">
         <Button
+          v-if="appChrome === null"
           class="blog__back"
           variant="ghost"
           size="sm"
