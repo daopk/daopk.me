@@ -26,6 +26,12 @@ export interface AppManifest {
   id: string;
   name: string;
   /**
+   * Semantic version string (e.g. `"1.0.0"`). Optional so the kernel/registry
+   * contract stays backwards compatible, but built-in manifests set it and
+   * external manifests require it. Surfaced read-only in Settings > Apps.
+   */
+  version?: string;
+  /**
    * App icon as a Vue Component (typically an Iconify-backed icon export).
    * Manifests own their visual identity so the dock/launcher can tree-shake
    * down to only the icons actually registered. If broader registries

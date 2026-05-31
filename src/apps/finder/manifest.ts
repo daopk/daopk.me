@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const finderManifest: AppManifest = {
   id: "finder",
   name: "Finder",
+  version: "1.0.0",
   icon: FinderAppIcon,
   category: "system",
   singleton: true,

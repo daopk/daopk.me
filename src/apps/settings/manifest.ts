@@ -13,6 +13,7 @@ import type { AppManifest } from "~/types/app";
 export const settingsManifest: AppManifest = {
   id: "settings",
   name: "Settings",
+  version: "1.0.0",
   icon: SettingsAppIcon,
   category: "system",
   singleton: true,

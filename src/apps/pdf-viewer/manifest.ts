@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const pdfViewerManifest: AppManifest = {
   id: "pdf-viewer",
   name: "PDF Viewer",
+  version: "1.0.0",
   icon: PdfViewerAppIcon,
   category: "productivity",
   singleton: false,

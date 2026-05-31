@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const terminalManifest: AppManifest = {
   id: "terminal",
   name: "Terminal",
+  version: "1.0.0",
   icon: TerminalAppIcon,
   category: "dev",
   permissions: ["vfs.read"],

@@ -66,7 +66,10 @@ function openAppSettings(manifestId: string): void {
           <component :is="app.icon" class="apps-settings__icon" aria-hidden="true" />
           <span class="apps-settings__copy">
             <span class="apps-settings__name">{{ app.name }}</span>
-            <span class="apps-settings__category">{{ app.category }}</span>
+            <span class="apps-settings__category">
+              {{ app.category
+              }}<span v-if="app.version" class="apps-settings__version"> · v{{ app.version }}</span>
+            </span>
           </span>
         </div>
 
@@ -166,6 +169,10 @@ function openAppSettings(manifestId: string): void {
   color: var(--color-fg-muted);
   font-size: 12px;
   text-transform: capitalize;
+}
+
+.apps-settings__version {
+  text-transform: none;
 }
 
 .apps-settings__actions {

@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const blogManifest: AppManifest = {
   id: "blog",
   name: "Blog",
+  version: "1.0.0",
   icon: BlogAppIcon,
   category: "system",
   permissions: ["vfs.read", "vfs.write", "network.fetch"],

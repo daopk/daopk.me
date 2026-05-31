@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const slidesManifest: AppManifest = {
   id: "slides",
   name: "Slides",
+  version: "1.0.0",
   icon: SlidesAppIcon,
   category: "productivity",
   singleton: true,

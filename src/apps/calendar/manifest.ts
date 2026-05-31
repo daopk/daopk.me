@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const calendarManifest: AppManifest = {
   id: "calendar",
   name: "Calendar",
+  version: "1.0.0",
   icon: CalendarAppIcon,
   category: "productivity",
   singleton: true,

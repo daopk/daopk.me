@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const editorManifest: AppManifest = {
   id: "editor",
   name: "Editor",
+  version: "1.0.0",
   icon: EditorAppIcon,
   category: "productivity",
   singleton: false,

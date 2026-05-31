@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const trashManifest: AppManifest = {
   id: "trash",
   name: "Trash",
+  version: "1.0.0",
   icon: TrashAppIcon,
   category: "system",
   hidden: true,

@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const browserManifest: AppManifest = {
   id: "browser",
   name: "Browser",
+  version: "1.0.0",
   icon: BrowserAppIcon,
   category: "productivity",
   singleton: false,

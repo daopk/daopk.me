@@ -5,6 +5,7 @@ import type { AppManifest } from "~/types/app";
 export const clockManifest: AppManifest = {
   id: "clock",
   name: "Clock",
+  version: "1.0.0",
   icon: ClockAppIcon,
   category: "productivity",
   singleton: true,
