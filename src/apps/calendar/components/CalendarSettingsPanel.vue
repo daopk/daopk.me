@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import { ActionRow, AppFrame, AppToolbar, Panel } from "~/components/kit";
+import {
+  ActionRow,
+  AppFrame,
+  AppToolbar,
+  GroupLabel,
+  Panel,
+  ScrollArea,
+  ToolbarTitle,
+} from "~/components/kit";
 import { Button, Switch } from "~/components/ui";
 import { ArrowLeft, RotateCcw } from "~/icons/lucide";
 
@@ -85,7 +93,7 @@ function viewLabel(view: CalendarViewMode): string {
         >
           Back
         </Button>
-        <h2 class="calendar-settings__title">Calendar settings</h2>
+        <ToolbarTitle class="calendar-settings__title" title="Calendar settings" />
       </div>
       <template #end>
         <Button
@@ -99,7 +107,7 @@ function viewLabel(view: CalendarViewMode): string {
       </template>
     </AppToolbar>
 
-    <div class="calendar-settings__content">
+    <ScrollArea as="div" class="calendar-settings__content">
       <Panel
         as="section"
         class="calendar-settings__group"
@@ -107,7 +115,9 @@ function viewLabel(view: CalendarViewMode): string {
         padding="none"
         aria-labelledby="calendar-settings-view"
       >
-        <h3 id="calendar-settings-view" class="calendar-settings__group-title">View</h3>
+        <GroupLabel as="h3" id="calendar-settings-view" class="calendar-settings__group-title">
+          View
+        </GroupLabel>
         <div
           class="calendar-settings__option-grid"
           role="radiogroup"
@@ -135,7 +145,13 @@ function viewLabel(view: CalendarViewMode): string {
         padding="none"
         aria-labelledby="calendar-settings-week-start"
       >
-        <h3 id="calendar-settings-week-start" class="calendar-settings__group-title">Week start</h3>
+        <GroupLabel
+          as="h3"
+          id="calendar-settings-week-start"
+          class="calendar-settings__group-title"
+        >
+          Week start
+        </GroupLabel>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
           role="radiogroup"
@@ -163,7 +179,9 @@ function viewLabel(view: CalendarViewMode): string {
         padding="none"
         aria-labelledby="calendar-settings-agenda"
       >
-        <h3 id="calendar-settings-agenda" class="calendar-settings__group-title">Agenda range</h3>
+        <GroupLabel as="h3" id="calendar-settings-agenda" class="calendar-settings__group-title">
+          Agenda range
+        </GroupLabel>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
           role="radiogroup"
@@ -211,9 +229,9 @@ function viewLabel(view: CalendarViewMode): string {
         padding="none"
         aria-labelledby="calendar-settings-duration"
       >
-        <h3 id="calendar-settings-duration" class="calendar-settings__group-title">
+        <GroupLabel as="h3" id="calendar-settings-duration" class="calendar-settings__group-title">
           New event duration
-        </h3>
+        </GroupLabel>
         <div
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
           role="radiogroup"
@@ -243,7 +261,9 @@ function viewLabel(view: CalendarViewMode): string {
         padding="none"
         aria-labelledby="calendar-settings-color"
       >
-        <h3 id="calendar-settings-color" class="calendar-settings__group-title">New event color</h3>
+        <GroupLabel as="h3" id="calendar-settings-color" class="calendar-settings__group-title">
+          New event color
+        </GroupLabel>
         <div
           class="calendar-settings__swatches"
           role="radiogroup"
@@ -277,7 +297,7 @@ function viewLabel(view: CalendarViewMode): string {
           Reset
         </Button>
       </footer>
-    </div>
+    </ScrollArea>
   </AppFrame>
 </template>
 
@@ -312,20 +332,8 @@ function viewLabel(view: CalendarViewMode): string {
   min-inline-size: 0;
 }
 
-.calendar-settings__title,
-.calendar-settings__group-title,
 .calendar-settings__row-title {
   margin: 0;
-}
-
-.calendar-settings__title {
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.2;
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .calendar-settings__action-button {
@@ -334,7 +342,7 @@ function viewLabel(view: CalendarViewMode): string {
 
 .calendar-settings__row-copy {
   color: var(--color-fg-muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.35;
   margin: 0;
 }
@@ -345,7 +353,6 @@ function viewLabel(view: CalendarViewMode): string {
   flex-direction: column;
   gap: var(--space-lg);
   min-block-size: 0;
-  overflow: auto;
   padding: var(--space-xl);
 }
 
@@ -353,14 +360,6 @@ function viewLabel(view: CalendarViewMode): string {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-}
-
-.calendar-settings__group-title {
-  color: var(--color-fg-muted);
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .calendar-settings__option-grid {
@@ -411,7 +410,7 @@ function viewLabel(view: CalendarViewMode): string {
 
 .calendar-settings__row-title {
   font-size: 14px;
-  font-weight: 650;
+  font-weight: var(--font-weight-bold);
 }
 
 .calendar-settings__swatches {

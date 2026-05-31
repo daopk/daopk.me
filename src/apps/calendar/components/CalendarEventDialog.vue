@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 import { FormField, Select, StatusBanner, Textarea, TextInput } from "~/components/kit";
-import { Button, Dialog } from "~/components/ui";
+import { Button, Dialog, DialogActions } from "~/components/ui";
 import { Trash2 } from "~/icons/lucide";
 
 import { colorLabel, type EventFormState } from "../eventForm";
@@ -105,7 +105,7 @@ function onAllDayChange(event: Event): void {
         <Button size="sm" variant="danger" @click="emit('confirmDelete')">Delete</Button>
       </StatusBanner>
 
-      <footer class="calendar__form-actions">
+      <DialogActions class="calendar__form-actions">
         <Button
           v-if="form.id !== null && !form.confirmingDelete"
           size="sm"
@@ -118,7 +118,7 @@ function onAllDayChange(event: Event): void {
         <span class="calendar__form-spacer" />
         <Button size="sm" @click="emit('close')">Cancel</Button>
         <Button size="sm" variant="primary" type="submit">Save</Button>
-      </footer>
+      </DialogActions>
     </form>
   </Dialog>
 </template>
@@ -144,7 +144,7 @@ function onAllDayChange(event: Event): void {
 
   span {
     color: var(--color-fg-muted);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -154,7 +154,7 @@ function onAllDayChange(event: Event): void {
   color: var(--color-fg);
   display: flex;
   gap: var(--space-sm);
-  min-block-size: 32px;
+  min-block-size: var(--control-height-md);
 }
 
 .calendar__input,
@@ -165,7 +165,7 @@ function onAllDayChange(event: Event): void {
   color: var(--color-fg);
   font: inherit;
   inline-size: 100%;
-  min-block-size: 32px;
+  min-block-size: var(--control-height-md);
   min-inline-size: 0;
   padding: var(--space-xs) var(--space-sm);
 
@@ -208,9 +208,7 @@ function onAllDayChange(event: Event): void {
 
 .calendar__form-actions {
   align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
+  margin-block-start: 0;
 }
 
 .calendar__form-spacer {

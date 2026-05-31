@@ -14,11 +14,15 @@ import {
   AppFrame,
   AppToolbar,
   EmptyState,
+  GroupLabel,
   IconButton,
   Panel,
+  ScrollArea,
   StatusBanner,
   TabList,
   ToolbarGroup,
+  ToolbarTitle,
+  useAppChrome,
   type TabListOption,
 } from "~/components/kit";
 import { Button } from "~/components/ui";
@@ -34,7 +38,7 @@ import {
   List,
   Plus,
 } from "~/icons/lucide";
-import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
+import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
 import { KernelInjectionKey } from "~/types/kernel";
 
 import CalendarEventDialog from "./components/CalendarEventDialog.vue";
@@ -68,7 +72,6 @@ type CalendarPane = "calendar" | "settings";
 
 const { isMobile } = useBreakpoint();
 const appContext = inject(AppContextInjectionKey, null);
-const appChrome = inject(AppChromeInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
 const calendarSettings = useCalendarSettings();
 const calendar = useCalendar({
@@ -227,14 +230,20 @@ const stopAppSettingsListener = kernel?.events.on(
   },
 );
 
+const mobileSettingsChrome = computed(() => settingsPaneOpen.value && isMobile.value);
+const chromeTitle = computed(() => (mobileSettingsChrome.value ? "Calendar settings" : null));
+const chromeBackAction = computed<AppChromeBackAction | null>(() =>
+  mobileSettingsChrome.value ? { ariaLabel: "Back to Calendar", handler: closeSettings } : null,
+);
+
+useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
+
 onMounted(() => {
   void calendar.loadCalendar();
 });
 
 onUnmounted(() => {
   stopAppSettingsListener?.();
-  appChrome?.setTitle(null);
-  appChrome?.setBackAction(null);
 });
 
 watch(
@@ -242,24 +251,6 @@ watch(
   ([preferredViewMode, mobile]) => {
     activeView.value = initialCalendarViewMode(preferredViewMode, mobile);
   },
-);
-
-watch(
-  () => [settingsPaneOpen.value, isMobile.value] as const,
-  ([open, mobile]) => {
-    if (open && mobile) {
-      appChrome?.setTitle("Calendar settings");
-      appChrome?.setBackAction({
-        ariaLabel: "Back to Calendar",
-        handler: closeSettings,
-      });
-      return;
-    }
-
-    appChrome?.setTitle(null);
-    appChrome?.setBackAction(null);
-  },
-  { immediate: true },
 );
 
 function selectView(view: CalendarViewMode): void {
@@ -468,10 +459,11 @@ function labelForStatus(status: CalendarStatus): string {
       <AppToolbar class="calendar__toolbar">
         <template #start>
           <div class="calendar__title-group">
-            <div class="calendar__title-stack">
-              <h2 class="calendar__title">{{ visibleRangeLabel }}</h2>
-              <p class="calendar__subtitle">{{ selectedDateLabel }}</p>
-            </div>
+            <ToolbarTitle
+              class="calendar__title-stack"
+              :title="visibleRangeLabel"
+              :subtitle="selectedDateLabel"
+            />
           </div>
         </template>
 
@@ -499,8 +491,6 @@ function labelForStatus(status: CalendarStatus): string {
             :model-value="activeView"
             :tabs="viewTabOptions"
             label="Calendar view"
-            item-class="calendar__view-button"
-            active-item-class="calendar__view-button--active"
             size="sm"
             @change="onViewTabChange"
           />
@@ -540,13 +530,13 @@ function labelForStatus(status: CalendarStatus): string {
           <div class="calendar__month-layout">
             <div class="calendar__month-panel" aria-label="Month view">
               <div class="calendar__weekdays" aria-hidden="true">
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
-                <span>Sun</span>
+                <GroupLabel as="span">Mon</GroupLabel>
+                <GroupLabel as="span">Tue</GroupLabel>
+                <GroupLabel as="span">Wed</GroupLabel>
+                <GroupLabel as="span">Thu</GroupLabel>
+                <GroupLabel as="span">Fri</GroupLabel>
+                <GroupLabel as="span">Sat</GroupLabel>
+                <GroupLabel as="span">Sun</GroupLabel>
               </div>
 
               <div class="calendar__grid" role="grid" :aria-label="visibleMonthLabel">
@@ -632,7 +622,7 @@ function labelForStatus(status: CalendarStatus): string {
               >
                 No events.
               </EmptyState>
-              <ul v-else class="calendar__event-list">
+              <ScrollArea v-else as="ul" class="calendar__event-list">
                 <li
                   v-for="event in calendar.selectedDateEvents.value"
                   :key="event.id"
@@ -649,7 +639,7 @@ function labelForStatus(status: CalendarStatus): string {
                     <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
                   </button>
                 </li>
-              </ul>
+              </ScrollArea>
             </Panel>
           </div>
         </section>
@@ -691,7 +681,7 @@ function labelForStatus(status: CalendarStatus): string {
               <div v-if="eventCountForDate(cell.dateKey) === 0" class="calendar__week-empty">
                 No events
               </div>
-              <ul v-else class="calendar__week-day-events">
+              <ScrollArea v-else as="ul" class="calendar__week-day-events">
                 <li v-for="event in calendar.eventsForDate(cell.dateKey)" :key="event.id">
                   <button
                     type="button"
@@ -703,7 +693,7 @@ function labelForStatus(status: CalendarStatus): string {
                     <span class="calendar__event-title">{{ event.title }}</span>
                   </button>
                 </li>
-              </ul>
+              </ScrollArea>
             </article>
           </div>
 
@@ -736,7 +726,7 @@ function labelForStatus(status: CalendarStatus): string {
             >
               No events.
             </EmptyState>
-            <ul v-else class="calendar__event-list">
+            <ScrollArea v-else as="ul" class="calendar__event-list">
               <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
                   type="button"
@@ -749,7 +739,7 @@ function labelForStatus(status: CalendarStatus): string {
                   <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
                 </button>
               </li>
-            </ul>
+            </ScrollArea>
           </Panel>
         </section>
 
@@ -763,7 +753,9 @@ function labelForStatus(status: CalendarStatus): string {
           <Panel as="div" class="calendar__focus-panel" variant="subtle" padding="none">
             <header class="calendar__focus-header">
               <div>
-                <p class="calendar__focus-kicker">{{ formatWeekday(selectedDayCell.date) }}</p>
+                <GroupLabel as="p" class="calendar__focus-kicker">
+                  {{ formatWeekday(selectedDayCell.date) }}
+                </GroupLabel>
                 <h3 class="calendar__focus-title">{{ selectedDateLabel }}</h3>
                 <p
                   v-if="selectedDateLunarLabel"
@@ -783,7 +775,7 @@ function labelForStatus(status: CalendarStatus): string {
             >
               No events.
             </EmptyState>
-            <ul v-else class="calendar__event-list calendar__event-list--roomy">
+            <ScrollArea v-else as="ul" class="calendar__event-list calendar__event-list--roomy">
               <li v-for="event in calendar.selectedDateEvents.value" :key="event.id">
                 <button
                   type="button"
@@ -796,7 +788,7 @@ function labelForStatus(status: CalendarStatus): string {
                   <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
                 </button>
               </li>
-            </ul>
+            </ScrollArea>
           </Panel>
         </section>
 
@@ -837,7 +829,7 @@ function labelForStatus(status: CalendarStatus): string {
                 >
               </header>
 
-              <ul class="calendar__event-list">
+              <ScrollArea as="ul" class="calendar__event-list">
                 <li v-for="event in group.events" :key="`${group.cell.dateKey}-${event.id}`">
                   <button
                     type="button"
@@ -850,7 +842,7 @@ function labelForStatus(status: CalendarStatus): string {
                     <span v-if="event.notes" class="calendar__event-notes">{{ event.notes }}</span>
                   </button>
                 </li>
-              </ul>
+              </ScrollArea>
             </section>
           </div>
         </section>
@@ -881,7 +873,7 @@ function labelForStatus(status: CalendarStatus): string {
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   inline-size: 100%;
   min-block-size: 0;
 }
@@ -916,18 +908,16 @@ function labelForStatus(status: CalendarStatus): string {
   inline-size: 20px;
 }
 
-.calendar__title-stack,
 .calendar__panel-title-stack {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2xs);
   min-inline-size: 0;
 }
 
-.calendar__title,
 .calendar__panel-title,
 .calendar__focus-title,
 .calendar__agenda-group-title {
-  font-weight: 650;
+  font-weight: var(--font-weight-bold);
   line-height: 1.2;
   margin: 0;
   min-inline-size: 0;
@@ -935,23 +925,15 @@ function labelForStatus(status: CalendarStatus): string {
   text-overflow: ellipsis;
 }
 
-.calendar__title {
-  font-size: 16px;
-  white-space: nowrap;
-}
-
-.calendar__subtitle,
 .calendar__panel-lunar,
 .calendar__event-time,
 .calendar__event-notes,
-.calendar__week-empty,
-.calendar__focus-kicker {
+.calendar__week-empty {
   color: var(--color-fg-muted);
 }
 
-.calendar__subtitle,
 .calendar__panel-lunar {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   line-height: 1.25;
   margin: 0;
   overflow: hidden;
@@ -974,43 +956,15 @@ function labelForStatus(status: CalendarStatus): string {
   gap: var(--space-xs);
 }
 
-.calendar__icon-button,
-.calendar__view-button {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-md);
-  color: var(--color-fg-muted);
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  transition:
-    background-color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    color var(--duration-fast) var(--ease);
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-}
-
 .calendar__icon-button {
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: var(--color-fg);
-  min-block-size: 32px;
-  min-inline-size: 32px;
-  padding: 0;
 
   &:hover,
   &:focus-visible {
     border-color: var(--color-accent);
-  }
-
-  svg {
-    block-size: 16px;
-    inline-size: 16px;
   }
 }
 
@@ -1019,39 +973,9 @@ function labelForStatus(status: CalendarStatus): string {
 }
 
 .calendar__view-switcher {
-  align-items: center;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  display: inline-flex;
   flex: 0 1 auto;
-  gap: 2px;
   min-inline-size: 0;
-  padding: 2px;
-}
-
-.calendar__view-button {
-  font: inherit;
-  gap: var(--space-xs);
-  min-block-size: 30px;
-  padding: 0 var(--space-sm);
-  white-space: nowrap;
-
-  svg {
-    block-size: 14px;
-    inline-size: 14px;
-  }
-
-  &:hover {
-    background: var(--color-bg-subtle);
-    color: var(--color-fg);
-  }
-}
-
-.calendar__view-button--active {
-  background: var(--color-bg-elevated);
-  box-shadow: var(--shadow-sm);
-  color: var(--color-fg);
 }
 
 .calendar__new-button {
@@ -1107,13 +1031,8 @@ function labelForStatus(status: CalendarStatus): string {
 .calendar__weekdays {
   background: var(--color-bg);
   border-block-end: 1px solid var(--color-border);
-  color: var(--color-fg-muted);
   display: grid;
-  font-size: 11px;
-  font-weight: 650;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  letter-spacing: 0;
-  text-transform: uppercase;
 
   span {
     padding: var(--space-sm);
@@ -1180,9 +1099,9 @@ function labelForStatus(status: CalendarStatus): string {
 .calendar__day-number,
 .calendar__week-date {
   align-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   display: inline-flex;
-  font-weight: 650;
+  font-weight: var(--font-weight-bold);
   justify-content: center;
   line-height: 1;
 }
@@ -1261,7 +1180,7 @@ function labelForStatus(status: CalendarStatus): string {
 .calendar__day-dot {
   background: var(--event-color, var(--color-accent));
   block-size: 5px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   inline-size: 5px;
 }
 
@@ -1366,7 +1285,6 @@ function labelForStatus(status: CalendarStatus): string {
   list-style: none;
   margin: 0;
   min-block-size: 0;
-  overflow: auto;
   padding: var(--space-sm);
 }
 
@@ -1410,7 +1328,7 @@ function labelForStatus(status: CalendarStatus): string {
 }
 
 .calendar__event-title {
-  font-weight: 650;
+  font-weight: var(--font-weight-bold);
   overflow-wrap: anywhere;
 }
 
@@ -1467,7 +1385,7 @@ function labelForStatus(status: CalendarStatus): string {
 .calendar__week-weekday {
   color: var(--color-fg-muted);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -1485,7 +1403,7 @@ function labelForStatus(status: CalendarStatus): string {
 .calendar__week-count {
   align-self: end;
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   color: var(--color-accent);
   font-size: 11px;
   justify-self: start;
@@ -1520,11 +1438,7 @@ function labelForStatus(status: CalendarStatus): string {
 }
 
 .calendar__focus-kicker {
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0;
-  margin: 0 0 var(--space-xs);
-  text-transform: uppercase;
+  margin-block-end: var(--space-xs);
 }
 
 .calendar__focus-title {
@@ -1573,10 +1487,6 @@ function labelForStatus(status: CalendarStatus): string {
     flex: 1 1 auto;
     overflow-x: auto;
   }
-
-  .calendar__view-button {
-    flex: 1 0 auto;
-  }
 }
 
 @media (max-width: 720px) {
@@ -1611,7 +1521,6 @@ function labelForStatus(status: CalendarStatus): string {
 
   .calendar__icon-button,
   .calendar__nav-button,
-  .calendar__view-button,
   .calendar__new-button,
   :deep(.ds-button) {
     min-block-size: 40px;
@@ -1625,10 +1534,6 @@ function labelForStatus(status: CalendarStatus): string {
     align-self: stretch;
     grid-area: new;
     justify-self: end;
-  }
-
-  .calendar__view-button {
-    min-block-size: 40px;
   }
 
   .calendar__surface {
