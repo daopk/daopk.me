@@ -94,13 +94,12 @@ function setTelemetryEnabled(next: boolean): void {
 
 <template>
   <article class="privacy" aria-label="Privacy settings">
-    <SectionHeader v-if="props.showHeader" class="privacy__header">
-      <h2 class="privacy__title">Privacy</h2>
-      <p class="privacy__hint">
-        Apps you've granted (or denied) sensitive capabilities. Revoke any decision to make the app
-        ask again the next time it tries.
-      </p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      size="page"
+      title="Privacy"
+      subtitle="Apps you've granted (or denied) sensitive capabilities. Revoke any decision to make the app ask again the next time it tries."
+    />
 
     <ActionRow as="section" class="privacy__telemetry" aria-labelledby="privacy-telemetry-title">
       <template #copy>
@@ -177,25 +176,6 @@ function setTelemetryEnabled(next: boolean): void {
   flex-direction: column;
   gap: var(--space-xl);
   padding: var(--space-xl);
-}
-
-.privacy__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.privacy__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.privacy__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  margin: 0;
-  max-inline-size: 60ch;
 }
 
 .privacy__telemetry {

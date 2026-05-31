@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
-import { Panel, SectionHeader } from "~/components/kit";
+import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import { useKernel } from "~/composables/useKernel";
 import { useTheme } from "~/composables/useTheme";
 import type { ThemePreference } from "~/types/theme";
@@ -69,10 +69,13 @@ function selectAccent(presetId: string, value: string): void {
 
 <template>
   <article class="appearance" aria-label="Appearance settings">
-    <SectionHeader v-if="props.showHeader" class="appearance__header">
-      <h2 class="appearance__title">Appearance</h2>
-      <p class="appearance__hint">Theme + accent color. Live preview on change.</p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      class="appearance__header"
+      size="page"
+      title="Appearance"
+      subtitle="Theme + accent color. Live preview on change."
+    />
 
     <Panel
       as="section"
@@ -81,7 +84,7 @@ function selectAccent(presetId: string, value: string): void {
       padding="none"
       aria-labelledby="appearance-theme-label"
     >
-      <h3 id="appearance-theme-label" class="appearance__group-title">Theme</h3>
+      <GroupLabel id="appearance-theme-label" as="h3">Theme</GroupLabel>
       <div
         class="appearance__theme-grid"
         role="radiogroup"
@@ -147,7 +150,7 @@ function selectAccent(presetId: string, value: string): void {
       padding="none"
       aria-labelledby="appearance-accent-label"
     >
-      <h3 id="appearance-accent-label" class="appearance__group-title">Accent color</h3>
+      <GroupLabel id="appearance-accent-label" as="h3">Accent color</GroupLabel>
       <div class="appearance__swatches" role="radiogroup" aria-labelledby="appearance-accent-label">
         <button
           v-for="preset in ACCENT_PRESETS"
@@ -185,37 +188,10 @@ function selectAccent(presetId: string, value: string): void {
   padding: var(--space-xl);
 }
 
-.appearance__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.appearance__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.appearance__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  margin: 0;
-}
-
 .appearance__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.appearance__group-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  margin: 0;
-  text-transform: uppercase;
-  color: var(--color-fg-muted);
 }
 
 .appearance__theme-grid {

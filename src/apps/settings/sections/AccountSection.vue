@@ -92,13 +92,12 @@ async function confirmDeleteAccount(): Promise<void> {
 
 <template>
   <article class="account" aria-label="Account settings">
-    <SectionHeader v-if="props.showHeader" class="account__header">
-      <h2 class="account__title">Account</h2>
-      <p class="account__hint">
-        This account is local to this browser. Lock keeps your apps open; sign out closes them and
-        returns to account unlock.
-      </p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      size="page"
+      title="Account"
+      subtitle="This account is local to this browser. Lock keeps your apps open; sign out closes them and returns to account unlock."
+    />
 
     <Panel
       as="section"
@@ -248,26 +247,6 @@ async function confirmDeleteAccount(): Promise<void> {
   flex-direction: column;
   gap: var(--space-xl);
   padding: var(--space-xl);
-}
-
-.account__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.account__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.account__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 0;
-  max-inline-size: 64ch;
 }
 
 .account__summary {

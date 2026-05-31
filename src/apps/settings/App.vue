@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
-import { AppFrame, ListButton } from "~/components/kit";
+import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
 import {
   SettingsAccountIcon as AccountIcon,
@@ -117,7 +117,7 @@ const rootRef = useTemplateRef<AppFrameRef>("rootRef");
 const rootElement = computed(() => rootRef.value?.element ?? null);
 const isNarrow = ref(false);
 const appContext = inject(AppContextInjectionKey, null);
-const appChrome = inject(AppChromeInjectionKey, null);
+const appChromeAvailable = inject(AppChromeInjectionKey, null) !== null;
 const kernel = inject(KernelInjectionKey, null);
 const { shellId } = useActiveShell();
 
@@ -146,7 +146,7 @@ const activeLabel = computed(() => sectionEntries[activeId.value].label);
 
 const narrowPanelOpen = ref(false);
 const usesSectionChrome = computed(
-  () => appChrome !== null && isNarrow.value && narrowPanelOpen.value,
+  () => appChromeAvailable && isNarrow.value && narrowPanelOpen.value,
 );
 
 const showNav = computed(() => !isNarrow.value || !narrowPanelOpen.value);
@@ -173,8 +173,6 @@ const stopSectionListener = kernel?.events.on("settings.section.requested", ({ s
 
 onUnmounted(() => {
   stopSectionListener?.();
-  appChrome?.setTitle(null);
-  appChrome?.setBackAction(null);
 });
 
 watch(shellId, () => {
@@ -194,23 +192,11 @@ function goBack(): void {
   narrowPanelOpen.value = false;
 }
 
-watch(
-  () => [usesSectionChrome.value, activeLabel.value] as const,
-  ([usesChrome, label]) => {
-    if (usesChrome) {
-      appChrome?.setTitle(label);
-      appChrome?.setBackAction({
-        ariaLabel: "Back to Settings",
-        handler: goBack,
-      });
-      return;
-    }
-
-    appChrome?.setTitle(null);
-    appChrome?.setBackAction(null);
-  },
-  { immediate: true },
-);
+useAppChrome({
+  title: () => (usesSectionChrome.value ? activeLabel.value : null),
+  backAction: () =>
+    usesSectionChrome.value ? { ariaLabel: "Back to Settings", handler: goBack } : null,
+});
 </script>
 
 <template>

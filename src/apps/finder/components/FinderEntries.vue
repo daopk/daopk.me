@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { Badge, EmptyState, StatusBanner } from "~/components/kit";
+import { Badge, EmptyState, ScrollArea, StatusBanner } from "~/components/kit";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
 import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide";
@@ -245,90 +245,94 @@ function onBrowserKeydown(event: KeyboardEvent): void {
           This folder is empty.
         </EmptyState>
 
-        <div
-          v-if="entries.length > 0"
-          ref="entriesRef"
-          class="finder__entries"
-          :class="`finder__entries--${viewMode}`"
-          role="listbox"
-          tabindex="0"
-          aria-label="Directory contents"
-          :aria-activedescendant="activeDescendant"
-          @keydown="onBrowserKeydown"
-        >
-          <ContextMenu v-for="(entry, index) in entries" :key="entry.path" :modal="false">
-            <template #trigger>
-              <div
-                :id="entryId(index)"
-                class="finder__entry"
-                :class="{ 'finder__entry--selected': selectedPath === entry.path }"
-                role="option"
-                :aria-selected="selectedPath === entry.path"
-                @click="emit('entryClick', entry)"
-                @contextmenu.stop="onEntryContextMenu(entry)"
-                @dblclick="emit('entryDoubleClick', entry)"
-                @pointercancel="onEntryPointerCancel"
-                @pointerdown="onEntryPointerDown(entry, $event)"
-                @pointerup="onEntryPointerUp(entry, $event)"
-              >
-                <component
-                  :is="entryIcon(entry)"
-                  class="finder__entry-icon"
-                  :size="viewMode === 'grid' ? 28 : 18"
-                  aria-hidden="true"
-                />
-                <span class="finder__entry-name" :title="entry.name">{{ entry.name }}</span>
-                <span class="finder__entry-kind">{{ entryKindLabel(entry) }}</span>
-                <span class="finder__entry-size">{{
-                  entry.kind === "file" ? formatBytes(entry.size) : "-"
-                }}</span>
-                <span class="finder__entry-date">{{ formatModified(entry.updatedAt) }}</span>
-                <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
-              </div>
-            </template>
-            <template #items>
-              <ContextMenuItem v-if="entry.kind === 'directory'" @select="emit('openEntry', entry)">
-                <FolderOpen class="finder__context-icon" :size="15" aria-hidden="true" />
-                <span>Open</span>
-              </ContextMenuItem>
-              <ContextMenuItem
-                v-for="suggestion in openSuggestionsForEntry(entry)"
-                :key="suggestion.id"
-                @select="emit('openWithSuggestion', entry, suggestion)"
-              >
-                <component
-                  :is="suggestion.icon"
-                  class="finder__context-icon finder__context-icon--app"
-                  :size="16"
-                  aria-hidden="true"
-                />
-                <span>{{ suggestion.label }}</span>
-              </ContextMenuItem>
-              <ContextMenuItem @select="emit('copyPath', entry.path)">
-                <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
-                <span>Copy Path</span>
-              </ContextMenuItem>
-              <template v-if="entry.kind === 'file'">
+        <ScrollArea v-if="entries.length > 0" class="finder__scroll">
+          <div
+            ref="entriesRef"
+            class="finder__entries"
+            :class="`finder__entries--${viewMode}`"
+            role="listbox"
+            tabindex="0"
+            aria-label="Directory contents"
+            :aria-activedescendant="activeDescendant"
+            @keydown="onBrowserKeydown"
+          >
+            <ContextMenu v-for="(entry, index) in entries" :key="entry.path" :modal="false">
+              <template #trigger>
+                <div
+                  :id="entryId(index)"
+                  class="finder__entry"
+                  :class="{ 'finder__entry--selected': selectedPath === entry.path }"
+                  role="option"
+                  :aria-selected="selectedPath === entry.path"
+                  @click="emit('entryClick', entry)"
+                  @contextmenu.stop="onEntryContextMenu(entry)"
+                  @dblclick="emit('entryDoubleClick', entry)"
+                  @pointercancel="onEntryPointerCancel"
+                  @pointerdown="onEntryPointerDown(entry, $event)"
+                  @pointerup="onEntryPointerUp(entry, $event)"
+                >
+                  <component
+                    :is="entryIcon(entry)"
+                    class="finder__entry-icon"
+                    :size="viewMode === 'grid' ? 28 : 18"
+                    aria-hidden="true"
+                  />
+                  <span class="finder__entry-name" :title="entry.name">{{ entry.name }}</span>
+                  <span class="finder__entry-kind">{{ entryKindLabel(entry) }}</span>
+                  <span class="finder__entry-size">{{
+                    entry.kind === "file" ? formatBytes(entry.size) : "-"
+                  }}</span>
+                  <span class="finder__entry-date">{{ formatModified(entry.updatedAt) }}</span>
+                  <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
+                </div>
+              </template>
+              <template #items>
+                <ContextMenuItem
+                  v-if="entry.kind === 'directory'"
+                  @select="emit('openEntry', entry)"
+                >
+                  <FolderOpen class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <span>Open</span>
+                </ContextMenuItem>
+                <ContextMenuItem
+                  v-for="suggestion in openSuggestionsForEntry(entry)"
+                  :key="suggestion.id"
+                  @select="emit('openWithSuggestion', entry, suggestion)"
+                >
+                  <component
+                    :is="suggestion.icon"
+                    class="finder__context-icon finder__context-icon--app"
+                    :size="16"
+                    aria-hidden="true"
+                  />
+                  <span>{{ suggestion.label }}</span>
+                </ContextMenuItem>
+                <ContextMenuItem @select="emit('copyPath', entry.path)">
+                  <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <span>Copy Path</span>
+                </ContextMenuItem>
+                <template v-if="entry.kind === 'file'">
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    :disabled="!canMutateEntry(entry)"
+                    @select="emit('duplicateEntry', entry)"
+                  >
+                    <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                    <span>Duplicate</span>
+                  </ContextMenuItem>
+                </template>
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   :disabled="!canMutateEntry(entry)"
-                  @select="emit('duplicateEntry', entry)"
+                  @select="emit('requestDeleteEntry', entry)"
                 >
-                  <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
-                  <span>Duplicate</span>
+                  <Trash2 class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <span>Delete...</span>
                 </ContextMenuItem>
               </template>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                :disabled="!canMutateEntry(entry)"
-                @select="emit('requestDeleteEntry', entry)"
-              >
-                <Trash2 class="finder__context-icon" :size="15" aria-hidden="true" />
-                <span>Delete...</span>
-              </ContextMenuItem>
-            </template>
-          </ContextMenu>
-        </div>
+            </ContextMenu>
+          </div>
+        </ScrollArea>
       </section>
     </template>
     <template #items>
@@ -370,10 +374,13 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   border-radius: var(--radius-md);
 }
 
-.finder__entries {
+.finder__scroll {
   block-size: 100%;
   min-block-size: 0;
-  overflow: auto;
+}
+
+.finder__entries {
+  min-block-size: 0;
 }
 
 .finder__entries:focus-visible {

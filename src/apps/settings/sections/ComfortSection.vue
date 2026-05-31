@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
-import { Panel, SectionHeader } from "~/components/kit";
+import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import Card from "~/components/ui/Card.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -175,10 +175,12 @@ function selectSize(option: FontSizeOption): void {
 
 <template>
   <article class="comfort" aria-label="Comfort settings">
-    <SectionHeader v-if="props.showHeader" class="comfort__header">
-      <h2 class="comfort__title">Comfort</h2>
-      <p class="comfort__hint">Density, motion, and type preferences for the shell.</p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      size="page"
+      title="Comfort"
+      subtitle="Density, motion, and type preferences for the shell."
+    />
 
     <Panel
       as="section"
@@ -187,7 +189,7 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-density-label"
     >
-      <h3 id="comfort-density-label" class="comfort__group-title">Density</h3>
+      <GroupLabel id="comfort-density-label" as="h3">Density</GroupLabel>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-density-label">
         <Card
           v-for="option in DENSITY_OPTIONS"
@@ -230,7 +232,7 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-motion-label"
     >
-      <h3 id="comfort-motion-label" class="comfort__group-title">Motion</h3>
+      <GroupLabel id="comfort-motion-label" as="h3">Motion</GroupLabel>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-motion-label">
         <Card
           v-for="option in MOTION_OPTIONS"
@@ -264,7 +266,7 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-typography-label"
     >
-      <h3 id="comfort-typography-label" class="comfort__group-title">Typography</h3>
+      <GroupLabel id="comfort-typography-label" as="h3">Typography</GroupLabel>
       <div class="comfort__subgroup" aria-labelledby="comfort-family-label">
         <h4 id="comfort-family-label" class="comfort__subgroup-title">Font family</h4>
         <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-family-label">
@@ -343,24 +345,6 @@ function selectSize(option: FontSizeOption): void {
   padding: var(--space-xl);
 }
 
-.comfort__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.comfort__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.comfort__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  margin: 0;
-}
-
 .comfort__group,
 .comfort__subgroup {
   display: flex;
@@ -372,19 +356,12 @@ function selectSize(option: FontSizeOption): void {
   margin-block-start: var(--space-sm);
 }
 
-.comfort__group-title,
 .comfort__subgroup-title {
   color: var(--color-fg-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   margin: 0;
-  text-transform: uppercase;
-}
-
-.comfort__subgroup-title {
-  font-size: 12px;
-  text-transform: none;
 }
 
 .comfort__grid {

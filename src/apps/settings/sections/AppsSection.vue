@@ -54,9 +54,7 @@ function openAppSettings(manifestId: string): void {
 
 <template>
   <section class="apps-settings" aria-label="Apps settings">
-    <SectionHeader v-if="props.showHeader" class="apps-settings__header">
-      <h2 id="apps-settings-title" class="apps-settings__title">Apps</h2>
-    </SectionHeader>
+    <SectionHeader v-if="props.showHeader" size="page" title="Apps" />
 
     <EmptyState v-if="apps.length === 0" class="apps-settings__empty">
       No apps available.
@@ -101,19 +99,6 @@ function openAppSettings(manifestId: string): void {
   flex-direction: column;
   gap: var(--space-md);
   padding: var(--space-xl);
-}
-
-.apps-settings__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.apps-settings__title {
-  font-size: 20px;
-  font-weight: 650;
-  line-height: 1.2;
-  margin: 0;
 }
 
 .apps-settings__empty {

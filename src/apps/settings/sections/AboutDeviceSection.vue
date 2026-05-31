@@ -152,12 +152,12 @@ function runSoftwareUpdateAction(): void {
 
 <template>
   <article class="about-device" aria-label="About this device">
-    <SectionHeader v-if="props.showHeader" class="about-device__header">
-      <h2 class="about-device__title">About device</h2>
-      <p class="about-device__hint">
-        Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics.
-      </p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      size="page"
+      title="About device"
+      subtitle="Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics."
+    />
 
     <Panel as="dl" class="about-device__list" variant="plain" padding="none">
       <div class="about-device__row">
@@ -264,24 +264,6 @@ function runSoftwareUpdateAction(): void {
   flex-direction: column;
   gap: var(--space-xl);
   padding: var(--space-xl);
-}
-
-.about-device__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.about-device__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.about-device__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  margin: 0;
 }
 
 .about-device__list {

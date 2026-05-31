@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import { ActionRow, Panel, SectionHeader } from "~/components/kit";
+import { ActionRow, GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import Switch from "~/components/ui/Switch.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -25,10 +25,12 @@ function setDockAutoHide(next: boolean): void {
 
 <template>
   <article class="dock-settings" aria-label="Dock settings">
-    <SectionHeader v-if="props.showHeader" class="dock-settings__header">
-      <h2 class="dock-settings__title">Dock</h2>
-      <p class="dock-settings__hint">Desktop Dock behavior for pointer-driven workspaces.</p>
-    </SectionHeader>
+    <SectionHeader
+      v-if="props.showHeader"
+      size="page"
+      title="Dock"
+      subtitle="Desktop Dock behavior for pointer-driven workspaces."
+    />
 
     <Panel
       as="section"
@@ -37,7 +39,7 @@ function setDockAutoHide(next: boolean): void {
       padding="none"
       aria-labelledby="dock-autohide-group-label"
     >
-      <h3 id="dock-autohide-group-label" class="dock-settings__group-title">Visibility</h3>
+      <GroupLabel id="dock-autohide-group-label" as="h3">Visibility</GroupLabel>
       <ActionRow as="div" class="dock-settings__toggle-row">
         <template #copy>
           <span class="dock-settings__toggle-copy">
@@ -68,37 +70,10 @@ function setDockAutoHide(next: boolean): void {
   padding: var(--space-xl);
 }
 
-.dock-settings__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.dock-settings__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.dock-settings__hint {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  margin: 0;
-}
-
 .dock-settings__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.dock-settings__group-title {
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0;
-  margin: 0;
-  text-transform: uppercase;
 }
 
 .dock-settings__toggle-row {

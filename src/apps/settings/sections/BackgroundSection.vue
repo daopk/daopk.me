@@ -142,8 +142,7 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <SectionHeader v-if="props.showHeader" class="background__header">
-      <h2 class="background__title">Background</h2>
+    <SectionHeader v-if="props.showHeader" size="page" title="Background">
       <template #actions>
         <Badge class="background__count">{{ wallpaperCountLabel }}</Badge>
       </template>
@@ -259,23 +258,6 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
   pointer-events: none;
   position: absolute;
   z-index: 3;
-}
-
-.background__header {
-  align-items: center;
-  display: flex;
-  gap: var(--space-md);
-  justify-content: space-between;
-}
-
-.background__title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  min-inline-size: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .background__count {
