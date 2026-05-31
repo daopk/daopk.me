@@ -36,6 +36,15 @@ export const WIDGETS_KV_PRIMARY_KEY = "state";
 export const PERMISSIONS_KV_NAMESPACE = "permissions";
 export const PERMISSIONS_KV_PRIMARY_KEY = "state";
 
+/**
+ * Installed external apps (per profile). Same isolation pattern as the other
+ * stores: its own KV namespace keeps cross-tab sync, hydration timing, and
+ * dispose ownership separate from `SettingsStore`. Physical key:
+ * `apps:state` in `localStorage` (profile-prefixed at runtime).
+ */
+export const APPS_KV_NAMESPACE = "apps";
+export const APPS_KV_PRIMARY_KEY = "state";
+
 export const VFS_IDB_DB_NAME = "daopk.vfs";
 export const VFS_IDB_STORE_NAME = "nodes";
 export const VFS_IDB_VERSION = 1;
