@@ -11,7 +11,8 @@
     "noUncheckedSideEffectImports": true,
 
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": ["./src/*"],
+      "@daopk/sdk": ["./src/runtime/sdk.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],

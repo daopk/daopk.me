@@ -1,4 +1,4 @@
-import type { InjectionKey, Ref, ShallowRef } from "vue";
+import type { Ref, ShallowRef } from "vue";
 
 import type { LifecyclePhase } from "~/core/kernel/Lifecycle";
 import type { VfsDirEntry, VfsNodeKind, VfsStat } from "~/core/vfs";
@@ -353,4 +353,6 @@ export interface Kernel {
 
 export type KernelInjection = Kernel;
 
-export const KernelInjectionKey: InjectionKey<KernelInjection> = Symbol("daopk.kernel");
+// Defined once in the SDK module so the host and external apps share the same
+// symbol instance (single source — see src/runtime/sdk.ts).
+export { KernelInjectionKey } from "~/runtime/sdk";

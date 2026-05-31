@@ -81,6 +81,91 @@ function blogContentDevServer(): PluginOption {
   };
 }
 
+/**
+ * Vue and the host SDK are emitted as dedicated build entries under these
+ * names; the build-only `externalRuntimeImportMap` plugin maps the bare `vue`
+ * and `@daopk/sdk` specifiers to their hashed chunks via an import map in
+ * index.html. This makes the host and every external app share ONE Vue
+ * instance + ONE set of injection keys. See src/runtime/{vue,sdk}.ts + README.
+ */
+const EXTERNAL_RUNTIME_VUE_CHUNK = "daopk-vue-runtime";
+const EXTERNAL_RUNTIME_SDK_CHUNK = "daopk-sdk-runtime";
+
+type RuntimeBundle = Record<string, { type: string; name?: string }>;
+
+function findChunkFileByName(bundle: RuntimeBundle, chunkName: string): string | undefined {
+  for (const [fileName, output] of Object.entries(bundle)) {
+    if (
+      output.type === "chunk" &&
+      (output.name === chunkName || fileName.startsWith(`assets/${chunkName}-`))
+    ) {
+      return fileName;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Build-only: after chunks are emitted, inject an import map (+ modulepreloads)
+ * into index.html so externally-loaded app modules resolve `import "vue"` and
+ * `import "@daopk/sdk"` to the host's hashed runtime chunks. The map is only
+ * injected at build time, so external apps are testable under `npm run preview`
+ * (not `npm run dev`) — documented in src/runtime/README.md.
+ */
+function externalRuntimeImportMap(): PluginOption {
+  return {
+    name: "daopk-external-runtime-importmap",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html, ctx) {
+        const bundle = ctx.bundle as RuntimeBundle | undefined;
+        if (!bundle) {
+          return html;
+        }
+
+        const vueFile = findChunkFileByName(bundle, EXTERNAL_RUNTIME_VUE_CHUNK);
+        const sdkFile = findChunkFileByName(bundle, EXTERNAL_RUNTIME_SDK_CHUNK);
+        if (!vueFile || !sdkFile) {
+          console.warn(
+            `[daopk] external runtime import map skipped: ${vueFile ? "@daopk/sdk" : "vue"} chunk not found`,
+          );
+          return html;
+        }
+
+        const importMap = {
+          imports: {
+            vue: `/${vueFile}`,
+            "@daopk/sdk": `/${sdkFile}`,
+          },
+        };
+
+        return {
+          html,
+          tags: [
+            {
+              tag: "script",
+              attrs: { type: "importmap" },
+              children: JSON.stringify(importMap),
+              injectTo: "head-prepend",
+            },
+            {
+              tag: "link",
+              attrs: { rel: "modulepreload", crossorigin: true, href: `/${vueFile}` },
+              injectTo: "head",
+            },
+            {
+              tag: "link",
+              attrs: { rel: "modulepreload", crossorigin: true, href: `/${sdkFile}` },
+              injectTo: "head",
+            },
+          ],
+        };
+      },
+    },
+  };
+}
+
 export default defineConfig({
   server: {
     headers: crossOriginIsolationHeaders,
@@ -90,6 +175,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      "@daopk/sdk": fileURLToPath(new URL("./src/runtime/sdk.ts", import.meta.url)),
       "~": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
@@ -99,8 +185,29 @@ export default defineConfig({
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
+  build: {
+    rollupOptions: {
+      // Emit Vue and the host SDK as dedicated, hashed library entries
+      // alongside the HTML app. `preserveEntrySignatures: "strict"` keeps their
+      // full, real-named export surface so externally-loaded app modules can
+      // import Vue + the injection keys by their real names via the import map
+      // (the host's own imports may use mangled names — same chunk, same
+      // instance). The import-map plugin locates both chunks by name.
+      preserveEntrySignatures: "strict",
+      input: {
+        index: fileURLToPath(new URL("./index.html", import.meta.url)),
+        [EXTERNAL_RUNTIME_VUE_CHUNK]: fileURLToPath(
+          new URL("./src/runtime/vue.ts", import.meta.url),
+        ),
+        [EXTERNAL_RUNTIME_SDK_CHUNK]: fileURLToPath(
+          new URL("./src/runtime/sdk.ts", import.meta.url),
+        ),
+      },
+    },
+  },
   plugins: [
     blogContentDevServer(),
+    externalRuntimeImportMap(),
     vue(),
     VitePWA({
       devOptions: {

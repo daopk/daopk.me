@@ -1,16 +1,4 @@
-import { inject } from "vue";
-
-import type { Kernel } from "~/types/kernel";
-import { KernelInjectionKey } from "~/types/kernel";
-
-export function useKernel(): Kernel {
-  const injected = inject(KernelInjectionKey, undefined);
-
-  if (!injected) {
-    throw new Error(
-      "useKernel(): KernelInjectionKey missing — bootstrapKernel must run before mount.",
-    );
-  }
-
-  return injected;
-}
+// `useKernel` is defined once in the SDK module so the host and external apps
+// resolve the same kernel injection key. Re-exported here to preserve the
+// existing `~/composables/useKernel` import path used across the app.
+export { useKernel } from "~/runtime/sdk";

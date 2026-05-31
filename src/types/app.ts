@@ -1,4 +1,4 @@
-import type { Component, InjectionKey } from "vue";
+import type { Component } from "vue";
 
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
@@ -62,7 +62,8 @@ export interface AppContext {
   // TODO: inject AbortSignal tied to window unmount + process kill.
 }
 
-export const AppContextInjectionKey: InjectionKey<AppContext> = Symbol("AppContext");
+// Defined once in the SDK module (single source — see src/runtime/sdk.ts).
+export { AppContextInjectionKey } from "~/runtime/sdk";
 
 export interface AppChromeBackAction {
   readonly ariaLabel: string;
@@ -74,7 +75,8 @@ export interface AppChromeController {
   setBackAction(action: AppChromeBackAction | null): void;
 }
 
-export const AppChromeInjectionKey: InjectionKey<AppChromeController> = Symbol("AppChrome");
+// Defined once in the SDK module (single source — see src/runtime/sdk.ts).
+export { AppChromeInjectionKey } from "~/runtime/sdk";
 
 export type AppLifecycleEvent = "close" | "blur" | "focus";
 
