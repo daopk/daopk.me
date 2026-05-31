@@ -5,14 +5,16 @@ import type {
   VfsWalkOptions,
   VfsWriteOptions,
 } from "~/core/vfs/adapter";
+import { compareEntries } from "~/core/vfs/entrySort";
 import { VfsError } from "~/core/vfs/errors";
 import type { VfsDirEntry, VfsNodeKind, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
 import {
   basename,
-  compareVfsNames,
   dirname,
+  isDescendant,
   isDirectChild,
   normalizeVfsPath,
+  withinDepth,
   type VfsPath,
 } from "~/core/vfs/path";
 import { randomBytes } from "~/core/profile/encoding";
@@ -42,12 +44,6 @@ export interface IDBAdapterOptions {
   readonly baseTimestamp?: number;
   readonly encryptionKey?: CryptoKey;
 }
-
-const KIND_RANK: Record<VfsNodeKind, number> = {
-  directory: 0,
-  file: 1,
-  symlink: 2,
-};
 
 function copyBytes(bytes: Uint8Array): Uint8Array {
   const copy = new Uint8Array(bytes.byteLength);
@@ -437,39 +433,7 @@ export class IDBAdapter implements VfsAdapter {
   }
 }
 
-function compareEntries(a: VfsDirEntry, b: VfsDirEntry): number {
-  const rank = KIND_RANK[a.kind] - KIND_RANK[b.kind];
-  if (rank !== 0) {
-    return rank;
-  }
-
-  return compareVfsNames(a.name, b.name);
-}
-
 function makeDescendantRange(path: VfsPath): IDBKeyRange {
   const prefix = path === "/" ? "/" : `${path}/`;
   return IDBKeyRange.bound(prefix, `${prefix}\uffff`, false, false);
-}
-
-function isDescendant(parent: VfsPath, candidate: VfsPath): boolean {
-  if (parent === candidate) {
-    return false;
-  }
-
-  const prefix = parent === "/" ? "/" : `${parent}/`;
-  return candidate.startsWith(prefix);
-}
-
-function withinDepth(parent: VfsPath, candidate: VfsPath, maxDepth?: number): boolean {
-  if (maxDepth === undefined) {
-    return true;
-  }
-
-  return depthBetween(parent, candidate) <= maxDepth;
-}
-
-function depthBetween(parent: VfsPath, candidate: VfsPath): number {
-  const prefix = parent === "/" ? "/" : `${parent}/`;
-  const rest = candidate.slice(prefix.length);
-  return rest.split("/").filter(Boolean).length;
 }

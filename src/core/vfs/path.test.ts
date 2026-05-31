@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { VfsError } from "~/core/vfs/errors";
-import { basename, dirname, joinVfsPath, normalizeVfsPath } from "~/core/vfs/path";
+import {
+  basename,
+  depthBetween,
+  dirname,
+  isDescendant,
+  isDescendantOrSelf,
+  joinVfsPath,
+  normalizeVfsPath,
+  withinDepth,
+} from "~/core/vfs/path";
 
 describe("VFS path helpers", () => {
   it("normalizes absolute paths deterministically", () => {
@@ -29,5 +38,35 @@ describe("VFS path helpers", () => {
     expect(basename(path)).toBe("today.md");
     expect(dirname(normalizeVfsPath("/"))).toBe("/");
     expect(basename(normalizeVfsPath("/"))).toBe("");
+  });
+});
+
+describe("VFS descendant predicates", () => {
+  it("isDescendant excludes self and non-descendants", () => {
+    expect(isDescendant(normalizeVfsPath("/a"), normalizeVfsPath("/a/b"))).toBe(true);
+    expect(isDescendant(normalizeVfsPath("/a"), normalizeVfsPath("/a/b/c"))).toBe(true);
+    expect(isDescendant(normalizeVfsPath("/a"), normalizeVfsPath("/a"))).toBe(false);
+    expect(isDescendant(normalizeVfsPath("/a"), normalizeVfsPath("/ab"))).toBe(false);
+    expect(isDescendant(normalizeVfsPath("/"), normalizeVfsPath("/a"))).toBe(true);
+  });
+
+  it("isDescendantOrSelf includes self and treats root as ancestor of all", () => {
+    expect(isDescendantOrSelf(normalizeVfsPath("/a"), normalizeVfsPath("/a"))).toBe(true);
+    expect(isDescendantOrSelf(normalizeVfsPath("/a"), normalizeVfsPath("/a/b"))).toBe(true);
+    expect(isDescendantOrSelf(normalizeVfsPath("/a"), normalizeVfsPath("/ab"))).toBe(false);
+    expect(isDescendantOrSelf(normalizeVfsPath("/"), normalizeVfsPath("/anything"))).toBe(true);
+  });
+
+  it("depthBetween counts segments below the parent", () => {
+    expect(depthBetween(normalizeVfsPath("/a"), normalizeVfsPath("/a"))).toBe(0);
+    expect(depthBetween(normalizeVfsPath("/a"), normalizeVfsPath("/a/b"))).toBe(1);
+    expect(depthBetween(normalizeVfsPath("/a"), normalizeVfsPath("/a/b/c"))).toBe(2);
+    expect(depthBetween(normalizeVfsPath("/"), normalizeVfsPath("/a/b"))).toBe(2);
+  });
+
+  it("withinDepth respects an optional maxDepth", () => {
+    expect(withinDepth(normalizeVfsPath("/a"), normalizeVfsPath("/a/b/c"))).toBe(true);
+    expect(withinDepth(normalizeVfsPath("/a"), normalizeVfsPath("/a/b"), 1)).toBe(true);
+    expect(withinDepth(normalizeVfsPath("/a"), normalizeVfsPath("/a/b/c"), 1)).toBe(false);
   });
 });

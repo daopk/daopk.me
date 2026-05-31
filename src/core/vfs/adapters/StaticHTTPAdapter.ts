@@ -4,16 +4,10 @@ import type {
   VfsRemoveOptions,
   VfsWriteOptions,
 } from "~/core/vfs/adapter";
+import { compareEntries } from "~/core/vfs/entrySort";
 import { VfsError } from "~/core/vfs/errors";
 import type { VfsDirEntry, VfsNodeKind, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
-import {
-  basename,
-  compareVfsNames,
-  dirname,
-  isDirectChild,
-  normalizeVfsPath,
-  type VfsPath,
-} from "~/core/vfs/path";
+import { basename, dirname, isDirectChild, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
 
 export interface StaticHttpEntry {
   readonly path: string;
@@ -39,12 +33,6 @@ interface StaticNode {
   readonly mimeType?: string;
   readonly etag?: string;
 }
-
-const KIND_RANK: Record<VfsNodeKind, number> = {
-  directory: 0,
-  file: 1,
-  symlink: 2,
-};
 
 function statFromNode(node: StaticNode, sizeOverride?: number, mimeTypeOverride?: string): VfsStat {
   const mimeType = mimeTypeOverride ?? node.mimeType;
@@ -198,13 +186,4 @@ export class StaticHTTPAdapter implements VfsAdapter {
       updatedAt: timestamp,
     });
   }
-}
-
-function compareEntries(a: VfsDirEntry, b: VfsDirEntry): number {
-  const rank = KIND_RANK[a.kind] - KIND_RANK[b.kind];
-  if (rank !== 0) {
-    return rank;
-  }
-
-  return compareVfsNames(a.name, b.name);
 }

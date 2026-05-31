@@ -91,3 +91,34 @@ export function compareVfsNames(a: string, b: string): number {
 
   return a < b ? -1 : 1;
 }
+
+export function isDescendant(parent: VfsPath, candidate: VfsPath): boolean {
+  if (parent === candidate) {
+    return false;
+  }
+
+  const prefix = parent === "/" ? "/" : `${parent}/`;
+  return candidate.startsWith(prefix);
+}
+
+export function isDescendantOrSelf(parent: VfsPath, candidate: VfsPath): boolean {
+  return parent === "/" || candidate === parent || candidate.startsWith(`${parent}/`);
+}
+
+export function depthBetween(parent: VfsPath, candidate: VfsPath): number {
+  if (parent === candidate) {
+    return 0;
+  }
+
+  const prefix = parent === "/" ? "/" : `${parent}/`;
+  const rest = candidate.slice(prefix.length);
+  return rest.split("/").filter(Boolean).length;
+}
+
+export function withinDepth(parent: VfsPath, candidate: VfsPath, maxDepth?: number): boolean {
+  if (maxDepth === undefined) {
+    return true;
+  }
+
+  return depthBetween(parent, candidate) <= maxDepth;
+}

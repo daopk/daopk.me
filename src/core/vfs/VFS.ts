@@ -6,13 +6,16 @@ import type {
   VfsWriteOptions,
 } from "~/core/vfs/adapter";
 import { MemoryAdapter } from "~/core/vfs/adapters/MemoryAdapter";
+import { compareEntries } from "~/core/vfs/entrySort";
 import { VfsError } from "~/core/vfs/errors";
-import type { VfsDirEntry, VfsNodeKind, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
+import type { VfsDirEntry, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
 import {
   basename,
-  compareVfsNames,
+  depthBetween,
   dirname,
+  isDescendantOrSelf,
   normalizeVfsPath,
+  withinDepth,
   type VfsPath,
 } from "~/core/vfs/path";
 
@@ -33,11 +36,6 @@ interface ResolvedMount {
 
 const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
-const KIND_RANK: Record<VfsNodeKind, number> = {
-  directory: 0,
-  file: 1,
-  symlink: 2,
-};
 
 export class VFS {
   private readonly mountTable: VfsMount[] = [];
@@ -375,35 +373,4 @@ function toGlobalPath(mountPath: VfsPath, adapterPath: VfsPath): VfsPath {
   }
 
   return normalizeVfsPath(`${mountPath}${adapterPath}`);
-}
-
-function compareEntries(a: VfsDirEntry, b: VfsDirEntry): number {
-  const rank = KIND_RANK[a.kind] - KIND_RANK[b.kind];
-  if (rank !== 0) {
-    return rank;
-  }
-
-  return compareVfsNames(a.name, b.name);
-}
-
-function isDescendantOrSelf(parent: VfsPath, candidate: VfsPath): boolean {
-  return parent === "/" || candidate === parent || candidate.startsWith(`${parent}/`);
-}
-
-function withinDepth(parent: VfsPath, candidate: VfsPath, maxDepth?: number): boolean {
-  if (maxDepth === undefined) {
-    return true;
-  }
-
-  return depthBetween(parent, candidate) <= maxDepth;
-}
-
-function depthBetween(parent: VfsPath, candidate: VfsPath): number {
-  if (parent === candidate) {
-    return 0;
-  }
-
-  const prefix = parent === "/" ? "/" : `${parent}/`;
-  const rest = candidate.slice(prefix.length);
-  return rest.split("/").filter(Boolean).length;
 }
