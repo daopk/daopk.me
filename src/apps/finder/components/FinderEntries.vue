@@ -135,7 +135,15 @@ function distanceBetween(
 }
 
 function onEntryPointerDown(entry: VfsDirEntry, event: PointerEvent): void {
-  if (!isTouchLikePointer(event) || event.isPrimary === false) {
+  if (!isTouchLikePointer(event)) {
+    return;
+  }
+
+  // Entry long-press is handled by a nested context menu; keep touch starts
+  // from also arming the browser background context menu.
+  event.stopPropagation();
+
+  if (event.isPrimary === false) {
     return;
   }
 

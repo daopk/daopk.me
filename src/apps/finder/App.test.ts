@@ -278,6 +278,7 @@ function emitShellChanged(kernel: Kernel, shellId: "desktop" | "mobile"): void {
 
 describe("Finder App.vue", () => {
   afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
@@ -642,6 +643,34 @@ describe("Finder App.vue", () => {
     ]);
     expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(4);
     expect(wrapper.find(".finder__entry--selected").text()).toContain("b.txt");
+
+    wrapper.unmount();
+  });
+
+  it("keeps touch long-press on an entry from opening the background context menu", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountFinder(
+      makeKernel({
+        "/": [entry("/a.txt")],
+      }),
+    );
+
+    await flushPromises();
+    wrapper
+      .get(".finder__entry")
+      .element.dispatchEvent(
+        makePointerEvent("pointerdown", { pointerId: 9, clientX: 18, clientY: 32 }),
+      );
+    await flushReka();
+    await vi.advanceTimersByTimeAsync(700);
+    await flushReka();
+
+    expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
+      "Open in Editor",
+      "Copy Path",
+      "Duplicate",
+      "Delete...",
+    ]);
 
     wrapper.unmount();
   });
