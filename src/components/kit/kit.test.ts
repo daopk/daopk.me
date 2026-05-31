@@ -12,9 +12,13 @@ import ActionRow from "./ActionRow.vue";
 import AppFrame from "./AppFrame.vue";
 import AppToolbar from "./AppToolbar.vue";
 import Badge from "./Badge.vue";
+import Checkbox from "./Checkbox.vue";
+import ChoiceCard from "./ChoiceCard.vue";
+import ChoiceGrid from "./ChoiceGrid.vue";
 import DataTable from "./DataTable.vue";
 import EmptyState from "./EmptyState.vue";
 import FormField from "./FormField.vue";
+import GroupLabel from "./GroupLabel.vue";
 import IconButton from "./IconButton.vue";
 import ListButton from "./ListButton.vue";
 import Panel from "./Panel.vue";
@@ -22,11 +26,14 @@ import ScrollArea from "./ScrollArea.vue";
 import SectionHeader from "./SectionHeader.vue";
 import SegmentedControl from "./SegmentedControl.vue";
 import Select from "./Select.vue";
+import Separator from "./Separator.vue";
+import Spinner from "./Spinner.vue";
 import StatusBanner from "./StatusBanner.vue";
 import TabList from "./TabList.vue";
 import Textarea from "./Textarea.vue";
 import TextInput from "./TextInput.vue";
 import ToolbarGroup from "./ToolbarGroup.vue";
+import ToolbarTitle from "./ToolbarTitle.vue";
 import { useAppChrome } from "./useAppChrome";
 
 const StubIcon = { template: '<svg data-testid="icon" />' };
@@ -262,6 +269,64 @@ describe("kit components", () => {
     const horizontal = mount(ScrollArea, { props: { axis: "horizontal", safeArea: true } });
     expect(horizontal.classes()).toContain("ds-kit-scroll-area--horizontal");
     expect(horizontal.classes()).toContain("ds-kit-scroll-area--safe-area");
+  });
+
+  it("renders Separator with separator semantics", () => {
+    const sep = mount(Separator, { props: { orientation: "vertical" } });
+    expect(sep.attributes("role")).toBe("separator");
+    expect(sep.attributes("aria-orientation")).toBe("vertical");
+    expect(sep.classes()).toContain("ds-kit-separator--vertical");
+
+    const decorative = mount(Separator, { props: { decorative: true } });
+    expect(decorative.attributes("role")).toBeUndefined();
+  });
+
+  it("renders Spinner with status role and size", () => {
+    const spinner = mount(Spinner, { props: { size: "lg", label: "Fetching" } });
+    expect(spinner.attributes("role")).toBe("status");
+    expect(spinner.attributes("aria-label")).toBe("Fetching");
+    expect(spinner.classes()).toContain("ds-kit-spinner--lg");
+  });
+
+  it("emits Checkbox model updates and renders its label", async () => {
+    const wrapper = mount(Checkbox, { props: { modelValue: false }, slots: { default: "Accept" } });
+    expect(wrapper.text()).toContain("Accept");
+
+    const input = wrapper.find("input");
+    expect((input.element as HTMLInputElement).checked).toBe(false);
+    await input.setValue(true);
+    expect(wrapper.emitted("update:modelValue")).toEqual([[true]]);
+  });
+
+  it("renders ToolbarTitle and GroupLabel", () => {
+    const title = mount(ToolbarTitle, { props: { title: "Document", subtitle: "Draft" } });
+    expect(title.text()).toContain("Document");
+    expect(title.text()).toContain("Draft");
+
+    const label = mount(GroupLabel, { slots: { default: "Appearance" } });
+    expect(label.classes()).toContain("ds-kit-group-label");
+    expect(label.text()).toBe("Appearance");
+  });
+
+  it("renders ChoiceCard radio semantics, emits select, and ChoiceGrid groups them", async () => {
+    const card = mount(ChoiceCard, {
+      props: { selected: true, title: "Light", description: "Bright" },
+    });
+    expect(card.attributes("role")).toBe("radio");
+    expect(card.attributes("aria-checked")).toBe("true");
+    expect(card.text()).toContain("Light");
+    expect(card.text()).toContain("Bright");
+    await card.trigger("click");
+    expect(card.emitted("select")).toHaveLength(1);
+
+    const grid = mount(ChoiceGrid, { props: { label: "Theme" }, slots: { default: "cards" } });
+    expect(grid.attributes("role")).toBe("radiogroup");
+    expect(grid.attributes("aria-label")).toBe("Theme");
+  });
+
+  it("applies the SectionHeader page size", () => {
+    const page = mount(SectionHeader, { props: { title: "General", size: "page" } });
+    expect(page.classes()).toContain("ds-kit-section-header--page");
   });
 });
 

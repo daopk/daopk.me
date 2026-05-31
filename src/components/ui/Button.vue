@@ -49,6 +49,7 @@ withDefaults(defineProps<ButtonProps>(), {
   cursor: pointer;
   display: inline-flex;
   gap: var(--space-xs);
+  justify-content: center;
   transition:
     border-color var(--duration-fast) var(--ease),
     background-color var(--duration-fast) var(--ease),
@@ -67,11 +68,13 @@ withDefaults(defineProps<ButtonProps>(), {
 
 .ds-button--sm {
   font-size: var(--font-size-xs);
+  min-block-size: var(--control-height-sm);
   padding: var(--space-2xs) var(--space-sm);
 }
 
 .ds-button--md {
   font-size: var(--font-size-sm);
+  min-block-size: var(--control-height-md);
   padding: var(--space-xs) var(--space-md);
 }
 

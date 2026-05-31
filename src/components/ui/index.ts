@@ -2,6 +2,7 @@ export { default as Button } from "./Button.vue";
 export { default as Card } from "./Card.vue";
 export { default as ContextMenu, ContextMenuItem, ContextMenuSeparator } from "./ContextMenu.vue";
 export { default as Dialog } from "./Dialog.vue";
+export { default as DialogActions } from "./DialogActions.vue";
 export {
   default as DropdownMenu,
   DropdownMenuItem,

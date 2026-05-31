@@ -7,6 +7,8 @@ interface SectionHeaderProps {
   subtitle?: string;
   icon?: Component;
   level?: 1 | 2 | 3 | 4;
+  /** `page` uses the larger page-title scale; `section` (default) the section scale. */
+  size?: "section" | "page";
 }
 
 const props = withDefaults(defineProps<SectionHeaderProps>(), {
@@ -15,11 +17,12 @@ const props = withDefaults(defineProps<SectionHeaderProps>(), {
   subtitle: undefined,
   icon: undefined,
   level: 2,
+  size: "section",
 });
 </script>
 
 <template>
-  <component :is="as" class="ds-kit-section-header">
+  <component :is="as" class="ds-kit-section-header" :class="`ds-kit-section-header--${size}`">
     <slot name="icon">
       <component :is="icon" v-if="icon" class="ds-kit-section-header__icon" aria-hidden="true" />
     </slot>
@@ -64,6 +67,10 @@ const props = withDefaults(defineProps<SectionHeaderProps>(), {
   font-weight: var(--font-weight-bold);
   line-height: var(--leading-tight);
   margin: 0;
+}
+
+.ds-kit-section-header--page .ds-kit-section-header__title {
+  font-size: var(--font-size-2xl);
 }
 
 .ds-kit-section-header__subtitle {
