@@ -455,7 +455,7 @@ function labelForStatus(status: CalendarStatus): string {
 </script>
 
 <template>
-  <AppFrame class="calendar" layout="flex-column" :safe-area="false" aria-label="Calendar">
+  <AppFrame class="calendar" layout="flex-column" aria-label="Calendar">
     <CalendarSettingsPanel
       v-if="settingsPaneOpen"
       :settings="calendarSettings"
@@ -884,9 +884,6 @@ function labelForStatus(status: CalendarStatus): string {
   font-size: 13px;
   inline-size: 100%;
   min-block-size: 0;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
-  padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
-  padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
 }
 
 .calendar__toolbar {

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useResizeObserver } from "@vueuse/core";
-import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
-import { AppToolbar, EmptyState, Textarea, TextInput } from "~/components/kit";
+import { AppFrame, AppToolbar, EmptyState, Textarea, TextInput } from "~/components/kit";
 import {
   Button,
   ContextMenu,
@@ -26,6 +26,10 @@ import {
 
 const COMPACT_BREAKPOINT = 620;
 
+interface AppFrameRef {
+  element: HTMLElement | null;
+}
+
 const kernel = useKernel();
 const appContext = inject(AppContextInjectionKey, null);
 const appChrome = inject(AppChromeInjectionKey, null);
@@ -39,7 +43,8 @@ const notes = useNotes({
         : kernel.trash.moveToTrash(path, { handleId: appContext.handleId }),
   },
 });
-const rootRef = ref<HTMLElement | null>(null);
+const rootRef = useTemplateRef<AppFrameRef>("rootRef");
+const rootElement = computed(() => rootRef.value?.element ?? null);
 const isCompact = ref(false);
 const mobileEditorOpen = ref(false);
 const deleteDialogOpen = ref(false);
@@ -99,7 +104,7 @@ const deleteDescription = computed(() => {
 const showList = computed(() => !isCompact.value || !mobileEditorOpen.value);
 const showEditor = computed(() => !isCompact.value || mobileEditorOpen.value);
 
-useResizeObserver(rootRef, ([entry]) => {
+useResizeObserver(rootElement, ([entry]) => {
   if (entry) {
     isCompact.value = entry.contentRect.width <= COMPACT_BREAKPOINT;
   }
@@ -267,13 +272,15 @@ function labelForStatus(status: NotesStatus): string {
 </script>
 
 <template>
-  <section
+  <AppFrame
     ref="rootRef"
+    as="section"
     class="notes"
     :class="{
       'notes--compact': isCompact,
       'notes--mobile-editor-open': isCompact && mobileEditorOpen,
     }"
+    layout="grid"
     aria-label="Notes"
   >
     <aside v-if="showList" class="notes__sidebar" aria-label="Note list">
@@ -378,7 +385,7 @@ function labelForStatus(status: NotesStatus): string {
         </Button>
       </div>
     </Dialog>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -391,9 +398,6 @@ function labelForStatus(status: NotesStatus): string {
   grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
   inline-size: 100%;
   min-block-size: 0;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
-  padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
-  padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
 }
 
 .notes--compact {

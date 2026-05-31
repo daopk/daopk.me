@@ -399,9 +399,6 @@ function datetimeValue(timestamp: number): string {
   font-size: 13px;
   inline-size: 100%;
   min-block-size: 0;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
-  padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
-  padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
 }
 
 .trash__toolbar {

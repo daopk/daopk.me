@@ -220,7 +220,6 @@ watch(
     class="settings"
     :class="{ 'settings--narrow': isNarrow }"
     layout="grid"
-    :safe-area="false"
     aria-label="Settings"
   >
     <div v-if="showNavInstallRow || showNavUpdateRow" class="settings__status-stack">
@@ -274,9 +273,6 @@ watch(
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   inline-size: 100%;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
-  padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
-  padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
 }
 
 .settings--narrow {

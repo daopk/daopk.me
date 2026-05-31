@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { AppFrame } from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
 import { useVfs } from "~/composables/useVfs";
@@ -274,7 +275,7 @@ async function copyPath(path: string): Promise<void> {
 </script>
 
 <template>
-  <section class="finder" aria-label="Finder">
+  <AppFrame as="section" class="finder" layout="flex-column" aria-label="Finder">
     <FinderToolbar
       :breadcrumbs="breadcrumbs"
       :cwd="cwd"
@@ -338,7 +339,7 @@ async function copyPath(path: string): Promise<void> {
         </Button>
       </div>
     </Dialog>
-  </section>
+  </AppFrame>
 </template>
 
 <style scoped lang="scss">
@@ -351,9 +352,6 @@ async function copyPath(path: string): Promise<void> {
   font-size: 13px;
   inline-size: 100%;
   min-block-size: 0;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
-  padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
-  padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
 }
 
 .finder__body {

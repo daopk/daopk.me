@@ -269,7 +269,6 @@ function setCanvasRef(el: unknown): void {
   font-size: 13px;
   inline-size: 100%;
   min-block-size: 0;
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
 }
 
 .pdf-viewer__toolbar {
