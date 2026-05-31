@@ -1,7 +1,7 @@
 /**
  * Builds the publish bundle that CI uploads to the Cloudflare R2 blog bucket.
  *
- * Output layout (mirrors the keys worker/seo.ts reads):
+ * Output layout (mirrors the keys worker/router.ts reads):
  *   blog-dist/index.json            -> runtime manifest for the blog index list
  *   blog-dist/posts/<slug>.md       -> raw markdown the app fetches per post
  *   blog-dist/seo/blog-index.html   -> prerendered index for crawlers

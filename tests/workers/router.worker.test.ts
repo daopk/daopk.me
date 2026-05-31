@@ -4,8 +4,8 @@ import {
   handleRequest,
   isCrawlerRequest,
   type R2ObjectBody,
-  type SeoWorkerEnv,
-} from "../../worker/seo";
+  type WorkerEnv,
+} from "../../worker/router";
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
@@ -33,7 +33,7 @@ function r2Object(text: string): R2ObjectBody {
 }
 
 function makeEnv(objects: Record<string, string> = DEFAULT_OBJECTS): {
-  env: SeoWorkerEnv;
+  env: WorkerEnv;
   get: ReturnType<typeof vi.fn>;
   assets: ReturnType<typeof vi.fn>;
 } {

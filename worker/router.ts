@@ -16,7 +16,7 @@ export interface R2Bucket {
   get(key: string): Promise<R2ObjectBody | null>;
 }
 
-export interface SeoWorkerEnv {
+export interface WorkerEnv {
   ASSETS: AssetBinding;
   /** R2 bucket holding the published blog content + prerendered SEO pages. */
   BLOG: R2Bucket;
@@ -76,7 +76,7 @@ function r2Headers(object: R2ObjectBody, contentType: string): Headers {
 
 /** Serve a stored R2 object verbatim, or `null` when the key is missing. */
 async function serveR2Asset(
-  env: SeoWorkerEnv,
+  env: WorkerEnv,
   key: string,
   contentType: string,
   request: Request,
@@ -92,7 +92,7 @@ async function serveR2Asset(
 
 /** Serve a prerendered SEO page from R2 with crawler caching hints. */
 async function serveSeoPage(
-  env: SeoWorkerEnv,
+  env: WorkerEnv,
   key: string,
   request: Request,
   missingMessage: string,
@@ -108,7 +108,7 @@ async function serveSeoPage(
   return new Response(body, { headers });
 }
 
-export async function handleRequest(request: Request, env: SeoWorkerEnv): Promise<Response> {
+export async function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url);
   const { pathname } = url;
 
