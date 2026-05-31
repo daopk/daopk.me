@@ -56,6 +56,15 @@ kernel.apps.register(settingsManifest);
 
 kernel.apps.register(trashManifest);
 
+// Dev-only component gallery. The DEV gate + dynamic import keep it out of
+// production bundles; the launcher reacts to `app.registered`, so registering
+// after the synchronous boot is fine.
+if (import.meta.env.DEV) {
+  void import("~/apps/_kit-gallery").then(({ kitGalleryManifest }) => {
+    kernel.apps.register(kitGalleryManifest);
+  });
+}
+
 registerBuiltinWidgets(kernel);
 
 app.provide(KernelInjectionKey, kernel);
