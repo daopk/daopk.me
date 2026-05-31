@@ -42,8 +42,6 @@ defineExpose({ scrollEl });
         :key="slot.manifest.id"
         :manifest="slot.manifest"
         :launching="launchingManifestIds.has(slot.manifest.id)"
-        :unavailable-reason="slot.unavailableReason"
-        :unsupported="slot.unsupported"
         @launch="onLaunch"
       />
     </section>

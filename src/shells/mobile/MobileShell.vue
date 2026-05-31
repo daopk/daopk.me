@@ -4,14 +4,13 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
 import HomeScreen from "./homeScreen/HomeScreen.vue";
 import AppView from "./AppView.vue";
-import UnsupportedAppView from "./UnsupportedAppView.vue";
 import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
 import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromptHost.vue";
 import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
 import { isAppSettingsLaunchArgs } from "~/core/apps/appSettings";
-import { appSupportsShell } from "~/core/apps/shellSupport";
+import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
 import type { AppManifest } from "~/types/app";
@@ -33,9 +32,7 @@ const showSwitcher = ref(false);
 
 const switcherActive = computed(() => showSwitcher.value && nav.depth.value > 0);
 
-const unsupportedManifest = ref<AppManifest | null>(null);
-
-const isHome = computed(() => nav.foreground.value === null && unsupportedManifest.value === null);
+const isHome = computed(() => nav.foreground.value === null);
 
 type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
   scrollEl: HTMLElement | null;
@@ -113,6 +110,13 @@ function unsupportedManifestFor(manifestId: string): AppManifest | null {
   return manifest;
 }
 
+function alertUnsupportedManifest(manifest: AppManifest): void {
+  const message = appUnsupportedShellMessage(manifest, "mobile");
+  if (typeof window !== "undefined" && typeof window.alert === "function") {
+    window.alert(message);
+  }
+}
+
 function addLaunching(manifestId: string): void {
   const next = new Set(launchingManifestIds.value);
   next.add(manifestId);
@@ -132,13 +136,11 @@ function onLaunch(manifestId: string, args?: Readonly<Record<string, unknown>>):
   const unsupported = unsupportedManifestFor(manifestId);
 
   if (unsupported) {
-    unsupportedManifest.value = unsupported;
     showSwitcher.value = false;
     clearLaunching(manifestId);
+    alertUnsupportedManifest(unsupported);
     return;
   }
-
-  unsupportedManifest.value = null;
 
   const willResume = nav.stack.some((frame) => frame.manifestId === manifestId);
 
@@ -170,13 +172,11 @@ function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>
   const unsupported = unsupportedManifestFor(manifestId);
 
   if (unsupported) {
-    unsupportedManifest.value = unsupported;
     showSwitcher.value = false;
     clearLaunching(manifestId);
+    alertUnsupportedManifest(unsupported);
     return;
   }
-
-  unsupportedManifest.value = null;
   addLaunching(manifestId);
   void nav.spawnNew(manifestId, args).then(
     () => {
@@ -195,10 +195,6 @@ function onBack(): void {
 
 function onHide(): void {
   nav.goHome();
-}
-
-function onUnsupportedBack(): void {
-  unsupportedManifest.value = null;
 }
 
 function onSelect(frameId: string): void {
@@ -260,20 +256,14 @@ watch(
           :title="titleFor(frame.manifestId)"
           :is-current="
             frame.frameId === nav.foreground.value &&
-            !switcherActive &&
-            unsupportedManifest === null
+            !switcherActive
           "
           :is-foreground-frame="frame.frameId === nav.foreground.value"
-          :aria-hidden="switcherActive || unsupportedManifest !== null ? 'true' : undefined"
-          :inert="switcherActive || unsupportedManifest !== null ? true : undefined"
+          :aria-hidden="switcherActive ? 'true' : undefined"
+          :inert="switcherActive ? true : undefined"
           @back="onBack"
           @hide="onHide"
           @recents="openSwitcher"
-        />
-        <UnsupportedAppView
-          v-if="unsupportedManifest !== null"
-          :manifest="unsupportedManifest"
-          @back="onUnsupportedBack"
         />
       </div>
       <Transition name="app-switcher">

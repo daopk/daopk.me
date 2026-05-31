@@ -15,13 +15,9 @@ const props = withDefaults(
      * unchanged.
      */
     launching?: boolean;
-    unsupported?: boolean;
-    unavailableReason?: string;
   }>(),
   {
     launching: false,
-    unsupported: false,
-    unavailableReason: undefined,
   },
 );
 
@@ -30,7 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const iconComponent = computed<Component>(() => props.manifest.icon);
-const disabled = computed<boolean>(() => props.launching || props.unsupported);
+const disabled = computed<boolean>(() => props.launching);
 
 function onActivate(): void {
   if (disabled.value) {
@@ -44,12 +40,10 @@ function onActivate(): void {
   <button
     type="button"
     class="home-icon"
-    :class="{ 'home-icon--launching': launching, 'home-icon--unsupported': unsupported }"
+    :class="{ 'home-icon--launching': launching }"
     :data-manifest-id="manifest.id"
     :aria-busy="launching ? 'true' : undefined"
-    :aria-disabled="unsupported ? 'true' : undefined"
     :disabled="disabled || undefined"
-    :title="unavailableReason"
     @click="onActivate"
     @keydown.enter.prevent="onActivate"
     @keydown.space.prevent="onActivate"
@@ -84,13 +78,9 @@ function onActivate(): void {
     border-radius: var(--home-screen-icon-radius);
   }
 
-  // Keep disabled styling owned by launch / unsupported states.
+  // Keep disabled styling owned by the launching state.
   &:disabled {
     cursor: default;
-  }
-
-  &.home-icon--unsupported {
-    cursor: not-allowed;
   }
 }
 
@@ -118,12 +108,6 @@ function onActivate(): void {
   .home-icon--launching & > :first-child {
     opacity: 0.35;
     transition: opacity var(--duration-fast) var(--ease);
-  }
-
-  .home-icon--unsupported & {
-    box-shadow: none;
-    filter: grayscale(1);
-    opacity: 0.42;
   }
 }
 
@@ -173,10 +157,5 @@ function onActivate(): void {
   text-overflow: ellipsis;
   text-shadow: var(--home-screen-label-shadow);
   white-space: nowrap;
-
-  .home-icon--unsupported & {
-    opacity: 0.68;
-    text-shadow: none;
-  }
 }
 </style>
