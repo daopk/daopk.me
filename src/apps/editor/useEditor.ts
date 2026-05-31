@@ -10,6 +10,7 @@ import {
 } from "~/core/vfs/fileTypes";
 import type { VfsStat } from "~/core/vfs/nodes";
 import { normalizeVfsPath } from "~/core/vfs/path";
+import { toErrorMessage } from "~/utils/errors";
 
 export type EditorStatus = "idle" | "loading" | "new" | "ready" | "saving" | "saved" | "error";
 export type EditorEditableKind = Extract<VfsRenderableFileType, "markdown" | "text">;
@@ -286,5 +287,5 @@ function messageFromError(error: unknown, operation: "open" | "save" = "open"): 
     }
   }
 
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }

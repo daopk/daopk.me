@@ -1,5 +1,7 @@
 import type { FileSystemTree, WebContainer, WebContainerProcess } from "@webcontainer/api";
 
+import { toErrorMessage } from "~/utils/errors";
+
 import runtimePnpmLock from "./runtime-pnpm-lock.yaml?raw";
 
 export const SLIDEV_RUNTIME_COEP = "credentialless";
@@ -207,7 +209,7 @@ async function loadWebContainerModule(
 
     return await import("@webcontainer/api");
   } catch (error) {
-    throw new SlidevRuntimeProbeError("boot-failed", messageFromError(error));
+    throw new SlidevRuntimeProbeError("boot-failed", toErrorMessage(error));
   }
 }
 
@@ -221,7 +223,7 @@ async function bootWebContainer(
       forwardPreviewErrors: "exceptions-only",
     });
   } catch (error) {
-    throw new SlidevRuntimeProbeError("boot-failed", messageFromError(error));
+    throw new SlidevRuntimeProbeError("boot-failed", toErrorMessage(error));
   }
 }
 
@@ -229,7 +231,7 @@ async function mountRuntimeSpike(webcontainer: SlidevRuntimeWebContainer): Promi
   try {
     await webcontainer.mount(createSlidevRuntimeSpikeFileTree());
   } catch (error) {
-    throw new SlidevRuntimeProbeError("storage-blocked", messageFromError(error));
+    throw new SlidevRuntimeProbeError("storage-blocked", toErrorMessage(error));
   }
 }
 
@@ -259,7 +261,7 @@ async function installRuntimeDependencies(
       throw error;
     }
 
-    throw new SlidevRuntimeProbeError("install-failed", messageFromError(error));
+    throw new SlidevRuntimeProbeError("install-failed", toErrorMessage(error));
   }
 }
 
@@ -333,7 +335,7 @@ async function startSlidevServer(
       throw error;
     }
 
-    throw new SlidevRuntimeProbeError("server-failed", messageFromError(error));
+    throw new SlidevRuntimeProbeError("server-failed", toErrorMessage(error));
   }
 }
 
@@ -423,8 +425,4 @@ function isLikelyChromium(environmentNavigator: SlidevRuntimeEnvironment["naviga
   return (
     /(?:Chrome|Chromium|Edg)\//.test(userAgent) && !/(?:Firefox|OPR|CriOS|FxiOS)\//.test(userAgent)
   );
-}
-
-function messageFromError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

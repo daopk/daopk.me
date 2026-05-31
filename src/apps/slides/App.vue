@@ -17,6 +17,7 @@ import { useKernel } from "~/composables/useKernel";
 import { useVfs } from "~/composables/useVfs";
 import { Play, Save } from "~/icons/lucide";
 import { AppContextInjectionKey } from "~/types/app";
+import { toErrorMessage } from "~/utils/errors";
 
 import { parseSlideDeckPath } from "./paths";
 import { useSlidesLibrary, type SlidesDeck } from "./useSlidesLibrary";
@@ -114,7 +115,7 @@ async function refreshDecks(): Promise<void> {
   try {
     decks.value = await library.listDecks();
   } catch (refreshError) {
-    error.value = messageFromError(refreshError);
+    error.value = toErrorMessage(refreshError);
   } finally {
     loading.value = false;
   }
@@ -129,7 +130,7 @@ async function createDeck(): Promise<void> {
     await openDeck(deck.filePath, { skipDirtyCheck: true });
     titleDraft.value = "Untitled Slides";
   } catch (createError) {
-    error.value = messageFromError(createError);
+    error.value = toErrorMessage(createError);
   } finally {
     loading.value = false;
   }
@@ -152,7 +153,7 @@ async function openDeck(
     savedSource.value = opened.source;
     message.value = `Opened ${opened.deck.title}.`;
   } catch (openError) {
-    error.value = messageFromError(openError);
+    error.value = toErrorMessage(openError);
   } finally {
     loading.value = false;
   }
@@ -176,7 +177,7 @@ async function saveDeck(): Promise<void> {
       await runtime.writeSlides(source.value);
     }
   } catch (saveError) {
-    error.value = messageFromError(saveError);
+    error.value = toErrorMessage(saveError);
   } finally {
     loading.value = false;
   }
@@ -208,10 +209,6 @@ function clearPreviewWrite(): void {
     globalThis.clearTimeout(previewWriteHandle);
     previewWriteHandle = undefined;
   }
-}
-
-function messageFromError(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
 }
 </script>
 

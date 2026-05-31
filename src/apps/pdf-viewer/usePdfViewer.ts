@@ -3,6 +3,7 @@ import { computed, getCurrentScope, onMounted, onScopeDispose, ref, type Ref } f
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { basename, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
 import type { VfsStat } from "~/core/vfs/nodes";
+import { toErrorMessage } from "~/utils/errors";
 
 export type PdfViewerStatus = "idle" | "loading" | "rendering" | "ready" | "error";
 export type PdfViewerFitMode = "fit-width" | "custom";
@@ -190,7 +191,7 @@ export function usePdfViewer({
         path: normalized,
       });
     } catch (loadError) {
-      fail(loadRun, messageFromError(loadError));
+      fail(loadRun, toErrorMessage(loadError));
       return false;
     }
   }
@@ -214,7 +215,7 @@ export function usePdfViewer({
         path: null,
       });
     } catch (loadError) {
-      fail(loadRun, messageFromError(loadError));
+      fail(loadRun, toErrorMessage(loadError));
       return false;
     }
   }
@@ -248,7 +249,7 @@ export function usePdfViewer({
     try {
       loadingTask = await adapter.loadDocument(copyBytes(bytes));
     } catch (loadError) {
-      fail(loadRun, messageFromError(loadError));
+      fail(loadRun, toErrorMessage(loadError));
       return false;
     }
 
@@ -286,7 +287,7 @@ export function usePdfViewer({
       await renderCurrentPage();
       return true;
     } catch (loadError) {
-      fail(loadRun, messageFromError(loadError));
+      fail(loadRun, toErrorMessage(loadError));
       return false;
     } finally {
       if (activeLoadingTask === loadingTask) {
@@ -452,7 +453,7 @@ export function usePdfViewer({
     } catch (renderError) {
       if (isCurrentRender(renderRun) && !isRenderingCancelled(renderError)) {
         status.value = "error";
-        error.value = messageFromError(renderError);
+        error.value = toErrorMessage(renderError);
         message.value = error.value;
       }
       return false;
@@ -636,8 +637,4 @@ function copyBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
 
 function isRenderingCancelled(error: unknown): boolean {
   return error instanceof Error && error.name === "RenderingCancelledException";
-}
-
-function messageFromError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

@@ -6,6 +6,7 @@ import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
 import { FinderFileIcon, FinderFolderIcon } from "~/icons/fluentColor";
+import { toErrorMessage } from "~/utils/errors";
 import { formatBytes, formatDateTime } from "~/utils/format";
 import { AppContextInjectionKey } from "~/types/app";
 import type { TrashItem } from "~/types/trash";
@@ -76,7 +77,7 @@ async function refresh(): Promise<void> {
 
     items.value = next;
   } catch (refreshError) {
-    error.value = messageFromError(refreshError);
+    error.value = toErrorMessage(refreshError);
   } finally {
     loading.value = false;
   }
@@ -96,7 +97,7 @@ async function restore(item: TrashItem): Promise<void> {
       error.value = "Trash could not restore this item.";
     }
   } catch (restoreError) {
-    error.value = messageFromError(restoreError);
+    error.value = toErrorMessage(restoreError);
   } finally {
     mutatingId.value = null;
     await refresh();
@@ -146,7 +147,7 @@ async function removePermanently(item: TrashItem): Promise<void> {
       error.value = "Trash could not delete this item permanently.";
     }
   } catch (removeError) {
-    error.value = messageFromError(removeError);
+    error.value = toErrorMessage(removeError);
   } finally {
     mutatingId.value = null;
     await refresh();
@@ -192,7 +193,7 @@ async function emptyTrash(): Promise<void> {
       error.value = "Trash could not empty deleted items.";
     }
   } catch (emptyError) {
-    error.value = messageFromError(emptyError);
+    error.value = toErrorMessage(emptyError);
   } finally {
     emptying.value = false;
     await refresh();
@@ -213,10 +214,6 @@ function itemIcon(item: TrashItem): Component {
 
 function datetimeValue(timestamp: number): string {
   return new Date(timestamp).toISOString();
-}
-
-function messageFromError(errorValue: unknown): string {
-  return errorValue instanceof Error ? errorValue.message : String(errorValue);
 }
 </script>
 

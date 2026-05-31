@@ -2,6 +2,8 @@ import { computed, ref, type ComputedRef, type Ref } from "vue";
 
 import type { FileSystemTree, WebContainer } from "@webcontainer/api";
 
+import { toErrorMessage } from "~/utils/errors";
+
 import {
   SLIDEV_CLI_VERSION,
   SLIDEV_PNPM_LOCKFILE_VERSION,
@@ -196,7 +198,7 @@ export function useSlidevRuntime(options: UseSlidevRuntimeOptions = {}): SlidevR
       return true;
     } catch (writeError) {
       status.value = "error";
-      error.value = messageFromError(writeError);
+      error.value = toErrorMessage(writeError);
       appendLifecycleLog(`slides.md write failed: ${error.value}`);
       return false;
     }
@@ -458,7 +460,7 @@ async function startServer(
     })
     .catch((serverError: unknown) => {
       options.onLifecycleLog(
-        `Slidev dev server process exit rejected: ${messageFromError(serverError)}`,
+        `Slidev dev server process exit rejected: ${toErrorMessage(serverError)}`,
       );
     });
 
@@ -607,7 +609,7 @@ function mapRuntimeError(error: unknown): {
     };
   }
 
-  return { status: "error", message: messageFromError(error) };
+  return { status: "error", message: toErrorMessage(error) };
 }
 
 function statusFromFailure(reason: SlidevRuntimeFailureReason): SlidevRuntimeStatus {
@@ -618,8 +620,4 @@ function statusFromFailure(reason: SlidevRuntimeFailureReason): SlidevRuntimeSta
     reason === "not-browser"
     ? "unsupported"
     : "error";
-}
-
-function messageFromError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }

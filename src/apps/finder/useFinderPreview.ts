@@ -2,13 +2,13 @@ import { getCurrentScope, onScopeDispose, ref, type Ref } from "vue";
 
 import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
 import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-import { VfsError } from "~/core/vfs/errors";
 import {
   detectVfsFileType,
   normalizedVfsMimeType,
   type VfsRenderableFileType,
 } from "~/core/vfs/fileTypes";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
+import { toErrorMessage } from "~/utils/errors";
 
 export type FinderPreviewKind =
   | "empty"
@@ -216,7 +216,7 @@ export function useFinderPreview({
     } catch (previewError) {
       if (run === previewRun && !disposed) {
         kind.value = "error";
-        message.value = messageFromError(previewError);
+        message.value = toErrorMessage(previewError);
       }
     } finally {
       if (run === previewRun && !disposed) {
@@ -280,12 +280,4 @@ function canCreateObjectUrl(): boolean {
     typeof URL.createObjectURL === "function" &&
     typeof URL.revokeObjectURL === "function"
   );
-}
-
-function messageFromError(error: unknown): string {
-  if (error instanceof VfsError) {
-    return error.message;
-  }
-
-  return error instanceof Error ? error.message : String(error);
 }

@@ -5,6 +5,7 @@ import { splitFilename } from "~/core/vfs/fileNames";
 import { basename, dirname, joinVfsPath, normalizeVfsPath } from "~/core/vfs/path";
 import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
 import type { TrashItem } from "~/types/trash";
+import { toErrorMessage } from "~/utils/errors";
 
 export type FinderViewMode = "list" | "grid";
 
@@ -522,5 +523,5 @@ function messageFromError(error: unknown): string {
     }
   }
 
-  return error instanceof Error ? error.message : String(error);
+  return toErrorMessage(error);
 }

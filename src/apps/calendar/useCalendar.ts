@@ -2,6 +2,7 @@ import { computed, ref, unref, type ComputedRef, type Ref } from "vue";
 
 import { VfsError } from "~/core/vfs/errors";
 import type { VfsStat } from "~/core/vfs/nodes";
+import { toActionErrorMessage } from "~/utils/errors";
 
 import {
   addMonths,
@@ -149,7 +150,7 @@ export function useCalendar({
       status.value = events.value.length === 0 ? "empty" : "ready";
       return true;
     } catch (loadError) {
-      fail(messageFromError(loadError, "load calendar"));
+      fail(toActionErrorMessage(loadError, "load calendar"));
       return false;
     }
   }
@@ -293,7 +294,7 @@ export function useCalendar({
       error.value = null;
       return true;
     } catch (saveError) {
-      fail(messageFromError(saveError, action));
+      fail(toActionErrorMessage(saveError, action));
       return false;
     }
   }
@@ -516,12 +517,4 @@ function defaultIdFactory(): string {
   }
 
   return `event-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
-function messageFromError(error: unknown, action: string): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return `Unable to ${action}: ${error.message}`;
-  }
-
-  return `Unable to ${action}.`;
 }

@@ -5,6 +5,7 @@ import { splitFilename } from "~/core/vfs/fileNames";
 import { basename, dirname, joinVfsPath, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
 import { normalizedVfsMimeType, vfsFileExtension } from "~/core/vfs/fileTypes";
 import type { TrashItem } from "~/types/trash";
+import { toErrorMessage } from "~/utils/errors";
 
 export const NOTES_ROOT = "/home/notes";
 export const NOTES_MIME_TYPE = "text/markdown;charset=utf-8";
@@ -743,5 +744,5 @@ function formatTimestamp(date: Date): string {
 }
 
 function messageFromError(error: unknown, action: string): string {
-  return error instanceof Error ? error.message : `Notes could not ${action}.`;
+  return toErrorMessage(error, `Notes could not ${action}.`);
 }
