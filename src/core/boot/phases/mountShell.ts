@@ -1,6 +1,5 @@
 import type { BootPhase } from "~/core/boot/types";
-
-import { ingestShellStickyFromSearchOnce } from "~/shells/shellRegistry";
+import { ingestShellStickyFromSearchOnce } from "~/core/routing/shellSticky";
 
 export const mountShellPhase: BootPhase = {
   id: "mount-shell",
