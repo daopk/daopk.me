@@ -1,5 +1,5 @@
 import { debugWarn } from "~/core/debug";
-import { BLOG_RAW_BASE, blogRawIndexUrl, blogRawPostUrl } from "~/core/blog/blogContentConfig";
+import { BLOG_CONTENT_BASE, blogRawIndexUrl, blogRawPostUrl } from "~/core/blog/blogContentConfig";
 import { BLOG_POSTS_ROOT, blogPostPathFromSlug, isBlogPostSlug } from "~/core/routing/blogPaths";
 import { VfsError } from "~/core/vfs/errors";
 
@@ -30,7 +30,7 @@ export interface BlogContentSourceOptions {
   readonly vfs: BlogContentVfs;
   /** Overridable for tests; defaults to `globalThis.fetch`. */
   readonly fetch?: typeof globalThis.fetch;
-  /** Overridable raw content base; defaults to {@link BLOG_RAW_BASE}. */
+  /** Overridable content base; defaults to {@link BLOG_CONTENT_BASE}. */
   readonly rawBase?: string;
 }
 
@@ -102,7 +102,7 @@ export function createBlogContentSource(options: BlogContentSourceOptions): Blog
   const fetchImpl =
     options.fetch ??
     (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : undefined);
-  const rawBase = options.rawBase ?? BLOG_RAW_BASE;
+  const rawBase = options.rawBase ?? BLOG_CONTENT_BASE;
 
   let cacheRootReady: Promise<void> | undefined;
 

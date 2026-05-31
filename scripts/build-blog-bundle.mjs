@@ -1,4 +1,14 @@
-import { mkdir, writeFile } from "node:fs/promises";
+/**
+ * Builds the publish bundle that CI uploads to the Cloudflare R2 blog bucket.
+ *
+ * Output layout (mirrors the keys worker/seo.ts reads):
+ *   blog-dist/index.json            -> runtime manifest for the blog index list
+ *   blog-dist/posts/<slug>.md       -> raw markdown the app fetches per post
+ *   blog-dist/seo/blog-index.html   -> prerendered index for crawlers
+ *   blog-dist/seo/posts/<slug>.html -> prerendered post for crawlers
+ *   blog-dist/sitemap.xml           -> sitemap served at /sitemap.xml
+ */
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,9 +25,12 @@ const SITE_ORIGIN = "https://daopk.me";
 const SITE_NAME = "daopk.me";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const POSTS_DIR = join(ROOT, "blog");
-const DIST_DIR = join(ROOT, "dist");
-const SEO_BLOG_DIR = join(DIST_DIR, "__seo/blog");
-const SEO_BLOG_INDEX_FILE = join(DIST_DIR, "__seo/blog-index.html");
+const OUT_DIR = join(ROOT, "blog-dist");
+const POSTS_OUT_DIR = join(OUT_DIR, "posts");
+const SEO_BLOG_DIR = join(OUT_DIR, "seo/posts");
+const SEO_BLOG_INDEX_FILE = join(OUT_DIR, "seo/blog-index.html");
+const INDEX_FILE = join(OUT_DIR, "index.json");
+const SITEMAP_FILE = join(OUT_DIR, "sitemap.xml");
 
 const markdownSanitizeSchema = {
   allowComments: false,
@@ -469,26 +482,33 @@ async function main() {
   const parsedPosts = await readBlogPosts(POSTS_DIR);
   const posts = [];
 
+  await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(SEO_BLOG_DIR, { recursive: true });
+  await mkdir(POSTS_OUT_DIR, { recursive: true });
 
   for (const post of parsedPosts) {
+    await writeTextFile(join(POSTS_OUT_DIR, `${post.slug}.md`), post.source);
+
     const html = await renderMarkdownToHtml(post.body);
     const document = buildPostDocument({ html, metadata: post.metadata, slug: post.slug });
-
     await writeTextFile(join(SEO_BLOG_DIR, `${post.slug}.html`), document);
+
     posts.push({ slug: post.slug, metadata: post.metadata });
   }
 
   const sortedPosts = [...posts].sort(comparePostsNewestFirst);
+  const index = sortedPosts.map((post) => ({
+    slug: post.slug,
+    title: post.metadata.title,
+    date: post.metadata.date,
+    description: post.metadata.description,
+  }));
 
+  await writeTextFile(INDEX_FILE, `${JSON.stringify(index, null, 2)}\n`);
   await writeTextFile(SEO_BLOG_INDEX_FILE, buildIndexDocument(sortedPosts));
-  await writeTextFile(join(DIST_DIR, "sitemap.xml"), buildSitemap(sortedPosts));
-  await writeTextFile(
-    join(DIST_DIR, "robots.txt"),
-    `User-agent: *\nAllow: /\n\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`,
-  );
+  await writeTextFile(SITEMAP_FILE, buildSitemap(sortedPosts));
 
-  console.log(`Generated ${posts.length} blog SEO page${posts.length === 1 ? "" : "s"}.`);
+  console.log(`Built blog bundle (${posts.length} post${posts.length === 1 ? "" : "s"}) -> blog-dist/`);
 }
 
 main().catch((error) => {

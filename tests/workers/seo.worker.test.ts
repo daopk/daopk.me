@@ -1,214 +1,231 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { handleRequest, isCrawlerRequest, type SeoWorkerEnv } from "../../worker/seo";
+import {
+  handleRequest,
+  isCrawlerRequest,
+  type R2ObjectBody,
+  type SeoWorkerEnv,
+} from "../../worker/seo";
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
-const SEO_BLOG_INDEX_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-index" />';
-const SEO_BLOG_POST_ASSET_MARKER = '<meta name="x-daopk-seo-asset" content="blog-post" />';
 
-function textResponse(body: string, init: ResponseInit = {}): Response {
-  return new Response(body, {
-    headers: {
-      "Content-Type": "text/html;charset=utf-8",
-      ...init.headers,
+const DEFAULT_OBJECTS: Record<string, string> = {
+  "index.json": '[{"slug":"building-a-tiny-web-os","title":"Building a Tiny OS in the Browser"}]',
+  "posts/building-a-tiny-web-os.md": "# Building a Tiny OS in the Browser\n",
+  "seo/blog-index.html": "<main>Latest posts</main>",
+  "seo/posts/building-a-tiny-web-os.html": "<article>Building a Tiny OS in the Browser</article>",
+  "sitemap.xml": '<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>',
+};
+
+function bodyStream(text: string): ReadableStream {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+      controller.close();
     },
-    status: init.status ?? 200,
-    statusText: init.statusText,
   });
 }
 
-function makeEnv(): {
+function r2Object(text: string): R2ObjectBody {
+  return { body: bodyStream(text), httpEtag: '"test-etag"' };
+}
+
+function makeEnv(objects: Record<string, string> = DEFAULT_OBJECTS): {
   env: SeoWorkerEnv;
-  fetch: ReturnType<typeof vi.fn<[Request | string, RequestInit?], Promise<Response>>>;
+  get: ReturnType<typeof vi.fn>;
+  assets: ReturnType<typeof vi.fn>;
 } {
-  const fetch = vi.fn(async (input: Request | string) => {
-    const url = typeof input === "string" ? new URL(input, "https://daopk.me") : new URL(input.url);
-
-    if (url.pathname === "/__seo/blog-index") {
-      return textResponse(`${SEO_BLOG_INDEX_ASSET_MARKER}<main>Latest posts</main>`);
-    }
-
-    if (url.pathname === "/__seo/blog/building-a-tiny-web-os") {
-      return textResponse(
-        `${SEO_BLOG_POST_ASSET_MARKER}<article>Building a Tiny OS in the Browser</article>`,
-      );
-    }
-
-    if (url.pathname.startsWith("/__seo/blog/")) {
-      return textResponse('<div id="app"></div>');
-    }
-
-    return textResponse('<div id="app"></div>');
-  });
+  const get = vi.fn(
+    async (key: string): Promise<R2ObjectBody | null> =>
+      Object.prototype.hasOwnProperty.call(objects, key) ? r2Object(objects[key] as string) : null,
+  );
+  const assets = vi.fn(
+    async (): Promise<Response> =>
+      new Response('<div id="app"></div>', {
+        headers: { "Content-Type": "text/html;charset=utf-8" },
+      }),
+  );
 
   return {
-    env: {
-      ASSETS: { fetch },
-    },
-    fetch,
+    env: { ASSETS: { fetch: assets }, BLOG: { get } },
+    get,
+    assets,
   };
 }
 
-describe("SEO Worker", () => {
+function crawler(path: string, method = "GET"): Request {
+  return new Request(`https://daopk.me${path}`, {
+    headers: { "User-Agent": "Googlebot/2.1" },
+    method,
+  });
+}
+
+function browser(path: string): Request {
+  return new Request(`https://daopk.me${path}`, {
+    headers: { "User-Agent": BROWSER_USER_AGENT },
+  });
+}
+
+describe("SEO Worker — crawler detection", () => {
   it("detects search and preview crawler requests from the user agent", () => {
+    expect(isCrawlerRequest(crawler("/blog/building-a-tiny-web-os"))).toBe(true);
     expect(
       isCrawlerRequest(
-        new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-          headers: { "User-Agent": "Googlebot/2.1" },
-        }),
-      ),
-    ).toBe(true);
-    expect(
-      isCrawlerRequest(
-        new Request("https://daopk.me/blog/building-a-tiny-web-os", {
+        new Request("https://daopk.me/blog", {
           headers: { "User-Agent": "facebookexternalhit/1.1" },
         }),
       ),
     ).toBe(true);
-    expect(
-      isCrawlerRequest(
-        new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-          headers: { "User-Agent": "curl/8.7.1" },
-        }),
-      ),
-    ).toBe(true);
-    expect(
-      isCrawlerRequest(
-        new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-          headers: { "User-Agent": BROWSER_USER_AGENT },
-        }),
-      ),
-    ).toBe(false);
+    expect(isCrawlerRequest(browser("/blog/building-a-tiny-web-os"))).toBe(false);
+  });
+});
+
+describe("SEO Worker — runtime content from R2", () => {
+  it("serves index.json from R2 to any user agent", async () => {
+    const { env, get, assets } = makeEnv();
+
+    const response = await handleRequest(browser("/blog/index.json"), env);
+
+    expect(get).toHaveBeenCalledWith("index.json");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/json;charset=utf-8");
+    await expect(response.text()).resolves.toContain("building-a-tiny-web-os");
+    expect(assets).not.toHaveBeenCalled();
   });
 
-  it("serves generated article HTML to crawlers", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-      headers: { "User-Agent": "Googlebot/2.1" },
-    });
+  it("serves a raw post markdown file from R2", async () => {
+    const { env, get } = makeEnv();
+
+    const response = await handleRequest(browser("/blog/building-a-tiny-web-os.md"), env);
+
+    expect(get).toHaveBeenCalledWith("posts/building-a-tiny-web-os.md");
+    expect(response.headers.get("Content-Type")).toBe("text/markdown;charset=utf-8");
+    await expect(response.text()).resolves.toContain("# Building a Tiny OS in the Browser");
+  });
+
+  it("serves the sitemap from R2", async () => {
+    const { env, get } = makeEnv();
+
+    const response = await handleRequest(browser("/sitemap.xml"), env);
+
+    expect(get).toHaveBeenCalledWith("sitemap.xml");
+    expect(response.headers.get("Content-Type")).toBe("application/xml;charset=utf-8");
+    await expect(response.text()).resolves.toContain("<urlset");
+  });
+
+  it("falls back to assets for the sitemap when R2 has none", async () => {
+    const { env, assets } = makeEnv({});
+    const request = browser("/sitemap.xml");
 
     const response = await handleRequest(request, env);
 
+    expect(assets).toHaveBeenCalledWith(request);
+    await expect(response.text()).resolves.toContain('<div id="app"></div>');
+  });
+
+  it("returns noindex 404 when the index is not yet published", async () => {
+    const { env } = makeEnv({});
+
+    const response = await handleRequest(browser("/blog/index.json"), env);
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+  });
+
+  it("returns noindex 404 when a markdown file is missing", async () => {
+    const { env, get } = makeEnv({});
+
+    const response = await handleRequest(browser("/blog/missing-post.md"), env);
+
+    expect(get).toHaveBeenCalledWith("posts/missing-post.md");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+  });
+});
+
+describe("SEO Worker — prerendered pages for crawlers", () => {
+  it("serves the prerendered blog index to crawlers", async () => {
+    const { env, get } = makeEnv();
+
+    const response = await handleRequest(crawler("/blog"), env);
+
+    expect(get).toHaveBeenCalledWith("seo/blog-index.html");
+    await expect(response.text()).resolves.toContain("Latest posts");
+    expect(response.headers.get("Vary")).toBe("User-Agent");
+    expect(response.headers.get("Content-Type")).toBe("text/html;charset=utf-8");
+  });
+
+  it("serves a prerendered post to crawlers", async () => {
+    const { env, get } = makeEnv();
+
+    const response = await handleRequest(crawler("/blog/building-a-tiny-web-os"), env);
+
+    expect(get).toHaveBeenCalledWith("seo/posts/building-a-tiny-web-os.html");
     await expect(response.text()).resolves.toContain("Building a Tiny OS in the Browser");
     expect(response.headers.get("Vary")).toBe("User-Agent");
-    expect(fetch).toHaveBeenCalledTimes(1);
-    const firstCall = fetch.mock.calls[0];
-    if (!firstCall) {
-      throw new Error("Expected ASSETS.fetch to be called.");
-    }
-
-    const assetRequest = firstCall[0];
-    expect(assetRequest).toBeInstanceOf(Request);
-    expect(new URL((assetRequest as Request).url).pathname).toBe(
-      "/__seo/blog/building-a-tiny-web-os",
-    );
   });
 
-  it("serves generated article headers to crawler HEAD requests", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-      headers: { "User-Agent": "Googlebot/2.1" },
-      method: "HEAD",
-    });
+  it("serves prerendered headers to crawler HEAD requests", async () => {
+    const { env, get } = makeEnv();
 
-    const response = await handleRequest(request, env);
+    const response = await handleRequest(crawler("/blog/building-a-tiny-web-os", "HEAD"), env);
 
     expect(response.status).toBe(200);
     await expect(response.text()).resolves.toBe("");
-    expect(fetch).toHaveBeenCalledTimes(1);
-    const firstCall = fetch.mock.calls[0];
-    if (!firstCall) {
-      throw new Error("Expected ASSETS.fetch to be called.");
-    }
-
-    const assetRequest = firstCall[0];
-    expect(assetRequest).toBeInstanceOf(Request);
-    expect((assetRequest as Request).method).toBe("GET");
-    expect(new URL((assetRequest as Request).url).pathname).toBe(
-      "/__seo/blog/building-a-tiny-web-os",
-    );
+    expect(get).toHaveBeenCalledWith("seo/posts/building-a-tiny-web-os.html");
   });
 
-  it("serves generated blog index HTML to crawlers", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog", {
-      headers: { "User-Agent": "Googlebot/2.1" },
-    });
-
-    const response = await handleRequest(request, env);
-
-    await expect(response.text()).resolves.toContain("Latest posts");
-    expect(response.headers.get("Vary")).toBe("User-Agent");
-    expect(fetch).toHaveBeenCalledTimes(1);
-    const firstCall = fetch.mock.calls[0];
-    if (!firstCall) {
-      throw new Error("Expected ASSETS.fetch to be called.");
-    }
-
-    const assetRequest = firstCall[0];
-    expect(assetRequest).toBeInstanceOf(Request);
-    expect(new URL((assetRequest as Request).url).pathname).toBe("/__seo/blog-index");
-  });
-
-  it("passes normal browser blog requests through to SPA assets", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog/building-a-tiny-web-os", {
-      headers: { "User-Agent": BROWSER_USER_AGENT },
-    });
-
-    const response = await handleRequest(request, env);
-
-    await expect(response.text()).resolves.toContain('<div id="app"></div>');
-    expect(fetch).toHaveBeenCalledWith(request);
-  });
-
-  it("passes normal browser blog index requests through to SPA assets", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog", {
-      headers: { "User-Agent": BROWSER_USER_AGENT },
-    });
-
-    const response = await handleRequest(request, env);
-
-    await expect(response.text()).resolves.toContain('<div id="app"></div>');
-    expect(fetch).toHaveBeenCalledWith(request);
-  });
-
-  it("returns noindex 404 for missing generated posts requested by crawlers", async () => {
+  it("returns noindex 404 for crawler posts missing from R2", async () => {
     const { env } = makeEnv();
-    const request = new Request("https://daopk.me/blog/missing-post", {
-      headers: { "User-Agent": "Googlebot/2.1" },
-    });
 
-    const response = await handleRequest(request, env);
+    const response = await handleRequest(crawler("/blog/unknown-post"), env);
 
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
     await expect(response.text()).resolves.toBe("Blog post not found.");
   });
 
-  it("returns noindex 404 for invalid crawler blog slugs", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/blog/FIELD-NOTES", {
-      headers: { "User-Agent": "Googlebot/2.1" },
-    });
+  it("returns noindex 404 for invalid crawler slugs without touching R2", async () => {
+    const { env, get } = makeEnv();
 
-    const response = await handleRequest(request, env);
+    const response = await handleRequest(crawler("/blog/FIELD-NOTES"), env);
 
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
-    expect(fetch).not.toHaveBeenCalled();
+    expect(get).not.toHaveBeenCalled();
+  });
+});
+
+describe("SEO Worker — humans and other routes", () => {
+  it("passes human blog post requests through to SPA assets", async () => {
+    const { env, get, assets } = makeEnv();
+    const request = browser("/blog/building-a-tiny-web-os");
+
+    const response = await handleRequest(request, env);
+
+    expect(assets).toHaveBeenCalledWith(request);
+    expect(get).not.toHaveBeenCalled();
+    await expect(response.text()).resolves.toContain('<div id="app"></div>');
   });
 
-  it("hides generated SEO assets from direct requests", async () => {
-    const { env, fetch } = makeEnv();
-    const request = new Request("https://daopk.me/__seo/blog/building-a-tiny-web-os.html");
+  it("passes human blog index requests through to SPA assets", async () => {
+    const { env, assets } = makeEnv();
+    const request = browser("/blog");
 
-    const response = await handleRequest(request, env);
+    await handleRequest(request, env);
 
-    expect(response.status).toBe(404);
-    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
-    expect(fetch).not.toHaveBeenCalled();
+    expect(assets).toHaveBeenCalledWith(request);
+  });
+
+  it("passes non-blog requests straight to assets", async () => {
+    const { env, get, assets } = makeEnv();
+    const request = browser("/about");
+
+    await handleRequest(request, env);
+
+    expect(assets).toHaveBeenCalledWith(request);
+    expect(get).not.toHaveBeenCalled();
   });
 });

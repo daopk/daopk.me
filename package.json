@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build && node scripts/generate-blog-index.mjs && node scripts/generate-blog-seo-assets.mjs",
+    "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "blog:index": "node scripts/generate-blog-index.mjs",
+    "blog:bundle": "node scripts/build-blog-bundle.mjs",
     "deploy": "wrangler deploy",
     "icons:generate": "node scripts/generate-fluent-color-icons.mjs",
     "lint": "oxlint .",
