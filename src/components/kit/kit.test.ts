@@ -1,5 +1,12 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { defineComponent } from "vue";
+
+import {
+  AppChromeInjectionKey,
+  type AppChromeBackAction,
+  type AppChromeController,
+} from "~/types/app";
 
 import ActionRow from "./ActionRow.vue";
 import AppFrame from "./AppFrame.vue";
@@ -11,6 +18,7 @@ import FormField from "./FormField.vue";
 import IconButton from "./IconButton.vue";
 import ListButton from "./ListButton.vue";
 import Panel from "./Panel.vue";
+import ScrollArea from "./ScrollArea.vue";
 import SectionHeader from "./SectionHeader.vue";
 import SegmentedControl from "./SegmentedControl.vue";
 import Select from "./Select.vue";
@@ -19,6 +27,7 @@ import TabList from "./TabList.vue";
 import Textarea from "./Textarea.vue";
 import TextInput from "./TextInput.vue";
 import ToolbarGroup from "./ToolbarGroup.vue";
+import { useAppChrome } from "./useAppChrome";
 
 const StubIcon = { template: '<svg data-testid="icon" />' };
 
@@ -220,5 +229,109 @@ describe("kit components", () => {
 
     const lined = mount(DataTable, { props: { label: "Recent files", variant: "lined" } });
     expect(lined.classes()).toContain("ds-kit-data-table--lined");
+  });
+
+  it("maps AppFrame safeArea modes onto inset classes", () => {
+    const def = mount(AppFrame);
+    expect(def.classes()).toContain("ds-kit-app-frame--safe-bottom");
+    expect(def.classes()).toContain("ds-kit-app-frame--safe-x");
+    expect(def.classes()).not.toContain("ds-kit-app-frame--safe-top");
+
+    const all = mount(AppFrame, { props: { safeArea: "all" } });
+    expect(all.classes()).toContain("ds-kit-app-frame--safe-top");
+    expect(all.classes()).toContain("ds-kit-app-frame--safe-bottom");
+    expect(all.classes()).toContain("ds-kit-app-frame--safe-x");
+
+    const bottom = mount(AppFrame, { props: { safeArea: "bottom" } });
+    expect(bottom.classes()).toContain("ds-kit-app-frame--safe-bottom");
+    expect(bottom.classes()).not.toContain("ds-kit-app-frame--safe-x");
+
+    const none = mount(AppFrame, { props: { safeArea: false } });
+    expect(none.classes()).not.toContain("ds-kit-app-frame--safe-bottom");
+    expect(none.classes()).not.toContain("ds-kit-app-frame--safe-x");
+    expect(none.classes()).not.toContain("ds-kit-app-frame--safe-top");
+  });
+
+  it("renders ScrollArea axis and safe-area classes", () => {
+    const vertical = mount(ScrollArea, { slots: { default: "Body" } });
+    expect(vertical.classes()).toContain("ds-kit-scroll-area--vertical");
+    expect(vertical.classes()).not.toContain("ds-kit-scroll-area--safe-area");
+    expect(vertical.text()).toBe("Body");
+    expect((vertical.vm as { element: Element | null }).element).toBe(vertical.element);
+
+    const horizontal = mount(ScrollArea, { props: { axis: "horizontal", safeArea: true } });
+    expect(horizontal.classes()).toContain("ds-kit-scroll-area--horizontal");
+    expect(horizontal.classes()).toContain("ds-kit-scroll-area--safe-area");
+  });
+});
+
+describe("useAppChrome", () => {
+  it("pushes a reactive title to the shell chrome and clears on unmount", async () => {
+    const titles: Array<string | null> = [];
+    const backs: Array<AppChromeBackAction | null> = [];
+    const controller: AppChromeController = {
+      setTitle: (title) => titles.push(title),
+      setBackAction: (action) => backs.push(action),
+    };
+
+    const Harness = defineComponent({
+      props: { title: { type: String, default: "" } },
+      setup(props) {
+        const chrome = useAppChrome({ title: () => props.title });
+        return { available: chrome.available };
+      },
+      template: "<div />",
+    });
+
+    const wrapper = mount(Harness, {
+      props: { title: "Inbox" },
+      global: { provide: { [AppChromeInjectionKey as symbol]: controller } },
+    });
+
+    expect((wrapper.vm as { available: boolean }).available).toBe(true);
+    expect(titles).toContain("Inbox");
+
+    await wrapper.setProps({ title: "Drafts" });
+    expect(titles).toContain("Drafts");
+
+    wrapper.unmount();
+    expect(titles.at(-1)).toBeNull();
+    expect(backs.at(-1)).toBeNull();
+  });
+
+  it("forwards imperative setters through the injected controller", () => {
+    const backs: Array<AppChromeBackAction | null> = [];
+    const controller: AppChromeController = {
+      setTitle: () => {},
+      setBackAction: (action) => backs.push(action),
+    };
+    const action: AppChromeBackAction = { ariaLabel: "Back", handler: () => {} };
+
+    const Harness = defineComponent({
+      setup() {
+        useAppChrome().setBackAction(action);
+        return {};
+      },
+      template: "<div />",
+    });
+
+    mount(Harness, { global: { provide: { [AppChromeInjectionKey as symbol]: controller } } });
+    expect(backs).toContainEqual(action);
+  });
+
+  it("no-ops on shells that do not provide app chrome", () => {
+    const Harness = defineComponent({
+      setup() {
+        const chrome = useAppChrome();
+        chrome.setTitle("Ignored");
+        chrome.setBackAction({ ariaLabel: "Back", handler: () => {} });
+        return { available: chrome.available };
+      },
+      template: "<div />",
+    });
+
+    const wrapper = mount(Harness);
+    expect((wrapper.vm as { available: boolean }).available).toBe(false);
+    expect(() => wrapper.unmount()).not.toThrow();
   });
 });

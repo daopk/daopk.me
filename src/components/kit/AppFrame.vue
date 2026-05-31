@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+
+/**
+ * - `true` (default): bottom + horizontal insets — the historical behavior.
+ * - `"all"`: top + bottom + horizontal, for full-bleed apps that draw under
+ *   shell chrome.
+ * - `"bottom"`: bottom only, when the app manages its own horizontal insets.
+ * - `false`: no inset padding; the app owns every edge.
+ */
+type SafeArea = boolean | "bottom" | "all";
 
 interface AppFrameProps {
   as?: keyof HTMLElementTagNameMap;
   background?: "default" | "subtle";
   layout?: "block" | "flex-column" | "grid";
-  safeArea?: boolean;
+  safeArea?: SafeArea;
 }
 
-withDefaults(defineProps<AppFrameProps>(), {
+const props = withDefaults(defineProps<AppFrameProps>(), {
   as: "section",
   background: "default",
   layout: "block",
@@ -16,6 +25,24 @@ withDefaults(defineProps<AppFrameProps>(), {
 });
 
 const element = ref<HTMLElement | null>(null);
+
+const safeAreaClasses = computed<string[]>(() => {
+  const mode = props.safeArea;
+  if (mode === false) {
+    return [];
+  }
+  if (mode === "bottom") {
+    return ["ds-kit-app-frame--safe-bottom"];
+  }
+  if (mode === "all") {
+    return [
+      "ds-kit-app-frame--safe-top",
+      "ds-kit-app-frame--safe-bottom",
+      "ds-kit-app-frame--safe-x",
+    ];
+  }
+  return ["ds-kit-app-frame--safe-bottom", "ds-kit-app-frame--safe-x"];
+});
 
 defineExpose({ element });
 </script>
@@ -25,11 +52,7 @@ defineExpose({ element });
     ref="element"
     :is="as"
     class="ds-kit-app-frame"
-    :class="[
-      `ds-kit-app-frame--${background}`,
-      `ds-kit-app-frame--${layout}`,
-      safeArea && 'ds-kit-app-frame--safe-area',
-    ]"
+    :class="[`ds-kit-app-frame--${background}`, `ds-kit-app-frame--${layout}`, safeAreaClasses]"
   >
     <slot />
   </component>
@@ -64,9 +87,16 @@ defineExpose({ element });
   display: grid;
 }
 
-.ds-kit-app-frame--safe-area {
-  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
+.ds-kit-app-frame--safe-x {
   padding-inline-end: var(--mobile-shell-app-safe-area-right, 0px);
   padding-inline-start: var(--mobile-shell-app-safe-area-left, 0px);
+}
+
+.ds-kit-app-frame--safe-bottom {
+  padding-block-end: var(--mobile-shell-app-bottom-padding, 0px);
+}
+
+.ds-kit-app-frame--safe-top {
+  padding-block-start: var(--mobile-shell-app-safe-area-top, 0px);
 }
 </style>
