@@ -44,15 +44,15 @@ jobs:
       has_changes: ${{ steps.detect.outputs.has_changes }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Full history so `git diff <before>..<after>` can resolve any base.
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: lts/*
 
       - name: Detect changed apps
         id: detect
@@ -75,17 +75,17 @@ jobs:
         app: ${{ fromJson(needs.detect.outputs.apps) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: lts/*
           cache: pnpm
 
       - name: Install dependencies
@@ -179,7 +179,7 @@ jobs:
           echo "Catalog entry: $(cat "catalog-entries/$APP.json")"
 
       - name: Stash catalog entry
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: catalog-entry-${{ matrix.app }}
           path: catalog-entries/${{ matrix.app }}.json
@@ -191,24 +191,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 11
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: lts/*
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Collect catalog entries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: catalog-entries
           pattern: catalog-entry-*
