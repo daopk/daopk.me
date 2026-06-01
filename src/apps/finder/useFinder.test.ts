@@ -230,6 +230,20 @@ describe("useFinder", () => {
     expect(finder.currentDirectoryReadonly.value).toBe(true);
   });
 
+  it("opens an initial file target by loading its parent directory and selecting it", async () => {
+    const finder = useFinder({
+      vfs: makeVfs({
+        "/home/docs": [entry("/home/docs/a.txt"), entry("/home/docs/b.txt")],
+      }),
+      initialPath: "/home/docs/a.txt",
+    });
+
+    await expect(finder.refresh()).resolves.toBe(true);
+
+    expect(finder.cwd.value).toBe("/home/docs");
+    expect(finder.selectedPath.value).toBe("/home/docs/a.txt");
+  });
+
   it("represents an empty directory without a selected entry", async () => {
     const finder = useFinder({ vfs: makeVfs({ "/": [] }) });
 
@@ -304,6 +318,21 @@ describe("useFinder", () => {
 
     await expect(finder.refresh()).resolves.toBe(false);
 
+    expect(finder.entries.value).toEqual([]);
+    expect(finder.error.value).toMatch(/permission/i);
+  });
+
+  it("surfaces missing initial targets without falling back to another directory", async () => {
+    const finder = useFinder({
+      vfs: makeVfs({
+        "/": [entry("/home", "directory")],
+      }),
+      initialPath: "/missing.txt",
+    });
+
+    await expect(finder.refresh()).resolves.toBe(false);
+
+    expect(finder.cwd.value).toBe("/missing.txt");
     expect(finder.entries.value).toEqual([]);
     expect(finder.error.value).toMatch(/permission/i);
   });

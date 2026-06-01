@@ -22,7 +22,11 @@ function context(overrides: Partial<AppResumeContext> = {}): AppResumeContext {
 describe("resolveAppResume", () => {
   it("resolves a finder reveal emission, carrying the optional reveal target", () => {
     const emission = resolveAppResume(
-      context({ manifestId: "finder", args: { path: "/portfolio", reveal: "/portfolio/x.md" } }),
+      context({
+        manifestId: "finder",
+        args: { path: "/portfolio", reveal: "/portfolio/x.md" },
+        source: "spotlight",
+      }),
     );
 
     expect(emission).toEqual({
@@ -36,7 +40,18 @@ describe("resolveAppResume", () => {
 
     expect(emission).toEqual({
       event: "finder.reveal.requested",
-      payload: { path: "/a", source: "spotlight" },
+      payload: { path: "/a", source: "api" },
+    });
+  });
+
+  it("preserves deeplink source for finder path resumes", () => {
+    const emission = resolveAppResume(
+      context({ manifestId: "finder", args: { path: "/a" }, source: "deeplink" }),
+    );
+
+    expect(emission).toEqual({
+      event: "finder.reveal.requested",
+      payload: { path: "/a", source: "deeplink" },
     });
   });
 

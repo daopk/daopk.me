@@ -8,6 +8,7 @@
 import { debugWarn } from "~/core/debug";
 import { appSettingsLaunchArgs, APP_SETTINGS_PANE } from "~/core/apps/appSettings";
 import { blogPostPathFromSlug } from "~/core/routing/blogPaths";
+import { normalizeVfsPath } from "~/core/vfs/path";
 
 import type { Kernel } from "~/types/kernel";
 import { isSettingsSectionId, type SettingsSectionId } from "~/types/settings";
@@ -57,6 +58,19 @@ function settingsSectionFromSearch(searchParams: URLSearchParams): SettingsSecti
   return value;
 }
 
+function finderPathFromSearch(searchParams: URLSearchParams): string | null {
+  const value = searchParams.get("path");
+  if (value === null) {
+    return null;
+  }
+
+  try {
+    return normalizeVfsPath(value);
+  } catch {
+    return null;
+  }
+}
+
 function argsForApp(
   manifestId: string,
   searchParams: URLSearchParams,
@@ -71,6 +85,13 @@ function argsForApp(
     const section = settingsSectionFromSearch(searchParams);
     if (section !== null) {
       args.section = section;
+    }
+  }
+
+  if (manifestId === "finder") {
+    const path = finderPathFromSearch(searchParams);
+    if (path !== null) {
+      args.path = path;
     }
   }
 

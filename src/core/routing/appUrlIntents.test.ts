@@ -105,6 +105,40 @@ describe("app URL intents", () => {
     });
   });
 
+  it("maps Finder path query to launch args", () => {
+    expect(parseAppUrlIntent("/apps/finder?path=/home/docs")).toEqual({
+      kind: "app",
+      manifestId: "finder",
+      args: { path: "/home/docs" },
+    });
+
+    expect(parseAppUrlIntent("/apps/finder?path=%2Fhome%2Fdocs%2Fnote.txt")).toEqual({
+      kind: "app",
+      manifestId: "finder",
+      args: { path: "/home/docs/note.txt" },
+    });
+  });
+
+  it("does not expose Finder reveal query args", () => {
+    expect(parseAppUrlIntent("/apps/finder?path=/home/docs&reveal=/home/docs/note.txt")).toEqual({
+      kind: "app",
+      manifestId: "finder",
+      args: { path: "/home/docs" },
+    });
+  });
+
+  it("ignores invalid Finder path query values", () => {
+    expect(parseAppUrlIntent("/apps/finder?path=relative")).toEqual({
+      kind: "app",
+      manifestId: "finder",
+    });
+
+    expect(parseAppUrlIntent("/apps/finder?path=")).toEqual({
+      kind: "app",
+      manifestId: "finder",
+    });
+  });
+
   it("parses `/blog` as the Blog app index launch intent", () => {
     expect(parseAppUrlIntent("/blog")).toEqual({
       kind: "app",
@@ -169,6 +203,18 @@ describe("app URL intents", () => {
       manifestId: "calendar",
       source: "deeplink",
       args: { pane: "settings" },
+    });
+  });
+
+  it("emits a Finder launch request for a URL path", () => {
+    const { kernel, eventsEmit } = makeKernel(["finder"]);
+
+    expect(consumeInitialAppUrlIntent(kernel, "/apps/finder?path=%2Fhome%2Fdocs")).toBe(true);
+
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "finder",
+      source: "deeplink",
+      args: { path: "/home/docs" },
     });
   });
 

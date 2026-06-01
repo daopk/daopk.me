@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { FinderFolderIcon } from "~/icons/fluentColor";
-import { Cloud } from "~/icons/lucide";
+import { CloudFolderIcon, FinderFolderIcon } from "~/icons/fluentColor";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
 import { normalizeVfsPath } from "~/core/vfs/path";
 
@@ -24,7 +23,7 @@ describe("finder display", () => {
     const home = directory("/home");
 
     expect(isCloudDriveEntry(cloud)).toBe(true);
-    expect(entryIcon(cloud)).toBe(Cloud);
+    expect(entryIcon(cloud)).toBe(CloudFolderIcon);
     expect(isCloudDriveEntry(home)).toBe(false);
     expect(entryIcon(home)).toBe(FinderFolderIcon);
   });

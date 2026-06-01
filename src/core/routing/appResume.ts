@@ -48,7 +48,7 @@ export type AppResumeEmission =
 
 type AppResumeHandler = (ctx: AppResumeContext) => AppResumeEmission | null;
 
-const resumeFinderReveal: AppResumeHandler = ({ manifestId, args }) => {
+const resumeFinderReveal: AppResumeHandler = ({ manifestId, args, source }) => {
   if (manifestId !== "finder" || typeof args?.path !== "string") {
     return null;
   }
@@ -59,7 +59,7 @@ const resumeFinderReveal: AppResumeHandler = ({ manifestId, args }) => {
     payload: {
       path: args.path,
       ...(reveal === undefined ? {} : { reveal }),
-      source: "spotlight",
+      source,
     },
   };
 };

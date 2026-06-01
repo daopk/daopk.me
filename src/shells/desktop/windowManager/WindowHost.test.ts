@@ -831,6 +831,44 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("replays Finder deeplink path args after focusing an existing Finder window", async () => {
+    const { kernel, launchSpy, bus } = makeKernel();
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "finder",
+      source: "deeplink",
+      args: { path: "/portfolio/posts/field-notes.md" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    bus.emit("app.launch.requested", {
+      manifestId: "finder",
+      source: "deeplink",
+      args: { path: "/portfolio/posts/field-notes.md" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(bus.emitted).toContainEqual({
+      channel: "finder.reveal.requested",
+      payload: { path: "/portfolio/posts/field-notes.md", source: "deeplink" },
+    });
+
+    wrapper.unmount();
+  });
+
   it("registers command-backed window actions", async () => {
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;

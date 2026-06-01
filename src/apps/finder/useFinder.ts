@@ -2,7 +2,7 @@ import { computed, ref, unref, type ComputedRef, type MaybeRef, type Ref } from 
 
 import { VfsError } from "~/core/vfs/errors";
 import { splitFilename } from "~/core/vfs/fileNames";
-import { basename, dirname, joinVfsPath, normalizeVfsPath } from "~/core/vfs/path";
+import { basename, dirname, joinVfsPath, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
 import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
 import type { TrashItem } from "~/types/trash";
 import { toErrorMessage } from "~/utils/errors";
@@ -85,6 +85,7 @@ export function useFinder({
   const selectionByDirectory = new Map<string, string>();
   let loadRun = 0;
   let pendingInitialReveal = safeNormalizeOptional(initialReveal);
+  let pendingInitialTarget = true;
 
   const selectedEntry = computed<VfsDirEntry | null>(
     () => entries.value.find((entry) => entry.path === selectedPath.value) ?? null,
@@ -97,9 +98,13 @@ export function useFinder({
   const breadcrumbs = computed<readonly FinderBreadcrumb[]>(() => buildBreadcrumbs(cwd.value));
   const currentDirectoryReadonly = computed(() => currentDirectory.value?.readonly === true);
 
-  async function loadDirectory(path: string, revealPath?: string | null): Promise<boolean> {
-    const run = ++loadRun;
-    let normalized: string;
+  async function loadDirectory(
+    path: string,
+    revealPath?: string | null,
+    existingRun?: number,
+  ): Promise<boolean> {
+    const run = existingRun ?? ++loadRun;
+    let normalized: VfsPath;
 
     try {
       normalized = normalizeVfsPath(path);
@@ -176,7 +181,7 @@ export function useFinder({
       return;
     }
 
-    let normalized: string;
+    let normalized: VfsPath;
     try {
       normalized = normalizeVfsPath(path);
     } catch {
@@ -226,13 +231,69 @@ export function useFinder({
   async function reveal(path: string, revealPath?: string): Promise<boolean> {
     const normalizedReveal = safeNormalizeOptional(revealPath);
     rememberSelection();
+    if (normalizedReveal === null) {
+      return await loadTarget(path);
+    }
+
     return await loadDirectory(path, normalizedReveal);
   }
 
   async function refresh(): Promise<boolean> {
     const revealPath = pendingInitialReveal;
     pendingInitialReveal = null;
+    if (pendingInitialTarget) {
+      pendingInitialTarget = false;
+      if (revealPath === null) {
+        return await loadTarget(cwd.value);
+      }
+    }
+
     return await loadDirectory(cwd.value, revealPath);
+  }
+
+  async function loadTarget(path: string): Promise<boolean> {
+    const run = ++loadRun;
+    let normalized: VfsPath;
+
+    try {
+      normalized = normalizeVfsPath(path);
+    } catch (loadError) {
+      if (run === loadRun) {
+        error.value = messageFromError(loadError);
+      }
+
+      return false;
+    }
+
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const targetStat = await vfs.stat(normalized);
+      if (run !== loadRun) {
+        return false;
+      }
+      if (targetStat === null) {
+        error.value = "Finder does not have permission to read this folder.";
+        return false;
+      }
+
+      if (targetStat.kind === "directory") {
+        return await loadDirectory(normalized, null, run);
+      }
+
+      return await loadDirectory(dirname(normalized), normalized, run);
+    } catch (loadError) {
+      if (run === loadRun) {
+        error.value = messageFromError(loadError);
+      }
+
+      return false;
+    } finally {
+      if (run === loadRun) {
+        loading.value = false;
+      }
+    }
   }
 
   async function openSelected(): Promise<boolean> {

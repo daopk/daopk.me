@@ -649,6 +649,26 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
+  it("selects an initial file path from launch args", async () => {
+    const wrapper = mountFinder(
+      makeKernel({
+        "/portfolio/posts": [
+          entry("/portfolio/posts/a.md"),
+          entry("/portfolio/posts/field-notes.md"),
+        ],
+      }),
+      makeContext({ path: "/portfolio/posts/field-notes.md" }),
+    );
+
+    await flushPromises();
+
+    expect(wrapper.find(".finder__toolbar").text()).toContain("posts");
+    const selected = wrapper.find(".finder__entry--selected");
+    expect(selected.text()).toContain("field-notes.md");
+
+    wrapper.unmount();
+  });
+
   it("responds to finder.reveal.requested while mounted", async () => {
     const kernel = makeKernel({
       "/": [entry("/portfolio", "directory")],

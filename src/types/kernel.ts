@@ -170,7 +170,7 @@ declare global {
     "finder.reveal.requested": {
       path: string;
       reveal?: string;
-      source: "spotlight";
+      source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
     };
   }
 }

@@ -11,6 +11,7 @@ export const fluentColorIconNames = [
   "arrow-sync-24",
   "calendar-32",
   "clock-32",
+  "cloud-24",
   "code-block-32",
   "document-24",
   "document-32",
@@ -65,6 +66,11 @@ export const fluentColorIconData = {
     width: 32,
     height: 32,
     body: '<g fill="none"><path fill="url(#SVGiFz8BbZD)" d="M16 30c7.732 0 14-6.268 14-14S23.732 2 16 2S2 8.268 2 16s6.268 14 14 14"/><path fill="url(#SVG4ze7Bf4C)" d="M14 9a1 1 0 1 1 2 0v7h4a1 1 0 1 1 0 2h-5a1 1 0 0 1-1-1z"/><defs><linearGradient id="SVGiFz8BbZD" x1="6.667" x2="20.667" y1=".444" y2="31.556" gradientUnits="userSpaceOnUse"><stop stop-color="#1ec8b0"/><stop offset="1" stop-color="#2764e7"/></linearGradient><linearGradient id="SVG4ze7Bf4C" x1="14.613" x2="11.885" y1="9.531" y2="17.383" gradientUnits="userSpaceOnUse"><stop stop-color="#fdfdfd"/><stop offset="1" stop-color="#d1d1ff"/></linearGradient></defs></g>',
+  },
+  "cloud-24": {
+    width: 24,
+    height: 24,
+    body: '<g fill="none"><path fill="url(#SVGkDYJieph)" d="M6.08 9.02a6.001 6.001 0 0 1 11.84 0A4.5 4.5 0 0 1 17.5 18h-11a4.5 4.5 0 0 1-.42-8.98"/><path fill="url(#SVGLDT2YbAc)" fill-opacity=".3" d="M11 13.5a4.5 4.5 0 1 1-9 0a4.5 4.5 0 0 1 9 0"/><path fill="url(#SVGmY5lTcYs)" fill-opacity=".3" d="M12 16a6 6 0 1 0-5.92-6.98Q6.287 9 6.5 9a4.5 4.5 0 0 1 3.881 6.779A6 6 0 0 0 12 16"/><path fill="url(#SVGRBtkrdPW)" d="M12 16a6 6 0 1 0-5.92-6.98Q6.287 9 6.5 9a4.5 4.5 0 0 1 3.881 6.779A6 6 0 0 0 12 16"/><path fill="url(#SVGNSA26dPB)" fill-opacity=".5" d="M6.08 9.02a6.001 6.001 0 0 1 11.84 0A4.5 4.5 0 0 1 17.5 18h-11a4.5 4.5 0 0 1-.42-8.98"/><defs><linearGradient id="SVGkDYJieph" x1="2.714" x2="11.675" y1="6.625" y2="19.925" gradientUnits="userSpaceOnUse"><stop stop-color="#0fafff"/><stop offset="1" stop-color="#367af2"/></linearGradient><linearGradient id="SVGLDT2YbAc" x1="2" x2="8.067" y1="10.542" y2="15.912" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fcfcfc" stop-opacity="0"/></linearGradient><linearGradient id="SVGmY5lTcYs" x1="8.146" x2="9.739" y1="4.675" y2="12.946" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fcfcfc" stop-opacity="0"/></linearGradient><radialGradient id="SVGRBtkrdPW" cx="0" cy="0" r="1" gradientTransform="rotate(-22.986 37.27 -9.185)scale(7.29834 6.53738)" gradientUnits="userSpaceOnUse"><stop offset=".412" stop-color="#2c87f5"/><stop offset="1" stop-color="#2c87f5" stop-opacity="0"/></radialGradient><radialGradient id="SVGNSA26dPB" cx="0" cy="0" r="1" gradientTransform="rotate(63.575 3.062 10.572)scale(17.3211 125.045)" gradientUnits="userSpaceOnUse"><stop offset=".5" stop-color="#dd3ce2" stop-opacity="0"/><stop offset="1" stop-color="#dd3ce2"/></radialGradient></defs></g>',
   },
   "code-block-32": {
     width: 32,

@@ -15,6 +15,7 @@ const ICON_NAMES = [
   "arrow-sync-24",
   "calendar-32",
   "clock-32",
+  "cloud-24",
   "code-block-32",
   "document-24",
   "document-32",

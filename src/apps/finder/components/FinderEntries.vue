@@ -8,13 +8,7 @@ import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide"
 
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../openSuggestions";
 import type { FinderViewMode } from "../useFinder";
-import {
-  entryIcon,
-  entryKindLabel,
-  formatBytes,
-  formatModified,
-  isCloudDriveEntry,
-} from "../display";
+import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../display";
 
 const GRID_KEYBOARD_COLUMNS = 4;
 const GRID_MIN_COLUMN_WIDTH = 120;
@@ -280,7 +274,6 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   <component
                     :is="entryIcon(entry)"
                     class="finder__entry-icon"
-                    :class="{ 'finder__entry-icon--cloud': isCloudDriveEntry(entry) }"
                     :size="viewMode === 'grid' ? 28 : 18"
                     aria-hidden="true"
                   />
@@ -448,10 +441,6 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 
 .finder__entry-icon {
   flex: 0 0 auto;
-}
-
-.finder__entry-icon--cloud {
-  color: var(--color-accent);
 }
 
 .finder__entry-name {
