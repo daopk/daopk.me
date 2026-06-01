@@ -42,6 +42,11 @@ describe("design tokens", () => {
     expect(matches.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("derives accent hover from the active accent token", () => {
+    expect(tokens).toContain("--color-accent-hover: color-mix(in srgb, var(--color-accent)");
+    expect(tokens).not.toMatch(/--color-accent-hover:\s*#[0-9a-f]{3,8}\b/i);
+  });
+
   it("defines radius-full and space-2xs helpers", () => {
     expect(tokens).toContain("--radius-full:");
     expect(tokens).toContain("--space-2xs:");

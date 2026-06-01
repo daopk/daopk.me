@@ -95,7 +95,7 @@
 
   --color-accent: #5a2d82;
   --color-accent-fg: #ffffff;
-  --color-accent-hover: #70379e;
+  --color-accent-hover: color-mix(in srgb, var(--color-accent) 88%, black 12%);
   --color-accent-sheen: #b794d6;
 
   --space-base: 4px;
