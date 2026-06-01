@@ -12,8 +12,8 @@ import {
   StatusBanner,
   TextInput,
   ToolbarGroup,
-} from "~/components/kit";
-import { Button, ContextMenu, ContextMenuItem } from "~/components/ui";
+} from "@daopk/kit";
+import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,8 +23,8 @@ import {
   RefreshCw,
   Search,
   Shield,
-} from "~/icons/lucide";
-import { AppContextInjectionKey } from "~/types/app";
+} from "@daopk/icons";
+import { AppContextInjectionKey } from "@daopk/sdk";
 
 import { BROWSER_QUICK_LINKS, useBrowser } from "./useBrowser";
 

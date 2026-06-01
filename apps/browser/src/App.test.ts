@@ -1,7 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import { AppContextInjectionKey, type AppContext } from "@daopk/sdk";
 
 import App from "./App.vue";
 
