@@ -496,6 +496,67 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
+  it("focuses a PDF Viewer frame that is already showing the requested file", async () => {
+    currentKernel = makeKernel([manifest({ id: "pdf-viewer", name: "PDF Viewer" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "pdf-viewer",
+      source: "api",
+      args: { path: "/docs/a.pdf" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: "h-1",
+      path: "/docs/a.pdf",
+    });
+    currentKernel.events.emit("pdf-viewer.open.requested", {
+      source: "api",
+      path: "/docs/a.pdf",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(1);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-1");
+
+    wrapper.unmount();
+  });
+
+  it("spawns a new PDF Viewer frame when no frame is showing the requested file", async () => {
+    currentKernel = makeKernel([manifest({ id: "pdf-viewer", name: "PDF Viewer" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "pdf-viewer",
+      source: "api",
+      args: { path: "/docs/a.pdf" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: "h-1",
+      path: "/docs/a.pdf",
+    });
+    currentKernel.events.emit("pdf-viewer.open.requested", {
+      source: "api",
+      path: "/docs/b.pdf",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(2);
+    expect(wrapper.findAll("section.app-view")).toHaveLength(2);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-2");
+
+    wrapper.unmount();
+  });
+
   it("two-app coexistence: launch alpha → back → launch beta → both frames alive in the stack", async () => {
     currentKernel = makeKernel([manifest({ id: "alpha" }), manifest({ id: "beta", name: "Beta" })]);
 

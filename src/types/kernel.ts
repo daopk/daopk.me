@@ -71,6 +71,10 @@ declare global {
       source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
       path: string;
     };
+    "pdf-viewer.open.requested": {
+      source: CommandSource;
+      path: string;
+    };
     "editor.open.requested": {
       source: CommandSource;
       path: string;

@@ -182,6 +182,27 @@ describe("usePdfViewer", () => {
     unmount();
   });
 
+  it("exposes the VFS path while a PDF load is pending", async () => {
+    const pendingDocument = deferred<PdfDocumentLike>();
+    const task: PdfLoadingTaskLike & { destroy: ReturnType<typeof vi.fn> } = {
+      promise: pendingDocument.promise,
+      destroy: vi.fn(async () => undefined),
+    };
+    const adapter = makeAdapter(task);
+    const { viewer, unmount } = harness({ adapter });
+
+    const load = viewer.loadFromPath("/docs/spec.pdf");
+
+    expect(viewer.status.value).toBe("loading");
+    expect(viewer.title.value).toBe("spec.pdf");
+    expect(viewer.path.value).toBe("/docs/spec.pdf");
+
+    pendingDocument.resolve(makeDocument());
+    await load;
+
+    unmount();
+  });
+
   it("loads a PDF from a local File without writing to VFS", async () => {
     const vfs = makeVfs();
     const adapter = makeAdapter();

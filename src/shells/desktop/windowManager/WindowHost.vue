@@ -126,6 +126,10 @@ const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested",
   void onBlogPostOpenRequested(payload.path, payload.slug);
 });
 
+const disposePdfViewerOpenListener = kernel.events.on("pdf-viewer.open.requested", (payload) => {
+  void onPdfViewerOpenRequested(payload.path);
+});
+
 const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
   windowManager.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
 });
@@ -365,6 +369,24 @@ async function onBlogPostOpenRequested(path: string, slug: string): Promise<void
   await openNewWindow("blog", { path: normalizedPath, slug });
 }
 
+async function onPdfViewerOpenRequested(path: string): Promise<void> {
+  const normalizedPath = normalizeOpenRequestPath("pdf-viewer.open.requested", path);
+  if (normalizedPath === null) {
+    return;
+  }
+
+  const matchingRecord = topmostWindowForManifest(
+    "pdf-viewer",
+    (record) => documentPathFor(record) === normalizedPath,
+  );
+  if (matchingRecord !== null) {
+    windowManager.focus(matchingRecord.id);
+    return;
+  }
+
+  await openNewWindow("pdf-viewer", { path: normalizedPath });
+}
+
 function normalizeEditorOpenPath(path: string): string | null {
   return normalizeOpenRequestPath("editor.open.requested", path);
 }
@@ -518,6 +540,7 @@ onBeforeUnmount(() => {
   disposeSpawnNewListener();
   disposeEditorOpenListener();
   disposeBlogPostOpenListener();
+  disposePdfViewerOpenListener();
   disposeDocumentChangedListener();
   disposeKilledListener();
   for (const dispose of disposeWindowCommands) {

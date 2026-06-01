@@ -525,10 +525,9 @@ describe("Finder App.vue", () => {
     openItem!.click();
     await flushReka();
 
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "pdf-viewer",
+    expect(kernel.events.emit).toHaveBeenCalledWith("pdf-viewer.open.requested", {
       source: "api",
-      args: { path: "/manual.pdf" },
+      path: "/manual.pdf",
     });
     expect(wrapper.text()).toContain("Open this document in PDF Viewer.");
 
@@ -545,10 +544,9 @@ describe("Finder App.vue", () => {
     await wrapper.find(".finder__entries").trigger("keydown", { key: "Enter" });
     await wrapper.find(".finder__entry").trigger("dblclick");
 
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "pdf-viewer",
+    expect(kernel.events.emit).toHaveBeenCalledWith("pdf-viewer.open.requested", {
       source: "api",
-      args: { path: "/manual.pdf" },
+      path: "/manual.pdf",
     });
     expect(kernel.events.emit).toHaveBeenCalledTimes(2);
 

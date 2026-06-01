@@ -40,6 +40,10 @@ const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested",
   void onBlogPostOpenRequested(payload.path, payload.slug);
 });
 
+const disposePdfViewerOpenListener = kernel.events.on("pdf-viewer.open.requested", (payload) => {
+  void onPdfViewerOpenRequested(payload.path);
+});
+
 const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
   nav.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
 });
@@ -88,6 +92,7 @@ onBeforeUnmount(() => {
   disposeSpawnNewListener();
   disposeEditorOpenListener();
   disposeBlogPostOpenListener();
+  disposePdfViewerOpenListener();
   disposeDocumentChangedListener();
   disposeKilledListener();
   if (typeof window === "undefined") {
@@ -302,6 +307,39 @@ async function onBlogPostOpenRequested(path: string, slug: string): Promise<void
     lastLaunchedManifestId.value = "blog";
   } finally {
     clearLaunching("blog");
+  }
+}
+
+async function onPdfViewerOpenRequested(path: string): Promise<void> {
+  const unsupported = unsupportedManifestFor("pdf-viewer");
+
+  if (unsupported) {
+    showSwitcher.value = false;
+    clearLaunching("pdf-viewer");
+    alertUnsupportedManifest(unsupported);
+    return;
+  }
+
+  const normalizedPath = normalizeOpenRequestPath("pdf-viewer.open.requested", path);
+  if (normalizedPath === null) {
+    return;
+  }
+
+  const matchingFrame = topmostFrameForManifest(
+    "pdf-viewer",
+    (frame) => documentPathFor(frame) === normalizedPath,
+  );
+  if (matchingFrame !== null) {
+    nav.focusFrame(matchingFrame.frameId);
+    return;
+  }
+
+  addLaunching("pdf-viewer");
+  try {
+    await nav.spawnNew("pdf-viewer", { path: normalizedPath });
+    lastLaunchedManifestId.value = "pdf-viewer";
+  } finally {
+    clearLaunching("pdf-viewer");
   }
 }
 

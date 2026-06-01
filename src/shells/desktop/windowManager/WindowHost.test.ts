@@ -725,6 +725,112 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("focuses a PDF Viewer window that is already showing the requested file", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("pdf-viewer", "PDF Viewer")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "pdf-viewer",
+      source: "api",
+      args: { path: "/docs/a.pdf" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    bus.emit("app.spawn.new", {
+      manifestId: "pdf-viewer",
+      source: "api",
+      args: { path: "/docs/b.pdf" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const [a, b] = manager.windows.filter((entry) => entry.manifestId === "pdf-viewer");
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+
+    bus.emit("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: a!.handleId,
+      path: "/docs/a.pdf",
+    });
+    bus.emit("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: b!.handleId,
+      path: "/docs/b.pdf",
+    });
+    manager.minimize(b!.id);
+
+    bus.emit("pdf-viewer.open.requested", {
+      source: "api",
+      path: "/docs/a.pdf",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(manager.windows.find((entry) => entry.id === a!.id)?.focused).toBe(true);
+    expect(manager.windows.find((entry) => entry.id === b!.id)?.minimized).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("opens a new PDF Viewer window when no window is showing the requested file", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("pdf-viewer", "PDF Viewer")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "pdf-viewer",
+      source: "api",
+      args: { path: "/docs/a.pdf" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const existing = manager.windows.find((entry) => entry.manifestId === "pdf-viewer");
+    expect(existing).toBeDefined();
+    bus.emit("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: existing!.handleId,
+      path: "/docs/a.pdf",
+    });
+
+    bus.emit("pdf-viewer.open.requested", {
+      source: "api",
+      path: "/docs/b.pdf",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(launchSpy).toHaveBeenLastCalledWith("pdf-viewer", {
+      path: "/docs/b.pdf",
+    });
+    expect(manager.windows.filter((entry) => entry.manifestId === "pdf-viewer")).toHaveLength(2);
+
+    wrapper.unmount();
+  });
+
   it("registers command-backed window actions", async () => {
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;

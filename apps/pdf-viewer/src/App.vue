@@ -25,15 +25,17 @@ import {
   ZoomIn,
   ZoomOut,
 } from "@daopk/icons";
-import { AppContextInjectionKey, useVfs } from "@daopk/sdk";
+import { AppContextInjectionKey, normalizeVfsPath, useKernel, useVfs } from "@daopk/sdk";
 
 import { usePdfViewer } from "./usePdfViewer";
 
 const ctx = inject(AppContextInjectionKey, null);
+const kernel = useKernel();
 const vfs = useVfs();
+const initialPath = typeof ctx?.args.path === "string" ? ctx.args.path : undefined;
 const viewer = usePdfViewer({
   vfs,
-  initialPath: typeof ctx?.args.path === "string" ? ctx.args.path : undefined,
+  initialPath,
 });
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -63,6 +65,37 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  viewer.path,
+  () => {
+    emitDocumentPath(normalizeDocumentPath(viewer.path.value));
+  },
+  { immediate: true },
+);
+
+function normalizeDocumentPath(path: string | null | undefined): string | null {
+  if (path === null || path === undefined) {
+    return null;
+  }
+  try {
+    return normalizeVfsPath(path);
+  } catch {
+    return null;
+  }
+}
+
+function emitDocumentPath(path: string | null): void {
+  if (ctx === null) {
+    return;
+  }
+
+  kernel.events.emit("app.document.changed", {
+    manifestId: ctx.manifestId,
+    handleId: ctx.handleId,
+    path,
+  });
+}
 
 function openFilePicker(): void {
   fileInput.value?.click();

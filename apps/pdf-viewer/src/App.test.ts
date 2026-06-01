@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 
 import { AppContextInjectionKey, type AppContext } from "@daopk/sdk";
 
@@ -13,6 +13,7 @@ import type {
 } from "./usePdfViewer";
 
 const mocks = vi.hoisted(() => ({
+  useKernel: vi.fn(),
   usePdfViewer: vi.fn(),
   useVfs: vi.fn(() => ({ stat: vi.fn(), read: vi.fn() })),
 }));
@@ -25,6 +26,7 @@ vi.mock("./usePdfViewer", () => ({
 // chunk, so override only `useVfs` and keep every other real export intact.
 vi.mock("@daopk/sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@daopk/sdk")>()),
+  useKernel: mocks.useKernel,
   useVfs: mocks.useVfs,
 }));
 
@@ -34,6 +36,14 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     handleId: "pdf-viewer-handle",
     args: Object.freeze(args),
   });
+}
+
+function makeKernel() {
+  return {
+    events: {
+      emit: vi.fn(),
+    },
+  };
 }
 
 function makeViewer(
@@ -87,8 +97,9 @@ function makeViewer(
   };
 }
 
-function mountPdfViewer(viewer: PdfViewerBindings, context = makeContext()) {
+function mountPdfViewer(viewer: PdfViewerBindings, context = makeContext(), kernel = makeKernel()) {
   mocks.usePdfViewer.mockReturnValue(viewer);
+  mocks.useKernel.mockReturnValue(kernel);
   return mount(App, {
     global: {
       provide: {
@@ -138,6 +149,40 @@ describe("PDF Viewer App.vue", () => {
     expect(wrapper.find(".pdf-viewer__status").exists()).toBe(true);
     expect(wrapper.text()).toContain("spec.pdf");
     expect(wrapper.text()).toContain("/docs/spec.pdf");
+
+    wrapper.unmount();
+  });
+
+  it("emits document path changes for VFS PDFs", async () => {
+    const kernel = makeKernel();
+    const viewer = makeViewer();
+    const wrapper = mountPdfViewer(viewer, makeContext(), kernel);
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: "pdf-viewer-handle",
+      path: null,
+    });
+
+    viewer.sourceKind.value = "vfs";
+    viewer.path.value = "/docs/spec.pdf";
+    await nextTick();
+
+    expect(kernel.events.emit).toHaveBeenLastCalledWith("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: "pdf-viewer-handle",
+      path: "/docs/spec.pdf",
+    });
+
+    viewer.sourceKind.value = "file";
+    viewer.path.value = null;
+    await nextTick();
+
+    expect(kernel.events.emit).toHaveBeenLastCalledWith("app.document.changed", {
+      manifestId: "pdf-viewer",
+      handleId: "pdf-viewer-handle",
+      path: null,
+    });
 
     wrapper.unmount();
   });

@@ -106,12 +106,16 @@ export function usePdfViewer({
   initialPath,
   adapter = createPdfJsAdapter(),
 }: UsePdfViewerOptions): PdfViewerBindings {
+  const initialVfsPath =
+    typeof initialPath === "string" && initialPath.trim().length > 0
+      ? safeNormalizePath(initialPath)
+      : null;
   const canvasEl = ref<HTMLCanvasElement | null>(null);
   const viewportEl = ref<HTMLElement | null>(null);
   const status = ref<PdfViewerStatus>("idle");
   const sourceKind = ref<PdfViewerSourceKind>("empty");
-  const title = ref("");
-  const path = ref<string | null>(null);
+  const title = ref(initialVfsPath === null ? "" : basename(initialVfsPath));
+  const path = ref<string | null>(initialVfsPath);
   const pageNumber = ref(1);
   const pageCount = ref(0);
   const scale = ref(1);
@@ -164,6 +168,8 @@ export function usePdfViewer({
       fail(loadRun, "Enter a valid VFS path.");
       return false;
     }
+    title.value = basename(normalized);
+    path.value = normalized;
 
     try {
       const stat = await vfs.stat(normalized);

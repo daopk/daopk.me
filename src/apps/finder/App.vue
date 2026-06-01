@@ -202,10 +202,9 @@ function openEntry(entry: VfsDirEntry): void {
 }
 
 function openPdf(entry: VfsDirEntry): void {
-  kernel.events.emit("app.launch.requested", {
-    manifestId: "pdf-viewer",
+  kernel.events.emit("pdf-viewer.open.requested", {
     source: "api",
-    args: { path: entry.path },
+    path: entry.path,
   });
 }
 
