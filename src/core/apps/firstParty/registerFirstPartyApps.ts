@@ -16,6 +16,19 @@ import type { FirstPartyAppDescriptor, FirstPartyWidgetDescriptor } from "./type
  */
 export type FirstPartyModuleLoader = () => Promise<Record<string, unknown>>;
 
+/**
+ * Wrap a resolved component in an ESM-flagged record. Every manifest consumer
+ * (`AppMount` + the widget surfaces) feeds `component` straight to Vue's
+ * `defineAsyncComponent`, which only unwraps `.default` when the resolved value
+ * is module-shaped (`__esModule` or `Symbol.toStringTag === "Module"`). Real
+ * `import()` records carry that flag; a plain `{ default }` object does not and
+ * would be treated as the component itself — rendering nothing, silently, in
+ * production. Synthetic records picked from the app module must mirror it.
+ */
+function asEsmModule(component: Component): { default: Component } {
+  return { default: component, __esModule: true } as { default: Component };
+}
+
 /** Build a widget's runtime loader from a named export of the app module. */
 function toWidgetManifest(
   descriptor: FirstPartyWidgetDescriptor,
@@ -24,7 +37,7 @@ function toWidgetManifest(
   const { exportName, ...rest } = descriptor;
   return {
     ...rest,
-    component: () => load().then((module) => ({ default: module[exportName] as Component })),
+    component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
   };
 }
 
@@ -40,7 +53,7 @@ function toManifest(
     version,
     icon: descriptor.icon,
     category: descriptor.category,
-    component: () => load().then((module) => ({ default: module.default as Component })),
+    component: () => load().then((module) => asEsmModule(module.default as Component)),
   };
 
   if (descriptor.hidden !== undefined) manifest.hidden = descriptor.hidden;
