@@ -10,6 +10,8 @@ import {
 
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const COEP_HEADER = "Cross-Origin-Embedder-Policy";
+const COOP_HEADER = "Cross-Origin-Opener-Policy";
 
 const DEFAULT_OBJECTS: Record<string, string> = {
   "index.json": '[{"slug":"building-a-tiny-web-os","title":"Building a Tiny OS in the Browser"}]',
@@ -17,6 +19,11 @@ const DEFAULT_OBJECTS: Record<string, string> = {
   "seo/blog-index.html": "<main>Latest posts</main>",
   "seo/posts/building-a-tiny-web-os.html": "<article>Building a Tiny OS in the Browser</article>",
   "sitemap.xml": '<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>',
+};
+
+const DEFAULT_APPS: Record<string, string> = {
+  "index.json": '[{"id":"notes","version":"1.0.0"}]',
+  "notes/1.0.0/app.js": "export default {};\n",
 };
 
 function bodyStream(text: string): ReadableStream {
@@ -68,9 +75,11 @@ function photoObjectBody(fixture: PhotoFixture): R2ObjectBody {
 function makeEnv(
   objects: Record<string, string> = DEFAULT_OBJECTS,
   photos: readonly PhotoFixture[] = DEFAULT_PHOTOS,
+  apps: Record<string, string> = DEFAULT_APPS,
 ): {
   env: WorkerEnv;
   get: ReturnType<typeof vi.fn>;
+  appsGet: ReturnType<typeof vi.fn>;
   assets: ReturnType<typeof vi.fn>;
   photosGet: ReturnType<typeof vi.fn>;
   photosList: ReturnType<typeof vi.fn>;
@@ -79,6 +88,10 @@ function makeEnv(
   const get = vi.fn(
     async (key: string): Promise<R2ObjectBody | null> =>
       Object.prototype.hasOwnProperty.call(objects, key) ? r2Object(objects[key] as string) : null,
+  );
+  const appsGet = vi.fn(
+    async (key: string): Promise<R2ObjectBody | null> =>
+      Object.prototype.hasOwnProperty.call(apps, key) ? r2Object(apps[key] as string) : null,
   );
   const assets = vi.fn(
     async (): Promise<Response> =>
@@ -107,9 +120,11 @@ function makeEnv(
     env: {
       ASSETS: { fetch: assets },
       BLOG: { get },
+      APPS: { get: appsGet },
       PHOTOS: { get: photosGet, list: photosList, put: photosPut },
     },
     get,
+    appsGet,
     assets,
     photosGet,
     photosList,
@@ -128,6 +143,11 @@ function browser(path: string): Request {
   return new Request(`https://daopk.me${path}`, {
     headers: { "User-Agent": BROWSER_USER_AGENT },
   });
+}
+
+function expectCrossOriginIsolation(response: Response): void {
+  expect(response.headers.get(COEP_HEADER)).toBe("credentialless");
+  expect(response.headers.get(COOP_HEADER)).toBe("same-origin");
 }
 
 describe("SEO Worker — crawler detection", () => {
@@ -289,6 +309,27 @@ describe("SEO Worker — humans and other routes", () => {
 
     expect(assets).toHaveBeenCalledWith(request);
     expect(get).not.toHaveBeenCalled();
+  });
+});
+
+describe("Worker responses — cross-origin isolation", () => {
+  it.each([
+    ["R2 blog JSON", () => makeEnv(), () => browser("/blog/index.json")],
+    ["R2 markdown", () => makeEnv(), () => browser("/blog/building-a-tiny-web-os.md")],
+    ["R2 SEO HTML", () => makeEnv(), () => crawler("/blog/building-a-tiny-web-os")],
+    ["app catalog", () => makeEnv(), () => browser("/apps/index.json")],
+    ["app module", () => makeEnv(), () => browser("/apps/notes/1.0.0/app.js")],
+    ["photo index", () => makeEnv(), () => browser("/photos/index.json")],
+    ["photo bytes", () => makeEnv(), () => browser("/photos/ocean.png")],
+    ["noindex 404", () => makeEnv({}), () => browser("/blog/index.json")],
+    ["asset fallback", () => makeEnv(), () => browser("/about")],
+    ["sitemap asset fallback", () => makeEnv({}), () => browser("/sitemap.xml")],
+  ])("adds isolation headers to %s responses", async (_label, makeScenarioEnv, makeRequest) => {
+    const { env } = makeScenarioEnv();
+
+    const response = await handleRequest(makeRequest(), env);
+
+    expectCrossOriginIsolation(response);
   });
 });
 

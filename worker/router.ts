@@ -71,6 +71,10 @@ const R2_SITEMAP_KEY = "sitemap.xml";
 const R2_SEO_INDEX_KEY = "seo/blog-index.html";
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+const CROSS_ORIGIN_ISOLATION_HEADERS = {
+  "Cross-Origin-Embedder-Policy": "credentialless",
+  "Cross-Origin-Opener-Policy": "same-origin",
+};
 
 // First-party apps published independently of the shell. The catalog (mutable,
 // revalidated) lives at the APPS bucket root; version-pinned modules are
@@ -103,6 +107,19 @@ function appendVary(value: string | null, token: string): string {
 
   const parts = value.split(",").map((part) => part.trim().toLowerCase());
   return parts.includes(token.toLowerCase()) ? value : `${value}, ${token}`;
+}
+
+function withCrossOriginIsolation(response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(CROSS_ORIGIN_ISOLATION_HEADERS)) {
+    headers.set(name, value);
+  }
+
+  return new Response(response.body, {
+    headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
 }
 
 function noIndexResponse(message: string, status = 404): Response {
@@ -305,7 +322,7 @@ async function serveResizedPhoto(
   return new Response(request.method === "HEAD" ? null : bytes, { headers });
 }
 
-export async function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
+async function routeRequest(request: Request, env: WorkerEnv): Promise<Response> {
   const url = new URL(request.url);
   const { pathname } = url;
 
@@ -405,6 +422,10 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
   }
 
   return serveSeoPage(env, `seo/posts/${slug}.html`, request, "Blog post not found.");
+}
+
+export async function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
+  return withCrossOriginIsolation(await routeRequest(request, env));
 }
 
 export default {

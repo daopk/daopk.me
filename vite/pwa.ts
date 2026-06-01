@@ -46,6 +46,11 @@ export function pwaPlugin(): PluginOption {
     workbox: {
       cacheId: "daopk-me",
       cleanupOutdatedCaches: true,
+      // vite-plugin-pwa defaults this to /^assets\// because Vite emits hashed
+      // asset names. Keep Workbox revisions anyway so update installs use
+      // cache: "reload" and refresh immutable responses that may have old
+      // security headers in browser caches.
+      dontCacheBustURLsMatching: undefined,
       globPatterns: ["index.html", "favicon.ico", "assets/**/*.{js,css}"],
       navigateFallback: "index.html",
       // First-party app modules live OUTSIDE the precache (they ship from R2,
