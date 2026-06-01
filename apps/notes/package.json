@@ -2,8 +2,8 @@
   "name": "@daopk-app/notes",
   "version": "1.0.1",
   "private": true,
-  "type": "module",
   "description": "Notes — a first-party daopk.me app published independently of the shell.",
+  "type": "module",
   "main": "./src/main.ts",
   "exports": {
     ".": "./src/main.ts"

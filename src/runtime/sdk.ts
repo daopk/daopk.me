@@ -25,11 +25,7 @@
 import { inject, type InjectionKey } from "vue";
 
 import type { AppChromeController, AppContext } from "~/types/app";
-import type {
-  Kernel,
-  KernelVfsDirectoryOptions,
-  KernelVfsWriteOptions,
-} from "~/types/kernel";
+import type { Kernel, KernelVfsDirectoryOptions, KernelVfsWriteOptions } from "~/types/kernel";
 
 /** Provided at the app root in `main.ts`; resolved by `useKernel`. */
 export const KernelInjectionKey: InjectionKey<Kernel> = Symbol("daopk.kernel");
@@ -132,13 +128,7 @@ export type {
   AppPermission,
 } from "~/types/app";
 export type { Kernel } from "~/types/kernel";
-export type {
-  VfsDirEntry,
-  VfsInode,
-  VfsNodeKind,
-  VfsReadResult,
-  VfsStat,
-} from "~/core/vfs/nodes";
+export type { VfsDirEntry, VfsInode, VfsNodeKind, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
 export type { VfsPath } from "~/core/vfs/path";
 export type { VfsFileTypeInput, VfsRenderableFileType } from "~/core/vfs/fileTypes";
 export type { VfsErrorCode } from "~/core/vfs/errors";

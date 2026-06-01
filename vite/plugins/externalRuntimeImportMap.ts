@@ -40,7 +40,9 @@ export function externalRuntimeImportMap(): PluginOption {
         for (const { specifier, chunkName } of EXTERNAL_RUNTIME_ENTRIES) {
           const file = findChunkFileByName(bundle, chunkName);
           if (!file) {
-            console.warn(`[daopk] external runtime import map skipped: ${specifier} chunk not found`);
+            console.warn(
+              `[daopk] external runtime import map skipped: ${specifier} chunk not found`,
+            );
             return html;
           }
           imports[specifier] = `/${file}`;

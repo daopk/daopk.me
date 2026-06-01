@@ -2,8 +2,8 @@
   "name": "@daopk-app/browser",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "description": "Browser — a first-party daopk.me app published independently of the shell.",
+  "type": "module",
   "main": "./src/main.ts",
   "exports": {
     ".": "./src/main.ts"

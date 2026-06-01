@@ -139,7 +139,7 @@ function buildPostDocument({ html, metadata, slug }) {
       "@type": "Person",
       name: metadata.author,
     },
-    dateModified: (metadata.updated ?? metadata.date) ?? undefined,
+    dateModified: metadata.updated ?? metadata.date ?? undefined,
     datePublished: metadata.date ?? undefined,
     description: metadata.description,
     headline: title,
@@ -520,7 +520,9 @@ async function main() {
   await writeTextFile(SEO_BLOG_INDEX_FILE, buildIndexDocument(sortedPosts));
   await writeTextFile(SITEMAP_FILE, buildSitemap(sortedPosts));
 
-  console.log(`Built blog bundle (${posts.length} post${posts.length === 1 ? "" : "s"}) -> blog-dist/`);
+  console.log(
+    `Built blog bundle (${posts.length} post${posts.length === 1 ? "" : "s"}) -> blog-dist/`,
+  );
 }
 
 main().catch((error) => {

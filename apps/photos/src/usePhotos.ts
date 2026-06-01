@@ -34,8 +34,7 @@ export function photoFromEntry(entry: unknown): Photo | null {
     return null;
   }
 
-  const size =
-    typeof record.size === "number" && Number.isFinite(record.size) ? record.size : 0;
+  const size = typeof record.size === "number" && Number.isFinite(record.size) ? record.size : 0;
 
   return {
     key,

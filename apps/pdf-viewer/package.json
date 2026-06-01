@@ -2,8 +2,8 @@
   "name": "@daopk-app/pdf-viewer",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "description": "PDF Viewer — a first-party daopk.me app published independently of the shell.",
+  "type": "module",
   "main": "./src/main.ts",
   "exports": {
     ".": "./src/main.ts"

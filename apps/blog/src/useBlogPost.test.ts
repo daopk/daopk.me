@@ -42,9 +42,7 @@ function renderer(overrides: Partial<MarkdownRenderer> = {}): MarkdownRenderer {
 
 type PostSource = Pick<BlogContentSource, "readPostCache" | "fetchPost">;
 
-function mountHarness(
-  options: Partial<BlogPostOptions> & { source?: Partial<PostSource> } = {},
-) {
+function mountHarness(options: Partial<BlogPostOptions> & { source?: Partial<PostSource> } = {}) {
   let state: ReturnType<typeof useBlogPost> | undefined;
   const source: PostSource = {
     readPostCache: options.source?.readPostCache ?? vi.fn(async () => null),

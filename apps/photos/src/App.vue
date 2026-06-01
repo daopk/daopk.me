@@ -14,11 +14,7 @@ import {
 import { Button } from "@daopk/ui";
 import { RefreshCw } from "@daopk/icons";
 
-import {
-  PHOTO_THUMB_WIDTH,
-  PHOTO_THUMB_WIDTH_2X,
-  photoThumbUrl,
-} from "./photosContentConfig";
+import { PHOTO_THUMB_WIDTH, PHOTO_THUMB_WIDTH_2X, photoThumbUrl } from "./photosContentConfig";
 
 import PhotoLightbox from "./PhotoLightbox.vue";
 import { photoLabel } from "./photoLabel";
