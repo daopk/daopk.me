@@ -118,6 +118,24 @@ function dispatch(
   el.dispatchEvent(event);
 }
 
+function dispatchWheel(el: HTMLElement, init: Partial<WheelEvent>): WheelEvent {
+  const event = new Event("wheel", { bubbles: true, cancelable: true });
+  Object.assign(event, init);
+  el.dispatchEvent(event);
+  return event as WheelEvent;
+}
+
+function dispatchGesture(
+  el: HTMLElement,
+  type: string,
+  init: { clientX?: number; clientY?: number; scale?: number } = {},
+): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.assign(event, init);
+  el.dispatchEvent(event);
+  return event;
+}
+
 describe("useLightboxGestures", () => {
   it("starts at the identity transform", async () => {
     const harness = mountGestures();
@@ -190,6 +208,75 @@ describe("useLightboxGestures", () => {
     harness.api.reset();
     expect(harness.api.scale.value).toBe(1);
     expect(harness.api.translateX.value).toBe(0);
+    expect(harness.api.translateY.value).toBe(0);
+
+    harness.unmount();
+  });
+
+  it("zooms on ctrl-wheel and clamps to the max scale", async () => {
+    const harness = mountGestures({ maxScale: 3 });
+    await nextTick();
+
+    const event = dispatchWheel(harness.el, {
+      clientX: 100,
+      clientY: 100,
+      ctrlKey: true,
+      deltaY: -1000,
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(harness.api.scale.value).toBe(3);
+    expect(harness.api.isZoomed.value).toBe(true);
+
+    harness.unmount();
+  });
+
+  it("ignores normal wheel events", async () => {
+    const harness = mountGestures();
+    await nextTick();
+
+    const event = dispatchWheel(harness.el, {
+      clientX: 100,
+      clientY: 100,
+      deltaY: -100,
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(harness.api.scale.value).toBe(1);
+
+    harness.unmount();
+  });
+
+  it("zooms around the Safari gesture focal point", async () => {
+    const harness = mountGestures({ maxScale: 4 });
+    harness.el.getBoundingClientRect = vi.fn(() => ({
+      bottom: 200,
+      height: 200,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }));
+    await nextTick();
+
+    const start = dispatchGesture(harness.el, "gesturestart", {
+      clientX: 150,
+      clientY: 100,
+      scale: 1,
+    });
+    const change = dispatchGesture(harness.el, "gesturechange", {
+      clientX: 150,
+      clientY: 100,
+      scale: 2,
+    });
+
+    expect(start.defaultPrevented).toBe(true);
+    expect(change.defaultPrevented).toBe(true);
+    expect(harness.api.scale.value).toBe(2);
+    expect(harness.api.translateX.value).toBe(-50);
     expect(harness.api.translateY.value).toBe(0);
 
     harness.unmount();

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useTemplateRef } from "vue";
+
 import Dock from "./dock/Dock.vue";
 import DesktopContextMenuLayer from "./contextMenu/DesktopContextMenuLayer.vue";
 import MenuBar from "./menubar/MenuBar.vue";
@@ -8,10 +10,15 @@ import DesktopWidgetGallery from "./widgetGallery/DesktopWidgetGallery.vue";
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
 import DesktopWidgetLayer from "./widgetLayer/DesktopWidgetLayer.vue";
 import WindowHost from "./windowManager/WindowHost.vue";
+import { useDesktopBrowserZoomGuard } from "./useDesktopBrowserZoomGuard";
+
+const shellRef = useTemplateRef<HTMLElement>("shellRef");
+
+useDesktopBrowserZoomGuard(shellRef);
 </script>
 
 <template>
-  <div class="desktop-shell" data-shell="desktop">
+  <div ref="shellRef" class="desktop-shell" data-shell="desktop">
     <Wallpaper shell-id="desktop" />
     <MenuBar />
     <Dock />

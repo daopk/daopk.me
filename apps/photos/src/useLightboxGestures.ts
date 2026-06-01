@@ -7,6 +7,7 @@ const SWIPE_CLOSE_THRESHOLD_PX = 90;
 const DOUBLE_TAP_MS = 300;
 const TAP_MOVE_TOLERANCE_PX = 16;
 const DOUBLE_TAP_DISTANCE_PX = 40;
+const WHEEL_ZOOM_INTENSITY = 0.0025;
 
 export type SwipeAction = "prev" | "next" | "close" | null;
 
@@ -105,6 +106,20 @@ interface PinchState {
   focalY: number;
 }
 
+interface GestureZoomState {
+  startScale: number;
+  startTx: number;
+  startTy: number;
+  focalX: number;
+  focalY: number;
+}
+
+interface WebKitGestureEvent extends Event {
+  readonly clientX?: number;
+  readonly clientY?: number;
+  readonly scale?: number;
+}
+
 /**
  * Touch-first zoom/pan/swipe for the photo lightbox: pinch to zoom, drag to pan
  * when zoomed, horizontal swipe to navigate and swipe-down to close at base
@@ -129,6 +144,7 @@ export function useLightboxGestures(
   const pointers = new Map<number, { x: number; y: number }>();
   let single: SingleState | null = null;
   let pinch: PinchState | null = null;
+  let gestureZoom: GestureZoomState | null = null;
   let lastTapAt = 0;
   let lastTapX = 0;
   let lastTapY = 0;
@@ -163,12 +179,32 @@ export function useLightboxGestures(
     translateY.value = clampTranslate(ty, height, scale.value);
   }
 
+  function zoomAt(clientX: number, clientY: number, nextScale: number): void {
+    if (attachedEl === undefined) {
+      return;
+    }
+
+    const { centerX, centerY } = metrics(attachedEl);
+    const startScale = scale.value;
+    const startTx = translateX.value;
+    const startTy = translateY.value;
+    const clampedScale = clampScale(nextScale, 1, maxScale);
+    const ratio = startScale === 0 ? 1 : clampedScale / startScale;
+
+    scale.value = clampedScale;
+    applyClampedTranslate(
+      focalTranslate(clientX - centerX, ratio, startTx),
+      focalTranslate(clientY - centerY, ratio, startTy),
+    );
+  }
+
   function reset(): void {
     scale.value = 1;
     translateX.value = 0;
     translateY.value = 0;
     single = null;
     pinch = null;
+    gestureZoom = null;
   }
 
   function toggleZoomAt(clientX: number, clientY: number): void {
@@ -176,12 +212,7 @@ export function useLightboxGestures(
       reset();
       return;
     }
-    const { centerX, centerY } = metrics(attachedEl);
-    scale.value = DOUBLE_TAP_SCALE;
-    applyClampedTranslate(
-      focalTranslate(clientX - centerX, DOUBLE_TAP_SCALE, 0),
-      focalTranslate(clientY - centerY, DOUBLE_TAP_SCALE, 0),
-    );
+    zoomAt(clientX, clientY, DOUBLE_TAP_SCALE);
   }
 
   function beginPinch(): void {
@@ -399,12 +430,94 @@ export function useLightboxGestures(
     }
   }
 
+  function onWheel(event: WheelEvent): void {
+    if (!event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    zoomAt(
+      event.clientX,
+      event.clientY,
+      scale.value * Math.exp(-event.deltaY * WHEEL_ZOOM_INTENSITY),
+    );
+  }
+
+  function gesturePoint(event: WebKitGestureEvent): { x: number; y: number } | null {
+    if (typeof event.clientX === "number" && typeof event.clientY === "number") {
+      return { x: event.clientX, y: event.clientY };
+    }
+    if (attachedEl === undefined) {
+      return null;
+    }
+    const { centerX, centerY } = metrics(attachedEl);
+    return { x: centerX, y: centerY };
+  }
+
+  function beginGestureZoom(event: Event): void {
+    event.preventDefault();
+    if (attachedEl === undefined) {
+      return;
+    }
+
+    const point = gesturePoint(event as WebKitGestureEvent);
+    if (point === null) {
+      return;
+    }
+
+    const { centerX, centerY } = metrics(attachedEl);
+    gestureZoom = {
+      startScale: scale.value,
+      startTx: translateX.value,
+      startTy: translateY.value,
+      focalX: point.x - centerX,
+      focalY: point.y - centerY,
+    };
+    single = null;
+    pinch = null;
+  }
+
+  function updateGestureZoom(event: Event): void {
+    event.preventDefault();
+    if (gestureZoom === null) {
+      beginGestureZoom(event);
+      return;
+    }
+
+    const gestureEvent = event as WebKitGestureEvent;
+    const eventScale =
+      typeof gestureEvent.scale === "number" && Number.isFinite(gestureEvent.scale)
+        ? gestureEvent.scale
+        : 1;
+    const nextScale = clampScale(gestureZoom.startScale * eventScale, 1, maxScale);
+    const ratio = gestureZoom.startScale === 0 ? 1 : nextScale / gestureZoom.startScale;
+
+    scale.value = nextScale;
+    applyClampedTranslate(
+      focalTranslate(gestureZoom.focalX, ratio, gestureZoom.startTx),
+      focalTranslate(gestureZoom.focalY, ratio, gestureZoom.startTy),
+    );
+  }
+
+  function endGestureZoom(event: Event): void {
+    event.preventDefault();
+    gestureZoom = null;
+    if (scale.value <= 1) {
+      scale.value = 1;
+      translateX.value = 0;
+      translateY.value = 0;
+    }
+  }
+
   function attach(el: HTMLElement): void {
     attachedEl = el;
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("pointermove", onPointerMove);
     el.addEventListener("pointerup", onPointerUp);
     el.addEventListener("pointercancel", onPointerCancel);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("gesturestart", beginGestureZoom, { passive: false });
+    el.addEventListener("gesturechange", updateGestureZoom, { passive: false });
+    el.addEventListener("gestureend", endGestureZoom, { passive: false });
   }
 
   function detach(): void {
@@ -415,10 +528,15 @@ export function useLightboxGestures(
     attachedEl.removeEventListener("pointermove", onPointerMove);
     attachedEl.removeEventListener("pointerup", onPointerUp);
     attachedEl.removeEventListener("pointercancel", onPointerCancel);
+    attachedEl.removeEventListener("wheel", onWheel);
+    attachedEl.removeEventListener("gesturestart", beginGestureZoom);
+    attachedEl.removeEventListener("gesturechange", updateGestureZoom);
+    attachedEl.removeEventListener("gestureend", endGestureZoom);
     attachedEl = undefined;
     pointers.clear();
     single = null;
     pinch = null;
+    gestureZoom = null;
   }
 
   const stopWatch = watch(

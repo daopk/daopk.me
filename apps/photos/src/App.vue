@@ -131,6 +131,8 @@ function closeLightbox(): void {
   display: flex;
   flex-direction: column;
   min-block-size: 0;
+  overflow: hidden;
+  position: relative;
 }
 
 .photos__toolbar {
