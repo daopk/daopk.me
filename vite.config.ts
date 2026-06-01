@@ -7,6 +7,7 @@ import { crossOriginIsolationHeaders } from "./vite/crossOriginIsolation";
 import { appsContentPreviewServer } from "./vite/plugins/appsContentPreviewServer";
 import { blogContentDevServer } from "./vite/plugins/blogContentDevServer";
 import { externalRuntimeImportMap } from "./vite/plugins/externalRuntimeImportMap";
+import { photosContentProxyServer } from "./vite/plugins/photosContentProxyServer";
 import { pwaPlugin } from "./vite/pwa";
 import { runtimeChunkInput, runtimeResolveAlias } from "./vite/runtimeEntries";
 
@@ -50,6 +51,7 @@ export default defineConfig({
   },
   plugins: [
     blogContentDevServer(),
+    photosContentProxyServer(),
     appsContentPreviewServer(),
     externalRuntimeImportMap(),
     vue(),
