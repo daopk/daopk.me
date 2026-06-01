@@ -1,16 +1,79 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 import type { Connect, PluginOption } from "vite";
 
+const CATALOG_SCHEMA_VERSION = 1;
+
+export interface FirstPartyPreviewCatalogEntry {
+  readonly id: string;
+  readonly version: string;
+  readonly entry: string;
+}
+
+export interface FirstPartyPreviewCatalog {
+  readonly version: typeof CATALOG_SCHEMA_VERSION;
+  readonly apps: readonly FirstPartyPreviewCatalogEntry[];
+}
+
+function isMissingFileError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
+}
+
+export async function buildFirstPartyPreviewCatalog(
+  appsRoot: string,
+): Promise<FirstPartyPreviewCatalog> {
+  const dirs = await readdir(appsRoot, { withFileTypes: true });
+  const apps: FirstPartyPreviewCatalogEntry[] = [];
+
+  for (const dir of dirs) {
+    if (!dir.isDirectory()) {
+      continue;
+    }
+
+    let rawPackageJson: string;
+    try {
+      rawPackageJson = await readFile(join(appsRoot, dir.name, "package.json"), "utf8");
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        continue;
+      }
+      throw error;
+    }
+
+    const packageJson = JSON.parse(rawPackageJson) as { version?: unknown };
+    if (typeof packageJson.version !== "string" || packageJson.version.length === 0) {
+      continue;
+    }
+
+    apps.push({
+      id: dir.name,
+      version: packageJson.version,
+      entry: `/apps/${dir.name}/${packageJson.version}/${dir.name}.js`,
+    });
+  }
+
+  apps.sort((a, b) => a.id.localeCompare(b.id));
+
+  return {
+    version: CATALOG_SCHEMA_VERSION,
+    apps,
+  };
+}
+
 /**
  * In production the Worker serves the first-party app catalog (`/apps/index.json`)
  * and version-pinned modules (`/apps/<id>/<version>/<file>`) from R2. Vite has
- * neither, so this plugin serves the catalog from the repo's `apps/index.json`
- * and modules from each app's local `apps/<id>/dist/` build. This makes the
- * production load path (catalog fetch → versioned `import()`) testable under
- * `npm run preview` without a deploy.
+ * neither, so this plugin synthesizes the catalog from each app package.json
+ * and serves modules from each app's local `apps/<id>/dist/` build. This makes
+ * the production load path (catalog fetch → versioned `import()`) testable
+ * under `npm run preview` without a deploy or committed catalog artifact.
  *
  * PREVIEW-ONLY: in `dev` the first-party loader imports each app straight from
  * its workspace package (HMR), so Vite already serves the real source at
@@ -19,7 +82,6 @@ import type { Connect, PluginOption } from "vite";
  */
 export function appsContentPreviewServer(): PluginOption {
   const appsRoot = fileURLToPath(new URL("../../apps", import.meta.url));
-  const catalogPath = join(appsRoot, "index.json");
   const modulePattern = /^\/apps\/([a-z0-9][a-z0-9-]*)\/[^/]+\/(.+)$/;
 
   const contentTypeFor = (file: string): string => {
@@ -34,11 +96,12 @@ export function appsContentPreviewServer(): PluginOption {
     if (pathname === "/apps/index.json") {
       void (async () => {
         try {
+          const catalog = await buildFirstPartyPreviewCatalog(appsRoot);
           res.setHeader("Content-Type", "application/json;charset=utf-8");
-          res.end(await readFile(catalogPath, "utf8"));
+          res.end(`${JSON.stringify(catalog, null, 2)}\n`);
         } catch {
-          res.statusCode = 404;
-          res.end("Not found");
+          res.statusCode = 500;
+          res.end("Could not build app catalog");
         }
       })();
       return;
