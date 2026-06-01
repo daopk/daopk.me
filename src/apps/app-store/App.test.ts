@@ -1,60 +1,54 @@
-import { flushPromises, mount } from "@vue/test-utils";
-import { createPinia, setActivePinia } from "pinia";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { defineComponent, h, nextTick, type Component } from "vue";
 
-import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
-import { installExternalApp } from "~/core/apps/installExternalApp";
-import type { ExternalAppManifest } from "~/types/externalApp";
+import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
 
 import AppStore from "./App.vue";
 
-vi.mock("~/core/apps/installExternalApp", () => ({ installExternalApp: vi.fn() }));
+const IconStub = defineComponent({
+  name: "IconStub",
+  render: () => h("span", { class: "icon-stub" }),
+});
 
-const installMock = vi.mocked(installExternalApp);
-
-const REGISTRY = {
-  apps: [
-    {
-      id: "weather",
-      name: "Weather",
-      version: "1.0.0",
-      description: "Local forecast",
-      manifestUrl: "https://apps.example.com/weather.json",
-    },
-  ],
-};
-
-const INSTALLED_MANIFEST: ExternalAppManifest = {
-  id: "weather",
-  name: "Weather",
-  version: "0.9.0",
-  category: "productivity",
-  entry: "https://apps.example.com/weather.mjs",
-  icon: { type: "url", src: "https://apps.example.com/weather.png" },
-};
-
-function makeKernel(): Kernel {
-  return { events: { on: vi.fn(() => vi.fn()), emit: vi.fn() } } as unknown as Kernel;
+function manifest(overrides: Partial<AppManifest> & { id: string; name: string }): AppManifest {
+  return {
+    version: "1.0.0",
+    category: "productivity",
+    icon: IconStub as Component,
+    component: async () => ({ default: IconStub }),
+    ...overrides,
+  };
 }
 
-function stubFetch(body: unknown, status = 200): ReturnType<typeof vi.fn> {
-  const fetchMock = vi.fn(
-    async () =>
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { "Content-Type": "application/json" },
-      }),
-  );
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+function makeKernel(initialApps: AppManifest[]) {
+  const apps = [...initialApps];
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+  const on = vi.fn((channel: string, listener: (payload: unknown) => void) => {
+    const bucket = listeners.get(channel) ?? new Set<(payload: unknown) => void>();
+    bucket.add(listener);
+    listeners.set(channel, bucket);
+    return (): void => {
+      bucket.delete(listener);
+    };
+  });
+  const emit = vi.fn((channel: string, payload: unknown) => {
+    for (const listener of listeners.get(channel) ?? []) {
+      listener(payload);
+    }
+  });
+  const kernel = {
+    apps: { list: vi.fn(() => [...apps]) },
+    events: { on, emit },
+  } as unknown as Kernel;
+  return { apps, emit, kernel };
 }
 
 const mountedWrappers: Array<ReturnType<typeof mountStore>> = [];
 
-function mountStore(kernel: Kernel = makeKernel()) {
+function mountStore(kernel: Kernel) {
   const wrapper = mount(AppStore, {
     attachTo: document.body,
     global: { provide: { [KernelInjectionKey as symbol]: kernel } },
@@ -63,83 +57,51 @@ function mountStore(kernel: Kernel = makeKernel()) {
   return wrapper;
 }
 
-async function waitForItems(wrapper: ReturnType<typeof mountStore>): Promise<void> {
-  await vi.waitFor(
-    () => {
-      if (wrapper.findAll(".app-store__item").length === 0) {
-        throw new Error("catalog not yet rendered");
-      }
-    },
-    { timeout: 1500, interval: 20 },
-  );
-}
-
 describe("App Store", () => {
-  beforeEach(() => {
-    setActivePinia(createPinia());
-    localStorage.clear();
-    installMock.mockReset();
-  });
-
   afterEach(() => {
     for (const wrapper of mountedWrappers.splice(0)) {
       wrapper.unmount();
     }
-    useInstalledAppsStore().dispose();
-    vi.unstubAllGlobals();
-    localStorage.clear();
   });
 
-  it("lists catalog apps with an Install action", async () => {
-    stubFetch(REGISTRY);
-    const wrapper = mountStore();
-
-    await waitForItems(wrapper);
-
-    expect(wrapper.text()).toContain("Weather");
-    expect(wrapper.text()).toContain("v1.0.0");
-    expect(wrapper.text()).toContain("Local forecast");
-    expect(wrapper.find(".app-store__install").text()).toBe("Install");
-  });
-
-  it("installs a listing through the install service", async () => {
-    installMock.mockResolvedValue({ ok: true, manifest: INSTALLED_MANIFEST, isUpdate: false });
-    stubFetch(REGISTRY);
-    const kernel = makeKernel();
+  it("lists registered first-party apps only", () => {
+    const { kernel } = makeKernel([
+      manifest({ id: "notes", name: "Notes", version: "1.0.0" }),
+      manifest({ id: "hello-world", name: "Hello World", version: "1.2.0" }),
+      manifest({ id: "settings", name: "Settings", category: "system" }),
+    ]);
     const wrapper = mountStore(kernel);
 
-    await waitForItems(wrapper);
-    await wrapper.find(".app-store__install").trigger("click");
-    await flushPromises();
+    expect(wrapper.text()).toContain("Notes");
+    expect(wrapper.text()).toContain("v1.0.0");
+    expect(wrapper.text()).toContain("productivity");
+    expect(wrapper.text()).not.toContain("Hello World");
+    expect(wrapper.text()).not.toContain("Settings");
+    expect(wrapper.find(".app-store__launch").text()).toBe("Open");
+  });
+
+  it("launches a first-party app", async () => {
+    const { emit, kernel } = makeKernel([manifest({ id: "notes", name: "Notes" })]);
+    const wrapper = mountStore(kernel);
+
+    await wrapper.find(".app-store__launch").trigger("click");
+
+    expect(emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "notes",
+      source: "api",
+    });
+  });
+
+  it("refreshes when first-party apps are registered", async () => {
+    const { apps, emit, kernel } = makeKernel([]);
+    const wrapper = mountStore(kernel);
+
+    expect(wrapper.text()).toContain("No first-party apps available.");
+
+    apps.push(manifest({ id: "notes", name: "Notes" }));
+    emit("app.registered", { manifestId: "notes" });
     await nextTick();
 
-    expect(installMock).toHaveBeenCalledWith(
-      "https://apps.example.com/weather.json",
-      expect.objectContaining({ kernel, confirm: expect.any(Function) }),
-    );
-  });
-
-  it("labels an installed app at a different version as Update", async () => {
-    stubFetch(REGISTRY);
-    const store = useInstalledAppsStore();
-    store.hydrate();
-    store.add({
-      manifestUrl: "https://apps.example.com/weather.json",
-      manifest: INSTALLED_MANIFEST,
-    });
-    const wrapper = mountStore();
-
-    await waitForItems(wrapper);
-
-    expect(wrapper.find(".app-store__install").text()).toBe("Update");
-  });
-
-  it("shows an error state when the catalog cannot be loaded", async () => {
-    stubFetch("unavailable", 500);
-    const wrapper = mountStore();
-
-    await vi.waitFor(() => {
-      expect(wrapper.text()).toContain("Could not load the catalog");
-    });
+    expect(wrapper.text()).toContain("Notes");
   });
 });

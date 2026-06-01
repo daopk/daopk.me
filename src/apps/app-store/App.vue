@@ -1,192 +1,89 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { onUnmounted, shallowRef } from "vue";
 
 import {
   AppFrame,
   AppToolbar,
   EmptyState,
   ScrollArea,
-  Spinner,
-  StatusBanner,
   ToolbarTitle,
   useAppChrome,
 } from "~/components/kit";
-import InstallConsentDialog from "~/components/app/InstallConsentDialog.vue";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
-import {
-  APP_STORE_REGISTRY_URL,
-  type AppStoreListing,
-  coerceAppStoreRegistry,
-} from "~/core/apps/appStoreConfig";
-import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
-import { installExternalApp, type InstallConsentInfo } from "~/core/apps/installExternalApp";
-import { Download, RefreshCw } from "~/icons/lucide";
+import { FIRST_PARTY_APP_IDS } from "~/core/apps/firstParty/registry";
+import { ExternalLink as LaunchIcon } from "~/icons/lucide";
+import type { AppManifest } from "~/types/app";
 
 useAppChrome({ title: () => "App Store" });
 
 const kernel = useKernel();
-const installedAppsStore = useInstalledAppsStore();
+const apps = shallowRef<readonly AppManifest[]>(visibleFirstPartyApps());
 
-type LoadState = "loading" | "ready" | "error";
+const stopRegistered = kernel.events.on("app.registered", refreshApps);
+const stopUnregistered = kernel.events.on("app.unregistered", refreshApps);
 
-const state = ref<LoadState>("loading");
-const errorMessage = ref("");
-const listings = shallowRef<readonly AppStoreListing[]>([]);
+onUnmounted(() => {
+  stopRegistered();
+  stopUnregistered();
+});
 
-const installingId = ref<string | null>(null);
-const installError = ref("");
-
-const consentOpen = ref(false);
-const consentInfo = ref<InstallConsentInfo | null>(null);
-let consentResolve: ((value: boolean) => void) | null = null;
-
-onMounted(load);
-onUnmounted(() => settleConsent(false));
-
-async function load(): Promise<void> {
-  state.value = "loading";
-  errorMessage.value = "";
-  try {
-    const response = await fetch(APP_STORE_REGISTRY_URL, { credentials: "omit" });
-    if (!response.ok) {
-      throw new Error(`Could not load the catalog (${response.status}).`);
-    }
-    listings.value = coerceAppStoreRegistry(await response.json()).apps;
-    state.value = "ready";
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : String(error);
-    state.value = "error";
-  }
+function visibleFirstPartyApps(): AppManifest[] {
+  return kernel.apps
+    .list()
+    .filter((manifest) => FIRST_PARTY_APP_IDS.has(manifest.id) && manifest.hidden !== true)
+    .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-type InstallAction = "Install" | "Update" | "Reinstall";
-
-/**
- * Reflect install state in the action: a not-installed app reads "Install", an
- * installed app whose catalog version differs reads "Update", and an installed
- * app at the same version reads "Reinstall". Version equality is exact-string
- * (no semver ordering) — any difference is treated as an available update.
- */
-function actionLabel(listing: AppStoreListing): InstallAction {
-  const installed = installedAppsStore.get(listing.id);
-  if (!installed) {
-    return "Install";
-  }
-  return installed.manifest.version === listing.version ? "Reinstall" : "Update";
+function refreshApps(): void {
+  apps.value = visibleFirstPartyApps();
 }
 
-function settleConsent(value: boolean): void {
-  consentOpen.value = false;
-  const resolve = consentResolve;
-  consentResolve = null;
-  resolve?.(value);
-}
-
-function requestConsent(info: InstallConsentInfo): Promise<boolean> {
-  consentInfo.value = info;
-  consentOpen.value = true;
-  return new Promise<boolean>((resolve) => {
-    consentResolve = resolve;
+function launchApp(manifestId: string): void {
+  kernel.events.emit("app.launch.requested", {
+    manifestId,
+    source: "api",
   });
-}
-
-async function install(listing: AppStoreListing): Promise<void> {
-  if (installingId.value !== null) {
-    return;
-  }
-  installingId.value = listing.id;
-  installError.value = "";
-
-  const result = await installExternalApp(listing.manifestUrl, { kernel, confirm: requestConsent });
-
-  installingId.value = null;
-  if (!result.ok && result.reason !== "declined") {
-    installError.value = `${listing.name}: ${result.error}`;
-  }
 }
 </script>
 
 <template>
   <AppFrame class="app-store" layout="flex-column" aria-label="App Store">
     <AppToolbar class="app-store__toolbar" density="comfortable">
-      <ToolbarTitle title="App Store" subtitle="Install apps from the registry" />
-      <template #end>
-        <Button
-          size="sm"
-          variant="secondary"
-          :icon-start="RefreshCw"
-          :loading="state === 'loading'"
-          @click="load"
-        >
-          Refresh
-        </Button>
-      </template>
+      <ToolbarTitle title="App Store" subtitle="First-party apps" />
     </AppToolbar>
 
     <ScrollArea class="app-store__body" safe-area>
-      <StatusBanner v-if="installError" as="p" tone="error" role="alert">
-        {{ installError }}
-      </StatusBanner>
-
-      <div v-if="state === 'loading'" class="app-store__center">
-        <Spinner />
-        <span>Loading catalog…</span>
-      </div>
-
-      <StatusBanner v-else-if="state === 'error'" tone="error">
-        {{ errorMessage }}
-      </StatusBanner>
-
-      <EmptyState v-else-if="listings.length === 0" class="app-store__center">
-        No apps in the catalog yet.
+      <EmptyState v-if="apps.length === 0" class="app-store__center">
+        No first-party apps available.
       </EmptyState>
 
       <ul v-else class="app-store__list">
-        <li v-for="listing in listings" :key="listing.id" class="app-store__item">
-          <img
-            v-if="listing.iconUrl"
-            class="app-store__icon"
-            :src="listing.iconUrl"
-            alt=""
-            referrerpolicy="no-referrer"
-            decoding="async"
-            loading="lazy"
-            draggable="false"
-          />
-          <span v-else class="app-store__icon app-store__icon--placeholder" aria-hidden="true" />
+        <li v-for="app in apps" :key="app.id" class="app-store__item">
+          <component :is="app.icon" class="app-store__icon" aria-hidden="true" />
 
           <span class="app-store__copy">
             <span class="app-store__name">
-              <span class="app-store__name-text">{{ listing.name }}</span>
-              <span class="app-store__version">v{{ listing.version }}</span>
+              <span class="app-store__name-text">{{ app.name }}</span>
+              <span v-if="app.version" class="app-store__version">v{{ app.version }}</span>
             </span>
-            <span v-if="listing.description" class="app-store__description">
-              {{ listing.description }}
+            <span class="app-store__category">
+              {{ app.category }}
             </span>
           </span>
 
           <Button
-            class="app-store__install"
+            class="app-store__launch"
             size="sm"
-            :variant="actionLabel(listing) === 'Reinstall' ? 'secondary' : 'primary'"
-            :icon-start="Download"
-            :loading="installingId === listing.id"
-            :disabled="installingId !== null && installingId !== listing.id"
-            @click="install(listing)"
+            variant="primary"
+            :icon-start="LaunchIcon"
+            @click="launchApp(app.id)"
           >
-            {{ actionLabel(listing) }}
+            Open
           </Button>
         </li>
       </ul>
     </ScrollArea>
-
-    <InstallConsentDialog
-      v-model:open="consentOpen"
-      :info="consentInfo"
-      @confirm="settleConsent(true)"
-      @cancel="settleConsent(false)"
-    />
   </AppFrame>
 </template>
 
@@ -239,11 +136,6 @@ async function install(listing: AppStoreListing): Promise<void> {
   object-fit: cover;
 }
 
-.app-store__icon--placeholder {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-}
-
 .app-store__copy {
   display: flex;
   flex: 1 1 auto;
@@ -272,15 +164,16 @@ async function install(listing: AppStoreListing): Promise<void> {
   font-size: 12px;
 }
 
-.app-store__description {
+.app-store__category {
   color: var(--color-fg-muted);
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: capitalize;
   white-space: nowrap;
 }
 
-.app-store__install {
+.app-store__launch {
   flex: 0 0 auto;
 }
 </style>

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick } from "vue";
 
 import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
-import { installExternalApp, uninstallExternalApp } from "~/core/apps/installExternalApp";
+import { uninstallExternalApp } from "~/core/apps/installExternalApp";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
@@ -12,11 +12,9 @@ import { KernelInjectionKey } from "~/types/kernel";
 import AppsSection from "./AppsSection.vue";
 
 vi.mock("~/core/apps/installExternalApp", () => ({
-  installExternalApp: vi.fn(),
   uninstallExternalApp: vi.fn(),
 }));
 
-const installMock = vi.mocked(installExternalApp);
 const uninstallMock = vi.mocked(uninstallExternalApp);
 
 const IconStub = defineComponent({
@@ -86,7 +84,6 @@ describe("AppsSection", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     localStorage.clear();
-    installMock.mockReset();
     uninstallMock.mockReset();
   });
 
@@ -121,28 +118,14 @@ describe("AppsSection", () => {
     expect(wrapper.findAll(".apps-settings__uninstall-action")).toHaveLength(1);
   });
 
-  it("installs from a URL through the install service", async () => {
-    installMock.mockResolvedValue({
-      ok: true,
-      manifest: EXTERNAL_RECORD.manifest,
-      isUpdate: false,
-    });
+  it("does not show the URL install form", () => {
     useInstalledAppsStore().hydrate();
     const { kernel } = makeKernel([]);
     const wrapper = mountSection(kernel);
 
-    await wrapper
-      .find<HTMLInputElement>("#apps-install-url")
-      .setValue("https://apps.example.com/m.json");
-    await wrapper.find("form.apps-settings__install").trigger("submit");
-    await paint();
-
-    expect(installMock).toHaveBeenCalledTimes(1);
-    expect(installMock).toHaveBeenCalledWith(
-      "https://apps.example.com/m.json",
-      expect.objectContaining({ kernel, confirm: expect.any(Function) }),
-    );
-    expect((wrapper.find("#apps-install-url").element as HTMLInputElement).value).toBe("");
+    expect(wrapper.find("#apps-install-url").exists()).toBe(false);
+    expect(wrapper.find("form.apps-settings__install").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Install from URL");
   });
 
   it("uninstalls an external app after confirming the dialog", async () => {

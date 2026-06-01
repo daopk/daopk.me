@@ -8,9 +8,8 @@ export const appStoreManifest: AppManifest = {
   version: "1.0.0",
   icon: AppStoreAppIcon,
   category: "productivity",
-  permissions: ["network.fetch"],
   defaultWindow: { width: 720, height: 560, centered: true },
   singleton: true,
   component: () => import("./App.vue"),
-  keywords: ["app", "store", "install", "registry", "marketplace", "extension"],
+  keywords: ["app", "store", "first party", "catalog", "marketplace"],
 };

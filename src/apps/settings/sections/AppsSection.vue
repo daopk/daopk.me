@@ -7,20 +7,13 @@ import {
   IconButton,
   SectionHeader,
   StatusBanner,
-  TextInput,
 } from "~/components/kit";
-import InstallConsentDialog from "~/components/app/InstallConsentDialog.vue";
 import { Button, Dialog } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { appSettingsLaunchArgs, hasAppSettings } from "~/core/apps/appSettings";
 import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
+import { uninstallExternalApp } from "~/core/apps/installExternalApp";
 import {
-  installExternalApp,
-  type InstallConsentInfo,
-  uninstallExternalApp,
-} from "~/core/apps/installExternalApp";
-import {
-  Download,
   ExternalLink as LaunchIcon,
   Settings as SettingsIcon,
   Trash2,
@@ -41,14 +34,6 @@ const apps = shallowRef<readonly AppManifest[]>(visibleApps());
 const stopRegistered = kernel.events.on("app.registered", refreshApps);
 const stopUnregistered = kernel.events.on("app.unregistered", refreshApps);
 
-const installUrl = ref("");
-const installing = ref(false);
-const installError = ref("");
-
-const consentOpen = ref(false);
-const consentInfo = ref<InstallConsentInfo | null>(null);
-let consentResolve: ((value: boolean) => void) | null = null;
-
 const uninstallOpen = ref(false);
 const uninstallTarget = ref<AppManifest | null>(null);
 const uninstalling = ref(false);
@@ -56,7 +41,6 @@ const uninstalling = ref(false);
 onUnmounted(() => {
   stopRegistered();
   stopUnregistered();
-  settleConsent(false);
 });
 
 function visibleApps(): AppManifest[] {
@@ -84,39 +68,6 @@ function openAppSettings(manifestId: string): void {
     source: "api",
     args: appSettingsLaunchArgs(),
   });
-}
-
-function settleConsent(value: boolean): void {
-  consentOpen.value = false;
-  const resolve = consentResolve;
-  consentResolve = null;
-  resolve?.(value);
-}
-
-function requestConsent(info: InstallConsentInfo): Promise<boolean> {
-  consentInfo.value = info;
-  consentOpen.value = true;
-  return new Promise<boolean>((resolve) => {
-    consentResolve = resolve;
-  });
-}
-
-async function submitInstall(): Promise<void> {
-  const url = installUrl.value.trim();
-  if (installing.value || url === "") {
-    return;
-  }
-  installing.value = true;
-  installError.value = "";
-
-  const result = await installExternalApp(url, { kernel, confirm: requestConsent });
-
-  installing.value = false;
-  if (result.ok) {
-    installUrl.value = "";
-  } else if (result.reason !== "declined") {
-    installError.value = result.error;
-  }
 }
 
 function requestUninstall(app: AppManifest): void {
@@ -148,41 +99,6 @@ async function confirmUninstall(): Promise<void> {
 <template>
   <section class="apps-settings" aria-label="Apps settings">
     <SectionHeader v-if="props.showHeader" size="page" title="Apps" />
-
-    <form class="apps-settings__install" @submit.prevent="submitInstall">
-      <label class="apps-settings__install-label" for="apps-install-url">Install from URL</label>
-      <div class="apps-settings__install-row">
-        <TextInput
-          id="apps-install-url"
-          v-model="installUrl"
-          class="apps-settings__install-input"
-          type="url"
-          inputmode="url"
-          autocomplete="off"
-          :spellcheck="false"
-          :disabled="installing"
-          placeholder="https://example.com/app.json"
-        />
-        <Button
-          type="submit"
-          variant="primary"
-          :icon-start="Download"
-          :loading="installing"
-          :disabled="installUrl.trim() === ''"
-        >
-          Install
-        </Button>
-      </div>
-      <StatusBanner
-        v-if="installError"
-        as="p"
-        class="apps-settings__install-error"
-        tone="error"
-        role="alert"
-      >
-        {{ installError }}
-      </StatusBanner>
-    </form>
 
     <EmptyState v-if="apps.length === 0" class="apps-settings__empty">
       No apps available.
@@ -234,13 +150,6 @@ async function confirmUninstall(): Promise<void> {
       </li>
     </ul>
 
-    <InstallConsentDialog
-      v-model:open="consentOpen"
-      :info="consentInfo"
-      @confirm="settleConsent(true)"
-      @cancel="settleConsent(false)"
-    />
-
     <Dialog
       v-model:open="uninstallOpen"
       :title="uninstallTarget ? `Uninstall ${uninstallTarget.name}?` : 'Uninstall app?'"
@@ -276,33 +185,6 @@ async function confirmUninstall(): Promise<void> {
   flex-direction: column;
   gap: var(--space-md);
   padding: var(--space-xl);
-}
-
-.apps-settings__install {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.apps-settings__install-label {
-  color: var(--color-fg-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.apps-settings__install-row {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.apps-settings__install-input {
-  flex: 1 1 auto;
-  min-inline-size: 0;
-}
-
-.apps-settings__install-error {
-  font-size: 13px;
-  margin: 0;
 }
 
 .apps-settings__empty {
