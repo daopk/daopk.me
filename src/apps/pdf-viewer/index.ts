@@ -1,1 +1,0 @@
-export { pdfViewerManifest } from "./manifest";

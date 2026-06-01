@@ -1,1 +1,0 @@
-export { editorManifest } from "./manifest";

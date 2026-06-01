@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { computed, ref } from "vue";
 
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import { AppContextInjectionKey, type AppContext } from "@daopk/sdk";
 
 import App from "./App.vue";
 import type {
@@ -21,7 +21,10 @@ vi.mock("./usePdfViewer", () => ({
   usePdfViewer: mocks.usePdfViewer,
 }));
 
-vi.mock("~/composables/useVfs", () => ({
+// App.vue resolves `useVfs` + `AppContextInjectionKey` from the same `@daopk/sdk`
+// chunk, so override only `useVfs` and keep every other real export intact.
+vi.mock("@daopk/sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@daopk/sdk")>()),
   useVfs: mocks.useVfs,
 }));
 

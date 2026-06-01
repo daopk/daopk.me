@@ -13,4 +13,7 @@ import type { FirstPartyModuleLoader } from "./registerFirstPartyApps";
  */
 export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
   notes: () => import("@daopk-app/notes"),
+  browser: () => import("@daopk-app/browser"),
+  editor: () => import("@daopk-app/editor"),
+  "pdf-viewer": () => import("@daopk-app/pdf-viewer"),
 };

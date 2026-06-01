@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { VfsError } from "~/core/vfs/errors";
-import type { VfsStat } from "~/core/vfs/nodes";
-import { dirname, normalizeVfsPath } from "~/core/vfs/path";
+import { dirname, normalizeVfsPath, VfsError, type VfsStat } from "@daopk/sdk";
 
 import { useEditor, type EditorVfsClient } from "./useEditor";
 

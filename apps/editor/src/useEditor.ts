@@ -1,16 +1,16 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 
-import { VfsError } from "~/core/vfs/errors";
 import {
   defaultTextMimeTypeForPath,
   detectVfsFileType,
   isEditableVfsTextFile,
+  normalizeVfsPath,
+  toErrorMessage,
+  VfsError,
   vfsFileTypeInputFromPath,
   type VfsRenderableFileType,
-} from "~/core/vfs/fileTypes";
-import type { VfsStat } from "~/core/vfs/nodes";
-import { normalizeVfsPath } from "~/core/vfs/path";
-import { toErrorMessage } from "~/utils/errors";
+  type VfsStat,
+} from "@daopk/sdk";
 
 export type EditorStatus = "idle" | "loading" | "new" | "ready" | "saving" | "saved" | "error";
 export type EditorEditableKind = Extract<VfsRenderableFileType, "markdown" | "text">;

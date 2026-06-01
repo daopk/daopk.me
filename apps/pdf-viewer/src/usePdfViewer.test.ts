@@ -2,9 +2,12 @@ import { mount } from "@vue/test-utils";
 import { defineComponent } from "vue";
 import { describe, expect, it, vi } from "vitest";
 
-import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
-import { normalizeVfsPath } from "~/core/vfs/path";
-import type { VfsStat } from "~/core/vfs/nodes";
+import {
+  detectVfsFileType,
+  normalizeVfsPath,
+  vfsFileTypeInputFromPath,
+  type VfsStat,
+} from "@daopk/sdk";
 
 import {
   isPdfFile,

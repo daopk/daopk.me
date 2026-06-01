@@ -1,15 +1,20 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
-import { VfsError } from "~/core/vfs/errors";
-import type { VfsStat } from "~/core/vfs/nodes";
-import { dirname, normalizeVfsPath } from "~/core/vfs/path";
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
-import { KernelInjectionKey, type Kernel } from "~/types/kernel";
+import {
+  AppContextInjectionKey,
+  dirname,
+  KernelInjectionKey,
+  normalizeVfsPath,
+  VfsError,
+  type AppContext,
+  type Kernel,
+  type VfsStat,
+} from "@daopk/sdk";
 
 import App from "./App.vue";
 
-vi.mock("~/core/markdown/createMarkdownRenderer", () => ({
+vi.mock("@daopk/markdown", () => ({
   createMarkdownRenderer: vi.fn(async () => ({
     ready: Promise.resolve(),
     render: vi.fn(async (source: string) => ({ html: `<p>${source}</p>` })),

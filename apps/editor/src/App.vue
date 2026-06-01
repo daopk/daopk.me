@@ -11,13 +11,11 @@ import {
   StatusBanner,
   Textarea,
   TextInput,
-} from "~/components/kit";
-import { Button, Dialog, DialogActions } from "~/components/ui";
-import { useVfs } from "~/composables/useVfs";
-import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
-import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-import { FileText, FolderOpen, RefreshCw, Save } from "~/icons/lucide";
-import { AppContextInjectionKey } from "~/types/app";
+} from "@daopk/kit";
+import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
+import { FileText, FolderOpen, RefreshCw, Save } from "@daopk/icons";
+import { AppContextInjectionKey, useVfs } from "@daopk/sdk";
 
 import { useEditor } from "./useEditor";
 

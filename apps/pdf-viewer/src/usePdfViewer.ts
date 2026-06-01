@@ -1,9 +1,14 @@
 import { computed, getCurrentScope, onMounted, onScopeDispose, ref, type Ref } from "vue";
 
-import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
-import { basename, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
-import type { VfsStat } from "~/core/vfs/nodes";
-import { toErrorMessage } from "~/utils/errors";
+import {
+  basename,
+  detectVfsFileType,
+  normalizeVfsPath,
+  toErrorMessage,
+  vfsFileTypeInputFromPath,
+  type VfsPath,
+  type VfsStat,
+} from "@daopk/sdk";
 
 export type PdfViewerStatus = "idle" | "loading" | "rendering" | "ready" | "error";
 export type PdfViewerFitMode = "fit-width" | "custom";

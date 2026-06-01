@@ -13,9 +13,8 @@ import {
   TextInput,
   ToolbarGroup,
   ToolbarTitle,
-} from "~/components/kit";
-import { Button } from "~/components/ui";
-import { useVfs } from "~/composables/useVfs";
+} from "@daopk/kit";
+import { Button } from "@daopk/ui";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,8 +24,8 @@ import {
   Upload,
   ZoomIn,
   ZoomOut,
-} from "~/icons/lucide";
-import { AppContextInjectionKey } from "~/types/app";
+} from "@daopk/icons";
+import { AppContextInjectionKey, useVfs } from "@daopk/sdk";
 
 import { usePdfViewer } from "./usePdfViewer";
 

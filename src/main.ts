@@ -7,12 +7,9 @@ import "~/assets/scss/base.scss";
 import App from "~/App.vue";
 import { appStoreManifest } from "~/apps/app-store";
 import { blogManifest } from "~/apps/blog";
-import { browserManifest } from "~/apps/browser";
 import { calendarManifest } from "~/apps/calendar";
 import { clockManifest } from "~/apps/clock";
-import { editorManifest } from "~/apps/editor";
 import { finderManifest } from "~/apps/finder";
-import { pdfViewerManifest } from "~/apps/pdf-viewer";
 import { photosManifest } from "~/apps/photos";
 import { slidesManifest } from "~/apps/slides";
 import { settingsManifest } from "~/apps/settings";
@@ -37,21 +34,16 @@ kernel.apps.register(blogManifest);
 
 kernel.apps.register(finderManifest);
 
-kernel.apps.register(browserManifest);
-
 kernel.apps.register(clockManifest);
 
 kernel.apps.register(calendarManifest);
 
-kernel.apps.register(editorManifest);
-
-// `notes` is a first-party app published independently of the shell; it is
-// registered by `firstPartyAppsPhase` (from the catalog in prod, from the
-// workspace package in dev) rather than bundled here.
+// `notes`, `browser`, `editor`, and `pdf-viewer` are first-party apps published
+// independently of the shell; they are registered by `firstPartyAppsPhase` (from
+// the catalog in prod, from their workspace packages in dev) rather than bundled
+// here.
 
 kernel.apps.register(slidesManifest);
-
-kernel.apps.register(pdfViewerManifest);
 
 kernel.apps.register(photosManifest);
 

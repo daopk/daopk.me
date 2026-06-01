@@ -5,6 +5,21 @@
       "id": "notes",
       "version": "1.0.0",
       "entry": "/apps/notes/1.0.0/notes.js"
+    },
+    {
+      "id": "browser",
+      "version": "1.0.0",
+      "entry": "/apps/browser/1.0.0/browser.js"
+    },
+    {
+      "id": "editor",
+      "version": "1.0.0",
+      "entry": "/apps/editor/1.0.0/editor.js"
+    },
+    {
+      "id": "pdf-viewer",
+      "version": "1.0.0",
+      "entry": "/apps/pdf-viewer/1.0.0/pdf-viewer.js"
     }
   ]
 }

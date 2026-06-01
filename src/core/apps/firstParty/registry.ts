@@ -1,4 +1,9 @@
-import { NotesAppIcon } from "~/icons/fluentColor";
+import {
+  BrowserAppIcon,
+  EditorAppIcon,
+  NotesAppIcon,
+  PdfViewerAppIcon,
+} from "~/icons/fluentColor";
 
 import type { FirstPartyAppDescriptor } from "./types";
 
@@ -36,6 +41,38 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     permissions: ["vfs.read", "vfs.write"],
     defaultWindow: { width: 920, height: 620, centered: true },
     keywords: ["notes", "markdown", "writing", "drafts", "journal", "vfs"],
+  },
+  {
+    id: "browser",
+    name: "Browser",
+    version: "1.0.0",
+    icon: BrowserAppIcon,
+    category: "productivity",
+    singleton: false,
+    defaultWindow: { width: 980, height: 640, centered: true },
+    keywords: ["web", "internet", "browser", "url", "site", "iframe"],
+  },
+  {
+    id: "editor",
+    name: "Editor",
+    version: "1.0.0",
+    icon: EditorAppIcon,
+    category: "productivity",
+    singleton: false,
+    permissions: ["vfs.read", "vfs.write"],
+    defaultWindow: { width: 900, height: 620, centered: true },
+    keywords: ["editor", "text", "markdown", "write", "notes", "vfs"],
+  },
+  {
+    id: "pdf-viewer",
+    name: "PDF Viewer",
+    version: "1.0.0",
+    icon: PdfViewerAppIcon,
+    category: "productivity",
+    singleton: false,
+    permissions: ["vfs.read"],
+    defaultWindow: { width: 1040, height: 720, centered: true },
+    keywords: ["pdf", "document", "reader", "viewer", "vfs"],
   },
 ];
 
