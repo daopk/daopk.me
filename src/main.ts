@@ -3,6 +3,9 @@ import { createApp } from "vue";
 
 import "~/core/boot/syncPreflightTheme";
 import "~/assets/scss/base.scss";
+// Standalone first-party apps import @daopk/kit through the import map; preload
+// the kit once so Vite links its scoped component CSS with the shell HTML.
+import "~/runtime/kit";
 
 import App from "~/App.vue";
 import { appStoreManifest } from "~/apps/app-store";
