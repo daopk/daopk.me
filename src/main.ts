@@ -6,7 +6,6 @@ import "~/assets/scss/base.scss";
 
 import App from "~/App.vue";
 import { appStoreManifest } from "~/apps/app-store";
-import { blogManifest } from "~/apps/blog";
 import { calendarManifest } from "~/apps/calendar";
 import { clockManifest } from "~/apps/clock";
 import { finderManifest } from "~/apps/finder";
@@ -29,16 +28,14 @@ app.use(createPinia());
 
 const kernel = bootstrapKernel();
 
-kernel.apps.register(blogManifest);
-
 kernel.apps.register(finderManifest);
 
 kernel.apps.register(clockManifest);
 
 kernel.apps.register(calendarManifest);
 
-// `notes`, `browser`, `editor`, `pdf-viewer`, and `photos` are first-party apps
-// published independently of the shell; they are registered by
+// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, and `blog` are
+// first-party apps published independently of the shell; they are registered by
 // `firstPartyAppsPhase` (from the catalog in prod, from their workspace packages
 // in dev) rather than bundled here.
 

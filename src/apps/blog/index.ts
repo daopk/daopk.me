@@ -1,1 +1,0 @@
-export { blogManifest } from "./manifest";

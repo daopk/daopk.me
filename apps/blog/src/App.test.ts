@@ -5,15 +5,17 @@ import { mount, type VueWrapper } from "@vue/test-utils";
 import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
+  KernelInjectionKey,
   type AppChromeBackAction,
   type AppChromeController,
   type AppContext,
-} from "~/types/app";
-import { KernelInjectionKey, type Kernel } from "~/types/kernel";
+  type Kernel,
+} from "@daopk/sdk";
 
 import Blog from "./App.vue";
 
-vi.mock("~/core/debug", () => ({
+vi.mock("@daopk/sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@daopk/sdk")>()),
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));

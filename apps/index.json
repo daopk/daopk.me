@@ -25,6 +25,11 @@
       "id": "photos",
       "version": "1.0.0",
       "entry": "/apps/photos/1.0.0/photos.js"
+    },
+    {
+      "id": "blog",
+      "version": "1.0.0",
+      "entry": "/apps/blog/1.0.0/blog.js"
     }
   ]
 }

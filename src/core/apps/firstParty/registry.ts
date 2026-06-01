@@ -1,4 +1,5 @@
 import {
+  BlogAppIcon,
   BrowserAppIcon,
   EditorAppIcon,
   NotesAppIcon,
@@ -85,6 +86,16 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     permissions: ["network.fetch"],
     defaultWindow: { width: 960, height: 680, centered: true },
     keywords: ["photos", "images", "gallery", "pictures", "media", "r2"],
+  },
+  {
+    id: "blog",
+    name: "Blog",
+    version: "1.0.0",
+    icon: BlogAppIcon,
+    category: "system",
+    permissions: ["vfs.read", "vfs.write", "network.fetch"],
+    defaultWindow: { width: 720, height: 520, centered: true },
+    keywords: ["blog", "post", "writing", "article", "markdown"],
   },
 ];
 

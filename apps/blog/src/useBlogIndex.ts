@@ -1,9 +1,14 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import type { BlogContentSource, BlogIndexEntry } from "~/core/blog/blogContentSource";
-import { formatBlogDate, validBlogDate } from "~/core/blog/blogDate";
-import { debugWarn } from "~/core/debug";
-import { BLOG_POSTS_ROOT, blogPostPathFromSlug } from "~/core/routing/blogPaths";
+import { debugWarn } from "@daopk/sdk";
+import {
+  BLOG_POSTS_ROOT,
+  blogPostPathFromSlug,
+  formatBlogDate,
+  validBlogDate,
+  type BlogContentSource,
+  type BlogIndexEntry,
+} from "@daopk/content";
 
 export type BlogIndexStatus = "idle" | "loading" | "ready" | "empty" | "error";
 

@@ -1,11 +1,13 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import type { BlogContentSource } from "~/core/blog/blogContentSource";
-import { formatBlogDate, validBlogDate } from "~/core/blog/blogDate";
-import { debugWarn } from "~/core/debug";
-import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
-import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-import { isBlogPostSlug } from "~/core/routing/blogPaths";
+import { debugWarn } from "@daopk/sdk";
+import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
+import {
+  formatBlogDate,
+  isBlogPostSlug,
+  validBlogDate,
+  type BlogContentSource,
+} from "@daopk/content";
 
 export interface BlogLaunchArgs {
   readonly slug?: unknown;

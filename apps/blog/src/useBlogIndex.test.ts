@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 
-import type { BlogContentSource, BlogIndexEntry } from "~/core/blog/blogContentSource";
-import { BlogNetworkError } from "~/core/blog/blogContentSource";
-import { debugWarn } from "~/core/debug";
+import { debugWarn } from "@daopk/sdk";
+import { BlogNetworkError, type BlogContentSource, type BlogIndexEntry } from "@daopk/content";
 
 import { blogIndexPostFromEntry, useBlogIndex } from "./useBlogIndex";
 
-vi.mock("~/core/debug", () => ({
+vi.mock("@daopk/sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@daopk/sdk")>()),
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));

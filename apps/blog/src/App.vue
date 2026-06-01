@@ -9,14 +9,16 @@ import {
   SectionHeader,
   StatusBanner,
   useAppChrome,
-} from "~/components/kit";
-import { Button } from "~/components/ui";
-import { useKernel } from "~/composables/useKernel";
-import { useVfs } from "~/composables/useVfs";
-import { createBlogContentSource } from "~/core/blog/blogContentSource";
-import { isBlogPostSlug } from "~/core/routing/blogPaths";
-import { ArrowLeft } from "~/icons/lucide";
-import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
+} from "@daopk/kit";
+import { Button } from "@daopk/ui";
+import { createBlogContentSource, isBlogPostSlug } from "@daopk/content";
+import { ArrowLeft } from "@daopk/icons";
+import {
+  AppContextInjectionKey,
+  useKernel,
+  useVfs,
+  type AppChromeBackAction,
+} from "@daopk/sdk";
 
 import { useBlogIndex, type BlogIndexPost } from "./useBlogIndex";
 import { useBlogPost } from "./useBlogPost";

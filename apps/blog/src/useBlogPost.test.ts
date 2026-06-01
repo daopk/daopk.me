@@ -2,15 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 
-import type { BlogContentSource } from "~/core/blog/blogContentSource";
-import { BlogNetworkError } from "~/core/blog/blogContentSource";
-import { debugWarn } from "~/core/debug";
-import { renderMarkdownToHtml } from "~/core/markdown/MarkdownPipeline";
-import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
+import { debugWarn } from "@daopk/sdk";
+import { renderMarkdownToHtml, type MarkdownRenderer } from "@daopk/markdown";
+import { BlogNetworkError, type BlogContentSource } from "@daopk/content";
 
 import { parseBlogPostSource, useBlogPost, type BlogPostOptions } from "./useBlogPost";
 
-vi.mock("~/core/debug", () => ({
+vi.mock("@daopk/sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@daopk/sdk")>()),
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));
