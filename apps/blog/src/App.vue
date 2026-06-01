@@ -289,32 +289,34 @@ function onShareClick(): void {
 
 .blog__index-list {
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-xl);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .blog__index-item {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   color: var(--color-fg);
   cursor: pointer;
   display: grid;
   gap: var(--space-xs);
   inline-size: 100%;
-  padding: var(--space-md);
+  padding: 0;
   text-align: start;
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
+  transition: color var(--duration-fast) var(--ease);
 }
 
 .blog__index-item:hover,
 .blog__index-item:focus-visible {
-  background: var(--color-bg-elevated);
-  border-color: var(--color-accent);
+  background: transparent;
+}
+
+.blog__index-item:hover .blog__index-title,
+.blog__index-item:focus-visible .blog__index-title {
+  color: var(--color-accent);
 }
 
 .blog__index-item:focus-visible {
