@@ -85,11 +85,16 @@ function blogContentDevServer(): PluginOption {
  * In production the Worker serves the first-party app catalog (`/apps/index.json`)
  * and version-pinned modules (`/apps/<id>/<version>/<file>`) from R2. Vite has
  * neither, so this plugin serves the catalog from the repo's `apps/index.json`
- * and modules from each app's local `apps/<id>/dist/` build during `dev` /
- * `preview`. This makes the production load path (catalog fetch → versioned
- * `import()`) testable under `npm run preview` without a deploy.
+ * and modules from each app's local `apps/<id>/dist/` build. This makes the
+ * production load path (catalog fetch → versioned `import()`) testable under
+ * `npm run preview` without a deploy.
+ *
+ * PREVIEW-ONLY: in `dev` the first-party loader imports each app straight from
+ * its workspace package (HMR), so Vite already serves the real source at
+ * `/apps/<id>/src/...`. Registering this middleware in dev would shadow those
+ * source paths (e.g. `/apps/notes/src/main.ts`) and 404 them, so it is not.
  */
-function appsContentDevServer(): PluginOption {
+function appsContentPreviewServer(): PluginOption {
   const appsRoot = fileURLToPath(new URL("./apps", import.meta.url));
   const catalogPath = join(appsRoot, "index.json");
   const modulePattern = /^\/apps\/([a-z0-9][a-z0-9-]*)\/[^/]+\/(.+)$/;
@@ -144,10 +149,7 @@ function appsContentDevServer(): PluginOption {
   };
 
   return {
-    name: "daopk-apps-content-dev-server",
-    configureServer(server) {
-      server.middlewares.use(middleware);
-    },
+    name: "daopk-apps-content-preview-server",
     configurePreviewServer(server) {
       server.middlewares.use(middleware);
     },
@@ -286,7 +288,7 @@ export default defineConfig({
   },
   plugins: [
     blogContentDevServer(),
-    appsContentDevServer(),
+    appsContentPreviewServer(),
     externalRuntimeImportMap(),
     vue(),
     VitePWA({
