@@ -555,6 +555,58 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
+  it("opens the first suggested app for markdown files from keyboard and double-click gestures", async () => {
+    const kernel = makeKernel({
+      "/home/posts": [entry("/home/posts/field-notes.md")],
+    });
+    const wrapper = mountFinder(kernel, makeContext({ path: "/home/posts" }));
+
+    await flushPromises();
+    await wrapper.find(".finder__entries").trigger("keydown", { key: "Enter" });
+    await wrapper.find(".finder__entry").trigger("dblclick");
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("blog.post.open.requested", {
+      source: "api",
+      path: "/home/posts/field-notes.md",
+      slug: "field-notes",
+    });
+    expect(
+      vi
+        .mocked(kernel.events.emit)
+        .mock.calls.filter(([channel]) => channel === "blog.post.open.requested"),
+    ).toHaveLength(2);
+    expect(
+      vi
+        .mocked(kernel.events.emit)
+        .mock.calls.some(([channel]) => channel === "editor.open.requested"),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("opens editable files in Editor from keyboard and double-click gestures", async () => {
+    const kernel = makeKernel({
+      "/": [entry("/note.txt")],
+    });
+    const wrapper = mountFinder(kernel);
+
+    await flushPromises();
+    await wrapper.find(".finder__entries").trigger("keydown", { key: "Enter" });
+    await wrapper.find(".finder__entry").trigger("dblclick");
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("editor.open.requested", {
+      source: "api",
+      path: "/note.txt",
+    });
+    expect(
+      vi
+        .mocked(kernel.events.emit)
+        .mock.calls.filter(([channel]) => channel === "editor.open.requested"),
+    ).toHaveLength(2);
+
+    wrapper.unmount();
+  });
+
   it("opens Slidev decks from keyboard and double-click gestures", async () => {
     const kernel = makeKernel({
       "/home/slides/demo": [

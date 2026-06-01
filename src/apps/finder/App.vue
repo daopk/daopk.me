@@ -13,7 +13,7 @@ import type { VfsDirEntry } from "~/core/vfs/nodes";
 import FinderEntries from "./components/FinderEntries.vue";
 import FinderPreviewPane from "./components/FinderPreviewPane.vue";
 import FinderToolbar from "./components/FinderToolbar.vue";
-import { isPdfEntry, isSlideDeckEntry } from "./display";
+import { isSlideDeckEntry } from "./display";
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "./openSuggestions";
 import { useFinderPreview } from "./useFinderPreview";
 import { useFinder } from "./useFinder";
@@ -141,6 +141,10 @@ function openWithSuggestion(entry: VfsDirEntry, suggestion: FinderOpenSuggestion
     return;
   }
 
+  openResolvedSuggestion(entry, currentSuggestion);
+}
+
+function openResolvedSuggestion(entry: VfsDirEntry, currentSuggestion: FinderOpenSuggestion): void {
   if (currentSuggestion.id === "editor") {
     openInEditor(entry);
     return;
@@ -172,6 +176,15 @@ function openWithSuggestion(entry: VfsDirEntry, suggestion: FinderOpenSuggestion
   }
 }
 
+function openFirstSuggestedApp(entry: VfsDirEntry): void {
+  const suggestion = openSuggestionsForEntry(entry)[0];
+  if (suggestion === undefined) {
+    return;
+  }
+
+  openResolvedSuggestion(entry, suggestion);
+}
+
 function openSelectedEntry(): void {
   const entry = selectedEntry.value;
   if (entry !== null) {
@@ -185,14 +198,7 @@ function openEntry(entry: VfsDirEntry): void {
     return;
   }
 
-  if (isPdfEntry(entry)) {
-    openPdf(entry);
-    return;
-  }
-
-  if (isSlideDeckEntry(entry)) {
-    openSlides(entry);
-  }
+  openFirstSuggestedApp(entry);
 }
 
 function openPdf(entry: VfsDirEntry): void {
