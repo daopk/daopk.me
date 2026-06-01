@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { AppFrame, Badge, FormField, ScrollArea, TabList, TextInput } from "~/components/kit";
-import type { TabListOption } from "~/components/kit";
-import { Button } from "~/components/ui";
-import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "~/icons/lucide";
+import { AppFrame, Badge, FormField, ScrollArea, TabList, TextInput } from "@daopk/kit";
+import type { TabListOption } from "@daopk/kit";
+import { Button } from "@daopk/ui";
+import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "@daopk/icons";
 
 import { formatClockLongDate, formatClockSecond, toLocalIsoSecond } from "./useClockNow";
 import {

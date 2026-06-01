@@ -1,1 +1,0 @@
-export { clockManifest } from "./manifest";

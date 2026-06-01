@@ -1,7 +1,6 @@
 import { computed, onBeforeUnmount, ref, type ComputedRef, type Ref } from "vue";
 
-import { activeProfileKvNamespace } from "~/core/profile/storageScope";
-import { KVStore } from "~/core/storage/KVStore";
+import { activeProfileKvNamespace, KVStore } from "@daopk/sdk";
 
 export const CLOCK_KV_NAMESPACE = "clock";
 export const CLOCK_KV_PRIMARY_KEY = "state";

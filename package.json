@@ -50,6 +50,7 @@
   "devDependencies": {
     "@daopk-app/blog": "workspace:*",
     "@daopk-app/browser": "workspace:*",
+    "@daopk-app/clock": "workspace:*",
     "@daopk-app/editor": "workspace:*",
     "@daopk-app/notes": "workspace:*",
     "@daopk-app/pdf-viewer": "workspace:*",

@@ -30,6 +30,11 @@
       "id": "blog",
       "version": "1.0.0",
       "entry": "/apps/blog/1.0.0/blog.js"
+    },
+    {
+      "id": "clock",
+      "version": "1.0.0",
+      "entry": "/apps/clock/1.0.0/clock.js"
     }
   ]
 }

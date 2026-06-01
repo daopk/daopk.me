@@ -7,7 +7,6 @@ import "~/assets/scss/base.scss";
 import App from "~/App.vue";
 import { appStoreManifest } from "~/apps/app-store";
 import { calendarManifest } from "~/apps/calendar";
-import { clockManifest } from "~/apps/clock";
 import { finderManifest } from "~/apps/finder";
 import { slidesManifest } from "~/apps/slides";
 import { settingsManifest } from "~/apps/settings";
@@ -30,11 +29,9 @@ const kernel = bootstrapKernel();
 
 kernel.apps.register(finderManifest);
 
-kernel.apps.register(clockManifest);
-
 kernel.apps.register(calendarManifest);
 
-// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, and `blog` are
+// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, `blog`, and `clock` are
 // first-party apps published independently of the shell; they are registered by
 // `firstPartyAppsPhase` (from the catalog in prod, from their workspace packages
 // in dev) rather than bundled here.
