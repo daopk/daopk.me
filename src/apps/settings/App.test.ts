@@ -25,6 +25,7 @@ import {
   type BeforeInstallPromptEventLike,
   type PwaInstallWindowLike,
 } from "~/service-worker/installController";
+import { useSettingsStore } from "~/core/storage/SettingsStore";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 import {
   AppChromeInjectionKey,
@@ -247,7 +248,7 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp();
 
     const items = wrapper.findAll(".settings__nav-item");
-    expect(items).toHaveLength(8);
+    expect(items).toHaveLength(7);
 
     const labels = items.map((item) => item.find(".settings__nav-label").text());
     expect(labels).toEqual([
@@ -257,7 +258,6 @@ describe("Settings App.vue", () => {
       "Dock",
       "Account",
       "Privacy",
-      "Apps",
       "About device",
     ]);
 
@@ -275,7 +275,6 @@ describe("Settings App.vue", () => {
       "Comfort",
       "Account",
       "Privacy",
-      "Apps",
       "About device",
     ]);
     expect(wrapper.text()).not.toContain("Desktop Dock");
@@ -356,7 +355,7 @@ describe("Settings App.vue", () => {
     wrapper.unmount();
   });
 
-  it("renders shared app entries with launch and optional settings actions", async () => {
+  it("renders app pin toggles inside Dock settings", async () => {
     const kernel = makeFakeKernel([
       makeApp({
         id: "notes",
@@ -379,40 +378,37 @@ describe("Settings App.vue", () => {
         settings: {},
       }),
     ]);
+    useSettingsStore().$patch({ dockPinnedAppIds: ["notes"] });
     const wrapper = mountApp({ kernel });
 
-    const appsItem = wrapper
+    const dockItem = wrapper
       .findAll(".settings__nav-item")
-      .find((item) => item.find(".settings__nav-label").text() === "Apps");
-    await appsItem?.trigger("click");
+      .find((item) => item.find(".settings__nav-label").text() === "Dock");
+    await dockItem?.trigger("click");
 
-    const appItems = wrapper.findAll(".apps-settings__item");
+    const appItems = wrapper.findAll(".dock-settings__app-item");
     expect(appItems).toHaveLength(2);
     expect(appItems[0]?.text()).toContain("Calendar");
     expect(appItems[1]?.text()).toContain("Notes");
-    expect(appItems[0]?.text()).not.toContain("Settings");
-    expect(appItems[1]?.text()).not.toContain("No settings");
     expect(wrapper.text()).not.toContain("Hidden Settings");
     expect(wrapper.text()).not.toContain("Template");
 
-    const settingsButtons = wrapper.findAll(".apps-settings__settings-action");
-    const launchButtons = wrapper.findAll(".apps-settings__launch-action");
-    expect(settingsButtons).toHaveLength(1);
-    expect(launchButtons).toHaveLength(2);
-    await settingsButtons[0]?.trigger("click");
+    expect(
+      appItems[0]
+        ?.find('[role="switch"][aria-labelledby="dock-pin-calendar-label"]')
+        .attributes("aria-checked"),
+    ).toBe("false");
+    expect(
+      appItems[1]
+        ?.find('[role="switch"][aria-labelledby="dock-pin-notes-label"]')
+        .attributes("aria-checked"),
+    ).toBe("true");
 
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "calendar",
-      source: "api",
-      args: { pane: "settings" },
-    });
+    await appItems[0]
+      ?.find('[role="switch"][aria-labelledby="dock-pin-calendar-label"]')
+      .trigger("click");
 
-    await appItems[1]?.find(".apps-settings__launch-action").trigger("click");
-
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "notes",
-      source: "api",
-    });
+    expect(kernel.settings.set).toHaveBeenCalledWith("dockPinnedAppIds", ["notes", "calendar"]);
 
     wrapper.unmount();
   });
@@ -452,8 +448,7 @@ describe("Settings App.vue", () => {
       [3, "dock-settings", "Automatically hide the Dock"],
       [4, "account", "Lock Session"],
       [5, "privacy", "Privacy"],
-      [6, "apps-settings", "No apps available"],
-      [7, "about-device", "Boot count"],
+      [6, "about-device", "Boot count"],
     ];
 
     for (const [idx, rootClass, marker] of expectations) {

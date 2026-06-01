@@ -9,7 +9,6 @@ import {
   SettingsBackgroundIcon as BackgroundIcon,
   SettingsComfortIcon as ComfortIcon,
   SettingsDockIcon as DockIcon,
-  SettingsWidgetsIcon as AppsIcon,
   SettingsPrivacyIcon as PrivacyIcon,
 } from "~/icons/fluentColor";
 import { useResizeObserver } from "@vueuse/core";
@@ -17,7 +16,6 @@ import { useResizeObserver } from "@vueuse/core";
 import AccountSection from "./sections/AccountSection.vue";
 import AboutDeviceSection from "./sections/AboutDeviceSection.vue";
 import AppearanceSection from "./sections/AppearanceSection.vue";
-import AppsSection from "./sections/AppsSection.vue";
 import BackgroundSection from "./sections/BackgroundSection.vue";
 import ComfortSection from "./sections/ComfortSection.vue";
 import DockSection from "./sections/DockSection.vue";
@@ -86,12 +84,6 @@ const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
     icon: PrivacyIcon as Component,
     component: PrivacySection,
   },
-  apps: {
-    id: "apps",
-    label: "Apps",
-    icon: AppsIcon as Component,
-    component: AppsSection,
-  },
   about: {
     id: "about",
     label: "About device",
@@ -107,7 +99,6 @@ const componentMap: Record<SettingsSectionId, Component> = {
   dock: DockSection,
   account: AccountSection,
   privacy: PrivacySection,
-  apps: AppsSection,
   about: AboutDeviceSection,
 };
 

@@ -28,7 +28,7 @@ export interface AppManifest {
   /**
    * Semantic version string (e.g. `"1.0.0"`). Optional so the kernel/registry
    * contract stays backwards compatible, but built-in manifests set it and
-   * external manifests require it. Surfaced read-only in Settings > Apps.
+   * external manifests require it. Surfaced read-only wherever app metadata is listed.
    */
   version?: string;
   /**

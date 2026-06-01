@@ -125,7 +125,7 @@ built `preview`/deploy:
 2. View source on `/` — confirm the injected `<script type="importmap">` maps
    `vue` and `@daopk/sdk` to the real hashed `/assets/*` chunks, with matching
    `<link rel="modulepreload">` tags.
-3. Install a real external app (Settings > Apps or the App Store) and launch it.
+3. Install a real external app from the App Store and launch it.
 4. In DevTools → Network, confirm **one** `daopk-vue-runtime-*.js` request is
    shared by host and app (no second Vue copy from the app's origin).
 5. Confirm the app's cross-origin entry responds with

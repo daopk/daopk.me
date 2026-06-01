@@ -40,7 +40,7 @@ export interface ExternalAppManifest {
   /** Stable unique id. Lowercase kebab-case; cannot collide with a built-in. */
   id: string;
   name: string;
-  /** Required for external apps (shown in Settings > Apps and used by updates). */
+  /** Required for external apps; used by catalog updates and app metadata surfaces. */
   version: string;
   category: ExternalAppCategory;
   description?: string;

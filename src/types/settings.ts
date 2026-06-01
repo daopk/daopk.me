@@ -5,7 +5,6 @@ export type SettingsSectionId =
   | "dock"
   | "account"
   | "privacy"
-  | "apps"
   | "about";
 
 export type SettingsSectionScope = "shared" | "desktop" | "mobile";
@@ -22,7 +21,6 @@ export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
   { id: "dock", scope: "desktop" },
   { id: "account", scope: "shared" },
   { id: "privacy", scope: "shared" },
-  { id: "apps", scope: "shared" },
   { id: "about", scope: "shared" },
 ] as const;
 
