@@ -25,7 +25,11 @@
 import { inject, type InjectionKey } from "vue";
 
 import type { AppChromeController, AppContext } from "~/types/app";
-import type { Kernel } from "~/types/kernel";
+import type {
+  Kernel,
+  KernelVfsDirectoryOptions,
+  KernelVfsWriteOptions,
+} from "~/types/kernel";
 
 /** Provided at the app root in `main.ts`; resolved by `useKernel`. */
 export const KernelInjectionKey: InjectionKey<Kernel> = Symbol("daopk.kernel");
@@ -49,6 +53,64 @@ export function useKernel(): Kernel {
   return injected;
 }
 
+type BoundWriteOptions = Omit<KernelVfsWriteOptions, "handleId">;
+type BoundDirectoryOptions = Omit<KernelVfsDirectoryOptions, "handleId">;
+
+/**
+ * App-scoped VFS client. Resolves the kernel + the per-window `AppContext` (so
+ * every call is tagged with the running `handleId` for permission scoping) and
+ * binds the kernel VFS facade to it. Defined here — not in `~/composables` — so
+ * the host and externally-loaded first-party apps share ONE implementation
+ * resolving the SAME injection keys.
+ */
+export function useVfs() {
+  const kernel = useKernel();
+  const context = inject(AppContextInjectionKey, null);
+
+  if (context === null) {
+    throw new Error("useVfs(): AppContextInjectionKey missing — VFS access is app-scoped.");
+  }
+
+  const access = { handleId: context.handleId };
+
+  return {
+    stat: (path: string) => kernel.vfs.stat(path, access),
+    list: (path: string) => kernel.vfs.list(path, access),
+    read: (path: string) => kernel.vfs.read(path, access),
+    readText: (path: string) => kernel.vfs.readText(path, access),
+    write: (path: string, bytes: Uint8Array, options?: BoundWriteOptions) =>
+      kernel.vfs.write(path, bytes, { ...options, ...access }),
+    writeText: (path: string, text: string, options?: BoundWriteOptions) =>
+      kernel.vfs.writeText(path, text, { ...options, ...access }),
+    mkdir: (path: string, options?: BoundDirectoryOptions) =>
+      kernel.vfs.mkdir(path, { ...options, ...access }),
+    remove: (path: string, options?: BoundDirectoryOptions) =>
+      kernel.vfs.remove(path, { ...options, ...access }),
+  };
+}
+
+// Pure helpers + types first-party apps may use without reaching into host
+// internals. Re-exported from their narrow source modules (not the `~/core/vfs`
+// barrel) so this SDK chunk never pulls in the heavy VFS adapters / VFS class.
+export { formatBytes, formatDateTime } from "~/utils/format";
+export { toActionErrorMessage, toErrorMessage } from "~/utils/errors";
+export {
+  assertAbsoluteVfsPath,
+  basename,
+  dirname,
+  joinVfsPath,
+  normalizeVfsPath,
+} from "~/core/vfs/path";
+export {
+  defaultTextMimeTypeForPath,
+  detectVfsFileType,
+  isEditableVfsTextFile,
+  normalizedVfsMimeType,
+  vfsFileExtension,
+  vfsFileTypeInputFromPath,
+} from "~/core/vfs/fileTypes";
+export { splitFilename } from "~/core/vfs/fileNames";
+
 export type {
   AppChromeBackAction,
   AppChromeController,
@@ -58,3 +120,13 @@ export type {
   AppPermission,
 } from "~/types/app";
 export type { Kernel } from "~/types/kernel";
+export type {
+  VfsDirEntry,
+  VfsInode,
+  VfsNodeKind,
+  VfsReadResult,
+  VfsStat,
+} from "~/core/vfs/nodes";
+export type { VfsPath } from "~/core/vfs/path";
+export type { VfsFileTypeInput, VfsRenderableFileType } from "~/core/vfs/fileTypes";
+export type { TrashItem, TrashItemKind } from "~/types/trash";

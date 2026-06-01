@@ -12,7 +12,10 @@
 
     "paths": {
       "~/*": ["./src/*"],
-      "@daopk/sdk": ["./src/runtime/sdk.ts"]
+      "@daopk/sdk": ["./src/runtime/sdk.ts"],
+      "@daopk/kit": ["./src/runtime/kit.ts"],
+      "@daopk/ui": ["./src/runtime/ui.ts"],
+      "@daopk/icons": ["./src/runtime/icons.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],

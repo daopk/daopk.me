@@ -82,14 +82,23 @@ function blogContentDevServer(): PluginOption {
 }
 
 /**
- * Vue and the host SDK are emitted as dedicated build entries under these
- * names; the build-only `externalRuntimeImportMap` plugin maps the bare `vue`
- * and `@daopk/sdk` specifiers to their hashed chunks via an import map in
- * index.html. This makes the host and every external app share ONE Vue
- * instance + ONE set of injection keys. See src/runtime/{vue,sdk}.ts + README.
+ * The host's shared runtime surface is emitted as dedicated build entries; the
+ * build-only `externalRuntimeImportMap` plugin maps each bare specifier to its
+ * hashed chunk via an import map in index.html. This makes the host and every
+ * externally-loaded app share ONE copy of Vue, the SDK, the kit/ui component
+ * layers, and the icon set (one Vue instance + one set of injection keys + one
+ * design system). See src/runtime/{vue,sdk,kit,ui,icons}.ts + README.
+ *
+ * `specifier` is what apps import (and mark `external`); `chunkName` is the
+ * Rollup entry name; `entry` is the façade module re-exporting the real surface.
  */
-const EXTERNAL_RUNTIME_VUE_CHUNK = "daopk-vue-runtime";
-const EXTERNAL_RUNTIME_SDK_CHUNK = "daopk-sdk-runtime";
+const EXTERNAL_RUNTIME_ENTRIES = [
+  { specifier: "vue", chunkName: "daopk-vue-runtime", entry: "./src/runtime/vue.ts" },
+  { specifier: "@daopk/sdk", chunkName: "daopk-sdk-runtime", entry: "./src/runtime/sdk.ts" },
+  { specifier: "@daopk/kit", chunkName: "daopk-kit-runtime", entry: "./src/runtime/kit.ts" },
+  { specifier: "@daopk/ui", chunkName: "daopk-ui-runtime", entry: "./src/runtime/ui.ts" },
+  { specifier: "@daopk/icons", chunkName: "daopk-icons-runtime", entry: "./src/runtime/icons.ts" },
+] as const;
 
 type RuntimeBundle = Record<string, { type: string; name?: string }>;
 
@@ -124,21 +133,17 @@ function externalRuntimeImportMap(): PluginOption {
           return html;
         }
 
-        const vueFile = findChunkFileByName(bundle, EXTERNAL_RUNTIME_VUE_CHUNK);
-        const sdkFile = findChunkFileByName(bundle, EXTERNAL_RUNTIME_SDK_CHUNK);
-        if (!vueFile || !sdkFile) {
-          console.warn(
-            `[daopk] external runtime import map skipped: ${vueFile ? "@daopk/sdk" : "vue"} chunk not found`,
-          );
-          return html;
+        const imports: Record<string, string> = {};
+        const preloads: string[] = [];
+        for (const { specifier, chunkName } of EXTERNAL_RUNTIME_ENTRIES) {
+          const file = findChunkFileByName(bundle, chunkName);
+          if (!file) {
+            console.warn(`[daopk] external runtime import map skipped: ${specifier} chunk not found`);
+            return html;
+          }
+          imports[specifier] = `/${file}`;
+          preloads.push(`/${file}`);
         }
-
-        const importMap = {
-          imports: {
-            vue: `/${vueFile}`,
-            "@daopk/sdk": `/${sdkFile}`,
-          },
-        };
 
         return {
           html,
@@ -146,19 +151,14 @@ function externalRuntimeImportMap(): PluginOption {
             {
               tag: "script",
               attrs: { type: "importmap" },
-              children: JSON.stringify(importMap),
+              children: JSON.stringify({ imports }),
               injectTo: "head-prepend",
             },
-            {
+            ...preloads.map((href) => ({
               tag: "link",
-              attrs: { rel: "modulepreload", crossorigin: true, href: `/${vueFile}` },
-              injectTo: "head",
-            },
-            {
-              tag: "link",
-              attrs: { rel: "modulepreload", crossorigin: true, href: `/${sdkFile}` },
-              injectTo: "head",
-            },
+              attrs: { rel: "modulepreload", crossorigin: true, href },
+              injectTo: "head" as const,
+            })),
           ],
         };
       },
@@ -175,7 +175,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // The shared runtime specifiers resolve to the host's façade modules in
+      // dev/preview/test (one instance). In a standalone app's own build these
+      // are marked `external` and resolved at runtime via the import map.
       "@daopk/sdk": fileURLToPath(new URL("./src/runtime/sdk.ts", import.meta.url)),
+      "@daopk/kit": fileURLToPath(new URL("./src/runtime/kit.ts", import.meta.url)),
+      "@daopk/ui": fileURLToPath(new URL("./src/runtime/ui.ts", import.meta.url)),
+      "@daopk/icons": fileURLToPath(new URL("./src/runtime/icons.ts", import.meta.url)),
       "~": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
@@ -196,11 +202,11 @@ export default defineConfig({
       preserveEntrySignatures: "strict",
       input: {
         index: fileURLToPath(new URL("./index.html", import.meta.url)),
-        [EXTERNAL_RUNTIME_VUE_CHUNK]: fileURLToPath(
-          new URL("./src/runtime/vue.ts", import.meta.url),
-        ),
-        [EXTERNAL_RUNTIME_SDK_CHUNK]: fileURLToPath(
-          new URL("./src/runtime/sdk.ts", import.meta.url),
+        ...Object.fromEntries(
+          EXTERNAL_RUNTIME_ENTRIES.map(({ chunkName, entry }) => [
+            chunkName,
+            fileURLToPath(new URL(entry, import.meta.url)),
+          ]),
         ),
       },
     },
