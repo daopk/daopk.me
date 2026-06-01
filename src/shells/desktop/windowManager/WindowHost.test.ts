@@ -572,6 +572,49 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("does not reuse an Editor window as empty until it reports a null document path", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("editor", "Editor")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    expect(manager.windows.filter((entry) => entry.manifestId === "editor")).toHaveLength(1);
+
+    bus.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/new.md",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(manager.windows.filter((entry) => entry.manifestId === "editor")).toHaveLength(2);
+    expect(
+      bus.emitted.some(
+        (entry) =>
+          entry.channel === "editor.window.open.requested" &&
+          entry.payload.path === "/home/new.md",
+      ),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("registers command-backed window actions", async () => {
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;

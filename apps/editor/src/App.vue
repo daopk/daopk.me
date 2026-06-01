@@ -53,6 +53,7 @@ const canPreview = computed(
 const editorClasses = computed(() => ({
   "editor__body--split": editor.previewOpen.value && canPreview.value,
 }));
+const initialPath = typeof ctx?.args.path === "string" ? ctx.args.path : "";
 
 const statusText = computed(() => {
   if (editor.error.value !== null) {
@@ -106,27 +107,33 @@ onUnmounted(() => {
 watch(
   editor.currentPath,
   (path) => {
-    if (ctx === null) {
-      return;
-    }
-
-    kernel.events.emit("app.document.changed", {
-      manifestId: ctx.manifestId,
-      handleId: ctx.handleId,
-      path,
-    });
+    emitDocumentPath(path);
   },
-  { immediate: true },
+  { immediate: initialPath.length === 0 },
 );
 
 async function openInitialPath(): Promise<void> {
-  const initialPath = typeof ctx?.args.path === "string" ? ctx.args.path : "";
   if (initialPath.length === 0) {
     return;
   }
 
   pathInput.value = initialPath;
   await openNow(initialPath);
+  if (editor.currentPath.value === null) {
+    emitDocumentPath(null);
+  }
+}
+
+function emitDocumentPath(path: string | null): void {
+  if (ctx === null) {
+    return;
+  }
+
+  kernel.events.emit("app.document.changed", {
+    manifestId: ctx.manifestId,
+    handleId: ctx.handleId,
+    path,
+  });
 }
 
 async function getRenderer(): Promise<MarkdownRenderer> {

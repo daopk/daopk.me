@@ -154,6 +154,11 @@ describe("Editor App.vue", () => {
       handleId: "editor-handle",
       path: "/home/note.md",
     });
+    expect(kernel.events.emit).not.toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "editor",
+      handleId: "editor-handle",
+      path: null,
+    });
 
     wrapper.unmount();
   });
