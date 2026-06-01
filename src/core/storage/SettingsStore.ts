@@ -16,13 +16,15 @@ import type { ResolvedTheme } from "~/types/theme";
 
 export const DEFAULT_DOCK_PINNED_APP_IDS = [
   "finder",
+  "blog",
   "browser",
-  "editor",
+  "calendar",
+  "clock",
   "notes",
   "photos",
   "pdf-viewer",
-  "terminal",
   "settings",
+  "app-store",
 ];
 
 const DEFAULT_SETTINGS: SettingsState = {
