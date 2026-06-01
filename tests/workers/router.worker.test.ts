@@ -47,6 +47,13 @@ interface PhotoFixture {
   readonly uploaded: string;
 }
 
+interface FileFixture {
+  readonly key: string;
+  readonly body: string;
+  readonly contentType: string;
+  readonly uploaded: string;
+}
+
 const DEFAULT_PHOTOS: readonly PhotoFixture[] = [
   {
     key: "2026/sunset.jpg",
@@ -62,6 +69,21 @@ const DEFAULT_PHOTOS: readonly PhotoFixture[] = [
   },
 ];
 
+const DEFAULT_FILES: readonly FileFixture[] = [
+  {
+    key: "docs/spec.pdf",
+    body: "%PDF-spec",
+    contentType: "application/pdf",
+    uploaded: "2026-05-29T09:00:00.000Z",
+  },
+  {
+    key: "notes/readme.md",
+    body: "# Cloud Notes\n",
+    contentType: "text/markdown;charset=utf-8",
+    uploaded: "2026-05-30T09:00:00.000Z",
+  },
+];
+
 function photoObjectBody(fixture: PhotoFixture): R2ObjectBody {
   return {
     body: bodyStream(fixture.body),
@@ -72,10 +94,21 @@ function photoObjectBody(fixture: PhotoFixture): R2ObjectBody {
   };
 }
 
+function fileObjectBody(fixture: FileFixture): R2ObjectBody {
+  return {
+    body: bodyStream(fixture.body),
+    httpEtag: '"file-etag"',
+    writeHttpMetadata(headers: Headers): void {
+      headers.set("Content-Type", fixture.contentType);
+    },
+  };
+}
+
 function makeEnv(
   objects: Record<string, string> = DEFAULT_OBJECTS,
   photos: readonly PhotoFixture[] = DEFAULT_PHOTOS,
   apps: Record<string, string> = DEFAULT_APPS,
+  files: readonly FileFixture[] = DEFAULT_FILES,
 ): {
   env: WorkerEnv;
   get: ReturnType<typeof vi.fn>;
@@ -84,6 +117,8 @@ function makeEnv(
   photosGet: ReturnType<typeof vi.fn>;
   photosList: ReturnType<typeof vi.fn>;
   photosPut: ReturnType<typeof vi.fn>;
+  filesGet: ReturnType<typeof vi.fn>;
+  filesList: ReturnType<typeof vi.fn>;
 } {
   const get = vi.fn(
     async (key: string): Promise<R2ObjectBody | null> =>
@@ -115,6 +150,21 @@ function makeEnv(
     }),
   );
   const photosPut = vi.fn(async (): Promise<undefined> => undefined);
+  const filesGet = vi.fn(async (key: string): Promise<R2ObjectBody | null> => {
+    const fixture = files.find((file) => file.key === key);
+    return fixture === undefined ? null : fileObjectBody(fixture);
+  });
+  const filesList = vi.fn(
+    async (): Promise<R2Objects> => ({
+      objects: files.map((file) => ({
+        key: file.key,
+        size: file.body.length,
+        uploaded: new Date(file.uploaded),
+        httpMetadata: { contentType: file.contentType },
+      })),
+      truncated: false,
+    }),
+  );
 
   return {
     env: {
@@ -122,6 +172,7 @@ function makeEnv(
       BLOG: { get },
       APPS: { get: appsGet },
       PHOTOS: { get: photosGet, list: photosList, put: photosPut },
+      FILES: { get: filesGet, list: filesList },
     },
     get,
     appsGet,
@@ -129,6 +180,8 @@ function makeEnv(
     photosGet,
     photosList,
     photosPut,
+    filesGet,
+    filesList,
   };
 }
 
@@ -168,7 +221,7 @@ describe("SEO Worker — runtime content from R2", () => {
   it("serves index.json from R2 to any user agent", async () => {
     const { env, get, assets } = makeEnv();
 
-    const response = await handleRequest(browser("/blog/index.json"), env);
+    const response = await handleRequest(browser("/_worker/blog/index.json"), env);
 
     expect(get).toHaveBeenCalledWith("index.json");
     expect(response.status).toBe(200);
@@ -180,7 +233,10 @@ describe("SEO Worker — runtime content from R2", () => {
   it("serves a raw post markdown file from R2", async () => {
     const { env, get } = makeEnv();
 
-    const response = await handleRequest(browser("/blog/building-a-tiny-web-os.md"), env);
+    const response = await handleRequest(
+      browser("/_worker/blog/building-a-tiny-web-os.md"),
+      env,
+    );
 
     expect(get).toHaveBeenCalledWith("posts/building-a-tiny-web-os.md");
     expect(response.headers.get("Content-Type")).toBe("text/markdown;charset=utf-8");
@@ -210,7 +266,7 @@ describe("SEO Worker — runtime content from R2", () => {
   it("returns noindex 404 when the index is not yet published", async () => {
     const { env } = makeEnv({});
 
-    const response = await handleRequest(browser("/blog/index.json"), env);
+    const response = await handleRequest(browser("/_worker/blog/index.json"), env);
 
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
@@ -219,7 +275,7 @@ describe("SEO Worker — runtime content from R2", () => {
   it("returns noindex 404 when a markdown file is missing", async () => {
     const { env, get } = makeEnv({});
 
-    const response = await handleRequest(browser("/blog/missing-post.md"), env);
+    const response = await handleRequest(browser("/_worker/blog/missing-post.md"), env);
 
     expect(get).toHaveBeenCalledWith("posts/missing-post.md");
     expect(response.status).toBe(404);
@@ -301,6 +357,30 @@ describe("SEO Worker — humans and other routes", () => {
     expect(assets).toHaveBeenCalledWith(request);
   });
 
+  it("does not serve legacy raw blog routes from R2", async () => {
+    const { env, get, assets } = makeEnv();
+
+    const indexResponse = await handleRequest(browser("/blog/index.json"), env);
+    const postResponse = await handleRequest(browser("/blog/building-a-tiny-web-os.md"), env);
+
+    expect(indexResponse.status).toBe(404);
+    expect(postResponse.status).toBe(404);
+    expect(get).not.toHaveBeenCalled();
+    expect(assets).not.toHaveBeenCalled();
+  });
+
+  it("does not serve legacy photo routes from R2", async () => {
+    const { env, photosGet, photosList, assets } = makeEnv();
+    const request = browser("/photos/ocean.png");
+
+    const response = await handleRequest(request, env);
+
+    expect(photosGet).not.toHaveBeenCalled();
+    expect(photosList).not.toHaveBeenCalled();
+    expect(assets).toHaveBeenCalledWith(request);
+    await expect(response.text()).resolves.toContain('<div id="app"></div>');
+  });
+
   it("passes non-blog requests straight to assets", async () => {
     const { env, get, assets } = makeEnv();
     const request = browser("/about");
@@ -314,14 +394,20 @@ describe("SEO Worker — humans and other routes", () => {
 
 describe("Worker responses — cross-origin isolation", () => {
   it.each([
-    ["R2 blog JSON", () => makeEnv(), () => browser("/blog/index.json")],
-    ["R2 markdown", () => makeEnv(), () => browser("/blog/building-a-tiny-web-os.md")],
+    ["R2 blog JSON", () => makeEnv(), () => browser("/_worker/blog/index.json")],
+    [
+      "R2 markdown",
+      () => makeEnv(),
+      () => browser("/_worker/blog/building-a-tiny-web-os.md"),
+    ],
     ["R2 SEO HTML", () => makeEnv(), () => crawler("/blog/building-a-tiny-web-os")],
     ["app catalog", () => makeEnv(), () => browser("/apps/index.json")],
     ["app module", () => makeEnv(), () => browser("/apps/notes/1.0.0+123/app.js")],
-    ["photo index", () => makeEnv(), () => browser("/photos/index.json")],
-    ["photo bytes", () => makeEnv(), () => browser("/photos/ocean.png")],
-    ["noindex 404", () => makeEnv({}), () => browser("/blog/index.json")],
+    ["photo index", () => makeEnv(), () => browser("/_worker/photos/index.json")],
+    ["photo bytes", () => makeEnv(), () => browser("/_worker/photos/ocean.png")],
+    ["file index", () => makeEnv(), () => browser("/_worker/files/index.json")],
+    ["file bytes", () => makeEnv(), () => browser("/_worker/files/raw/docs/spec.pdf")],
+    ["noindex 404", () => makeEnv({}), () => browser("/_worker/blog/index.json")],
     ["asset fallback", () => makeEnv(), () => browser("/about")],
     ["sitemap asset fallback", () => makeEnv({}), () => browser("/sitemap.xml")],
   ])("adds isolation headers to %s responses", async (_label, makeScenarioEnv, makeRequest) => {
@@ -337,7 +423,7 @@ describe("Photo gallery — dynamic index from R2", () => {
   it("lists the PHOTOS bucket as a newest-first JSON index", async () => {
     const { env, photosList, assets } = makeEnv();
 
-    const response = await handleRequest(browser("/photos/index.json"), env);
+    const response = await handleRequest(browser("/_worker/photos/index.json"), env);
 
     expect(photosList).toHaveBeenCalled();
     expect(response.status).toBe(200);
@@ -349,14 +435,17 @@ describe("Photo gallery — dynamic index from R2", () => {
       contentType: string;
     }>;
     expect(index.map((entry) => entry.key)).toEqual(["ocean.png", "2026/sunset.jpg"]);
-    expect(index[0]).toMatchObject({ url: "/photos/ocean.png", contentType: "image/png" });
+    expect(index[0]).toMatchObject({
+      url: "/_worker/photos/ocean.png",
+      contentType: "image/png",
+    });
     expect(assets).not.toHaveBeenCalled();
   });
 
   it("returns an empty array when the bucket has no objects", async () => {
     const { env } = makeEnv(DEFAULT_OBJECTS, []);
 
-    const response = await handleRequest(browser("/photos/index.json"), env);
+    const response = await handleRequest(browser("/_worker/photos/index.json"), env);
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual([]);
@@ -384,7 +473,7 @@ describe("Photo gallery — dynamic index from R2", () => {
       },
     ]);
 
-    const response = await handleRequest(browser("/photos/index.json"), env);
+    const response = await handleRequest(browser("/_worker/photos/index.json"), env);
     const index = (await response.json()) as Array<{ key: string }>;
 
     expect(index.map((entry) => entry.key)).toEqual(["2026/japan.jpg"]);
@@ -419,10 +508,12 @@ describe("Photo gallery — dynamic index from R2", () => {
     const env: WorkerEnv = {
       ASSETS: { fetch: vi.fn(async () => new Response("")) },
       BLOG: { get: vi.fn(async () => null) },
+      APPS: { get: vi.fn(async () => null) },
       PHOTOS: { get: vi.fn(async () => null), list, put: vi.fn(async () => undefined) },
+      FILES: { get: vi.fn(async () => null), list: vi.fn(async () => ({ objects: [], truncated: false })) },
     };
 
-    const response = await handleRequest(browser("/photos/index.json"), env);
+    const response = await handleRequest(browser("/_worker/photos/index.json"), env);
     const index = (await response.json()) as Array<{ key: string }>;
 
     expect(list).toHaveBeenCalledTimes(2);
@@ -430,11 +521,102 @@ describe("Photo gallery — dynamic index from R2", () => {
   });
 });
 
+describe("Files cloud drive — dynamic index from R2", () => {
+  it("lists the FILES bucket as a newest-first JSON index", async () => {
+    const { env, filesList, assets } = makeEnv();
+
+    const response = await handleRequest(browser("/_worker/files/index.json"), env);
+
+    expect(filesList).toHaveBeenCalledWith({ cursor: undefined, include: ["httpMetadata"] });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/json;charset=utf-8");
+
+    const index = (await response.json()) as Array<{
+      key: string;
+      kind: string;
+      url?: string;
+      contentType?: string;
+    }>;
+    expect(index.map((entry) => entry.key)).toEqual(["notes/readme.md", "docs/spec.pdf"]);
+    expect(index[0]).toMatchObject({
+      kind: "file",
+      url: "/_worker/files/raw/notes/readme.md",
+      contentType: "text/markdown;charset=utf-8",
+    });
+    expect(assets).not.toHaveBeenCalled();
+  });
+
+  it("surfaces R2 folder markers as directories", async () => {
+    const { env } = makeEnv(DEFAULT_OBJECTS, DEFAULT_PHOTOS, DEFAULT_APPS, [
+      {
+        key: "docs/",
+        body: "",
+        contentType: "application/octet-stream",
+        uploaded: "2026-05-31T13:44:17.720Z",
+      },
+    ]);
+
+    const response = await handleRequest(browser("/_worker/files/index.json"), env);
+    const index = (await response.json()) as Array<{ key: string; kind: string; url?: string }>;
+
+    expect(index).toEqual([
+      expect.objectContaining({ key: "docs/", kind: "directory" }),
+    ]);
+    expect(index[0]?.url).toBeUndefined();
+  });
+
+  it("serves stored file bytes with the bucket content type", async () => {
+    const { env, filesGet } = makeEnv();
+
+    const response = await handleRequest(browser("/_worker/files/raw/docs/spec.pdf"), env);
+
+    expect(filesGet).toHaveBeenCalledWith("docs/spec.pdf");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/pdf");
+    expect(response.headers.get("Cache-Control")).toContain("max-age=3600");
+    await expect(response.text()).resolves.toBe("%PDF-spec");
+  });
+
+  it("serves nested file keys with encoded path segments", async () => {
+    const { env, filesGet } = makeEnv(DEFAULT_OBJECTS, DEFAULT_PHOTOS, DEFAULT_APPS, [
+      {
+        key: "meeting notes/q2 plan.md",
+        body: "# Q2\n",
+        contentType: "text/markdown;charset=utf-8",
+        uploaded: "2026-05-31T13:44:17.720Z",
+      },
+    ]);
+
+    const indexResponse = await handleRequest(browser("/_worker/files/index.json"), env);
+    const index = (await indexResponse.json()) as Array<{ url?: string }>;
+    const response = await handleRequest(
+      browser("/_worker/files/raw/meeting%20notes/q2%20plan.md"),
+      env,
+    );
+
+    expect(index[0]?.url).toBe("/_worker/files/raw/meeting%20notes/q2%20plan.md");
+    expect(filesGet).toHaveBeenCalledWith("meeting notes/q2 plan.md");
+    await expect(response.text()).resolves.toBe("# Q2\n");
+  });
+
+  it("returns 404 for missing and unsafe file keys", async () => {
+    const { env, filesGet } = makeEnv(DEFAULT_OBJECTS, DEFAULT_PHOTOS, DEFAULT_APPS, []);
+
+    const missing = await handleRequest(browser("/_worker/files/raw/docs/missing.pdf"), env);
+    const unsafe = await handleRequest(browser("/_worker/files/raw/%2E%2E/secret.txt"), env);
+
+    expect(missing.status).toBe(404);
+    expect(unsafe.status).toBe(404);
+    expect(filesGet).toHaveBeenCalledTimes(1);
+    expect(filesGet).toHaveBeenCalledWith("docs/missing.pdf");
+  });
+});
+
 describe("Photo gallery — image bytes from R2", () => {
   it("serves stored image bytes with the bucket content type", async () => {
     const { env, photosGet } = makeEnv();
 
-    const response = await handleRequest(browser("/photos/ocean.png"), env);
+    const response = await handleRequest(browser("/_worker/photos/ocean.png"), env);
 
     expect(photosGet).toHaveBeenCalledWith("ocean.png");
     expect(response.status).toBe(200);
@@ -445,7 +627,7 @@ describe("Photo gallery — image bytes from R2", () => {
 
   it("serves nested keys and omits the body for HEAD requests", async () => {
     const { env, photosGet } = makeEnv();
-    const headRequest = new Request("https://daopk.me/photos/2026/sunset.jpg", {
+    const headRequest = new Request("https://daopk.me/_worker/photos/2026/sunset.jpg", {
       method: "HEAD",
       headers: { "User-Agent": BROWSER_USER_AGENT },
     });
@@ -460,14 +642,14 @@ describe("Photo gallery — image bytes from R2", () => {
   it("returns 404 for a missing photo", async () => {
     const { env } = makeEnv(DEFAULT_OBJECTS, []);
 
-    const response = await handleRequest(browser("/photos/missing.jpg"), env);
+    const response = await handleRequest(browser("/_worker/photos/missing.jpg"), env);
 
     expect(response.status).toBe(404);
   });
 
   it("ignores non-image paths and falls through to assets", async () => {
     const { env, assets, photosGet } = makeEnv();
-    const request = browser("/photos/readme.txt");
+    const request = browser("/_worker/photos/readme.txt");
 
     const response = await handleRequest(request, env);
 
@@ -490,13 +672,13 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
 
     const { env, photosGet, photosPut } = makeEnv();
 
-    const response = await handleRequest(browser("/photos/ocean.png?w=400"), env);
+    const response = await handleRequest(browser("/_worker/photos/ocean.png?w=400"), env);
 
     // A cache miss probes the derived key, then transforms the original.
     expect(photosGet).toHaveBeenCalledWith("thumbnails/400/ocean.png");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [input, init] = fetchMock.mock.calls[0] as [URL, { cf?: { image?: { width?: number } } }];
-    expect(String(input)).toContain("/photos/ocean.png");
+    expect(String(input)).toContain("/_worker/photos/ocean.png");
     expect(String(input)).not.toContain("w=400");
     expect(init?.cf?.image?.width).toBe(400);
 
@@ -528,7 +710,7 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
       },
     ]);
 
-    const response = await handleRequest(browser("/photos/ocean.png?w=400"), env);
+    const response = await handleRequest(browser("/_worker/photos/ocean.png?w=400"), env);
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(photosPut).not.toHaveBeenCalled();
@@ -543,7 +725,7 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
 
     const { env, photosGet, photosPut } = makeEnv();
 
-    const response = await handleRequest(browser("/photos/ocean.png?w=123"), env);
+    const response = await handleRequest(browser("/_worker/photos/ocean.png?w=123"), env);
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(photosPut).not.toHaveBeenCalled();
@@ -555,7 +737,7 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
   it("never serves derived thumbnail keys directly", async () => {
     const { env, photosGet } = makeEnv();
 
-    const response = await handleRequest(browser("/photos/thumbnails/400/ocean.png"), env);
+    const response = await handleRequest(browser("/_worker/photos/thumbnails/400/ocean.png"), env);
 
     expect(response.status).toBe(404);
     expect(photosGet).not.toHaveBeenCalled();
@@ -577,7 +759,7 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
       },
     ]);
 
-    const response = await handleRequest(browser("/photos/index.json"), env);
+    const response = await handleRequest(browser("/_worker/photos/index.json"), env);
     const index = (await response.json()) as Array<{ key: string }>;
 
     expect(index.map((entry) => entry.key)).toEqual(["ocean.png"]);

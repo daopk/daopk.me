@@ -37,9 +37,13 @@ export interface R2Bucket {
   get(key: string): Promise<R2ObjectBody | null>;
 }
 
-/** R2 bucket binding we additionally enumerate via `list()` and write to via `put()`. */
+/** R2 bucket binding we additionally enumerate via `list()`. */
 export interface R2ListableBucket extends R2Bucket {
   list(options?: R2ListOptions): Promise<R2Objects>;
+}
+
+/** R2 bucket binding we additionally write to via `put()`. */
+export interface R2WritableListableBucket extends R2ListableBucket {
   put(
     key: string,
     value: ArrayBuffer | ArrayBufferView | ReadableStream | string,
@@ -51,8 +55,10 @@ export interface WorkerEnv {
   ASSETS: AssetBinding;
   /** R2 bucket holding the published blog content + prerendered SEO pages. */
   BLOG: R2Bucket;
-  /** R2 bucket holding gallery images served verbatim under `/photos/*`. */
-  PHOTOS: R2ListableBucket;
+  /** R2 bucket holding gallery images served verbatim under `/_worker/photos/*`. */
+  PHOTOS: R2WritableListableBucket;
+  /** R2 bucket holding files surfaced as a read-only Finder cloud drive. */
+  FILES: R2ListableBucket;
   /**
    * R2 bucket holding independently-published first-party apps: the catalog at
    * `index.json` plus immutable, release-pinned modules at `<id>/<version+build>/*`.
@@ -62,8 +68,12 @@ export interface WorkerEnv {
 }
 
 const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
-const BLOG_POST_FILE_PATTERN = /^\/blog\/([a-z0-9-]+)\.md$/;
 const SLUG_PATTERN = /^[a-z0-9-]+$/;
+const WORKER_PREFIX = "/_worker";
+const WORKER_BLOG_INDEX_PATHNAME = `${WORKER_PREFIX}/blog/index.json`;
+const WORKER_BLOG_POST_FILE_PATTERN = /^\/_worker\/blog\/([a-z0-9-]+)\.md$/;
+const LEGACY_BLOG_INDEX_PATHNAME = "/blog/index.json";
+const LEGACY_BLOG_POST_FILE_PATTERN = /^\/blog\/([a-z0-9-]+)\.md$/;
 
 // R2 object keys (mirrors the layout produced by scripts/build-blog-bundle.mjs).
 const R2_INDEX_KEY = "index.json";
@@ -89,9 +99,11 @@ const APP_MODULE_PATTERN =
   /^\/apps\/([a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.(?:js|css|map))$/;
 const APP_MODULE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
-// Photo gallery served verbatim from the PHOTOS bucket under /photos/*.
-const PHOTOS_INDEX_PATHNAME = "/photos/index.json";
-const PHOTO_FILE_PATTERN = /^\/photos\/([a-z0-9][a-z0-9/_-]*\.(?:jpe?g|png|webp|gif|avif))$/i;
+// Photo gallery served verbatim from the PHOTOS bucket under /_worker/photos/*.
+const PHOTOS_BASE_PATHNAME = `${WORKER_PREFIX}/photos`;
+const PHOTOS_INDEX_PATHNAME = `${PHOTOS_BASE_PATHNAME}/index.json`;
+const PHOTO_FILE_PATTERN =
+  /^\/_worker\/photos\/([a-z0-9][a-z0-9/_-]*\.(?:jpe?g|png|webp|gif|avif))$/i;
 const PHOTO_CACHE_CONTROL = "public, max-age=3600";
 
 // On-the-fly thumbnails: each (key, width) is resized once via Cloudflare Image
@@ -100,6 +112,11 @@ const PHOTO_THUMB_WIDTHS = new Set([400, 800, 1600]);
 const PHOTO_THUMB_PREFIX = "thumbnails/";
 const PHOTO_THUMB_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
+// Read-only Finder cloud drive from the FILES bucket under /_worker/files/*.
+const FILES_INDEX_PATHNAME = `${WORKER_PREFIX}/files/index.json`;
+const FILES_RAW_PREFIX = `${WORKER_PREFIX}/files/raw/`;
+const FILES_CACHE_CONTROL = "public, max-age=3600";
+
 function appendVary(value: string | null, token: string): string {
   if (value === null || value.trim().length === 0) {
     return token;
@@ -107,6 +124,25 @@ function appendVary(value: string | null, token: string): string {
 
   const parts = value.split(",").map((part) => part.trim().toLowerCase());
   return parts.includes(token.toLowerCase()) ? value : `${value}, ${token}`;
+}
+
+function encodeR2KeyPath(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
+}
+
+function decodeRouteKey(encoded: string): string | null {
+  try {
+    const key = decodeURIComponent(encoded);
+    if (key.length === 0 || key.startsWith("/") || key.endsWith("/")) {
+      return null;
+    }
+    if (key.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
+      return null;
+    }
+    return key;
+  } catch {
+    return null;
+  }
 }
 
 function withCrossOriginIsolation(response: Response): Response {
@@ -208,6 +244,15 @@ export interface PhotosIndexEntry {
   readonly contentType: string;
 }
 
+export interface FilesIndexEntry {
+  readonly key: string;
+  readonly kind: "file" | "directory";
+  readonly size: number;
+  readonly uploaded: string;
+  readonly url?: string;
+  readonly contentType?: string;
+}
+
 /** Enumerate the PHOTOS bucket (paginated) into a newest-first gallery index. */
 async function buildPhotosIndex(env: WorkerEnv): Promise<PhotosIndexEntry[]> {
   const entries: PhotosIndexEntry[] = [];
@@ -223,15 +268,55 @@ async function buildPhotosIndex(env: WorkerEnv): Promise<PhotosIndexEntry[]> {
       // Only surface keys the image route can actually serve. This skips the
       // zero-byte `prefix/` folder markers the R2 dashboard creates and any
       // non-image objects, keeping the index in sync with `servePhoto`.
-      if (!PHOTO_FILE_PATTERN.test(`/photos/${object.key}`)) {
+      if (!PHOTO_FILE_PATTERN.test(`${PHOTOS_BASE_PATHNAME}/${object.key}`)) {
         continue;
       }
 
       entries.push({
         key: object.key,
-        url: `/photos/${object.key}`,
+        url: `${PHOTOS_BASE_PATHNAME}/${encodeR2KeyPath(object.key)}`,
         size: object.size,
         uploaded: object.uploaded.toISOString(),
+        contentType: object.httpMetadata?.contentType ?? "application/octet-stream",
+      });
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
+
+  entries.sort((a, b) => b.uploaded.localeCompare(a.uploaded));
+  return entries;
+}
+
+/** Enumerate the FILES bucket into a public, read-only Finder cloud-drive index. */
+async function buildFilesIndex(env: WorkerEnv): Promise<FilesIndexEntry[]> {
+  const entries: FilesIndexEntry[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const page = await env.FILES.list({ cursor, include: ["httpMetadata"] });
+    for (const object of page.objects) {
+      const key = object.key;
+      if (key.length === 0) {
+        continue;
+      }
+
+      const uploaded = object.uploaded.toISOString();
+      if (key.endsWith("/")) {
+        entries.push({
+          key,
+          kind: "directory",
+          size: 0,
+          uploaded,
+        });
+        continue;
+      }
+
+      entries.push({
+        key,
+        kind: "file",
+        size: object.size,
+        uploaded,
+        url: `${FILES_RAW_PREFIX}${encodeR2KeyPath(key)}`,
         contentType: object.httpMetadata?.contentType ?? "application/octet-stream",
       });
     }
@@ -255,6 +340,27 @@ async function servePhoto(env: WorkerEnv, key: string, request: Request): Promis
     headers.set("Content-Type", "application/octet-stream");
   }
   headers.set("Cache-Control", PHOTO_CACHE_CONTROL);
+  if (object.httpEtag !== undefined) {
+    headers.set("ETag", object.httpEtag);
+  }
+
+  const body = request.method === "HEAD" ? null : object.body;
+  return new Response(body, { headers });
+}
+
+/** Serve a stored cloud-drive file from the FILES bucket, or a 404 when absent. */
+async function serveFile(env: WorkerEnv, key: string, request: Request): Promise<Response> {
+  const object = await env.FILES.get(key);
+  if (object === null) {
+    return noIndexResponse("File not found.");
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata?.(headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/octet-stream");
+  }
+  headers.set("Cache-Control", FILES_CACHE_CONTROL);
   if (object.httpEtag !== undefined) {
     headers.set("ETag", object.httpEtag);
   }
@@ -307,7 +413,7 @@ async function serveResizedPhoto(
   const init: CfImageRequestInit = {
     cf: { image: { width, fit: "scale-down", metadata: "none" } },
   };
-  const resized = await fetch(new URL(`/photos/${key}`, request.url), init);
+  const resized = await fetch(new URL(`${PHOTOS_BASE_PATHNAME}/${encodeR2KeyPath(key)}`, request.url), init);
   if (!resized.ok) {
     return servePhoto(env, key, request);
   }
@@ -326,15 +432,16 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
   const url = new URL(request.url);
   const { pathname } = url;
 
-  // Runtime content consumed by the app (any user agent) lives in R2.
-  if (pathname === "/blog/index.json") {
+  // Runtime content consumed by apps (any user agent) lives in R2 behind
+  // /_worker/*, keeping human/crawler routes separate from raw content APIs.
+  if (pathname === WORKER_BLOG_INDEX_PATHNAME) {
     return (
       (await serveR2Asset(env.BLOG, R2_INDEX_KEY, "application/json;charset=utf-8", request)) ??
       noIndexResponse("Blog index not found.")
     );
   }
 
-  const postFile = BLOG_POST_FILE_PATTERN.exec(pathname);
+  const postFile = WORKER_BLOG_POST_FILE_PATTERN.exec(pathname);
   if (postFile !== null) {
     return (
       (await serveR2Asset(
@@ -344,6 +451,10 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
         request,
       )) ?? noIndexResponse("Blog post not found.")
     );
+  }
+
+  if (pathname === LEGACY_BLOG_INDEX_PATHNAME || LEGACY_BLOG_POST_FILE_PATTERN.test(pathname)) {
+    return noIndexResponse("Blog content not found.");
   }
 
   // Sitemap is published to R2 too; fall back to static assets if absent.
@@ -400,6 +511,24 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
       return serveResizedPhoto(env, photoKey, width, request);
     }
     return servePhoto(env, photoKey, request);
+  }
+
+  if (pathname === FILES_INDEX_PATHNAME) {
+    const index = await buildFilesIndex(env);
+    return new Response(JSON.stringify(index), {
+      headers: {
+        "Cache-Control": DEFAULT_CACHE_CONTROL,
+        "Content-Type": "application/json;charset=utf-8",
+      },
+    });
+  }
+
+  if (pathname.startsWith(FILES_RAW_PREFIX)) {
+    const key = decodeRouteKey(pathname.slice(FILES_RAW_PREFIX.length));
+    if (key === null) {
+      return noIndexResponse("File not found.");
+    }
+    return serveFile(env, key, request);
   }
 
   // Everything outside /blog is a normal static asset / SPA route.

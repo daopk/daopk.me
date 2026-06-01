@@ -3,7 +3,7 @@
  *
  * Images live in a dedicated Cloudflare R2 bucket (`daopk-photos`). The Worker
  * enumerates that bucket and serves both the generated index and the image
- * bytes same-origin under `/photos/*` (see `worker/router.ts`). Fetching
+ * bytes same-origin under `/_worker/photos/*` (see `worker/router.ts`). Fetching
  * same-origin avoids the COEP `credentialless` constraints a cross-origin CDN
  * would introduce, and new photos appear without redeploying the app.
  *
@@ -12,8 +12,8 @@
  */
 export const PHOTOS_INDEX_FILENAME = "index.json";
 
-/** Same-origin path the Worker maps to the R2 photos bucket. */
-export const PHOTOS_CONTENT_BASE = "/photos";
+/** Same-origin Worker namespace mapped to the R2 photos bucket. */
+export const PHOTOS_CONTENT_BASE = "/_worker/photos";
 
 export function photosIndexUrl(base: string = PHOTOS_CONTENT_BASE): string {
   return `${base}/${PHOTOS_INDEX_FILENAME}`;

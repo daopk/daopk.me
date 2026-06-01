@@ -70,7 +70,10 @@ export function photosProxyTargetUrl(
   } catch {
     return null;
   }
-  if (parsed.pathname !== "/photos" && !parsed.pathname.startsWith("/photos/")) {
+  if (
+    parsed.pathname !== "/_worker/photos" &&
+    !parsed.pathname.startsWith("/_worker/photos/")
+  ) {
     return null;
   }
 
@@ -107,8 +110,9 @@ async function proxyPhotosRequest(
 }
 
 /**
- * Production serves `/photos/*` from the Worker/R2 bucket. In local Vite dev and
- * preview there is no R2 binding, so proxy the same-origin path to daopk.me.
+ * Production serves `/_worker/photos/*` from the Worker/R2 bucket. In local
+ * Vite dev and preview there is no R2 binding, so proxy the same-origin path to
+ * daopk.me.
  */
 export function photosContentProxyServer(): PluginOption {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {

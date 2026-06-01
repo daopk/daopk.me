@@ -15,7 +15,7 @@ export interface Photo {
 }
 
 export interface UsePhotosOptions {
-  /** Override the index loader (defaults to fetching the Worker `/photos/index.json`). */
+  /** Override the index loader (defaults to fetching the Worker `/_worker/photos/index.json`). */
   readonly fetchIndex?: () => Promise<readonly Photo[]>;
 }
 
@@ -38,7 +38,7 @@ export function photoFromEntry(entry: unknown): Photo | null {
 
   return {
     key,
-    url: asNonEmptyString(record.url) ?? `/photos/${key}`,
+    url: asNonEmptyString(record.url) ?? `/_worker/photos/${key}`,
     size,
     uploaded: asNonEmptyString(record.uploaded),
     contentType: asNonEmptyString(record.contentType) ?? "application/octet-stream",

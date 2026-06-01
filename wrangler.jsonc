@@ -7,7 +7,7 @@
     "binding": "ASSETS",
     // `/apps/*` must hit the Worker first so release-pinned app modules are
     // served from R2 instead of the SPA `not_found_handling` fallback HTML.
-    "run_worker_first": ["/blog", "/blog/*", "/sitemap.xml", "/photos", "/photos/*", "/apps/*"],
+    "run_worker_first": ["/_worker/*", "/blog", "/blog/*", "/sitemap.xml", "/apps/*"],
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "single-page-application",
   },
@@ -19,6 +19,10 @@
     {
       "binding": "PHOTOS",
       "bucket_name": "daopk-photos",
+    },
+    {
+      "binding": "FILES",
+      "bucket_name": "daopk-files",
     },
     {
       "binding": "APPS",
