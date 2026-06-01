@@ -13,7 +13,7 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "pdfjs-dist": "^5.7.284"
+    "pdfjs-dist": "^6.0.227"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",

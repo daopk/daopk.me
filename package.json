@@ -34,7 +34,7 @@
     "isbot": "^5.1.40",
     "minisearch": "^7.2.0",
     "motion-v": "^2.2.1",
-    "pdfjs-dist": "^5.7.284",
+    "pdfjs-dist": "^6.0.227",
     "pinia": "^3.0.4",
     "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.1",
