@@ -75,7 +75,7 @@
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "4.1.7",
     "vue-axe": "^3.1.2",
-    "vue-tsc": "^3.3.2",
+    "vue-tsc": "^3.3.3",
     "workbox-build": "^7.4.1",
     "workbox-window": "^7.4.1",
     "wrangler": "^4.95.0"
