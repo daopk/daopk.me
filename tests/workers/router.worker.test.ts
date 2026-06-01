@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   handleRequest,
@@ -74,6 +74,7 @@ function makeEnv(
   assets: ReturnType<typeof vi.fn>;
   photosGet: ReturnType<typeof vi.fn>;
   photosList: ReturnType<typeof vi.fn>;
+  photosPut: ReturnType<typeof vi.fn>;
 } {
   const get = vi.fn(
     async (key: string): Promise<R2ObjectBody | null> =>
@@ -100,17 +101,19 @@ function makeEnv(
       truncated: false,
     }),
   );
+  const photosPut = vi.fn(async (): Promise<undefined> => undefined);
 
   return {
     env: {
       ASSETS: { fetch: assets },
       BLOG: { get },
-      PHOTOS: { get: photosGet, list: photosList },
+      PHOTOS: { get: photosGet, list: photosList, put: photosPut },
     },
     get,
     assets,
     photosGet,
     photosList,
+    photosPut,
   };
 }
 
@@ -375,7 +378,7 @@ describe("Photo gallery — dynamic index from R2", () => {
     const env: WorkerEnv = {
       ASSETS: { fetch: vi.fn(async () => new Response("")) },
       BLOG: { get: vi.fn(async () => null) },
-      PHOTOS: { get: vi.fn(async () => null), list },
+      PHOTOS: { get: vi.fn(async () => null), list, put: vi.fn(async () => undefined) },
     };
 
     const response = await handleRequest(browser("/photos/index.json"), env);
@@ -430,5 +433,112 @@ describe("Photo gallery — image bytes from R2", () => {
     expect(photosGet).not.toHaveBeenCalled();
     expect(assets).toHaveBeenCalledWith(request);
     await expect(response.text()).resolves.toContain('<div id="app"></div>');
+  });
+});
+
+describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("resizes via Cloudflare image fetch and persists the variant to R2", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response("resized-png-bytes", { headers: { "Content-Type": "image/png" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { env, photosGet, photosPut } = makeEnv();
+
+    const response = await handleRequest(browser("/photos/ocean.png?w=400"), env);
+
+    // A cache miss probes the derived key, then transforms the original.
+    expect(photosGet).toHaveBeenCalledWith("thumbnails/400/ocean.png");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [input, init] = fetchMock.mock.calls[0] as [URL, { cf?: { image?: { width?: number } } }];
+    expect(String(input)).toContain("/photos/ocean.png");
+    expect(String(input)).not.toContain("w=400");
+    expect(init?.cf?.image?.width).toBe(400);
+
+    expect(photosPut).toHaveBeenCalledTimes(1);
+    expect(photosPut.mock.calls[0]?.[0]).toBe("thumbnails/400/ocean.png");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/png");
+    expect(response.headers.get("Cache-Control")).toContain("immutable");
+    await expect(response.text()).resolves.toBe("resized-png-bytes");
+  });
+
+  it("serves a previously cached variant from R2 without transforming again", async () => {
+    const fetchMock = vi.fn(async () => new Response("should-not-run"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { env, photosPut } = makeEnv(DEFAULT_OBJECTS, [
+      {
+        key: "thumbnails/400/ocean.png",
+        body: "cached-thumb",
+        contentType: "image/png",
+        uploaded: "2026-05-31T12:00:00.000Z",
+      },
+      {
+        key: "ocean.png",
+        body: "ocean-bytes",
+        contentType: "image/png",
+        uploaded: "2026-05-31T12:00:00.000Z",
+      },
+    ]);
+
+    const response = await handleRequest(browser("/photos/ocean.png?w=400"), env);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(photosPut).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toContain("immutable");
+    await expect(response.text()).resolves.toBe("cached-thumb");
+  });
+
+  it("ignores widths outside the allow-list and serves the original", async () => {
+    const fetchMock = vi.fn(async () => new Response("nope"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { env, photosGet, photosPut } = makeEnv();
+
+    const response = await handleRequest(browser("/photos/ocean.png?w=123"), env);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(photosPut).not.toHaveBeenCalled();
+    expect(photosGet).toHaveBeenCalledWith("ocean.png");
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("ocean-bytes");
+  });
+
+  it("never serves derived thumbnail keys directly", async () => {
+    const { env, photosGet } = makeEnv();
+
+    const response = await handleRequest(browser("/photos/thumbnails/400/ocean.png"), env);
+
+    expect(response.status).toBe(404);
+    expect(photosGet).not.toHaveBeenCalled();
+  });
+
+  it("omits derived thumbnails from the gallery index", async () => {
+    const { env } = makeEnv(DEFAULT_OBJECTS, [
+      {
+        key: "ocean.png",
+        body: "ocean-bytes",
+        contentType: "image/png",
+        uploaded: "2026-05-31T12:00:00.000Z",
+      },
+      {
+        key: "thumbnails/400/ocean.png",
+        body: "cached-thumb",
+        contentType: "image/png",
+        uploaded: "2026-05-31T12:30:00.000Z",
+      },
+    ]);
+
+    const response = await handleRequest(browser("/photos/index.json"), env);
+    const index = (await response.json()) as Array<{ key: string }>;
+
+    expect(index.map((entry) => entry.key)).toEqual(["ocean.png"]);
   });
 });

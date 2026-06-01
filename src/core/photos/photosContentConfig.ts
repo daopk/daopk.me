@@ -22,3 +22,20 @@ export function photosIndexUrl(base: string = PHOTOS_CONTENT_BASE): string {
 export function photoUrl(key: string, base: string = PHOTOS_CONTENT_BASE): string {
   return `${base}/${key}`;
 }
+
+/**
+ * Thumbnail widths the Worker is allowed to generate (see `PHOTO_THUMB_WIDTHS`
+ * in `worker/router.ts`). The grid renders the 1x size and lets the browser
+ * pick the 2x variant on high-density displays.
+ */
+export const PHOTO_THUMB_WIDTH = 400;
+export const PHOTO_THUMB_WIDTH_2X = 800;
+
+/** Same-origin URL for a width-constrained variant the Worker resizes + caches. */
+export function photoThumbUrl(
+  key: string,
+  width: number,
+  base: string = PHOTOS_CONTENT_BASE,
+): string {
+  return `${base}/${key}?w=${width}`;
+}

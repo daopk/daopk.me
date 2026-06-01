@@ -37,9 +37,14 @@ export interface R2Bucket {
   get(key: string): Promise<R2ObjectBody | null>;
 }
 
-/** R2 bucket binding that we additionally enumerate via `list()`. */
+/** R2 bucket binding we additionally enumerate via `list()` and write to via `put()`. */
 export interface R2ListableBucket extends R2Bucket {
   list(options?: R2ListOptions): Promise<R2Objects>;
+  put(
+    key: string,
+    value: ArrayBuffer | ArrayBufferView | ReadableStream | string,
+    options?: { httpMetadata?: { contentType?: string } },
+  ): Promise<unknown>;
 }
 
 export interface WorkerEnv {
@@ -65,6 +70,12 @@ const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate";
 const PHOTOS_INDEX_PATHNAME = "/photos/index.json";
 const PHOTO_FILE_PATTERN = /^\/photos\/([a-z0-9][a-z0-9/_-]*\.(?:jpe?g|png|webp|gif|avif))$/i;
 const PHOTO_CACHE_CONTROL = "public, max-age=3600";
+
+// On-the-fly thumbnails: each (key, width) is resized once via Cloudflare Image
+// Resizing, then persisted under this prefix so later hits are plain R2 reads.
+const PHOTO_THUMB_WIDTHS = new Set([400, 800, 1600]);
+const PHOTO_THUMB_PREFIX = "thumbnails/";
+const PHOTO_THUMB_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 function appendVary(value: string | null, token: string): string {
   if (value === null || value.trim().length === 0) {
@@ -157,6 +168,10 @@ async function buildPhotosIndex(env: WorkerEnv): Promise<PhotosIndexEntry[]> {
   do {
     const page = await env.PHOTOS.list({ cursor, include: ["httpMetadata"] });
     for (const object of page.objects) {
+      // Derived thumbnails live in the same bucket; never list them as photos.
+      if (object.key.startsWith(PHOTO_THUMB_PREFIX)) {
+        continue;
+      }
       // Only surface keys the image route can actually serve. This skips the
       // zero-byte `prefix/` folder markers the R2 dashboard creates and any
       // non-image objects, keeping the index in sync with `servePhoto`.
@@ -198,6 +213,65 @@ async function servePhoto(env: WorkerEnv, key: string, request: Request): Promis
 
   const body = request.method === "HEAD" ? null : object.body;
   return new Response(body, { headers });
+}
+
+/** `RequestInit` plus the Cloudflare-specific `cf.image` resize controls. */
+interface CfImageRequestInit extends RequestInit {
+  cf?: {
+    image?: {
+      width?: number;
+      fit?: "scale-down" | "contain" | "cover" | "crop" | "pad";
+      metadata?: "keep" | "copyright" | "none";
+    };
+  };
+}
+
+/**
+ * Serve a width-constrained variant of a stored image. The first request for a
+ * given size transforms the original via Cloudflare Image Resizing and writes
+ * the result back to R2 under `thumbnails/<width>/`; later requests are plain
+ * R2 reads. Falls back to the original bytes when resizing is unavailable.
+ */
+async function serveResizedPhoto(
+  env: WorkerEnv,
+  key: string,
+  width: number,
+  request: Request,
+): Promise<Response> {
+  const derivedKey = `${PHOTO_THUMB_PREFIX}${width}/${key}`;
+
+  const cached = await env.PHOTOS.get(derivedKey);
+  if (cached !== null) {
+    const headers = new Headers();
+    cached.writeHttpMetadata?.(headers);
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/octet-stream");
+    }
+    headers.set("Cache-Control", PHOTO_THUMB_CACHE_CONTROL);
+    if (cached.httpEtag !== undefined) {
+      headers.set("ETag", cached.httpEtag);
+    }
+    return new Response(request.method === "HEAD" ? null : cached.body, { headers });
+  }
+
+  // Transform the original same-origin. The source URL carries no `?w`, so the
+  // worker serves the unresized object and there is no resize recursion.
+  const init: CfImageRequestInit = {
+    cf: { image: { width, fit: "scale-down", metadata: "none" } },
+  };
+  const resized = await fetch(new URL(`/photos/${key}`, request.url), init);
+  if (!resized.ok) {
+    return servePhoto(env, key, request);
+  }
+
+  const contentType = resized.headers.get("Content-Type") ?? "application/octet-stream";
+  const bytes = await resized.arrayBuffer();
+  await env.PHOTOS.put(derivedKey, bytes, { httpMetadata: { contentType } });
+
+  const headers = new Headers();
+  headers.set("Content-Type", contentType);
+  headers.set("Cache-Control", PHOTO_THUMB_CACHE_CONTROL);
+  return new Response(request.method === "HEAD" ? null : bytes, { headers });
 }
 
 export async function handleRequest(request: Request, env: WorkerEnv): Promise<Response> {
@@ -246,6 +320,14 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
 
   const photoKey = PHOTO_FILE_PATTERN.exec(pathname)?.[1] ?? null;
   if (photoKey !== null) {
+    // Derived variants are an internal cache; they are never served directly.
+    if (photoKey.startsWith(PHOTO_THUMB_PREFIX)) {
+      return noIndexResponse("Photo not found.");
+    }
+    const width = Number(url.searchParams.get("w"));
+    if (PHOTO_THUMB_WIDTHS.has(width)) {
+      return serveResizedPhoto(env, photoKey, width, request);
+    }
     return servePhoto(env, photoKey, request);
   }
 
