@@ -53,6 +53,12 @@ export interface WorkerEnv {
   BLOG: R2Bucket;
   /** R2 bucket holding gallery images served verbatim under `/photos/*`. */
   PHOTOS: R2ListableBucket;
+  /**
+   * R2 bucket holding independently-published first-party apps: the catalog at
+   * `index.json` plus immutable, version-pinned modules at `<id>/<version>/*`.
+   * Served under `/apps/*` so an app republish never touches the shell bundle.
+   */
+  APPS: R2Bucket;
 }
 
 const BLOG_ROUTE_PATTERN = /^\/blog\/([^/]+)$/;
@@ -65,6 +71,19 @@ const R2_SITEMAP_KEY = "sitemap.xml";
 const R2_SEO_INDEX_KEY = "seo/blog-index.html";
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+
+// First-party apps published independently of the shell. The catalog (mutable,
+// revalidated) lives at the APPS bucket root; version-pinned modules are
+// immutable. R2 keys are the request path minus the `/apps/` prefix, so
+// `/apps/index.json` -> `index.json` and `/apps/notes/1.0.0/notes.js` ->
+// `notes/1.0.0/notes.js` (the layout the per-app CI uploads).
+const APPS_CATALOG_PATHNAME = "/apps/index.json";
+const APPS_CATALOG_KEY = "index.json";
+// `<id>/<version>/<file>.{js,css,map}` — mirrors the host loader's ENTRY_PATTERN
+// (src/core/apps/firstParty/catalog.ts) but also allows sibling css/sourcemaps.
+const APP_MODULE_PATTERN =
+  /^\/apps\/([a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.(?:js|css|map))$/;
+const APP_MODULE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 // Photo gallery served verbatim from the PHOTOS bucket under /photos/*.
 const PHOTOS_INDEX_PATHNAME = "/photos/index.json";
@@ -107,11 +126,15 @@ function blogSlugFromPathname(pathname: string): string | null {
   return slug !== null && SLUG_PATTERN.test(slug) ? slug : null;
 }
 
-function r2Headers(object: R2ObjectBody, contentType: string): Headers {
+function r2Headers(
+  object: R2ObjectBody,
+  contentType: string,
+  cacheControl: string = DEFAULT_CACHE_CONTROL,
+): Headers {
   const headers = new Headers();
   object.writeHttpMetadata?.(headers);
   headers.set("Content-Type", contentType);
-  headers.set("Cache-Control", DEFAULT_CACHE_CONTROL);
+  headers.set("Cache-Control", cacheControl);
   if (object.httpEtag !== undefined) {
     headers.set("ETag", object.httpEtag);
   }
@@ -120,18 +143,26 @@ function r2Headers(object: R2ObjectBody, contentType: string): Headers {
 
 /** Serve a stored R2 object verbatim, or `null` when the key is missing. */
 async function serveR2Asset(
-  env: WorkerEnv,
+  bucket: R2Bucket,
   key: string,
   contentType: string,
   request: Request,
+  cacheControl: string = DEFAULT_CACHE_CONTROL,
 ): Promise<Response | null> {
-  const object = await env.BLOG.get(key);
+  const object = await bucket.get(key);
   if (object === null) {
     return null;
   }
 
   const body = request.method === "HEAD" ? null : object.body;
-  return new Response(body, { headers: r2Headers(object, contentType) });
+  return new Response(body, { headers: r2Headers(object, contentType, cacheControl) });
+}
+
+/** Content type for a first-party app module key (defaults to JS). */
+function appModuleContentType(key: string): string {
+  if (key.endsWith(".css")) return "text/css;charset=utf-8";
+  if (key.endsWith(".map")) return "application/json;charset=utf-8";
+  return "text/javascript;charset=utf-8";
 }
 
 /** Serve a prerendered SEO page from R2 with crawler caching hints. */
@@ -281,7 +312,7 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
   // Runtime content consumed by the app (any user agent) lives in R2.
   if (pathname === "/blog/index.json") {
     return (
-      (await serveR2Asset(env, R2_INDEX_KEY, "application/json;charset=utf-8", request)) ??
+      (await serveR2Asset(env.BLOG, R2_INDEX_KEY, "application/json;charset=utf-8", request)) ??
       noIndexResponse("Blog index not found.")
     );
   }
@@ -290,7 +321,7 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
   if (postFile !== null) {
     return (
       (await serveR2Asset(
-        env,
+        env.BLOG,
         `posts/${postFile[1]}.md`,
         "text/markdown;charset=utf-8",
         request,
@@ -301,8 +332,31 @@ export async function handleRequest(request: Request, env: WorkerEnv): Promise<R
   // Sitemap is published to R2 too; fall back to static assets if absent.
   if (pathname === "/sitemap.xml") {
     return (
-      (await serveR2Asset(env, R2_SITEMAP_KEY, "application/xml;charset=utf-8", request)) ??
+      (await serveR2Asset(env.BLOG, R2_SITEMAP_KEY, "application/xml;charset=utf-8", request)) ??
       env.ASSETS.fetch(request)
+    );
+  }
+
+  // First-party app catalog + immutable, version-pinned modules from the APPS
+  // bucket. Must run before the static-asset catch-all so module requests are
+  // not answered with the SPA fallback HTML.
+  if (pathname === APPS_CATALOG_PATHNAME) {
+    return (
+      (await serveR2Asset(env.APPS, APPS_CATALOG_KEY, "application/json;charset=utf-8", request)) ??
+      noIndexResponse("App catalog not found.")
+    );
+  }
+
+  const appModuleKey = APP_MODULE_PATTERN.exec(pathname)?.[1] ?? null;
+  if (appModuleKey !== null && !appModuleKey.includes("..")) {
+    return (
+      (await serveR2Asset(
+        env.APPS,
+        appModuleKey,
+        appModuleContentType(appModuleKey),
+        request,
+        APP_MODULE_CACHE_CONTROL,
+      )) ?? noIndexResponse("App module not found.")
     );
   }
 

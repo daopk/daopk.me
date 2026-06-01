@@ -5,7 +5,16 @@
   "assets": {
     "directory": "./dist/",
     "binding": "ASSETS",
-    "run_worker_first": ["/blog", "/blog/*", "/sitemap.xml", "/photos", "/photos/*"],
+    // `/apps/*` must hit the Worker first so version-pinned app modules are
+    // served from R2 instead of the SPA `not_found_handling` fallback HTML.
+    "run_worker_first": [
+      "/blog",
+      "/blog/*",
+      "/sitemap.xml",
+      "/photos",
+      "/photos/*",
+      "/apps/*",
+    ],
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "single-page-application",
   },
@@ -17,6 +26,10 @@
     {
       "binding": "PHOTOS",
       "bucket_name": "daopk-photos",
+    },
+    {
+      "binding": "APPS",
+      "bucket_name": "daopk-apps",
     },
   ],
 }
