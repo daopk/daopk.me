@@ -1,16 +1,31 @@
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { defineComponent } from "vue";
 
 import "fake-indexeddb/auto";
 
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import { VFS_IDB_DB_NAME } from "~/core/storage/constants";
 import { kernel } from "~/core/kernel";
+import type { AppManifest } from "~/types/app";
 import type { KernelVfsDirectoryOptions, KernelVfsWriteOptions } from "~/types/kernel";
 
-import { notesManifest } from "./manifest";
 import { useNotes } from "./useNotes";
 import type { NotesVfsClient } from "./useNotes";
+
+// Minimal manifest: this test drives `useNotes` directly against the kernel
+// VFS, so it only needs a registered `notes` handle for permission scoping —
+// not the real (now independently-built) app component.
+const notesManifest: AppManifest = {
+  id: "notes",
+  name: "Notes",
+  version: "1.0.0",
+  icon: defineComponent({ name: "NotesTestIcon", render: () => null }),
+  category: "productivity",
+  permissions: ["vfs.read", "vfs.write"],
+  component: () =>
+    Promise.resolve({ default: defineComponent({ name: "NotesTestStub", render: () => null }) }),
+};
 
 function deleteDatabase(name: string): Promise<void> {
   return new Promise((resolve, reject) => {

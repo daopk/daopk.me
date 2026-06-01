@@ -1,13 +1,27 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 
-import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
-import { splitFilename } from "~/core/vfs/fileNames";
-import { basename, dirname, joinVfsPath, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
-import { normalizedVfsMimeType, vfsFileExtension } from "~/core/vfs/fileTypes";
-import type { TrashItem } from "~/types/trash";
-import { toErrorMessage } from "~/utils/errors";
+import {
+  basename,
+  dirname,
+  isNotesMarkdownPath,
+  joinVfsPath,
+  NOTES_ROOT,
+  normalizedVfsMimeType,
+  normalizeVfsPath,
+  splitFilename,
+  toErrorMessage,
+  vfsFileExtension,
+  type TrashItem,
+  type VfsDirEntry,
+  type VfsPath,
+  type VfsStat,
+} from "@daopk/sdk";
 
-export const NOTES_ROOT = "/home/notes";
+// `NOTES_ROOT` + `isNotesMarkdownPath` are owned by the host (the shell defines
+// the VFS layout) and re-exported here so existing `./useNotes` importers
+// (App.vue, tests) keep working against the same source of truth.
+export { isNotesMarkdownPath, NOTES_ROOT };
+
 export const NOTES_MIME_TYPE = "text/markdown;charset=utf-8";
 export const NOTES_AUTOSAVE_DEBOUNCE_MS = 800;
 
@@ -58,18 +72,6 @@ export interface UseNotesBindings {
   setDraft(value: string): void;
   flushAutosave(): Promise<boolean>;
   dispose(options?: { flush?: boolean }): void;
-}
-
-export function isNotesMarkdownPath(path: string): boolean {
-  let normalized: VfsPath;
-  try {
-    normalized = normalizeVfsPath(path);
-  } catch {
-    return false;
-  }
-
-  const extension = vfsFileExtension(normalized);
-  return dirname(normalized) === NOTES_ROOT && (extension === "md" || extension === "markdown");
 }
 
 interface ParsedNote {

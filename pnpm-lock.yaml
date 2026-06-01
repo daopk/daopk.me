@@ -84,6 +84,9 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0(@vue/compiler-sfc@3.5.35)(pinia@3.0.4(typescript@6.0.3)(vue@3.5.35(typescript@6.0.3)))(vite@8.0.14(@types/node@25.9.1)(esbuild@0.27.3)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
     devDependencies:
+      '@daopk-app/notes':
+        specifier: workspace:*
+        version: link:apps/notes
       '@iconify-json/fluent-color':
         specifier: ^1.2.21
         version: 1.2.21
@@ -150,6 +153,33 @@ importers:
       wrangler:
         specifier: ^4.95.0
         version: 4.95.0
+
+  apps/notes:
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^6.0.7
+        version: 6.0.7(vite@8.0.14(@types/node@25.9.1)(esbuild@0.27.3)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.48.0)(yaml@2.9.0))(vue@3.5.35(typescript@6.0.3))
+      '@vue/tsconfig':
+        specifier: ^0.9.1
+        version: 0.9.1(typescript@6.0.3)(vue@3.5.35(typescript@6.0.3))
+      '@vueuse/core':
+        specifier: ^14.3.0
+        version: 14.3.0(vue@3.5.35(typescript@6.0.3))
+      sass-embedded:
+        specifier: ^1.100.0
+        version: 1.100.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.14
+        version: 8.0.14(@types/node@25.9.1)(esbuild@0.27.3)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.48.0)(yaml@2.9.0)
+      vue:
+        specifier: ^3.5.35
+        version: 3.5.35(typescript@6.0.3)
+      vue-tsc:
+        specifier: ^3.3.2
+        version: 3.3.2(typescript@6.0.3)
 
 packages:
 

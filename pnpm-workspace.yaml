@@ -8,3 +8,4 @@ allowBuilds:
   workerd: false
 packages:
   - .
+  - apps/*

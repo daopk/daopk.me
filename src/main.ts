@@ -12,7 +12,6 @@ import { calendarManifest } from "~/apps/calendar";
 import { clockManifest } from "~/apps/clock";
 import { editorManifest } from "~/apps/editor";
 import { finderManifest } from "~/apps/finder";
-import { notesManifest } from "~/apps/notes";
 import { pdfViewerManifest } from "~/apps/pdf-viewer";
 import { photosManifest } from "~/apps/photos";
 import { slidesManifest } from "~/apps/slides";
@@ -46,7 +45,9 @@ kernel.apps.register(calendarManifest);
 
 kernel.apps.register(editorManifest);
 
-kernel.apps.register(notesManifest);
+// `notes` is a first-party app published independently of the shell; it is
+// registered by `firstPartyAppsPhase` (from the catalog in prod, from the
+// workspace package in dev) rather than bundled here.
 
 kernel.apps.register(slidesManifest);
 

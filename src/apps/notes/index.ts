@@ -1,1 +1,0 @@
-export { notesManifest } from "./manifest";

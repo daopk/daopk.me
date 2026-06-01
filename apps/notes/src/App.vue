@@ -10,7 +10,7 @@ import {
   Textarea,
   TextInput,
   useAppChrome,
-} from "~/components/kit";
+} from "@daopk/kit";
 import {
   Button,
   ContextMenu,
@@ -18,12 +18,15 @@ import {
   ContextMenuSeparator,
   Dialog,
   DialogActions,
-} from "~/components/ui";
-import { useKernel } from "~/composables/useKernel";
-import { useVfs } from "~/composables/useVfs";
-import { FileText, Plus } from "~/icons/lucide";
-import { formatDateTime } from "~/utils/format";
-import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
+} from "@daopk/ui";
+import { FileText, Plus } from "@daopk/icons";
+import {
+  AppContextInjectionKey,
+  formatDateTime,
+  useKernel,
+  useVfs,
+  type AppChromeBackAction,
+} from "@daopk/sdk";
 
 import {
   isNotesMarkdownPath,

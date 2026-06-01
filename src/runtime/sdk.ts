@@ -110,6 +110,7 @@ export {
   vfsFileTypeInputFromPath,
 } from "~/core/vfs/fileTypes";
 export { splitFilename } from "~/core/vfs/fileNames";
+export { isNotesMarkdownPath, NOTES_ROOT } from "~/core/notes/notesPaths";
 
 export type {
   AppChromeBackAction,

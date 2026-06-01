@@ -1,7 +1,7 @@
 import type { Component } from "vue";
 
-import { isNotesMarkdownPath } from "~/apps/notes/useNotes";
 import { isSlideDeckPath } from "~/apps/slides/paths";
+import { isNotesMarkdownPath } from "~/core/notes/notesPaths";
 import { BLOG_POSTS_ROOT, isBlogPostSlug } from "~/core/routing/blogPaths";
 import { detectVfsFileType, isEditableVfsTextFile, vfsFileExtension } from "~/core/vfs/fileTypes";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
