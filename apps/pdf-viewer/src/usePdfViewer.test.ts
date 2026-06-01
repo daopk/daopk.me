@@ -348,4 +348,23 @@ describe("usePdfViewer", () => {
     expect(document.destroy).toHaveBeenCalledTimes(1);
     unmount();
   });
+
+  it("destroys the document loading task when the PDF proxy has no destroy method", async () => {
+    let task!: PdfLoadingTaskLike & { destroy: ReturnType<typeof vi.fn> };
+    const document: PdfDocumentLike & { getPage: ReturnType<typeof vi.fn> } = {
+      numPages: 3,
+      get loadingTask() {
+        return task;
+      },
+      getPage: vi.fn(async () => makePage()),
+    };
+    task = makeLoadingTask(document);
+    const { viewer, unmount } = harness({ adapter: makeAdapter(task) });
+
+    await viewer.loadFromPath("/book.pdf");
+    viewer.dispose();
+
+    expect(task.destroy).toHaveBeenCalledTimes(1);
+    unmount();
+  });
 });

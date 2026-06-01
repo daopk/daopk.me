@@ -42,8 +42,10 @@ export interface PdfPageLike {
 
 export interface PdfDocumentLike {
   readonly numPages: number;
+  readonly loadingTask?: PdfLoadingTaskLike;
   getPage(pageNumber: number): Promise<PdfPageLike>;
-  destroy(): Promise<void>;
+  destroy?(): Promise<void>;
+  cleanup?(keepLoadedFonts?: boolean): Promise<unknown>;
 }
 
 export interface PdfLoadingTaskLike {
@@ -268,7 +270,7 @@ export function usePdfViewer({
     try {
       const document = await loadingTask.promise;
       if (!isCurrentLoad(loadRun)) {
-        void document.destroy().catch(() => undefined);
+        destroyDocument(document);
         return false;
       }
 
@@ -517,7 +519,7 @@ export function usePdfViewer({
     const document = activeDocument;
     activeDocument = undefined;
     if (document !== undefined) {
-      void document.destroy().catch(() => undefined);
+      destroyDocument(document);
     }
   }
 
@@ -537,7 +539,33 @@ export function usePdfViewer({
 
   function destroyLoadingTask(loadingTask: PdfLoadingTaskLike): void {
     void loadingTask.destroy().catch(() => undefined);
-    void loadingTask.promise.then((document) => document.destroy()).catch(() => undefined);
+    void loadingTask.promise
+      .then((document) => {
+        if (typeof document.destroy === "function") {
+          return document.destroy();
+        }
+
+        if (document.loadingTask !== undefined && document.loadingTask !== loadingTask) {
+          return document.loadingTask.destroy();
+        }
+
+        return undefined;
+      })
+      .catch(() => undefined);
+  }
+
+  function destroyDocument(document: PdfDocumentLike): void {
+    if (typeof document.destroy === "function") {
+      void document.destroy().catch(() => undefined);
+      return;
+    }
+
+    if (document.loadingTask !== undefined) {
+      void document.loadingTask.destroy().catch(() => undefined);
+      return;
+    }
+
+    void document.cleanup?.().catch(() => undefined);
   }
 
   function dispose(): void {
