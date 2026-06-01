@@ -8,12 +8,12 @@ import {
 } from "@daopk/sdk";
 
 import {
-  SLIDES_ROOT,
   deckDirectoryFromSlug,
   deckPathFromSlug,
   normalizeSlideDeckSlug,
   parseSlideDeckPath,
-} from "./paths";
+  SLIDES_ROOT,
+} from "@daopk/content";
 
 export const SLIDE_DECK_MIME_TYPE = "text/markdown;charset=utf-8";
 

@@ -8,7 +8,7 @@ import {
 } from "~/core/spotlight/SpotlightRecentsStore";
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { dirname, normalizeVfsPath } from "~/core/vfs/path";
-import { isSlideDeckPath } from "~/apps/slides/paths";
+import { isSlideDeckPath } from "~/core/routing/slidePaths";
 import type { SearchHit, SearchKind } from "~/types/search";
 
 const QUERY_DEBOUNCE_MS = 80;

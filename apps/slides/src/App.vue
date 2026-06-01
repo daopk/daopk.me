@@ -20,7 +20,7 @@ import { Button, Dialog, DialogActions } from "@daopk/ui";
 import { Play, Save } from "@daopk/icons";
 import { AppContextInjectionKey, toErrorMessage, useKernel, useVfs } from "@daopk/sdk";
 
-import { parseSlideDeckPath } from "./paths";
+import { parseSlideDeckPath } from "@daopk/content";
 import { useSlidesLibrary, type SlidesDeck } from "./useSlidesLibrary";
 import { useSlidevRuntime } from "./useSlidevRuntime";
 

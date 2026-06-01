@@ -1,4 +1,4 @@
-import { normalizeVfsPath, type VfsPath } from "@daopk/sdk";
+import { normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
 
 export const SLIDES_ROOT = "/home/slides";
 export const SLIDE_DECK_FILENAME = "slides.md";

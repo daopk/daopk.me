@@ -10,7 +10,7 @@ import {
 } from "~/icons/fluentColor";
 import { formatBytes, formatDateTime } from "~/utils/format";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
-import { isSlideDeckPath } from "~/apps/slides/paths";
+import { isSlideDeckPath } from "~/core/routing/slidePaths";
 
 import { detectPreviewType } from "./useFinderPreview";
 

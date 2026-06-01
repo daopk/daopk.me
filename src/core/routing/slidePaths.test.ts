@@ -7,7 +7,7 @@ import {
   normalizeSlideDeckSlug,
   parseSlideDeckPath,
   SlideDeckPathError,
-} from "./paths";
+} from "./slidePaths";
 
 describe("slide deck paths", () => {
   it("normalizes titles to a single safe slug segment", () => {
