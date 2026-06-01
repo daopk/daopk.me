@@ -281,6 +281,7 @@ watch(
   color: var(--color-fg);
   cursor: pointer;
   display: inline-flex;
+  flex: 0 0 36px;
   inline-size: 36px;
   justify-content: center;
   transition: background var(--duration-fast) var(--ease);
@@ -298,18 +299,14 @@ watch(
 .app-view__title {
   color: var(--color-fg);
   flex: 1 1 auto;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   margin: 0;
+  min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.app-view__recents,
-.app-view__hide {
-  flex: 0 0 auto;
 }
 
 .app-view__body {
