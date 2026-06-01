@@ -5,6 +5,8 @@ import { flushPromises, mount } from "@vue/test-utils";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
+import type { FirstPartyAppDescriptor } from "./types";
+
 vi.mock("~/core/debug", () => ({ debugWarn: vi.fn(), debugLog: vi.fn() }));
 
 // A single rostered app whose published module exposes the app component as
@@ -42,7 +44,10 @@ vi.mock("./devEntries", async () => {
     FIRST_PARTY_DEV_ENTRIES: {
       notes: () =>
         Promise.resolve({
-          default: dc({ name: "AppRoot", template: '<div class="app-root-stub">app content</div>' }),
+          default: dc({
+            name: "AppRoot",
+            template: '<div class="app-root-stub">app content</div>',
+          }),
           RecentNotesWidget: dc({
             name: "RecentNotesWidget",
             template: '<div class="widget-stub">widget content</div>',
@@ -52,7 +57,10 @@ vi.mock("./devEntries", async () => {
   };
 });
 
-import { registerFirstPartyApps } from "./registerFirstPartyApps";
+import {
+  firstPartyDescriptorToAppManifest,
+  registerFirstPartyApps,
+} from "./registerFirstPartyApps";
 
 function fakeKernel(registered: AppManifest[]): Kernel {
   return {
@@ -112,5 +120,47 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect((resolved as { __esModule?: boolean }).__esModule).toBe(true);
 
     expect(await renderViaAsyncComponent(widget!.component)).toContain("widget-stub");
+  });
+
+  it("reuses the manifest builder with ESM-wrapped app and widget loaders", async () => {
+    const descriptor: FirstPartyAppDescriptor = {
+      id: "probe",
+      name: "Probe",
+      icon: defineComponent({ name: "ProbeIcon", template: "<svg />" }),
+      category: "dev",
+      version: "0.0.0",
+      widgets: [
+        {
+          id: "probe:widget",
+          title: "Probe Widget",
+          surface: "desktop:wallpaper",
+          size: "sm",
+          exportName: "ProbeWidget",
+        },
+      ],
+    };
+    const manifest = firstPartyDescriptorToAppManifest(
+      descriptor,
+      async () => ({
+        default: defineComponent({
+          name: "ProbeApp",
+          template: '<div class="probe-app">probe app</div>',
+        }),
+        ProbeWidget: defineComponent({
+          name: "ProbeWidget",
+          template: '<div class="probe-widget">probe widget</div>',
+        }),
+      }),
+      "1.2.3",
+    );
+
+    expect(manifest.version).toBe("1.2.3");
+    expect(((await manifest.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(manifest.component)).toContain("probe-app");
+
+    const widget = manifest.widgets?.[0];
+    expect(widget).toBeDefined();
+    expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(widget!.component)).toContain("probe-widget");
   });
 });

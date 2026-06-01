@@ -7,6 +7,10 @@ export const FIRST_PARTY_CATALOG_URL = "/apps/index.json";
 
 const DEFAULT_TIMEOUT_MS = 4000;
 
+export type FirstPartyCatalogFetchResult =
+  | { ok: true; catalog: FirstPartyCatalog }
+  | { ok: false; error: string };
+
 /**
  * Entries must be same-origin, version-pinned module paths. Restricting to
  * `/apps/<id>/<version>/<file>` is a security boundary: even though the catalog
@@ -69,18 +73,37 @@ function timeoutSignal(signal: AbortSignal | undefined, ms: number): AbortSignal
 export async function fetchFirstPartyCatalog(
   options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<FirstPartyCatalog> {
+  const result = await fetchFirstPartyCatalogForUpdate(options);
+  if (!result.ok) {
+    debugWarn("[first-party]", "catalog fetch error", result.error);
+    return { apps: [] };
+  }
+  return result.catalog;
+}
+
+/**
+ * Fetch + validate the catalog for user-triggered update checks. Unlike the
+ * boot helper, this keeps the failure reason so App Store can surface it.
+ */
+export async function fetchFirstPartyCatalogForUpdate(
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<FirstPartyCatalogFetchResult> {
   try {
     const response = await fetch(FIRST_PARTY_CATALOG_URL, {
       signal: timeoutSignal(options.signal, options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {
-      debugWarn("[first-party]", `catalog fetch failed: ${response.status}`);
-      return { apps: [] };
+      return {
+        ok: false,
+        error: `Could not check for updates (${response.status}).`,
+      };
     }
-    return coerceFirstPartyCatalog(await response.json());
+    return { ok: true, catalog: coerceFirstPartyCatalog(await response.json()) };
   } catch (error) {
-    debugWarn("[first-party]", "catalog fetch error", error);
-    return { apps: [] };
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

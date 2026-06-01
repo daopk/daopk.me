@@ -7,7 +7,11 @@ import type { Component } from "vue";
 
 import { fetchFirstPartyCatalog } from "./catalog";
 import { FIRST_PARTY_APPS } from "./registry";
-import type { FirstPartyAppDescriptor, FirstPartyWidgetDescriptor } from "./types";
+import type {
+  FirstPartyAppDescriptor,
+  FirstPartyCatalogEntry,
+  FirstPartyWidgetDescriptor,
+} from "./types";
 
 /**
  * Loads an app's published ES module. Returns the raw module namespace so the
@@ -42,7 +46,7 @@ function toWidgetManifest(
 }
 
 /** Build a runtime `AppManifest` from the host-owned identity + a module loader. */
-function toManifest(
+export function firstPartyDescriptorToAppManifest(
   descriptor: FirstPartyAppDescriptor,
   load: FirstPartyModuleLoader,
   version: string,
@@ -73,6 +77,18 @@ function toManifest(
   return manifest;
 }
 
+export function firstPartyCatalogEntryToAppManifest(
+  entry: FirstPartyCatalogEntry,
+): AppManifest | null {
+  const descriptor = FIRST_PARTY_APPS.find((app) => app.id === entry.id);
+  if (descriptor === undefined) {
+    return null;
+  }
+  const load: FirstPartyModuleLoader = () =>
+    import(/* @vite-ignore */ entry.entry) as Promise<Record<string, unknown>>;
+  return firstPartyDescriptorToAppManifest(descriptor, load, entry.version);
+}
+
 /**
  * Register the first-party app roster against the kernel. Two lanes:
  *  - **dev**: load each app from its workspace package (HMR; no catalog).
@@ -96,7 +112,7 @@ export async function registerFirstPartyApps(
         debugWarn("[first-party]", `no dev loader for "${descriptor.id}" — skipping`);
         continue;
       }
-      kernel.apps.register(toManifest(descriptor, load, descriptor.version));
+      kernel.apps.register(firstPartyDescriptorToAppManifest(descriptor, load, descriptor.version));
     }
     return;
   }
@@ -111,8 +127,9 @@ export async function registerFirstPartyApps(
       continue;
     }
 
-    const load: FirstPartyModuleLoader = () =>
-      import(/* @vite-ignore */ entry.entry) as Promise<Record<string, unknown>>;
-    kernel.apps.register(toManifest(descriptor, load, entry.version));
+    const manifest = firstPartyCatalogEntryToAppManifest(entry);
+    if (manifest !== null) {
+      kernel.apps.register(manifest);
+    }
   }
 }
