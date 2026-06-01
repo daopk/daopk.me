@@ -17,7 +17,10 @@ import { fetchFirstPartyCatalogForUpdate } from "~/core/apps/firstParty/catalog"
 import { FIRST_PARTY_APP_IDS } from "~/core/apps/firstParty/registry";
 import { firstPartyCatalogEntryToAppManifest } from "~/core/apps/firstParty/registerFirstPartyApps";
 import type { FirstPartyCatalogEntry } from "~/core/apps/firstParty/types";
-import { isFirstPartyUpdateVersion } from "~/core/apps/firstParty/versions";
+import {
+  formatFirstPartyReleaseLabel,
+  isFirstPartyUpdateVersion,
+} from "~/core/apps/firstParty/versions";
 import { Download as UpdateIcon, ExternalLink as LaunchIcon, RefreshCw } from "~/icons/lucide";
 import type { AppManifest } from "~/types/app";
 
@@ -110,7 +113,17 @@ function updateEntryFor(app: AppManifest): FirstPartyCatalogEntry | undefined {
   if (entry === undefined) {
     return undefined;
   }
-  return isFirstPartyUpdateVersion(app.version, entry.version) ? entry : undefined;
+  return isFirstPartyUpdateVersion(app.version, entry.version, app.build, entry.build)
+    ? entry
+    : undefined;
+}
+
+function appReleaseLabel(app: AppManifest): string {
+  return formatFirstPartyReleaseLabel(app.version, app.build);
+}
+
+function catalogEntryReleaseLabel(entry: FirstPartyCatalogEntry | undefined): string {
+  return formatFirstPartyReleaseLabel(entry?.version, entry?.build);
 }
 
 function isUpdating(appId: string): boolean {
@@ -140,13 +153,17 @@ async function checkForUpdates(): Promise<void> {
     return;
   }
 
-  const currentVersions = new Map(apps.value.map((app) => [app.id, app.version] as const));
+  const currentApps = new Map(apps.value.map((app) => [app.id, app] as const));
   const nextUpdates = new Map<string, FirstPartyCatalogEntry>();
   for (const entry of result.catalog.apps) {
     if (!FIRST_PARTY_APP_IDS.has(entry.id)) {
       continue;
     }
-    if (!isFirstPartyUpdateVersion(currentVersions.get(entry.id), entry.version)) {
+    const current = currentApps.get(entry.id);
+    if (
+      current === undefined ||
+      !isFirstPartyUpdateVersion(current.version, entry.version, current.build, entry.build)
+    ) {
       continue;
     }
     if (firstPartyCatalogEntryToAppManifest(entry) === null) {
@@ -315,16 +332,14 @@ function launchApp(manifestId: string): void {
                 <component :is="app.icon" class="app-store__icon" aria-hidden="true" />
                 <span class="app-store__copy">
                   <span class="app-store__name">{{ app.name }}</span>
-                  <span class="app-store__version">
-                    {{ app.version ? `v${app.version}` : "No version" }}
-                  </span>
+                  <span class="app-store__version">{{ appReleaseLabel(app) }}</span>
                 </span>
               </div>
 
               <div class="app-store__meta">
                 <span class="app-store__category">{{ group.label }}</span>
                 <Badge v-if="updateEntryFor(app)" class="app-store__badge" tone="accent">
-                  v{{ updateEntryFor(app)?.version }}
+                  {{ catalogEntryReleaseLabel(updateEntryFor(app)) }}
                 </Badge>
               </div>
 

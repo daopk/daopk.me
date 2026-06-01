@@ -66,14 +66,35 @@ function compareSemver(left: ParsedSemver, right: ParsedSemver): number {
   return comparePrerelease(left.prerelease, right.prerelease);
 }
 
+function normalizeBuild(build: number | undefined): number {
+  return build !== undefined && Number.isSafeInteger(build) && build >= 0 ? build : 0;
+}
+
 export function isFirstPartyUpdateVersion(
   currentVersion: string | undefined,
   candidateVersion: string,
+  currentBuild?: number,
+  candidateBuild?: number,
 ): boolean {
   const current = parseSemver(currentVersion);
   const candidate = parseSemver(candidateVersion);
   if (current === null || candidate === null) {
     return false;
   }
-  return compareSemver(candidate, current) > 0;
+  const versionComparison = compareSemver(candidate, current);
+  if (versionComparison !== 0) {
+    return versionComparison > 0;
+  }
+  return normalizeBuild(candidateBuild) > normalizeBuild(currentBuild);
+}
+
+export function formatFirstPartyReleaseLabel(
+  version: string | undefined,
+  build: number | undefined,
+): string {
+  if (version === undefined || version.length === 0) {
+    return "No version";
+  }
+  const normalizedBuild = normalizeBuild(build);
+  return normalizedBuild > 0 ? `v${version}+${normalizedBuild}` : `v${version}`;
 }

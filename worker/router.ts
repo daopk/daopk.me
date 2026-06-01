@@ -55,7 +55,7 @@ export interface WorkerEnv {
   PHOTOS: R2ListableBucket;
   /**
    * R2 bucket holding independently-published first-party apps: the catalog at
-   * `index.json` plus immutable, version-pinned modules at `<id>/<version>/*`.
+   * `index.json` plus immutable, release-pinned modules at `<id>/<version+build>/*`.
    * Served under `/apps/*` so an app republish never touches the shell bundle.
    */
   APPS: R2Bucket;
@@ -77,13 +77,13 @@ const CROSS_ORIGIN_ISOLATION_HEADERS = {
 };
 
 // First-party apps published independently of the shell. The catalog (mutable,
-// revalidated) lives at the APPS bucket root; version-pinned modules are
+// revalidated) lives at the APPS bucket root; release-pinned modules are
 // immutable. R2 keys are the request path minus the `/apps/` prefix, so
-// `/apps/index.json` -> `index.json` and `/apps/notes/1.0.0/notes.js` ->
-// `notes/1.0.0/notes.js` (the layout the per-app CI uploads).
+// `/apps/index.json` -> `index.json` and `/apps/notes/1.0.0+123/notes.js` ->
+// `notes/1.0.0+123/notes.js` (the layout the per-app CI uploads).
 const APPS_CATALOG_PATHNAME = "/apps/index.json";
 const APPS_CATALOG_KEY = "index.json";
-// `<id>/<version>/<file>.{js,css,map}` — mirrors the host loader's ENTRY_PATTERN
+// `<id>/<version+build>/<file>.{js,css,map}` — mirrors the host loader's ENTRY_PATTERN
 // (src/core/apps/firstParty/catalog.ts) but also allows sibling css/sourcemaps.
 const APP_MODULE_PATTERN =
   /^\/apps\/([a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.(?:js|css|map))$/;
@@ -354,7 +354,7 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
     );
   }
 
-  // First-party app catalog + immutable, version-pinned modules from the APPS
+  // First-party app catalog + immutable, release-pinned modules from the APPS
   // bucket. Must run before the static-asset catch-all so module requests are
   // not answered with the SPA fallback HTML.
   if (pathname === APPS_CATALOG_PATHNAME) {

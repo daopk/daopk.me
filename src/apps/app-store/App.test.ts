@@ -182,7 +182,13 @@ describe("App Store", () => {
   it("checks the first-party catalog and marks only newer versions as updates", async () => {
     stubCatalog({
       apps: [
-        { id: "notes", version: "1.0.1", entry: "/apps/notes/1.0.1/notes.js" },
+        {
+          id: "notes",
+          version: "1.0.1",
+          build: 7,
+          revision: "abc1234",
+          entry: "/apps/notes/1.0.1+7/notes.js",
+        },
         { id: "photos", version: "0.9.0", entry: "/apps/photos/0.9.0/photos.js" },
         { id: "browser", version: "1.0.0", entry: "/apps/browser/1.0.0/browser.js" },
       ],
@@ -201,7 +207,33 @@ describe("App Store", () => {
     expect(wrapper.findAll(".app-store__update")).toHaveLength(1);
     expect(wrapper.find(".app-store__update").text()).toBe("Update");
     expect(wrapper.findAll(".app-store__launch")).toHaveLength(2);
-    expect(wrapper.text()).toContain("v1.0.1");
+    expect(wrapper.text()).toContain("v1.0.1+7");
+  });
+
+  it("marks same-version newer builds as updates", async () => {
+    stubCatalog({
+      apps: [
+        {
+          id: "notes",
+          version: "1.0.1",
+          build: 124,
+          revision: "def5678",
+          entry: "/apps/notes/1.0.1+124/notes.js",
+        },
+      ],
+    });
+    const { kernel } = makeKernel([
+      manifest({ id: "notes", name: "Notes", version: "1.0.1", build: 123 }),
+    ]);
+    const wrapper = mountStore(kernel);
+
+    await wrapper.find(".app-store__check").trigger("click");
+    await paint();
+
+    expect(wrapper.text()).toContain("1 update available.");
+    expect(wrapper.findAll(".app-store__update")).toHaveLength(1);
+    expect(wrapper.text()).toContain("v1.0.1+123");
+    expect(wrapper.text()).toContain("v1.0.1+124");
   });
 
   it("reports up to date when catalog versions are equal, older, or invalid", async () => {
@@ -242,7 +274,15 @@ describe("App Store", () => {
 
   it("updates a first-party app by re-registering its catalog manifest and restarting it", async () => {
     stubCatalog({
-      apps: [{ id: "notes", version: "1.0.1", entry: "/apps/notes/1.0.1/notes.js" }],
+      apps: [
+        {
+          id: "notes",
+          version: "1.0.1",
+          build: 42,
+          revision: "abc1234",
+          entry: "/apps/notes/1.0.1+42/notes.js",
+        },
+      ],
     });
     const { emit, kernel, kill, register } = makeKernel(
       [manifest({ id: "notes", name: "Notes", version: "1.0.0" })],
@@ -262,7 +302,12 @@ describe("App Store", () => {
     await paint();
 
     expect(register).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "notes", version: "1.0.1" }),
+      expect.objectContaining({
+        id: "notes",
+        version: "1.0.1",
+        build: 42,
+        revision: "abc1234",
+      }),
     );
     expect(kill).toHaveBeenCalledWith("h-notes", "kernel");
     expect(emit).toHaveBeenCalledWith("app.launch.requested", {
@@ -270,7 +315,7 @@ describe("App Store", () => {
       source: "api",
       args: { slug: "field-notes", path: "/home/posts/field-notes.md" },
     });
-    expect(wrapper.text()).toContain("v1.0.1");
+    expect(wrapper.text()).toContain("v1.0.1+42");
     expect(wrapper.text()).toContain("All apps are up to date.");
     expect(wrapper.findAll(".app-store__update")).toHaveLength(0);
     expect(wrapper.find(".app-store__launch").text()).toBe("Open");

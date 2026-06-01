@@ -2,17 +2,17 @@ name: Publish apps
 
 # Building or updating a first-party app is just committing to apps/<id>/.
 # This workflow builds ONLY the changed app packages, uploads their immutable,
-# version-pinned ES modules to the Cloudflare R2 bucket the Worker serves under
+# release-pinned ES modules to the Cloudflare R2 bucket the Worker serves under
 # /apps/*, and updates the catalog (/apps/index.json) to point at the new
 # versions. It does NOT deploy the shell: configure Cloudflare's own build to
 # IGNORE apps/** (dashboard -> Workers Build -> "Build watch paths", exclude
 # `apps/**`, exactly as blog/ is excluded) so app publishes and shell deploys
 # stay on independent tracks and never deploy twice.
 #
-# Immutability contract: a module URL is /apps/<id>/<version>/<id>.js and is
-# cached `immutable`. Every app change MUST bump apps/<id>/package.json
-# "version" so the URL changes; the build job hard-fails a push that reuses an
-# already-published version to stop a stale-but-cached release.
+# Immutability contract: a module URL is /apps/<id>/<version+build>/<id>.js and
+# is cached `immutable`. The package.json "version" is the manual, user-facing
+# semver; the GitHub Actions run number is the automatic build number that lets
+# same-version publishes produce a fresh URL and a detectable app update.
 on:
   push:
     branches: [main]
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       # One independent build per changed app. Each uploads only its own
-      # version-pinned module keys (no shared keys), so the matrix never races.
+      # release-pinned module keys (no shared keys), so the matrix never races.
       fail-fast: false
       matrix:
         app: ${{ fromJson(needs.detect.outputs.apps) }}
@@ -109,19 +109,26 @@ jobs:
           fi
 
           version="$(node -p "require('./apps/$APP/package.json').version")"
+          build="$GITHUB_RUN_NUMBER"
+          revision="${GITHUB_SHA:0:7}"
+          if ! [[ "$build" =~ ^[0-9]+$ ]]; then
+            echo "::error::GITHUB_RUN_NUMBER must be numeric; got '$build'."
+            exit 1
+          fi
+          release="$version+$build"
           # Convention: the lib build emits <id>.js as the entry module.
           entry_file="$APP.js"
           if [ ! -f "$dist/$entry_file" ]; then
             echo "::error::Expected entry $dist/$entry_file (lib build must emit <id>.js)."
             exit 1
           fi
-          entry_key="$APP/$version/$entry_file"
+          entry_key="$APP/$release/$entry_file"
 
           # Immutable URLs must never change bytes: block re-publishing an
-          # existing version on push (manual dispatch may overwrite to recover).
+          # existing release on push (manual dispatch may overwrite to recover).
           if [ "$EVENT_NAME" = "push" ] && \
              pnpm exec wrangler r2 object get "$R2_BUCKET/$entry_key" --remote >/dev/null 2>&1; then
-            echo "::error::$APP@$version already published at $entry_key. Bump apps/$APP/package.json version."
+            echo "::error::$APP@$release already published at $entry_key."
             exit 1
           fi
 
@@ -129,7 +136,7 @@ jobs:
           for file in "$dist"/**/*; do
             [ -f "$file" ] || continue
             rel="${file#"$dist"/}"
-            key="$APP/$version/$rel"
+            key="$APP/$release/$rel"
             case "$file" in
               *.js)  content_type="text/javascript;charset=utf-8" ;;
               *.css) content_type="text/css;charset=utf-8" ;;
@@ -144,9 +151,16 @@ jobs:
           done
 
           mkdir -p catalog-entries
-          APP="$APP" VERSION="$version" ENTRY="/apps/$APP/$version/$entry_file" node -e '
+          APP="$APP" VERSION="$version" BUILD="$build" REVISION="$revision" ENTRY="/apps/$APP/$release/$entry_file" node -e '
             const fs = require("node:fs");
-            const entry = { id: process.env.APP, version: process.env.VERSION, entry: process.env.ENTRY };
+            const build = Number(process.env.BUILD);
+            const entry = {
+              id: process.env.APP,
+              version: process.env.VERSION,
+              build,
+              revision: process.env.REVISION,
+              entry: process.env.ENTRY,
+            };
             fs.writeFileSync(`catalog-entries/${process.env.APP}.json`, JSON.stringify(entry));
           '
           echo "Catalog entry: $(cat "catalog-entries/$APP.json")"

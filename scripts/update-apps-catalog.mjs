@@ -1,13 +1,13 @@
 // Merge per-app catalog-entry fragments into the first-party app catalog.
 //
 // The catalog (`/apps/index.json`, served from R2) maps every published app id
-// to its current immutable, version-pinned module URL. A publish only rebuilds
+// to its current immutable, release-pinned module URL. A publish only rebuilds
 // the apps that changed, so we MUST preserve the entries of the apps that did
 // not: read the current catalog, upsert the changed entries, write it back.
 //
 // Usage: node scripts/update-apps-catalog.mjs <currentCatalog> <entriesDir> <outFile>
 //   currentCatalog  existing catalog JSON (missing/empty => start fresh)
-//   entriesDir      dir of `{ id, version, entry }` fragments (recursed)
+//   entriesDir      dir of `{ id, version, build, revision, entry }` fragments (recursed)
 //   outFile         merged catalog destination
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -42,14 +42,43 @@ function collectEntryFiles(dir) {
   return files;
 }
 
-function isValidEntry(value) {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    typeof value.id === "string" &&
-    typeof value.version === "string" &&
-    typeof value.entry === "string"
-  );
+function coerceBuild(value) {
+  if (value === undefined) {
+    return 0;
+  }
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return value;
+  }
+  if (typeof value === "string" && /^[0-9]+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function coerceEntry(value) {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    typeof value.id !== "string" ||
+    typeof value.version !== "string" ||
+    typeof value.entry !== "string"
+  ) {
+    return null;
+  }
+  const build = coerceBuild(value.build);
+  if (build === null) {
+    return null;
+  }
+  return {
+    id: value.id,
+    version: value.version,
+    build,
+    ...(typeof value.revision === "string" && value.revision.length > 0
+      ? { revision: value.revision }
+      : {}),
+    entry: value.entry,
+  };
 }
 
 const [, , currentPath, entriesDir, outPath] = process.argv;
@@ -63,16 +92,18 @@ if (outPath === undefined) {
 const current = readJson(currentPath, { version: CATALOG_SCHEMA_VERSION, apps: [] });
 const byId = new Map();
 for (const app of Array.isArray(current.apps) ? current.apps : []) {
-  if (isValidEntry(app)) {
-    byId.set(app.id, { id: app.id, version: app.version, entry: app.entry });
+  const entry = coerceEntry(app);
+  if (entry !== null) {
+    byId.set(entry.id, entry);
   }
 }
 
 let upserted = 0;
 for (const file of collectEntryFiles(entriesDir)) {
   const entry = readJson(file, null);
-  if (isValidEntry(entry)) {
-    byId.set(entry.id, { id: entry.id, version: entry.version, entry: entry.entry });
+  const coerced = coerceEntry(entry);
+  if (coerced !== null) {
+    byId.set(coerced.id, coerced);
     upserted += 1;
   }
 }

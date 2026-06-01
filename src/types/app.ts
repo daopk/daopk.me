@@ -32,6 +32,13 @@ export interface AppManifest {
    */
   version?: string;
   /**
+   * Monotonic first-party app build number. The semantic `version` may stay the
+   * same across publishes; `build` lets the host detect same-version updates.
+   */
+  build?: number;
+  /** Short source revision for first-party release traceability. */
+  revision?: string;
+  /**
    * App icon as a Vue Component (typically an Iconify-backed icon export).
    * Manifests own their visual identity so the dock/launcher can tree-shake
    * down to only the icons actually registered. If broader registries

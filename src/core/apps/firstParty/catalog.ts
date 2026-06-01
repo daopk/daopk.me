@@ -12,8 +12,8 @@ export type FirstPartyCatalogFetchResult =
   | { ok: false; error: string };
 
 /**
- * Entries must be same-origin, version-pinned module paths. Restricting to
- * `/apps/<id>/<version>/<file>` is a security boundary: even though the catalog
+ * Entries must be same-origin, release-pinned module paths. Restricting to
+ * `/apps/<id>/<version+build>/<file>` is a security boundary: even though the catalog
  * is trusted (same-origin), first-party apps run in the trusted lane, so we
  * never let a catalog point that lane at an arbitrary cross-origin URL.
  */
@@ -23,19 +23,44 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function coerceBuild(value: unknown): number | null {
+  if (value === undefined) {
+    return 0;
+  }
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) {
+    return value;
+  }
+  if (typeof value === "string" && /^[0-9]+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function coerceEntry(input: unknown): FirstPartyCatalogEntry | null {
   if (!isRecord(input)) {
     return null;
   }
-  const { id, version, entry } = input;
+  const { id, version, build: rawBuild, revision, entry } = input;
   if (typeof id !== "string" || typeof version !== "string" || typeof entry !== "string") {
+    return null;
+  }
+  const build = coerceBuild(rawBuild);
+  if (build === null) {
+    debugWarn("[first-party]", `rejecting catalog entry for "${id}": bad build`, rawBuild);
     return null;
   }
   if (!ENTRY_PATTERN.test(entry) || !entry.startsWith(`/apps/${id}/`)) {
     debugWarn("[first-party]", `rejecting catalog entry for "${id}": bad entry URL`, entry);
     return null;
   }
-  return { id, version, entry };
+  return {
+    id,
+    version,
+    build,
+    ...(typeof revision === "string" && revision.length > 0 ? { revision } : {}),
+    entry,
+  };
 }
 
 /** Validate + normalize an untrusted-shaped catalog document; drop bad entries. */

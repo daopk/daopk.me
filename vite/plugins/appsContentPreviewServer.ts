@@ -5,10 +5,12 @@ import { fileURLToPath, URL } from "node:url";
 import type { Connect, PluginOption } from "vite";
 
 const CATALOG_SCHEMA_VERSION = 1;
+const PREVIEW_BUILD = 0;
 
 export interface FirstPartyPreviewCatalogEntry {
   readonly id: string;
   readonly version: string;
+  readonly build: number;
   readonly entry: string;
 }
 
@@ -52,10 +54,12 @@ export async function buildFirstPartyPreviewCatalog(
       continue;
     }
 
+    const release = `${packageJson.version}+${PREVIEW_BUILD}`;
     apps.push({
       id: dir.name,
       version: packageJson.version,
-      entry: `/apps/${dir.name}/${packageJson.version}/${dir.name}.js`,
+      build: PREVIEW_BUILD,
+      entry: `/apps/${dir.name}/${release}/${dir.name}.js`,
     });
   }
 
@@ -69,7 +73,7 @@ export async function buildFirstPartyPreviewCatalog(
 
 /**
  * In production the Worker serves the first-party app catalog (`/apps/index.json`)
- * and version-pinned modules (`/apps/<id>/<version>/<file>`) from R2. Vite has
+ * and release-pinned modules (`/apps/<id>/<version+build>/<file>`) from R2. Vite has
  * neither, so this plugin synthesizes the catalog from each app package.json
  * and serves modules from each app's local `apps/<id>/dist/` build. This makes
  * the production load path (catalog fetch → versioned `import()`) testable
@@ -117,9 +121,9 @@ export function appsContentPreviewServer(): PluginOption {
       }
       void (async () => {
         try {
-          // Local dev/preview ignores the version segment — there is only one
+          // Local dev/preview ignores the release segment — there is only one
           // built copy per app at apps/<id>/dist/. R2 serves the real
-          // version-pinned URLs in production.
+          // release-pinned URLs in production.
           const bytes = await readFile(join(appsRoot, id, "dist", file));
           res.setHeader("Content-Type", contentTypeFor(file));
           res.end(bytes);

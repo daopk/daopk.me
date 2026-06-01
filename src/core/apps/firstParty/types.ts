@@ -51,11 +51,16 @@ export interface FirstPartyAppDescriptor {
   readonly widgets?: readonly FirstPartyWidgetDescriptor[];
 }
 
-/** One published app in the catalog: which immutable URL serves which version. */
+/** One published app in the catalog: which immutable URL serves which release. */
 export interface FirstPartyCatalogEntry {
   readonly id: string;
+  /** Manual, user-facing semver from the app package.json. */
   readonly version: string;
-  /** Same-origin, version-pinned module URL, e.g. `/apps/notes/1.0.0/notes.js`. */
+  /** Automatic publish build number. Missing legacy catalog values normalize to 0. */
+  readonly build: number;
+  /** Optional short source revision for tracing the published bundle. */
+  readonly revision?: string;
+  /** Same-origin, release-pinned module URL, e.g. `/apps/notes/1.0.0+123/notes.js`. */
   readonly entry: string;
 }
 

@@ -318,7 +318,7 @@ describe("Worker responses — cross-origin isolation", () => {
     ["R2 markdown", () => makeEnv(), () => browser("/blog/building-a-tiny-web-os.md")],
     ["R2 SEO HTML", () => makeEnv(), () => crawler("/blog/building-a-tiny-web-os")],
     ["app catalog", () => makeEnv(), () => browser("/apps/index.json")],
-    ["app module", () => makeEnv(), () => browser("/apps/notes/1.0.0/app.js")],
+    ["app module", () => makeEnv(), () => browser("/apps/notes/1.0.0+123/app.js")],
     ["photo index", () => makeEnv(), () => browser("/photos/index.json")],
     ["photo bytes", () => makeEnv(), () => browser("/photos/ocean.png")],
     ["noindex 404", () => makeEnv({}), () => browser("/blog/index.json")],

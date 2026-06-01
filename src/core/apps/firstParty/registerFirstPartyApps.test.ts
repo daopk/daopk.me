@@ -58,6 +58,7 @@ vi.mock("./devEntries", async () => {
 });
 
 import {
+  firstPartyCatalogEntryToAppManifest,
   firstPartyDescriptorToAppManifest,
   registerFirstPartyApps,
 } from "./registerFirstPartyApps";
@@ -152,9 +153,13 @@ describe("registerFirstPartyApps (dev lane)", () => {
         }),
       }),
       "1.2.3",
+      42,
+      "abc1234",
     );
 
     expect(manifest.version).toBe("1.2.3");
+    expect(manifest.build).toBe(42);
+    expect(manifest.revision).toBe("abc1234");
     expect(((await manifest.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(manifest.component)).toContain("probe-app");
 
@@ -162,5 +167,24 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(widget).toBeDefined();
     expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(widget!.component)).toContain("probe-widget");
+  });
+
+  it("carries catalog build metadata into the runtime manifest", () => {
+    const manifest = firstPartyCatalogEntryToAppManifest({
+      id: "notes",
+      version: "1.2.3",
+      build: 42,
+      revision: "abc1234",
+      entry: "/apps/notes/1.2.3+42/notes.js",
+    });
+
+    expect(manifest).toEqual(
+      expect.objectContaining({
+        id: "notes",
+        version: "1.2.3",
+        build: 42,
+        revision: "abc1234",
+      }),
+    );
   });
 });

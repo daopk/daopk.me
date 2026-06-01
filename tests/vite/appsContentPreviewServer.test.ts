@@ -19,11 +19,13 @@ describe("buildFirstPartyPreviewCatalog", () => {
     expect(catalog.apps.find((app) => app.id === "notes")).toEqual({
       id: "notes",
       version: "1.0.1",
-      entry: "/apps/notes/1.0.1/notes.js",
+      build: 0,
+      entry: "/apps/notes/1.0.1+0/notes.js",
     });
 
     for (const app of catalog.apps) {
-      expect(app.entry).toBe(`/apps/${app.id}/${app.version}/${app.id}.js`);
+      expect(app.build).toBe(0);
+      expect(app.entry).toBe(`/apps/${app.id}/${app.version}+0/${app.id}.js`);
     }
   });
 });

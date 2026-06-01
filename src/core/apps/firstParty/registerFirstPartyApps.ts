@@ -50,16 +50,20 @@ export function firstPartyDescriptorToAppManifest(
   descriptor: FirstPartyAppDescriptor,
   load: FirstPartyModuleLoader,
   version: string,
+  build = 0,
+  revision?: string,
 ): AppManifest {
   const manifest: AppManifest = {
     id: descriptor.id,
     name: descriptor.name,
     version,
+    build,
     icon: descriptor.icon,
     category: descriptor.category,
     component: () => load().then((module) => asEsmModule(module.default as Component)),
   };
 
+  if (revision !== undefined) manifest.revision = revision;
   if (descriptor.hidden !== undefined) manifest.hidden = descriptor.hidden;
   if (descriptor.singleton !== undefined) manifest.singleton = descriptor.singleton;
   if (descriptor.autorun !== undefined) manifest.autorun = descriptor.autorun;
@@ -86,14 +90,20 @@ export function firstPartyCatalogEntryToAppManifest(
   }
   const load: FirstPartyModuleLoader = () =>
     import(/* @vite-ignore */ entry.entry) as Promise<Record<string, unknown>>;
-  return firstPartyDescriptorToAppManifest(descriptor, load, entry.version);
+  return firstPartyDescriptorToAppManifest(
+    descriptor,
+    load,
+    entry.version,
+    entry.build,
+    entry.revision,
+  );
 }
 
 /**
  * Register the first-party app roster against the kernel. Two lanes:
  *  - **dev**: load each app from its workspace package (HMR; no catalog).
  *  - **prod**: fetch the same-origin catalog and register each rostered app
- *    with a loader that imports its version-pinned module URL on launch.
+ *    with a loader that imports its release-pinned module URL on launch.
  *
  * Fail-safe per app: a missing catalog entry (not yet published) or a bad
  * loader is skipped with a warning — it must never fail boot. Apps are

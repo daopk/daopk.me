@@ -71,7 +71,7 @@ export function pwaPlugin(): PluginOption {
           },
         },
         {
-          // Version-pinned app modules are immutable → CacheFirst (offline launch).
+          // Release-pinned app modules are immutable → CacheFirst (offline launch).
           urlPattern: /\/apps\/[^/]+\/[^/]+\/.+$/,
           handler: "CacheFirst",
           options: {
