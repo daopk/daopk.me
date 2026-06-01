@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-import { FormField, Select, StatusBanner, Textarea, TextInput } from "~/components/kit";
-import { Button, Dialog, DialogActions } from "~/components/ui";
-import { Trash2 } from "~/icons/lucide";
+import { FormField, Select, StatusBanner, Textarea, TextInput } from "@daopk/kit";
+import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Trash2 } from "@daopk/icons";
 
 import { colorLabel, type EventFormState } from "../eventForm";
 import type { CalendarEventColor } from "../useCalendar";

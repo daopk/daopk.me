@@ -19,4 +19,5 @@ export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
   photos: () => import("@daopk-app/photos"),
   blog: () => import("@daopk-app/blog"),
   clock: () => import("@daopk-app/clock"),
+  calendar: () => import("@daopk-app/calendar"),
 };

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { localDateKey } from "~/apps/calendar/dateGrid";
+import { localDateKey } from "../dateGrid";
 import {
   formatVietnameseLunarMonth,
   formatVietnameseLunarYear,
   gregorianToVietnameseLunar,
-} from "~/apps/calendar/vietnameseLunar";
+} from "../vietnameseLunar";
 
 const currentDate = ref(new Date());
 let midnightTimer: ReturnType<typeof setTimeout> | undefined;

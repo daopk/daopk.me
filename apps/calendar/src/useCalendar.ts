@@ -1,8 +1,6 @@
 import { computed, ref, unref, type ComputedRef, type Ref } from "vue";
 
-import { VfsError } from "~/core/vfs/errors";
-import type { VfsStat } from "~/core/vfs/nodes";
-import { toActionErrorMessage } from "~/utils/errors";
+import { toActionErrorMessage, VfsError, type VfsStat } from "@daopk/sdk";
 
 import {
   addMonths,

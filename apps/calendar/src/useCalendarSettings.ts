@@ -1,7 +1,6 @@
 import { getCurrentScope, onScopeDispose, ref, type Ref } from "vue";
 
-import { activeProfileKvNamespace } from "~/core/profile/storageScope";
-import { KVStore } from "~/core/storage/KVStore";
+import { activeProfileKvNamespace, KVStore } from "@daopk/sdk";
 
 import { isCalendarPreferredViewMode, type CalendarPreferredViewMode } from "./calendarViews";
 import type { CalendarEventColor } from "./useCalendar";

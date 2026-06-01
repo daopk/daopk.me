@@ -1,15 +1,16 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { VfsStat } from "~/core/vfs/nodes";
-import { normalizeVfsPath } from "~/core/vfs/path";
 import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
+  KernelInjectionKey,
+  normalizeVfsPath,
   type AppChromeController,
   type AppContext,
-} from "~/types/app";
-import { KernelInjectionKey, type Kernel } from "~/types/kernel";
+  type Kernel,
+  type VfsStat,
+} from "@daopk/sdk";
 
 import App from "./App.vue";
 import type { CalendarViewMode } from "./calendarViews";

@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { VfsStat } from "~/core/vfs/nodes";
-import { normalizeVfsPath } from "~/core/vfs/path";
-import { VfsError } from "~/core/vfs/errors";
+import { normalizeVfsPath, VfsError, type VfsStat } from "@daopk/sdk";
 
 import {
   CALENDAR_FILE_PATH,

@@ -35,6 +35,11 @@
       "id": "clock",
       "version": "1.0.0",
       "entry": "/apps/clock/1.0.0/clock.js"
+    },
+    {
+      "id": "calendar",
+      "version": "1.0.0",
+      "entry": "/apps/calendar/1.0.0/calendar.js"
     }
   ]
 }

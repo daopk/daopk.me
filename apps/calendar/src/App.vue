@@ -24,10 +24,8 @@ import {
   ToolbarTitle,
   useAppChrome,
   type TabListOption,
-} from "~/components/kit";
-import { Button } from "~/components/ui";
-import { useBreakpoint } from "~/composables/useBreakpoint";
-import { useVfs } from "~/composables/useVfs";
+} from "@daopk/kit";
+import { Button } from "@daopk/ui";
 import {
   CalendarDays,
   CalendarRange,
@@ -37,9 +35,14 @@ import {
   LayoutGrid,
   List,
   Plus,
-} from "~/icons/lucide";
-import { AppContextInjectionKey, type AppChromeBackAction } from "~/types/app";
-import { KernelInjectionKey } from "~/types/kernel";
+} from "@daopk/icons";
+import {
+  AppContextInjectionKey,
+  KernelInjectionKey,
+  useBreakpoint,
+  useVfs,
+  type AppChromeBackAction,
+} from "@daopk/sdk";
 
 import CalendarEventDialog from "./components/CalendarEventDialog.vue";
 import CalendarSettingsPanel from "./components/CalendarSettingsPanel.vue";

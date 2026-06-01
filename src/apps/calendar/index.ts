@@ -1,1 +1,0 @@
-export { calendarManifest } from "./manifest";

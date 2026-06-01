@@ -9,9 +9,9 @@ import {
   Panel,
   ScrollArea,
   ToolbarTitle,
-} from "~/components/kit";
-import { Button, Switch } from "~/components/ui";
-import { ArrowLeft, RotateCcw } from "~/icons/lucide";
+} from "@daopk/kit";
+import { Button, Switch } from "@daopk/ui";
+import { ArrowLeft, RotateCcw } from "@daopk/icons";
 
 import {
   CALENDAR_VIEW_MODES,
