@@ -1,7 +1,21 @@
-import type { AppPermission, WindowDefaults } from "~/types/app";
+import type { AppPermission, AppSettingsManifest, WindowDefaults } from "~/types/app";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
+
+/**
+ * A widget a first-party app contributes. Identical to {@link WidgetManifest}
+ * except the component is referenced by `exportName` — the named export in the
+ * app's published module that provides the widget's Vue component. The host
+ * resolves it to a real `component` loader at registration time (from the
+ * catalog entry URL in prod, or the workspace package in dev), since the
+ * widget's code ships inside the independently-published app module, not the
+ * shell bundle.
+ */
+export interface FirstPartyWidgetDescriptor extends Omit<WidgetManifest, "component"> {
+  /** Named export in the app entry module that is this widget's component. */
+  readonly exportName: string;
+}
 
 /**
  * A first-party app's **stable identity**, owned by the shell. Everything here
@@ -25,12 +39,16 @@ export interface FirstPartyAppDescriptor {
   readonly permissions?: readonly AppPermission[];
   readonly defaultWindow?: WindowDefaults;
   readonly keywords?: readonly string[];
+  /** Settings metadata (e.g. search keywords) surfaced for this app. */
+  readonly settings?: AppSettingsManifest;
   /**
    * Widgets this app contributes. Unlike user-installed external apps (whose
-   * widgets are dropped), first-party apps are trusted to register widgets;
-   * carried through to the built `AppManifest`.
+   * widgets are dropped), first-party apps are trusted to register widgets.
+   * Each references a named export in the published app module ({@link
+   * FirstPartyWidgetDescriptor}); the host builds the real loaders at
+   * registration time and carries them through to the built `AppManifest`.
    */
-  readonly widgets?: readonly WidgetManifest[];
+  readonly widgets?: readonly FirstPartyWidgetDescriptor[];
 }
 
 /** One published app in the catalog: which immutable URL serves which version. */

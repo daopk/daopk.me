@@ -2,18 +2,36 @@ import { debugWarn } from "~/core/debug";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
+import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
 
 import { fetchFirstPartyCatalog } from "./catalog";
 import { FIRST_PARTY_APPS } from "./registry";
-import type { FirstPartyAppDescriptor } from "./types";
+import type { FirstPartyAppDescriptor, FirstPartyWidgetDescriptor } from "./types";
 
-type ComponentLoader = () => Promise<{ default: Component }>;
+/**
+ * Loads an app's published ES module. Returns the raw module namespace so the
+ * default export (the app component) and any named widget exports can both be
+ * resolved from the single fetched module.
+ */
+export type FirstPartyModuleLoader = () => Promise<Record<string, unknown>>;
 
-/** Build a runtime `AppManifest` from the host-owned identity + a code loader. */
+/** Build a widget's runtime loader from a named export of the app module. */
+function toWidgetManifest(
+  descriptor: FirstPartyWidgetDescriptor,
+  load: FirstPartyModuleLoader,
+): WidgetManifest {
+  const { exportName, ...rest } = descriptor;
+  return {
+    ...rest,
+    component: () => load().then((module) => ({ default: module[exportName] as Component })),
+  };
+}
+
+/** Build a runtime `AppManifest` from the host-owned identity + a module loader. */
 function toManifest(
   descriptor: FirstPartyAppDescriptor,
-  component: ComponentLoader,
+  load: FirstPartyModuleLoader,
   version: string,
 ): AppManifest {
   const manifest: AppManifest = {
@@ -22,7 +40,7 @@ function toManifest(
     version,
     icon: descriptor.icon,
     category: descriptor.category,
-    component,
+    component: () => load().then((module) => ({ default: module.default as Component })),
   };
 
   if (descriptor.hidden !== undefined) manifest.hidden = descriptor.hidden;
@@ -34,7 +52,10 @@ function toManifest(
   if (descriptor.permissions !== undefined) manifest.permissions = [...descriptor.permissions];
   if (descriptor.defaultWindow !== undefined) manifest.defaultWindow = descriptor.defaultWindow;
   if (descriptor.keywords !== undefined) manifest.keywords = [...descriptor.keywords];
-  if (descriptor.widgets !== undefined) manifest.widgets = descriptor.widgets;
+  if (descriptor.settings !== undefined) manifest.settings = descriptor.settings;
+  if (descriptor.widgets !== undefined) {
+    manifest.widgets = descriptor.widgets.map((widget) => toWidgetManifest(widget, load));
+  }
 
   return manifest;
 }
@@ -48,7 +69,7 @@ function toManifest(
  * Fail-safe per app: a missing catalog entry (not yet published) or a bad
  * loader is skipped with a warning — it must never fail boot. Apps are
  * registered with a lazy `component` loader, so nothing is fetched until the
- * user actually launches the app.
+ * user actually launches the app (or a widget surface mounts).
  */
 export async function registerFirstPartyApps(
   kernel: Kernel,
@@ -57,12 +78,12 @@ export async function registerFirstPartyApps(
   if (import.meta.env.DEV) {
     const { FIRST_PARTY_DEV_ENTRIES } = await import("./devEntries");
     for (const descriptor of FIRST_PARTY_APPS) {
-      const loader = FIRST_PARTY_DEV_ENTRIES[descriptor.id];
-      if (loader === undefined) {
+      const load = FIRST_PARTY_DEV_ENTRIES[descriptor.id];
+      if (load === undefined) {
         debugWarn("[first-party]", `no dev loader for "${descriptor.id}" — skipping`);
         continue;
       }
-      kernel.apps.register(toManifest(descriptor, loader, descriptor.version));
+      kernel.apps.register(toManifest(descriptor, load, descriptor.version));
     }
     return;
   }
@@ -77,8 +98,8 @@ export async function registerFirstPartyApps(
       continue;
     }
 
-    const loader: ComponentLoader = () =>
-      import(/* @vite-ignore */ entry.entry) as Promise<{ default: Component }>;
-    kernel.apps.register(toManifest(descriptor, loader, entry.version));
+    const load: FirstPartyModuleLoader = () =>
+      import(/* @vite-ignore */ entry.entry) as Promise<Record<string, unknown>>;
+    kernel.apps.register(toManifest(descriptor, load, entry.version));
   }
 }
