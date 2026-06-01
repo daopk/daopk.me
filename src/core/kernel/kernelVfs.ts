@@ -3,7 +3,13 @@ import type { ProcessTable } from "~/core/kernel/ProcessTable";
 import type { EventBus } from "~/core/kernel/EventBus";
 import { profileIdbName } from "~/core/profile/storageScope";
 import { TRASH_ROOT } from "~/core/trash/TrashManager";
-import { IDBAdapter, MemoryAdapter, createMemoryVfsBootstrap, normalizeVfsPath } from "~/core/vfs";
+import {
+  IDBAdapter,
+  MemoryAdapter,
+  RemoteHTTPIndexAdapter,
+  createMemoryVfsBootstrap,
+  normalizeVfsPath,
+} from "~/core/vfs";
 import type { VfsStat } from "~/core/vfs";
 import { VfsError } from "~/core/vfs/errors";
 import type { ActiveProfileSession } from "~/types/profile";
@@ -11,8 +17,15 @@ import type { KernelVfsFacade } from "~/types/kernel";
 
 export type KernelVfs = ReturnType<typeof createMemoryVfsBootstrap>;
 
+const CLOUD_FILES_INDEX_URL = "/_worker/files/index.json";
+
 export function createKernelVfs(profile?: ActiveProfileSession): KernelVfs {
   const vfs = createMemoryVfsBootstrap();
+  vfs.mount(
+    "/cloud",
+    new RemoteHTTPIndexAdapter({ id: "cloud-files", indexUrl: CLOUD_FILES_INDEX_URL }),
+    { id: "cloud" },
+  );
   vfs.mount(
     "/home",
     profile

@@ -8,6 +8,7 @@ import {
   FinderTextFileIcon,
   SlidesAppIcon,
 } from "~/icons/fluentColor";
+import { Cloud } from "~/icons/lucide";
 import { formatBytes, formatDateTime } from "~/utils/format";
 import type { VfsDirEntry } from "~/core/vfs/nodes";
 import { isSlideDeckPath } from "~/core/routing/slidePaths";
@@ -16,7 +17,14 @@ import { detectPreviewType } from "./useFinderPreview";
 
 export { formatBytes };
 
+export function isCloudDriveEntry(entry: VfsDirEntry): boolean {
+  return entry.kind === "directory" && entry.path === "/cloud";
+}
+
 export function entryIcon(entry: VfsDirEntry): Component {
+  if (isCloudDriveEntry(entry)) {
+    return Cloud;
+  }
   if (entry.kind === "directory") {
     return FinderFolderIcon;
   }

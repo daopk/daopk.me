@@ -9,6 +9,11 @@ export { IDBAdapter } from "~/core/vfs/adapters/IDBAdapter";
 export type { IDBAdapterOptions } from "~/core/vfs/adapters/IDBAdapter";
 export { MemoryAdapter } from "~/core/vfs/adapters/MemoryAdapter";
 export type { MemoryAdapterOptions, MemoryAdapterSeed } from "~/core/vfs/adapters/MemoryAdapter";
+export { RemoteHTTPIndexAdapter } from "~/core/vfs/adapters/RemoteHTTPIndexAdapter";
+export type {
+  RemoteHTTPIndexAdapterOptions,
+  RemoteHTTPIndexEntry,
+} from "~/core/vfs/adapters/RemoteHTTPIndexAdapter";
 export { StaticHTTPAdapter } from "~/core/vfs/adapters/StaticHTTPAdapter";
 export type {
   StaticHTTPAdapterOptions,

@@ -233,10 +233,7 @@ describe("SEO Worker — runtime content from R2", () => {
   it("serves a raw post markdown file from R2", async () => {
     const { env, get } = makeEnv();
 
-    const response = await handleRequest(
-      browser("/_worker/blog/building-a-tiny-web-os.md"),
-      env,
-    );
+    const response = await handleRequest(browser("/_worker/blog/building-a-tiny-web-os.md"), env);
 
     expect(get).toHaveBeenCalledWith("posts/building-a-tiny-web-os.md");
     expect(response.headers.get("Content-Type")).toBe("text/markdown;charset=utf-8");
@@ -395,11 +392,7 @@ describe("SEO Worker — humans and other routes", () => {
 describe("Worker responses — cross-origin isolation", () => {
   it.each([
     ["R2 blog JSON", () => makeEnv(), () => browser("/_worker/blog/index.json")],
-    [
-      "R2 markdown",
-      () => makeEnv(),
-      () => browser("/_worker/blog/building-a-tiny-web-os.md"),
-    ],
+    ["R2 markdown", () => makeEnv(), () => browser("/_worker/blog/building-a-tiny-web-os.md")],
     ["R2 SEO HTML", () => makeEnv(), () => crawler("/blog/building-a-tiny-web-os")],
     ["app catalog", () => makeEnv(), () => browser("/apps/index.json")],
     ["app module", () => makeEnv(), () => browser("/apps/notes/1.0.0+123/app.js")],
@@ -510,7 +503,10 @@ describe("Photo gallery — dynamic index from R2", () => {
       BLOG: { get: vi.fn(async () => null) },
       APPS: { get: vi.fn(async () => null) },
       PHOTOS: { get: vi.fn(async () => null), list, put: vi.fn(async () => undefined) },
-      FILES: { get: vi.fn(async () => null), list: vi.fn(async () => ({ objects: [], truncated: false })) },
+      FILES: {
+        get: vi.fn(async () => null),
+        list: vi.fn(async () => ({ objects: [], truncated: false })),
+      },
     };
 
     const response = await handleRequest(browser("/_worker/photos/index.json"), env);
@@ -559,9 +555,7 @@ describe("Files cloud drive — dynamic index from R2", () => {
     const response = await handleRequest(browser("/_worker/files/index.json"), env);
     const index = (await response.json()) as Array<{ key: string; kind: string; url?: string }>;
 
-    expect(index).toEqual([
-      expect.objectContaining({ key: "docs/", kind: "directory" }),
-    ]);
+    expect(index).toEqual([expect.objectContaining({ key: "docs/", kind: "directory" })]);
     expect(index[0]?.url).toBeUndefined();
   });
 
@@ -647,15 +641,15 @@ describe("Photo gallery — image bytes from R2", () => {
     expect(response.status).toBe(404);
   });
 
-  it("ignores non-image paths and falls through to assets", async () => {
+  it("returns 404 for non-image worker paths", async () => {
     const { env, assets, photosGet } = makeEnv();
     const request = browser("/_worker/photos/readme.txt");
 
     const response = await handleRequest(request, env);
 
     expect(photosGet).not.toHaveBeenCalled();
-    expect(assets).toHaveBeenCalledWith(request);
-    await expect(response.text()).resolves.toContain('<div id="app"></div>');
+    expect(assets).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
   });
 });
 

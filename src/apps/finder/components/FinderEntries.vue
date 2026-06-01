@@ -8,7 +8,13 @@ import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide"
 
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../openSuggestions";
 import type { FinderViewMode } from "../useFinder";
-import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../display";
+import {
+  entryIcon,
+  entryKindLabel,
+  formatBytes,
+  formatModified,
+  isCloudDriveEntry,
+} from "../display";
 
 const GRID_KEYBOARD_COLUMNS = 4;
 const GRID_MIN_COLUMN_WIDTH = 120;
@@ -274,6 +280,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   <component
                     :is="entryIcon(entry)"
                     class="finder__entry-icon"
+                    :class="{ 'finder__entry-icon--cloud': isCloudDriveEntry(entry) }"
                     :size="viewMode === 'grid' ? 28 : 18"
                     aria-hidden="true"
                   />
@@ -283,7 +290,9 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                     entry.kind === "file" ? formatBytes(entry.size) : "-"
                   }}</span>
                   <span class="finder__entry-date">{{ formatModified(entry.updatedAt) }}</span>
-                  <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
+                  <span class="finder__entry-badge-slot">
+                    <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
+                  </span>
                 </div>
               </template>
               <template #items>
@@ -412,7 +421,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   align-items: center;
   display: grid;
   gap: var(--space-sm);
-  grid-template-columns: 20px minmax(120px, 1fr) 78px 64px 140px auto;
+  grid-template-columns: 20px minmax(120px, 1fr) 78px 64px 140px 96px;
   min-block-size: 34px;
   padding: var(--space-xs) var(--space-sm);
 }
@@ -441,6 +450,10 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   flex: 0 0 auto;
 }
 
+.finder__entry-icon--cloud {
+  color: var(--color-accent);
+}
+
 .finder__entry-name {
   color: var(--color-fg);
   font-weight: 500;
@@ -459,7 +472,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 .finder__entry-kind,
 .finder__entry-size,
 .finder__entry-date,
-.finder__entry-badge {
+.finder__entry-badge-slot {
   color: var(--color-fg-muted);
   font-size: 12px;
   min-inline-size: 0;
@@ -469,8 +482,13 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 }
 
 .finder__entries--grid .finder__entry-date,
-.finder__entries--grid .finder__entry-badge {
+.finder__entries--grid .finder__entry-badge-slot {
   display: none;
+}
+
+.finder__entry-badge-slot {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .finder__entry-badge {
@@ -500,7 +518,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 
   .finder__entries--list .finder__entry-size,
   .finder__entries--list .finder__entry-date,
-  .finder__entries--list .finder__entry-badge {
+  .finder__entries--list .finder__entry-badge-slot {
     display: none;
   }
 }

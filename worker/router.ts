@@ -136,7 +136,9 @@ function decodeRouteKey(encoded: string): string | null {
     if (key.length === 0 || key.startsWith("/") || key.endsWith("/")) {
       return null;
     }
-    if (key.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")) {
+    if (
+      key.split("/").some((segment) => segment.length === 0 || segment === "." || segment === "..")
+    ) {
       return null;
     }
     return key;
@@ -413,7 +415,10 @@ async function serveResizedPhoto(
   const init: CfImageRequestInit = {
     cf: { image: { width, fit: "scale-down", metadata: "none" } },
   };
-  const resized = await fetch(new URL(`${PHOTOS_BASE_PATHNAME}/${encodeR2KeyPath(key)}`, request.url), init);
+  const resized = await fetch(
+    new URL(`${PHOTOS_BASE_PATHNAME}/${encodeR2KeyPath(key)}`, request.url),
+    init,
+  );
   if (!resized.ok) {
     return servePhoto(env, key, request);
   }
@@ -529,6 +534,10 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
       return noIndexResponse("File not found.");
     }
     return serveFile(env, key, request);
+  }
+
+  if (pathname === WORKER_PREFIX || pathname.startsWith(`${WORKER_PREFIX}/`)) {
+    return noIndexResponse("Worker route not found.");
   }
 
   // Everything outside /blog is a normal static asset / SPA route.

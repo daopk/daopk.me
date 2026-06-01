@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { Connect, PluginOption } from "vite";
 
-const PHOTOS_ORIGIN = "https://daopk.me";
+const FILES_ORIGIN = "https://daopk.me";
 
 const FORWARDED_REQUEST_HEADERS = [
   "accept",
@@ -56,9 +56,9 @@ function copyResponseHeaders(upstream: Response, res: ServerResponse): void {
   });
 }
 
-export function photosProxyTargetUrl(
+export function filesProxyTargetUrl(
   requestUrl: string | undefined,
-  origin = PHOTOS_ORIGIN,
+  origin = FILES_ORIGIN,
 ): string | null {
   if (requestUrl === undefined) {
     return null;
@@ -66,18 +66,18 @@ export function photosProxyTargetUrl(
 
   let parsed: URL;
   try {
-    parsed = new URL(requestUrl, PHOTOS_ORIGIN);
+    parsed = new URL(requestUrl, FILES_ORIGIN);
   } catch {
     return null;
   }
-  if (parsed.pathname !== "/_worker/photos" && !parsed.pathname.startsWith("/_worker/photos/")) {
+  if (parsed.pathname !== "/_worker/files" && !parsed.pathname.startsWith("/_worker/files/")) {
     return null;
   }
 
   return new URL(`${parsed.pathname}${parsed.search}`, origin).toString();
 }
 
-async function proxyPhotosRequest(
+async function proxyFilesRequest(
   req: IncomingMessage,
   res: ServerResponse,
   targetUrl: string,
@@ -107,13 +107,13 @@ async function proxyPhotosRequest(
 }
 
 /**
- * Production serves `/_worker/photos/*` from the Worker/R2 bucket. In local
- * Vite dev and preview there is no R2 binding, so proxy the same-origin path to
+ * Production serves `/_worker/files/*` from the Worker/R2 bucket. In local Vite
+ * dev and preview there is no R2 binding, so proxy the same-origin path to
  * daopk.me.
  */
-export function photosContentProxyServer(): PluginOption {
+export function filesContentProxyServer(): PluginOption {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
-    const targetUrl = photosProxyTargetUrl(req.url);
+    const targetUrl = filesProxyTargetUrl(req.url);
     if (targetUrl === null) {
       next();
       return;
@@ -126,11 +126,11 @@ export function photosContentProxyServer(): PluginOption {
       return;
     }
 
-    void proxyPhotosRequest(req, res, targetUrl);
+    void proxyFilesRequest(req, res, targetUrl);
   };
 
   return {
-    name: "photos-content-proxy-server",
+    name: "files-content-proxy-server",
     configureServer(server) {
       server.middlewares.use(middleware);
     },
