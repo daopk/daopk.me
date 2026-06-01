@@ -251,6 +251,9 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
     expect(wrapper.findAll("section.app-view").length).toBe(1);
+    const parkedApp = wrapper.find("section.app-view");
+    expect(parkedApp.attributes("aria-hidden")).toBe("true");
+    expect(parkedApp.attributes("inert")).toBeDefined();
     expect(currentKernel.processes.kill).not.toHaveBeenCalled();
 
     wrapper.unmount();
@@ -359,6 +362,49 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     expect(wrapper.findAll("section.app-view").length).toBe(2);
     expect(currentKernel.processes.kill).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("reopening an older parked app foregrounds it above a newer parked frame", async () => {
+    currentKernel = makeKernel([manifest({ id: "alpha" }), manifest({ id: "beta", name: "Beta" })]);
+
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    const icons = wrapper.findAllComponents(HomeScreenIcon);
+    await icons[0].trigger("click");
+    await flushPromises();
+    await nextTick();
+
+    await wrapper.find(".app-view__back").trigger("click");
+    await flushPromises();
+    await nextTick();
+    await nextTick();
+
+    await icons[1].trigger("click");
+    await flushPromises();
+    await nextTick();
+
+    await wrapper.find(FOREGROUND_APPVIEW).find(".app-view__back").trigger("click");
+    await flushPromises();
+    await nextTick();
+    await nextTick();
+
+    await icons[0].trigger("click");
+    await flushPromises();
+    await nextTick();
+    vi.runOnlyPendingTimers();
+    await flushPromises();
+    await nextTick();
+
+    const alphaView = wrapper.find('section.app-view[data-manifest-id="alpha"]');
+    const betaView = wrapper.find('section.app-view[data-manifest-id="beta"]');
+
+    expect(alphaView.attributes("aria-current")).toBe("page");
+    expect(alphaView.classes()).toContain("app-view--foreground");
+    expect(betaView.attributes("aria-hidden")).toBe("true");
+    expect(betaView.attributes("inert")).toBeDefined();
+    expect(betaView.classes()).not.toContain("app-view--foreground");
 
     wrapper.unmount();
   });

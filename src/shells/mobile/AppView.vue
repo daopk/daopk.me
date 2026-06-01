@@ -238,6 +238,7 @@ watch(
   transform: translateX(100%);
   pointer-events: none;
   will-change: transform;
+  z-index: 0;
 
   &.app-view--anim-active {
     transition: transform 280ms var(--ease);
@@ -246,6 +247,7 @@ watch(
   &.app-view--foreground {
     transform: translateX(0);
     pointer-events: auto;
+    z-index: 1;
   }
 }
 

@@ -276,8 +276,6 @@ watch(
           :title="titleFor(frame.manifestId)"
           :is-current="frame.frameId === nav.foreground.value && !switcherActive"
           :is-foreground-frame="frame.frameId === nav.foreground.value"
-          :aria-hidden="switcherActive ? 'true' : undefined"
-          :inert="switcherActive ? true : undefined"
           @back="onBack"
           @hide="onHide"
           @recents="openSwitcher"
@@ -307,13 +305,14 @@ watch(
   flex-direction: column;
   inline-size: 100%;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
   position: relative;
 }
 
 .mobile-shell__body {
   flex: 1 1 auto;
   min-block-size: 0;
+  overflow: clip;
   position: relative;
 }
 
@@ -321,12 +320,9 @@ watch(
   block-size: 100%;
   inline-size: 100%;
   inset: 0;
+  overflow: clip;
   pointer-events: none; // child AppViews flip back to `auto`
   position: absolute;
-}
-
-.mobile-shell__stack > * {
-  pointer-events: auto;
 }
 
 // keyboard attached, hiding the focus ring for genuine keyboard users.
