@@ -7,8 +7,23 @@ import type { FirstPartyAppDescriptor } from "./types";
  * independently (out of the shell bundle) and loaded at runtime from the
  * catalog. This is the trusted lane: entries here may use reserved built-in
  * ids, the `system` category, `autorun`, and widgets — none of which untrusted
- * external apps may declare. Adding an app to a wave = add a descriptor here +
- * an `apps/<id>` package + a catalog entry.
+ * external apps may declare.
+ *
+ * Rollout (staged on purpose — externalize in waves, not all at once):
+ *  - Wave 1 (done): `notes` — the pilot that proved the runtime contract, lib
+ *    build, catalog, loader, R2/Worker path, per-app CI, and offline caching.
+ *  - Wave 2 (incremental): the satellite apps (`blog`, `calendar`, `clock`,
+ *    `editor`, `photos`, `pdf-viewer`, `slides`, `browser`). Each migrates the
+ *    same mechanical way — move `src/apps/<id>` to an `apps/<id>` package
+ *    (vite lib build, `@daopk/*` external), add a descriptor below, drop its
+ *    `kernel.apps.register(...)` from `src/main.ts`, and let CI publish it.
+ *  - System apps (`settings`, `finder`, `trash`, `app-store`, `terminal`):
+ *    intentionally kept IN the shell. They are the system (deepest coupling +
+ *    permissions, lowest payoff), so decoupling them buys little and risks the
+ *    boot/identity path. Revisit only with a concrete reason.
+ *
+ * Migrating one app = add a descriptor here + an `apps/<id>` package + (CI
+ * publishes) a catalog entry; nothing else in the shell needs to change.
  */
 export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
   {

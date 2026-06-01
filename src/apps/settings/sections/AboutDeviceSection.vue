@@ -183,6 +183,9 @@ function runSoftwareUpdateAction(): void {
           >
             {{ updateButtonLabel }}
           </Button>
+          <span class="about-device__sub about-device__update-note">
+            Updates the system shell only. Apps update on their own from the catalog.
+          </span>
         </dd>
       </div>
       <div class="about-device__row">
@@ -327,6 +330,11 @@ function runSoftwareUpdateAction(): void {
 .about-device__update-status {
   color: var(--color-fg-muted);
   line-height: 1.4;
+}
+
+.about-device__update-note {
+  flex-basis: 100%;
+  margin-top: var(--space-2xs);
 }
 
 .about-device__update-status[data-tone="success"] {
