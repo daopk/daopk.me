@@ -2,7 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from "vue";
 
 import type { FileSystemTree, WebContainer } from "@webcontainer/api";
 
-import { toErrorMessage } from "~/utils/errors";
+import { toErrorMessage } from "@daopk/sdk";
 
 import {
   SLIDEV_CLI_VERSION,

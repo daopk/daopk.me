@@ -1,6 +1,6 @@
 import type { FileSystemTree, WebContainer, WebContainerProcess } from "@webcontainer/api";
 
-import { toErrorMessage } from "~/utils/errors";
+import { toErrorMessage } from "@daopk/sdk";
 
 import runtimePnpmLock from "./runtime-pnpm-lock.yaml?raw";
 

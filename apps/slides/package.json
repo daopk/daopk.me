@@ -1,0 +1,28 @@
+{
+  "name": "@daopk-app/slides",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Slides — a first-party daopk.me app (Slidev-in-WebContainer) published independently of the shell.",
+  "main": "./src/main.ts",
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@webcontainer/api": "1.6.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/tsconfig": "^0.9.1",
+    "@vueuse/core": "^14.3.0",
+    "sass-embedded": "^1.100.0",
+    "typescript": "~6.0.3",
+    "vue": "^3.5.35",
+    "vite": "^8.0.14",
+    "vue-tsc": "^3.3.2"
+  }
+}

@@ -1,1 +1,0 @@
-export { slidesManifest } from "./manifest";

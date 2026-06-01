@@ -7,6 +7,7 @@ import {
   NotesAppIcon,
   PdfViewerAppIcon,
   PhotosAppIcon,
+  SlidesAppIcon,
 } from "~/icons/fluentColor";
 
 import type { FirstPartyAppDescriptor } from "./types";
@@ -172,6 +173,21 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
         exportName: "LunarDateWidget",
       },
     ],
+  },
+  {
+    id: "slides",
+    name: "Slides",
+    version: "1.0.0",
+    icon: SlidesAppIcon,
+    category: "productivity",
+    singleton: true,
+    // Desktop-only: the Slidev preview runs in a WebContainer, which needs a
+    // cross-origin-isolated context (SharedArrayBuffer) — unavailable in the
+    // mobile shell's embedded surfaces.
+    supportedShells: ["desktop"],
+    permissions: ["vfs.read", "vfs.write", "network.fetch"],
+    defaultWindow: { width: 1120, height: 720, centered: true },
+    keywords: ["slides", "slidev", "deck", "presentation", "markdown", "vfs"],
   },
 ];
 

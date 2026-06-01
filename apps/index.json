@@ -40,6 +40,11 @@
       "id": "calendar",
       "version": "1.0.0",
       "entry": "/apps/calendar/1.0.0/calendar.js"
+    },
+    {
+      "id": "slides",
+      "version": "1.0.0",
+      "entry": "/apps/slides/1.0.0/slides.js"
     }
   ]
 }

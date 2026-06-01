@@ -1,6 +1,11 @@
-import { VfsError } from "~/core/vfs/errors";
-import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
-import { basename, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
+import {
+  basename,
+  normalizeVfsPath,
+  VfsError,
+  type VfsDirEntry,
+  type VfsPath,
+  type VfsStat,
+} from "@daopk/sdk";
 
 import {
   SLIDES_ROOT,

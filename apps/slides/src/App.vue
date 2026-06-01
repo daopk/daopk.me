@@ -15,13 +15,10 @@ import {
   TextInput,
   ToolbarGroup,
   ToolbarTitle,
-} from "~/components/kit";
-import { Button, Dialog, DialogActions } from "~/components/ui";
-import { useKernel } from "~/composables/useKernel";
-import { useVfs } from "~/composables/useVfs";
-import { Play, Save } from "~/icons/lucide";
-import { AppContextInjectionKey } from "~/types/app";
-import { toErrorMessage } from "~/utils/errors";
+} from "@daopk/kit";
+import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Play, Save } from "@daopk/icons";
+import { AppContextInjectionKey, toErrorMessage, useKernel, useVfs } from "@daopk/sdk";
 
 import { parseSlideDeckPath } from "./paths";
 import { useSlidesLibrary, type SlidesDeck } from "./useSlidesLibrary";

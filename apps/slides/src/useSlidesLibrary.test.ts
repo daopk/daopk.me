@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { VfsDirEntry, VfsStat } from "@daopk/sdk";
+
+// Host-internal test utilities (not part of the shipped `@daopk/*` contract);
+// see the note in App.test.ts — app tests may use `~/` under root vitest.
 import { MemoryAdapter, VFS } from "~/core/vfs";
-import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
 
 import {
   SLIDE_DECK_MIME_TYPE,

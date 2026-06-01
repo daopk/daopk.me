@@ -1,9 +1,18 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  AppContextInjectionKey,
+  KernelInjectionKey,
+  type AppContext,
+  type Kernel,
+} from "@daopk/sdk";
+
+// `VFS` + `MemoryAdapter` are host-internal test utilities (deliberately not in
+// the shipped `@daopk/*` contract). Per the notes pilot, app *tests* may reach
+// into `~/` since they run under the root vitest config (which aliases `~/` to
+// host source); only the app's shipped source is restricted to the contract.
 import { MemoryAdapter, VFS } from "~/core/vfs";
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
-import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
 import App from "./App.vue";
 
