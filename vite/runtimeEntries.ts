@@ -22,6 +22,16 @@ export const EXTERNAL_RUNTIME_ENTRIES = [
   { specifier: "@daopk/kit", chunkName: "daopk-kit-runtime", entry: "src/runtime/kit.ts" },
   { specifier: "@daopk/ui", chunkName: "daopk-ui-runtime", entry: "src/runtime/ui.ts" },
   { specifier: "@daopk/icons", chunkName: "daopk-icons-runtime", entry: "src/runtime/icons.ts" },
+  {
+    specifier: "@daopk/markdown",
+    chunkName: "daopk-markdown-runtime",
+    entry: "src/runtime/markdown.ts",
+  },
+  {
+    specifier: "@daopk/content",
+    chunkName: "daopk-content-runtime",
+    entry: "src/runtime/content.ts",
+  },
 ] as const;
 
 // Repo root resolved from this file's location (`vite/` -> repo root).

@@ -112,6 +112,17 @@ export {
 export { splitFilename } from "~/core/vfs/fileNames";
 export { isNotesMarkdownPath, NOTES_ROOT } from "~/core/notes/notesPaths";
 
+// Shared composables + infra the satellite first-party apps reuse. Each resolves
+// to ONE instance via this chunk, so `VfsError` `instanceof` checks, the profile
+// session singleton behind `activeProfileKvNamespace`, etc. match the host.
+// Added for the satellite-app migration — treat as stable ABI like the rest of
+// this surface.
+export { useBreakpoint } from "~/composables/useBreakpoint";
+export { debugLog, debugWarn } from "~/core/debug";
+export { VfsError } from "~/core/vfs/errors";
+export { KVStore } from "~/core/storage/KVStore";
+export { activeProfileKvNamespace } from "~/core/profile/storageScope";
+
 export type {
   AppChromeBackAction,
   AppChromeController,
@@ -130,4 +141,6 @@ export type {
 } from "~/core/vfs/nodes";
 export type { VfsPath } from "~/core/vfs/path";
 export type { VfsFileTypeInput, VfsRenderableFileType } from "~/core/vfs/fileTypes";
+export type { VfsErrorCode } from "~/core/vfs/errors";
+export type { KVStoreOptions } from "~/core/storage/KVStore";
 export type { TrashItem, TrashItemKind } from "~/types/trash";

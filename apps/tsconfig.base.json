@@ -1,0 +1,29 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "composite": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    // The app imports the shared `@daopk/*` surface, whose façades re-export
+    // host source (resolved via the `~/*` path below for typechecking). That
+    // host source uses `import.meta.env`, so the app needs vite's ambient types.
+    "types": ["vite/client"],
+
+    // Relative paths in an extended tsconfig resolve against THIS file's dir
+    // (`apps/`), so `../src/...` points at the host source for every app.
+    "paths": {
+      "@daopk/sdk": ["../src/runtime/sdk.ts"],
+      "@daopk/kit": ["../src/runtime/kit.ts"],
+      "@daopk/ui": ["../src/runtime/ui.ts"],
+      "@daopk/icons": ["../src/runtime/icons.ts"],
+      "@daopk/markdown": ["../src/runtime/markdown.ts"],
+      "@daopk/content": ["../src/runtime/content.ts"],
+      "~/*": ["../src/*"]
+    }
+  }
+}
