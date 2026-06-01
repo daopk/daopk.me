@@ -10,14 +10,15 @@ import {
   StatusBanner,
   ToolbarTitle,
   useAppChrome,
-} from "~/components/kit";
-import { Button } from "~/components/ui";
+} from "@daopk/kit";
+import { Button } from "@daopk/ui";
+import { RefreshCw } from "@daopk/icons";
+
 import {
   PHOTO_THUMB_WIDTH,
   PHOTO_THUMB_WIDTH_2X,
   photoThumbUrl,
-} from "~/core/photos/photosContentConfig";
-import { RefreshCw } from "~/icons/lucide";
+} from "./photosContentConfig";
 
 import PhotoLightbox from "./PhotoLightbox.vue";
 import { photoLabel } from "./photoLabel";

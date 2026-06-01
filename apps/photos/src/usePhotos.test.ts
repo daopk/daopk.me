@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 
-import { debugWarn } from "~/core/debug";
+import { debugWarn } from "@daopk/sdk";
 
 import { photoFromEntry, usePhotos, type Photo } from "./usePhotos";
 
-vi.mock("~/core/debug", () => ({
+vi.mock("@daopk/sdk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@daopk/sdk")>()),
   debugWarn: vi.fn(),
   debugLog: vi.fn(),
 }));

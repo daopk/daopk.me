@@ -1,7 +1,8 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { debugWarn } from "~/core/debug";
-import { photosIndexUrl } from "~/core/photos/photosContentConfig";
+import { debugWarn } from "@daopk/sdk";
+
+import { photosIndexUrl } from "./photosContentConfig";
 
 export type PhotosStatus = "idle" | "loading" | "ready" | "empty" | "error";
 

@@ -10,7 +10,6 @@ import { blogManifest } from "~/apps/blog";
 import { calendarManifest } from "~/apps/calendar";
 import { clockManifest } from "~/apps/clock";
 import { finderManifest } from "~/apps/finder";
-import { photosManifest } from "~/apps/photos";
 import { slidesManifest } from "~/apps/slides";
 import { settingsManifest } from "~/apps/settings";
 import { terminalManifest } from "~/apps/terminal";
@@ -38,14 +37,12 @@ kernel.apps.register(clockManifest);
 
 kernel.apps.register(calendarManifest);
 
-// `notes`, `browser`, `editor`, and `pdf-viewer` are first-party apps published
-// independently of the shell; they are registered by `firstPartyAppsPhase` (from
-// the catalog in prod, from their workspace packages in dev) rather than bundled
-// here.
+// `notes`, `browser`, `editor`, `pdf-viewer`, and `photos` are first-party apps
+// published independently of the shell; they are registered by
+// `firstPartyAppsPhase` (from the catalog in prod, from their workspace packages
+// in dev) rather than bundled here.
 
 kernel.apps.register(slidesManifest);
-
-kernel.apps.register(photosManifest);
 
 kernel.apps.register(terminalManifest);
 

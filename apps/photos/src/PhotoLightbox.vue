@@ -2,8 +2,8 @@
 import { FocusTrap } from "focus-trap-vue";
 import { computed, ref, watch } from "vue";
 
-import { IconButton } from "~/components/kit";
-import { ChevronLeft, ChevronRight, X as CloseIcon } from "~/icons/lucide";
+import { IconButton } from "@daopk/kit";
+import { ChevronLeft, ChevronRight, X as CloseIcon } from "@daopk/icons";
 
 import { photoLabel } from "./photoLabel";
 import type { Photo } from "./usePhotos";

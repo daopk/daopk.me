@@ -3,6 +3,7 @@ import {
   EditorAppIcon,
   NotesAppIcon,
   PdfViewerAppIcon,
+  PhotosAppIcon,
 } from "~/icons/fluentColor";
 
 import type { FirstPartyAppDescriptor } from "./types";
@@ -73,6 +74,17 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     permissions: ["vfs.read"],
     defaultWindow: { width: 1040, height: 720, centered: true },
     keywords: ["pdf", "document", "reader", "viewer", "vfs"],
+  },
+  {
+    id: "photos",
+    name: "Photos",
+    version: "1.0.0",
+    icon: PhotosAppIcon,
+    category: "media",
+    singleton: true,
+    permissions: ["network.fetch"],
+    defaultWindow: { width: 960, height: 680, centered: true },
+    keywords: ["photos", "images", "gallery", "pictures", "media", "r2"],
   },
 ];
 

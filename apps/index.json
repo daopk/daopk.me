@@ -20,6 +20,11 @@
       "id": "pdf-viewer",
       "version": "1.0.0",
       "entry": "/apps/pdf-viewer/1.0.0/pdf-viewer.js"
+    },
+    {
+      "id": "photos",
+      "version": "1.0.0",
+      "entry": "/apps/photos/1.0.0/photos.js"
     }
   ]
 }
