@@ -1,0 +1,86 @@
+import { debugWarn } from "~/core/debug";
+
+import type { FirstPartyCatalog, FirstPartyCatalogEntry } from "./types";
+
+/** Same-origin catalog of published first-party apps; served by the Worker from R2. */
+export const FIRST_PARTY_CATALOG_URL = "/apps/index.json";
+
+const DEFAULT_TIMEOUT_MS = 4000;
+
+/**
+ * Entries must be same-origin, version-pinned module paths. Restricting to
+ * `/apps/<id>/<version>/<file>` is a security boundary: even though the catalog
+ * is trusted (same-origin), first-party apps run in the trusted lane, so we
+ * never let a catalog point that lane at an arbitrary cross-origin URL.
+ */
+const ENTRY_PATTERN = /^\/apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function coerceEntry(input: unknown): FirstPartyCatalogEntry | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+  const { id, version, entry } = input;
+  if (typeof id !== "string" || typeof version !== "string" || typeof entry !== "string") {
+    return null;
+  }
+  if (!ENTRY_PATTERN.test(entry) || !entry.startsWith(`/apps/${id}/`)) {
+    debugWarn("[first-party]", `rejecting catalog entry for "${id}": bad entry URL`, entry);
+    return null;
+  }
+  return { id, version, entry };
+}
+
+/** Validate + normalize an untrusted-shaped catalog document; drop bad entries. */
+export function coerceFirstPartyCatalog(input: unknown): FirstPartyCatalog {
+  if (!isRecord(input) || !Array.isArray(input.apps)) {
+    return { apps: [] };
+  }
+  const seen = new Set<string>();
+  const apps: FirstPartyCatalogEntry[] = [];
+  for (const raw of input.apps) {
+    const entry = coerceEntry(raw);
+    if (entry === null || seen.has(entry.id)) {
+      continue;
+    }
+    seen.add(entry.id);
+    apps.push(entry);
+  }
+  return { apps };
+}
+
+function timeoutSignal(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeout = AbortSignal.timeout(ms);
+  if (signal === undefined) {
+    return timeout;
+  }
+  // `AbortSignal.any` is widely available; fall back to the caller's signal.
+  return typeof AbortSignal.any === "function" ? AbortSignal.any([signal, timeout]) : signal;
+}
+
+/**
+ * Fetch + validate the catalog. Never throws: on any failure (offline first
+ * load, 404, malformed JSON) it returns an empty catalog so boot continues and
+ * the affected apps simply do not register this session.
+ */
+export async function fetchFirstPartyCatalog(
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<FirstPartyCatalog> {
+  try {
+    const response = await fetch(FIRST_PARTY_CATALOG_URL, {
+      signal: timeoutSignal(options.signal, options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      debugWarn("[first-party]", `catalog fetch failed: ${response.status}`);
+      return { apps: [] };
+    }
+    return coerceFirstPartyCatalog(await response.json());
+  } catch (error) {
+    debugWarn("[first-party]", "catalog fetch error", error);
+    return { apps: [] };
+  }
+}

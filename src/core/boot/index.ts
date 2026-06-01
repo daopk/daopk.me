@@ -1,4 +1,5 @@
 import { BootManager, BootManagerInjectionKey } from "~/core/boot/BootManager";
+import { firstPartyAppsPhase } from "~/core/boot/phases/firstPartyApps";
 import { installedAppsPhase } from "~/core/boot/phases/installedApps";
 import { kernelInitPhase } from "~/core/boot/phases/kernelInit";
 import { mountShellPhase } from "~/core/boot/phases/mountShell";
@@ -6,11 +7,14 @@ import { postPhase } from "~/core/boot/phases/post";
 
 export type { BootDisposable } from "~/core/boot/BootManager";
 
-// `installedAppsPhase` runs after `kernelInitPhase` (store hydrated) and before
-// `mountShellPhase` so external apps are registered for the first paint.
+// After `kernelInitPhase` (store hydrated) and before `mountShellPhase` so all
+// apps are registered for the first paint: `firstPartyAppsPhase` registers
+// independently-published first-party apps (catalog in prod, workspace in dev);
+// `installedAppsPhase` registers user-installed external apps.
 export const defaultBootPhases = [
   postPhase,
   kernelInitPhase,
+  firstPartyAppsPhase,
   installedAppsPhase,
   mountShellPhase,
 ] as const;
@@ -20,6 +24,7 @@ export type { BootContext, BootPhase, BootStatus } from "~/core/boot/types";
 export {
   BootManager,
   BootManagerInjectionKey,
+  firstPartyAppsPhase,
   installedAppsPhase,
   kernelInitPhase,
   mountShellPhase,

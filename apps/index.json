@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "id": "notes",
+      "version": "1.0.0",
+      "entry": "/apps/notes/1.0.0/notes.js"
+    }
+  ]
+}

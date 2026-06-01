@@ -4,9 +4,12 @@
  * install time is `kernel.apps.list()` (the live registry), which also catches
  * any drift if a new built-in is added without updating this set.
  *
- * Keep in sync with the manifests registered in `src/main.ts`. Ids beginning
- * with `_` (dev-only apps like `_template`, `_kit-gallery`) are additionally
- * rejected by a separate rule, so they need not be listed here.
+ * Keep in sync with the manifests registered in `src/main.ts` AND the
+ * first-party roster in `src/core/apps/firstParty/registry.ts` (apps published
+ * independently of the shell but still reserved + trusted). Listing first-party
+ * ids here also stops `reconcileInstalledApps` from unregistering them. Ids
+ * beginning with `_` (dev-only apps like `_template`, `_kit-gallery`) are
+ * additionally rejected by a separate rule, so they need not be listed here.
  */
 export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
   "blog",
@@ -15,6 +18,7 @@ export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
   "clock",
   "editor",
   "finder",
+  // first-party, published independently (see firstParty/registry.ts)
   "notes",
   "pdf-viewer",
   "photos",

@@ -82,6 +82,79 @@ function blogContentDevServer(): PluginOption {
 }
 
 /**
+ * In production the Worker serves the first-party app catalog (`/apps/index.json`)
+ * and version-pinned modules (`/apps/<id>/<version>/<file>`) from R2. Vite has
+ * neither, so this plugin serves the catalog from the repo's `apps/index.json`
+ * and modules from each app's local `apps/<id>/dist/` build during `dev` /
+ * `preview`. This makes the production load path (catalog fetch → versioned
+ * `import()`) testable under `npm run preview` without a deploy.
+ */
+function appsContentDevServer(): PluginOption {
+  const appsRoot = fileURLToPath(new URL("./apps", import.meta.url));
+  const catalogPath = join(appsRoot, "index.json");
+  const modulePattern = /^\/apps\/([a-z0-9][a-z0-9-]*)\/[^/]+\/(.+)$/;
+
+  const contentTypeFor = (file: string): string => {
+    if (file.endsWith(".css")) return "text/css;charset=utf-8";
+    if (file.endsWith(".map")) return "application/json;charset=utf-8";
+    return "text/javascript;charset=utf-8";
+  };
+
+  const middleware: Connect.NextHandleFunction = (req, res, next) => {
+    const pathname = (req.url ?? "").split("?")[0];
+
+    if (pathname === "/apps/index.json") {
+      void (async () => {
+        try {
+          res.setHeader("Content-Type", "application/json;charset=utf-8");
+          res.end(await readFile(catalogPath, "utf8"));
+        } catch {
+          res.statusCode = 404;
+          res.end("Not found");
+        }
+      })();
+      return;
+    }
+
+    const match = modulePattern.exec(pathname);
+    if (match !== null) {
+      const [, id, file] = match;
+      if (file.includes("..")) {
+        res.statusCode = 400;
+        res.end("Bad request");
+        return;
+      }
+      void (async () => {
+        try {
+          // Local dev/preview ignores the version segment — there is only one
+          // built copy per app at apps/<id>/dist/. R2 serves the real
+          // version-pinned URLs in production.
+          const bytes = await readFile(join(appsRoot, id, "dist", file));
+          res.setHeader("Content-Type", contentTypeFor(file));
+          res.end(bytes);
+        } catch {
+          res.statusCode = 404;
+          res.end("Not found");
+        }
+      })();
+      return;
+    }
+
+    next();
+  };
+
+  return {
+    name: "daopk-apps-content-dev-server",
+    configureServer(server) {
+      server.middlewares.use(middleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware);
+    },
+  };
+}
+
+/**
  * The host's shared runtime surface is emitted as dedicated build entries; the
  * build-only `externalRuntimeImportMap` plugin maps each bare specifier to its
  * hashed chunk via an import map in index.html. This makes the host and every
@@ -213,6 +286,7 @@ export default defineConfig({
   },
   plugins: [
     blogContentDevServer(),
+    appsContentDevServer(),
     externalRuntimeImportMap(),
     vue(),
     VitePWA({
@@ -255,7 +329,33 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         globPatterns: ["index.html", "favicon.ico", "assets/**/*.{js,css}"],
         navigateFallback: "index.html",
+        // First-party app modules live OUTSIDE the precache (they ship from R2,
+        // not dist/), which is the whole point: republishing an app never
+        // changes the shell's precache manifest. These two rules give launched
+        // apps offline support without coupling them to a shell update.
+        navigateFallbackDenylist: [/^\/apps\//],
         runtimeCaching: [
+          {
+            // Catalog: revalidate so a republished app is picked up next boot,
+            // but keep working offline from cache.
+            urlPattern: /\/apps\/index\.json$/,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "daopk-me-app-catalog-v1",
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
+          {
+            // Version-pinned app modules are immutable → CacheFirst (offline launch).
+            urlPattern: /\/apps\/[^/]+\/[^/]+\/.+$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "daopk-me-apps-v1",
+              cacheableResponse: { statuses: [200] },
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
           {
             urlPattern: /\.(?:png|jpg|jpeg|webp|gif|svg|ico)$/i,
             handler: "StaleWhileRevalidate",
