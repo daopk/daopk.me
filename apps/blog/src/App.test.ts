@@ -295,6 +295,30 @@ Event body`,
     });
   });
 
+  it("copies the current URL from the desktop post toolbar share action", async () => {
+    window.history.replaceState(null, "", "/blog/field-notes?via=toolbar#read");
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    stubBlogFetch({ posts: { "field-notes": "# Field Notes\n\nNetwork body" } });
+    const wrapper = mount(wrap(makeKernel()));
+
+    await waitForContent(wrapper);
+
+    expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
+    expect(wrapper.find(".blog__back .ds-button__icon").exists()).toBe(true);
+
+    await wrapper.find(".blog__share").trigger("click");
+
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(window.location.href);
+      expect(wrapper.find(".blog__share").attributes("aria-label")).toBe("Copied URL");
+      expect(wrapper.find(".blog__share-status").text()).toBe("Copied");
+    });
+  });
+
   it("hides the in-content back link when mobile app chrome provides back navigation", async () => {
     let backAction: AppChromeBackAction | null = null;
     const appChrome: AppChromeController = {

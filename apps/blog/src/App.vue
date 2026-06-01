@@ -2,8 +2,10 @@
 import { computed, inject, onUnmounted, ref } from "vue";
 
 import {
+  AppToolbar,
   AppFrame,
   EmptyState,
+  IconButton,
   ListButton,
   ScrollArea,
   SectionHeader,
@@ -12,13 +14,8 @@ import {
 } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { createBlogContentSource, isBlogPostSlug } from "@daopk/content";
-import { ArrowLeft } from "@daopk/icons";
-import {
-  AppContextInjectionKey,
-  useKernel,
-  useVfs,
-  type AppChromeBackAction,
-} from "@daopk/sdk";
+import { ArrowLeft, Check, Share2 } from "@daopk/icons";
+import { AppContextInjectionKey, useKernel, useVfs, type AppChromeBackAction } from "@daopk/sdk";
 
 import { useBlogIndex, type BlogIndexPost } from "./useBlogIndex";
 import { useBlogPost } from "./useBlogPost";
@@ -73,9 +70,14 @@ const chromeBackAction = computed<AppChromeBackAction | null>(() =>
   view.value === "post" ? { ariaLabel: "Back to Blog", handler: openIndex } : null,
 );
 const chrome = useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
+const shareCopied = ref(false);
+const shareButtonLabel = computed(() => (shareCopied.value ? "Copied URL" : "Share post"));
+const shareButtonIcon = computed(() => (shareCopied.value ? Check : Share2));
+let shareCopiedTimeout: number | undefined;
 
 onUnmounted(() => {
   stopOpenRequests();
+  clearShareCopiedTimeout();
 });
 
 function replaceBrowserPath(pathname: string): void {
@@ -116,16 +118,80 @@ function openPost(args: { readonly slug: string; readonly path?: string }): void
 function onPostSelect(post: BlogIndexPost): void {
   openPost({ slug: post.slug, path: post.path });
 }
+
+function clearShareCopiedTimeout(): void {
+  if (shareCopiedTimeout === undefined || typeof window === "undefined") {
+    return;
+  }
+
+  window.clearTimeout(shareCopiedTimeout);
+  shareCopiedTimeout = undefined;
+}
+
+function markShareCopied(): void {
+  shareCopied.value = true;
+  clearShareCopiedTimeout();
+  shareCopiedTimeout = window.setTimeout(() => {
+    shareCopied.value = false;
+    shareCopiedTimeout = undefined;
+  }, 1600);
+}
+
+async function copyCurrentUrl(): Promise<void> {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return;
+  }
+
+  const writeText = navigator.clipboard?.writeText;
+  if (writeText === undefined) {
+    return;
+  }
+
+  try {
+    await writeText.call(navigator.clipboard, window.location.href);
+    markShareCopied();
+  } catch {
+    shareCopied.value = false;
+  }
+}
+
+function onShareClick(): void {
+  void copyCurrentUrl();
+}
 </script>
 
 <template>
   <AppFrame
     as="article"
     class="blog"
+    layout="flex-column"
     :safe-area="false"
     :aria-busy="busy ? 'true' : undefined"
     :data-handle-id="debugHandleId"
   >
+    <AppToolbar
+      v-if="view === 'post' && !chrome.available"
+      class="blog__post-toolbar"
+      density="comfortable"
+      wrap
+    >
+      <Button class="blog__back" size="sm" :icon-start="ArrowLeft" @click="openIndex">
+        All posts
+      </Button>
+      <template #end>
+        <span class="blog__share-status" role="status" aria-live="polite" aria-atomic="true">
+          {{ shareCopied ? "Copied" : "" }}
+        </span>
+        <IconButton
+          class="blog__share"
+          :icon="shareButtonIcon"
+          :label="shareButtonLabel"
+          size="sm"
+          @click="onShareClick"
+        />
+      </template>
+    </AppToolbar>
+
     <ScrollArea class="blog__scroll">
       <section v-if="view === 'index'" class="blog__index" aria-label="Latest blog posts">
         <SectionHeader class="blog__index-header" title="Latest posts" :level="1" size="page" />
@@ -161,16 +227,6 @@ function onPostSelect(post: BlogIndexPost): void {
 
       <template v-else>
         <div class="blog__post-shell">
-          <Button
-            v-if="!chrome.available"
-            class="blog__back"
-            variant="ghost"
-            size="sm"
-            :icon-start="ArrowLeft"
-            @click="openIndex"
-          >
-            All posts
-          </Button>
           <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
           <StatusBanner
             v-else-if="blogPost.status.value === 'loading'"
@@ -203,7 +259,7 @@ function onPostSelect(post: BlogIndexPost): void {
 }
 
 .blog__scroll {
-  block-size: 100%;
+  flex: 1 1 auto;
   padding-block-end: calc(var(--space-xl) + var(--mobile-shell-app-bottom-padding, 0px));
   padding-block-start: var(--space-lg);
   padding-inline-end: calc(var(--space-xl) + var(--mobile-shell-app-safe-area-right, 0px));
@@ -288,8 +344,12 @@ function onPostSelect(post: BlogIndexPost): void {
   max-inline-size: 68ch;
 }
 
-.blog__back {
-  margin-block-end: var(--space-md);
+.blog__share-status {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  min-inline-size: 4.5ch;
+  text-align: end;
+  white-space: nowrap;
 }
 
 .blog__content :deep(h1) {
