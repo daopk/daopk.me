@@ -11,7 +11,7 @@ name: Publish apps
 #
 # Immutability contract: a module URL is /apps/<id>/<version+build>/<id>.js and
 # is cached `immutable`. The package.json "version" is the manual, user-facing
-# semver; the GitHub Actions run number is the automatic build number that lets
+# semver; each app's catalog entry owns its own automatic build number so
 # same-version publishes produce a fresh URL and a detectable app update.
 on:
   push:
@@ -109,28 +109,41 @@ jobs:
           fi
 
           version="$(node -p "require('./apps/$APP/package.json').version")"
-          build="$GITHUB_RUN_NUMBER"
           revision="${GITHUB_SHA:0:7}"
-          if ! [[ "$build" =~ ^[0-9]+$ ]]; then
-            echo "::error::GITHUB_RUN_NUMBER must be numeric; got '$build'."
-            exit 1
-          fi
-          release="$version+$build"
           # Convention: the lib build emits <id>.js as the entry module.
           entry_file="$APP.js"
           if [ ! -f "$dist/$entry_file" ]; then
             echo "::error::Expected entry $dist/$entry_file (lib build must emit <id>.js)."
             exit 1
           fi
-          entry_key="$APP/$release/$entry_file"
 
-          # Immutable URLs must never change bytes: block re-publishing an
-          # existing release on push (manual dispatch may overwrite to recover).
-          if [ "$EVENT_NAME" = "push" ] && \
-             pnpm exec wrangler r2 object get "$R2_BUCKET/$entry_key" --remote >/dev/null 2>&1; then
-            echo "::error::$APP@$release already published at $entry_key."
+          # Build numbers are per app: read the live catalog, then increment
+          # only this app's current build. Missing catalog means first publish.
+          if ! pnpm exec wrangler r2 object get "$R2_BUCKET/index.json" \
+                --file current-catalog.json --remote 2>/dev/null; then
+            echo "No existing catalog; starting $APP at build 1."
+            rm -f current-catalog.json
+          fi
+          build="$(node scripts/next-app-build.mjs current-catalog.json "$APP")"
+          if ! [[ "$build" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Next build for $APP must be a positive integer; got '$build'."
             exit 1
           fi
+
+          # Immutable URLs must never change bytes. On push, skip orphaned
+          # release keys left by an interrupted publish; manual dispatch may
+          # overwrite to recover intentionally.
+          while true; do
+            release="$version+$build"
+            entry_key="$APP/$release/$entry_file"
+            if [ "$EVENT_NAME" != "push" ] || \
+               ! pnpm exec wrangler r2 object get "$R2_BUCKET/$entry_key" --remote >/dev/null 2>&1; then
+              break
+            fi
+            echo "$APP@$release already exists at $entry_key; trying next build."
+            build="$((build + 1))"
+          done
+          echo "Using per-app build $build for $APP."
 
           shopt -s globstar nullglob
           for file in "$dist"/**/*; do
