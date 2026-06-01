@@ -249,7 +249,9 @@ describe("Notes App.vue", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("No notes yet.");
-    expect(wrapper.findAll("button").some((button) => button.text().includes("New"))).toBe(true);
+    const newButton = wrapper.get(".notes__new-button");
+    expect(newButton.text()).toContain("New");
+    expect(newButton.classes()).toContain("ds-button--sm");
 
     wrapper.unmount();
   });
@@ -390,6 +392,7 @@ describe("Notes App.vue", () => {
     expect(wrapper.find(".notes").classes()).toContain("notes--compact");
     expect(wrapper.find(".notes__sidebar").exists()).toBe(true);
     expect(wrapper.find(".notes__editor").exists()).toBe(false);
+    expect(wrapper.get(".notes__new-button").classes()).toContain("ds-button--md");
     expect(wrapper.findAll(".notes__note-button")).toHaveLength(2);
 
     wrapper.unmount();

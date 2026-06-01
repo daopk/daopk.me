@@ -286,18 +286,17 @@ function labelForStatus(status: NotesStatus): string {
   >
     <aside v-if="showList" class="notes__sidebar" aria-label="Note list">
       <AppToolbar class="notes__sidebar-header" density="comfortable" variant="plain">
-        <template #end>
-          <Button
-            size="sm"
-            variant="primary"
-            :icon-start="Plus"
-            :loading="newButtonLoading"
-            :disabled="newButtonDisabled"
-            @click="createNote"
-          >
-            New
-          </Button>
-        </template>
+        <Button
+          class="notes__new-button"
+          :size="isCompact ? 'md' : 'sm'"
+          variant="primary"
+          :icon-start="Plus"
+          :loading="newButtonLoading"
+          :disabled="newButtonDisabled"
+          @click="createNote"
+        >
+          New
+        </Button>
       </AppToolbar>
 
       <EmptyState v-if="notes.notes.value.length === 0" class="notes__list-empty">
@@ -448,6 +447,15 @@ function labelForStatus(status: NotesStatus): string {
   border-block-end: 0;
   min-block-size: 64px;
   padding: var(--space-md);
+}
+
+.notes__new-button {
+  inline-size: 100%;
+}
+
+.notes--compact .notes__new-button {
+  min-block-size: var(--control-height-lg);
+  padding-block: var(--space-sm);
 }
 
 .notes__list {
