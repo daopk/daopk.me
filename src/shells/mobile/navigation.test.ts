@@ -214,6 +214,23 @@ describe("navigation orchestrator (v2 — internal stack, no browser history)", 
     expect(window.location.search).toBe("");
   });
 
+  it("removeByHandleId() removes externally killed frames without killing again", async () => {
+    const { kernel, killSpy } = makeKernelMock();
+    navigation.init(kernel as unknown as Kernel);
+
+    const first = await navigation.launch("about");
+    const second = await navigation.spawnNew("terminal");
+
+    expect(navigation.foreground.value).toBe(second.frameId);
+
+    const removed = navigation.removeByHandleId(second.handleId);
+
+    expect(removed).toBe(true);
+    expect(navigation.stack.map((frame) => frame.handleId)).toEqual([first.handleId]);
+    expect(navigation.foreground.value).toBe(first.frameId);
+    expect(killSpy).not.toHaveBeenCalled();
+  });
+
   it("launch() before init() throws", async () => {
     await expect(navigation.launch("about")).rejects.toThrow(/before init/);
   });

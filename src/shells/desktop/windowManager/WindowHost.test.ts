@@ -502,4 +502,41 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
 
     wrapper.unmount();
   });
+
+  it("removes a window when its process is killed outside the window manager", async () => {
+    const { kernel, bus } = makeKernel();
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "api",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(record).toBeDefined();
+
+    bus.emit("app.killed", {
+      manifestId: "alpha",
+      handleId: record!.handleId,
+      reason: "kernel",
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(manager.windows.some((entry) => entry.handleId === record!.handleId)).toBe(false);
+    expect(kernel.processes.kill).not.toHaveBeenCalledWith(record!.handleId);
+
+    wrapper.unmount();
+  });
 });

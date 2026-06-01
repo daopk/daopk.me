@@ -29,6 +29,10 @@ type CheckState =
   | { kind: "checking" }
   | { kind: "success" }
   | { kind: "error"; message: string };
+interface ProcessRestartSnapshot {
+  readonly handleId: string;
+  readonly args?: Readonly<Record<string, unknown>>;
+}
 
 const CATEGORY_ORDER: readonly AppCategory[] = ["system", "productivity", "media", "dev", "other"];
 const CATEGORY_LABELS: Record<AppCategory, string> = {
@@ -38,6 +42,7 @@ const CATEGORY_LABELS: Record<AppCategory, string> = {
   dev: "Developer",
   other: "Other",
 };
+const PROCESS_KILL_TIMEOUT_MS = 3000;
 
 const kernel = useKernel();
 const apps = shallowRef<readonly AppManifest[]>(visibleFirstPartyApps());
@@ -154,7 +159,76 @@ async function checkForUpdates(): Promise<void> {
   checkState.value = { kind: "success" };
 }
 
-function updateApp(app: AppManifest): void {
+function restartSnapshotsForApp(manifestId: string): ProcessRestartSnapshot[] {
+  return Array.from(kernel.processes.list())
+    .filter(([, process]) => process.manifestId === manifestId)
+    .map(([handleId, process]) => ({
+      handleId,
+      ...(process.args === undefined ? {} : { args: Object.freeze({ ...process.args }) }),
+    }));
+}
+
+function waitForProcessKills(snapshots: readonly ProcessRestartSnapshot[]): Promise<void> {
+  if (snapshots.length === 0) {
+    return Promise.resolve();
+  }
+
+  const pending = new Set(snapshots.map((snapshot) => snapshot.handleId));
+  return new Promise<void>((resolve) => {
+    let settled = false;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
+    let offKilled: () => void = () => {};
+    const finish = (): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      offKilled();
+      if (timer !== undefined) {
+        globalThis.clearTimeout(timer);
+      }
+      resolve();
+    };
+    timer = globalThis.setTimeout(finish, PROCESS_KILL_TIMEOUT_MS);
+    offKilled = kernel.events.on("app.killed", ({ handleId }) => {
+      pending.delete(handleId);
+      if (pending.size === 0) {
+        finish();
+      }
+    });
+
+    for (const snapshot of snapshots) {
+      kernel.processes.kill(snapshot.handleId, "kernel");
+    }
+  });
+}
+
+function launchRestartedApp(
+  manifestId: string,
+  snapshots: readonly ProcessRestartSnapshot[],
+): void {
+  const [first, ...rest] = snapshots;
+  if (first === undefined) {
+    return;
+  }
+
+  kernel.events.emit("app.launch.requested", {
+    manifestId,
+    source: "api",
+    ...(first.args === undefined ? {} : { args: first.args }),
+  });
+
+  for (const snapshot of rest) {
+    kernel.events.emit("app.spawn.new", {
+      manifestId,
+      source: "api",
+      ...(snapshot.args === undefined ? {} : { args: snapshot.args }),
+    });
+  }
+}
+
+async function updateApp(app: AppManifest): Promise<void> {
   const entry = updateEntryFor(app);
   if (entry === undefined || isUpdating(app.id)) {
     return;
@@ -167,8 +241,11 @@ function updateApp(app: AppManifest): void {
   }
 
   setUpdating(app.id, true);
+  const restartSnapshots = restartSnapshotsForApp(app.id);
   try {
     kernel.apps.register(manifest);
+    await waitForProcessKills(restartSnapshots);
+    launchRestartedApp(app.id, restartSnapshots);
   } catch (error) {
     checkState.value = {
       kind: "error",

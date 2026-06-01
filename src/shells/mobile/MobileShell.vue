@@ -29,6 +29,10 @@ const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
   onSpawnNew(payload.manifestId, payload.args);
 });
 
+const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
+  nav.removeByHandleId(handleId);
+});
+
 const showSwitcher = ref(false);
 
 const switcherActive = computed(() => showSwitcher.value && nav.depth.value > 0);
@@ -67,6 +71,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
+  disposeKilledListener();
   if (typeof window === "undefined") {
     return;
   }

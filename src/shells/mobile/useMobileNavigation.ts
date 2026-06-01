@@ -14,6 +14,7 @@ export interface UseMobileNavigation {
   focusFrame(frameId: string): void;
   dismiss(frameId: string): void;
   dismissAll(): void;
+  removeByHandleId(handleId: string): boolean;
   spawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): Promise<void>;
 }
 
@@ -57,6 +58,10 @@ export function useMobileNavigation(): UseMobileNavigation {
     navigation.dismissAll();
   }
 
+  function removeByHandleId(handleId: string): boolean {
+    return navigation.removeByHandleId(handleId);
+  }
+
   async function spawnNew(
     manifestId: string,
     args?: Readonly<Record<string, unknown>>,
@@ -74,6 +79,7 @@ export function useMobileNavigation(): UseMobileNavigation {
     focusFrame,
     dismiss,
     dismissAll,
+    removeByHandleId,
     spawnNew,
   };
 }

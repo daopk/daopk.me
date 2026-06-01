@@ -60,6 +60,7 @@ export interface WindowManagerApi {
   rebindToStage(stage: StageSize): void;
   minimize(id: string): void;
   restore(id: string): void;
+  removeByHandleId(handleId: string): boolean;
   restoreAllForManifest(manifestId: string): boolean;
   focusTopOfManifest(manifestId: string): boolean;
   hasWindowsForManifest(manifestId: string): boolean;
@@ -191,6 +192,10 @@ function close(id: string): void {
     killProcess?.(removed.handleId);
   }
 
+  focusTopVisibleWindow();
+}
+
+function focusTopVisibleWindow(): void {
   if (state.windows.length === 0) {
     return;
   }
@@ -208,6 +213,22 @@ function close(id: string): void {
   const top = visible.reduce((acc, w) => (w.z > acc.z ? w : acc), visible[0]!);
 
   setFocusedFlag(top.id);
+}
+
+function removeByHandleId(handleId: string): boolean {
+  let removed = false;
+  for (let index = state.windows.length - 1; index >= 0; index -= 1) {
+    if (state.windows[index]?.handleId === handleId) {
+      state.windows.splice(index, 1);
+      removed = true;
+    }
+  }
+
+  if (removed) {
+    focusTopVisibleWindow();
+  }
+
+  return removed;
 }
 
 function focus(id: string): void {
@@ -472,6 +493,7 @@ export function useWindowManager(deps?: WindowManagerDeps): WindowManagerApi {
     rebindToStage,
     minimize,
     restore,
+    removeByHandleId,
     restoreAllForManifest,
     focusTopOfManifest,
     hasWindowsForManifest,

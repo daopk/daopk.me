@@ -116,6 +116,10 @@ const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
   void onSpawnNewRequested(payload.manifestId, payload.args);
 });
 
+const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
+  windowManager.removeByHandleId(handleId);
+});
+
 function windowIdFromPayload(ctx: CommandContext, commandId: string): string | null {
   const value = ctx.payload.windowId;
   if (typeof value !== "string" || value.length === 0) {
@@ -344,6 +348,7 @@ async function onSpawnNewRequested(
 onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
+  disposeKilledListener();
   for (const dispose of disposeWindowCommands) {
     dispose();
   }

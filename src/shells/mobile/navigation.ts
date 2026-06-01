@@ -256,6 +256,36 @@ function dismissAll(): void {
   }
 }
 
+function removeByHandleId(handleId: string): boolean {
+  if (!kernelRef) {
+    throw new Error("navigation.removeByHandleId() before init()");
+  }
+
+  let removedForeground = false;
+  let removed = false;
+  for (let index = state.stack.length - 1; index >= 0; index -= 1) {
+    const frame = state.stack[index];
+    if (frame?.handleId !== handleId) {
+      continue;
+    }
+
+    removed = true;
+    removedForeground ||= foreground.value === frame.frameId;
+    state.stack.splice(index, 1);
+  }
+
+  if (!removed) {
+    return false;
+  }
+
+  if (removedForeground) {
+    const fallback = state.stack.length > 0 ? state.stack[state.stack.length - 1] : null;
+    foreground.value = fallback?.frameId ?? null;
+  }
+
+  return true;
+}
+
 export interface NavigationOrchestrator {
   readonly stack: DeepReadonly<NavigationFrame[]>;
   readonly foreground: Readonly<Ref<string | null>>;
@@ -266,6 +296,7 @@ export interface NavigationOrchestrator {
   focusFrame(frameId: string): void;
   dismiss(frameId: string): void;
   dismissAll(): void;
+  removeByHandleId(handleId: string): boolean;
   spawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): Promise<NavigationFrame>;
 }
 
@@ -283,6 +314,7 @@ export const navigation: NavigationOrchestrator = {
   focusFrame,
   dismiss,
   dismissAll,
+  removeByHandleId,
   spawnNew,
 };
 

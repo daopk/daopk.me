@@ -23,8 +23,27 @@ function manifest(overrides: Partial<AppManifest> & { id: string; name: string }
   };
 }
 
-function makeKernel(initialApps: AppManifest[]) {
+interface ProcessFixture {
+  readonly handleId: string;
+  readonly manifestId: string;
+  readonly args?: Readonly<Record<string, unknown>>;
+}
+
+function makeKernel(initialApps: AppManifest[], initialProcesses: readonly ProcessFixture[] = []) {
   const apps = [...initialApps];
+  const processes = new Map(
+    initialProcesses.map(
+      (process) =>
+        [
+          process.handleId,
+          {
+            state: "running",
+            manifestId: process.manifestId,
+            ...(process.args === undefined ? {} : { args: process.args }),
+          },
+        ] as const,
+    ),
+  );
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   const emit = vi.fn((channel: string, payload: unknown) => {
     for (const listener of listeners.get(channel) ?? []) {
@@ -48,11 +67,27 @@ function makeKernel(initialApps: AppManifest[]) {
     }
     emit("app.registered", { id: app.id });
   });
+  const kill = vi.fn((handleId: string, reason: "user" | "shell" | "kernel" = "shell") => {
+    const process = processes.get(handleId);
+    if (process === undefined) {
+      return;
+    }
+
+    processes.delete(handleId);
+    emit("app.killed", { manifestId: process.manifestId, handleId, reason });
+  });
   const kernel = {
     apps: { list: vi.fn(() => [...apps]), register },
+    processes: {
+      spawn: vi.fn(),
+      kill,
+      suspend: vi.fn(),
+      resume: vi.fn(),
+      list: vi.fn(() => processes.entries()),
+    },
     events: { on, emit },
   } as unknown as Kernel;
-  return { apps, emit, kernel, register };
+  return { apps, emit, kernel, kill, processes, register };
 }
 
 function fetchResponse(payload: unknown, ok = true, status = 200): Response {
@@ -205,13 +240,20 @@ describe("App Store", () => {
     expect(wrapper.findAll(".app-store__launch")).toHaveLength(1);
   });
 
-  it("updates a first-party app by re-registering its catalog manifest", async () => {
+  it("updates a first-party app by re-registering its catalog manifest and restarting it", async () => {
     stubCatalog({
       apps: [{ id: "notes", version: "1.0.1", entry: "/apps/notes/1.0.1/notes.js" }],
     });
-    const { kernel, register } = makeKernel([
-      manifest({ id: "notes", name: "Notes", version: "1.0.0" }),
-    ]);
+    const { emit, kernel, kill, register } = makeKernel(
+      [manifest({ id: "notes", name: "Notes", version: "1.0.0" })],
+      [
+        {
+          handleId: "h-notes",
+          manifestId: "notes",
+          args: { slug: "field-notes", path: "/home/posts/field-notes.md" },
+        },
+      ],
+    );
     const wrapper = mountStore(kernel);
 
     await wrapper.find(".app-store__check").trigger("click");
@@ -222,6 +264,12 @@ describe("App Store", () => {
     expect(register).toHaveBeenCalledWith(
       expect.objectContaining({ id: "notes", version: "1.0.1" }),
     );
+    expect(kill).toHaveBeenCalledWith("h-notes", "kernel");
+    expect(emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "notes",
+      source: "api",
+      args: { slug: "field-notes", path: "/home/posts/field-notes.md" },
+    });
     expect(wrapper.text()).toContain("v1.0.1");
     expect(wrapper.text()).toContain("All apps are up to date.");
     expect(wrapper.findAll(".app-store__update")).toHaveLength(0);

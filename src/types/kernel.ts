@@ -170,7 +170,16 @@ export interface KernelProcessesFacade {
    */
   suspend(_handleId: string): void;
   resume(_handleId: string): void;
-  list(): IterableIterator<[string, { state: string; manifestId: string }]>;
+  list(): IterableIterator<
+    [
+      string,
+      {
+        state: string;
+        manifestId: string;
+        args?: Readonly<Record<string, unknown>>;
+      },
+    ]
+  >;
 }
 
 export interface KernelLifecycleCoordinatorFacade {
