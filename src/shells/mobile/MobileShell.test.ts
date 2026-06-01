@@ -339,6 +339,100 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
+  it("focuses an Editor frame that is already editing the requested path", async () => {
+    currentKernel = makeKernel([manifest({ id: "editor", name: "Editor" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+      args: { path: "/home/a.md" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: "h-1",
+      path: "/home/a.md",
+    });
+    currentKernel.events.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/a.md",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(1);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-1");
+
+    wrapper.unmount();
+  });
+
+  it("reuses a confirmed-empty Editor frame when no matching path exists", async () => {
+    currentKernel = makeKernel([manifest({ id: "editor", name: "Editor" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: "h-1",
+      path: null,
+    });
+    currentKernel.events.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/new.md",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(1);
+    expect(currentKernel.events.emit).toHaveBeenCalledWith("editor.window.open.requested", {
+      handleId: "h-1",
+      path: "/home/new.md",
+    });
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-1");
+
+    wrapper.unmount();
+  });
+
+  it("spawns a new Editor frame when no matching or empty frame exists", async () => {
+    currentKernel = makeKernel([manifest({ id: "editor", name: "Editor" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+      args: { path: "/home/a.md" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: "h-1",
+      path: "/home/a.md",
+    });
+    currentKernel.events.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/b.md",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(2);
+    expect(wrapper.findAll("section.app-view")).toHaveLength(2);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-2");
+
+    wrapper.unmount();
+  });
+
   it("two-app coexistence: launch alpha → back → launch beta → both frames alive in the stack", async () => {
     currentKernel = makeKernel([manifest({ id: "alpha" }), manifest({ id: "beta", name: "Beta" })]);
 

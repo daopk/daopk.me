@@ -15,13 +15,14 @@ import {
 import { Button, Dialog, DialogActions } from "@daopk/ui";
 import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
 import { FileText, FolderOpen, RefreshCw, Save } from "@daopk/icons";
-import { AppContextInjectionKey, useVfs } from "@daopk/sdk";
+import { AppContextInjectionKey, useKernel, useVfs } from "@daopk/sdk";
 
 import { useEditor } from "./useEditor";
 
 type PendingDiscardAction = { kind: "open"; path: string } | { kind: "revert" };
 
 const ctx = inject(AppContextInjectionKey, null);
+const kernel = useKernel();
 const vfs = useVfs();
 const editor = useEditor({ vfs });
 
@@ -37,6 +38,13 @@ let previewRun = 0;
 let disposed = false;
 let renderer: MarkdownRenderer | undefined;
 let rendererPromise: Promise<MarkdownRenderer> | undefined;
+const stopOpenRequests = kernel.events.on("editor.window.open.requested", (payload) => {
+  if (payload.handleId !== ctx?.handleId) {
+    return;
+  }
+
+  requestOpenPath(payload.path);
+});
 
 const canPreview = computed(
   () => editor.currentPath.value !== null && editor.editableKind.value === "markdown",
@@ -90,9 +98,26 @@ watch(
 onUnmounted(() => {
   disposed = true;
   previewRun += 1;
+  stopOpenRequests();
   renderer?.dispose();
   renderer = undefined;
 });
+
+watch(
+  editor.currentPath,
+  (path) => {
+    if (ctx === null) {
+      return;
+    }
+
+    kernel.events.emit("app.document.changed", {
+      manifestId: ctx.manifestId,
+      handleId: ctx.handleId,
+      path,
+    });
+  },
+  { immediate: true },
+);
 
 async function openInitialPath(): Promise<void> {
   const initialPath = typeof ctx?.args.path === "string" ? ctx.args.path : "";
@@ -156,7 +181,11 @@ async function renderPreview(): Promise<void> {
 }
 
 function requestOpen(): void {
-  const nextPath = pathInput.value.trim();
+  requestOpenPath(pathInput.value);
+}
+
+function requestOpenPath(path: string): void {
+  const nextPath = path.trim();
   if (nextPath.length === 0) {
     return;
   }

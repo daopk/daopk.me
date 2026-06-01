@@ -45,6 +45,19 @@ describe("useWindowManager", () => {
     expect(record.args).toBeUndefined();
   });
 
+  it("tracks a live document path by manifest and handle id", () => {
+    const wm = useWindowManager({ killProcess: vi.fn() });
+
+    wm.open({ manifestId: "editor", handleId: "h-editor", title: "Editor" });
+
+    expect(wm.setDocumentPath("h-editor", "editor", "/home/a.md")).toBe(true);
+    expect(wm.windows[0]!.documentPath).toBe("/home/a.md");
+    expect(wm.setDocumentPath("h-editor", "notes", "/home/b.md")).toBe(false);
+    expect(wm.windows[0]!.documentPath).toBe("/home/a.md");
+    expect(wm.setDocumentPath("h-editor", "editor", null)).toBe(true);
+    expect(wm.windows[0]!.documentPath).toBeNull();
+  });
+
   it("opens a window with monotonic z above the base and flags it focused", () => {
     const wm = useWindowManager({ killProcess: vi.fn() });
 

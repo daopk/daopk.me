@@ -15,6 +15,7 @@ export interface UseMobileNavigation {
   dismiss(frameId: string): void;
   dismissAll(): void;
   removeByHandleId(handleId: string): boolean;
+  setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
   spawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): Promise<void>;
 }
 
@@ -62,6 +63,10 @@ export function useMobileNavigation(): UseMobileNavigation {
     return navigation.removeByHandleId(handleId);
   }
 
+  function setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean {
+    return navigation.setDocumentPath(handleId, manifestId, path);
+  }
+
   async function spawnNew(
     manifestId: string,
     args?: Readonly<Record<string, unknown>>,
@@ -80,6 +85,7 @@ export function useMobileNavigation(): UseMobileNavigation {
     dismiss,
     dismissAll,
     removeByHandleId,
+    setDocumentPath,
     spawnNew,
   };
 }

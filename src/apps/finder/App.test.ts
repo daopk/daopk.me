@@ -408,10 +408,9 @@ describe("Finder App.vue", () => {
     openItem!.click();
     await flushReka();
 
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "editor",
+    expect(kernel.events.emit).toHaveBeenCalledWith("editor.open.requested", {
       source: "api",
-      args: { path: "/note.md" },
+      path: "/note.md",
     });
 
     wrapper.unmount();

@@ -11,7 +11,9 @@ import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
+import { debugWarn } from "~/core/debug";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
+import { normalizeVfsPath } from "~/core/vfs/path";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
 import type { AppManifest } from "~/types/app";
@@ -27,6 +29,14 @@ const disposeLaunchListener = kernel.events.on("app.launch.requested", (payload)
 
 const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
   onSpawnNew(payload.manifestId, payload.args);
+});
+
+const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
+  void onEditorOpenRequested(payload.path);
+});
+
+const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
+  nav.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
 });
 
 const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
@@ -71,6 +81,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
+  disposeEditorOpenListener();
+  disposeDocumentChangedListener();
   disposeKilledListener();
   if (typeof window === "undefined") {
     return;
@@ -206,6 +218,88 @@ function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>
     () => {
       clearLaunching(manifestId);
     },
+  );
+}
+
+async function onEditorOpenRequested(path: string): Promise<void> {
+  const unsupported = unsupportedManifestFor("editor");
+
+  if (unsupported) {
+    showSwitcher.value = false;
+    clearLaunching("editor");
+    alertUnsupportedManifest(unsupported);
+    return;
+  }
+
+  const normalizedPath = normalizeEditorOpenPath(path);
+  if (normalizedPath === null) {
+    return;
+  }
+
+  const matchingFrame = topmostEditorFrame((frame) => documentPathFor(frame) === normalizedPath);
+  if (matchingFrame !== null) {
+    nav.focusFrame(matchingFrame.frameId);
+    return;
+  }
+
+  const emptyFrame = topmostEditorFrame((frame) => frame.documentPath === null);
+  if (emptyFrame !== null) {
+    nav.focusFrame(emptyFrame.frameId);
+    await nextTick();
+    kernel.events.emit("editor.window.open.requested", {
+      handleId: emptyFrame.handleId,
+      path: normalizedPath,
+    });
+    lastLaunchedManifestId.value = "editor";
+    return;
+  }
+
+  addLaunching("editor");
+  try {
+    await nav.spawnNew("editor", { path: normalizedPath });
+    lastLaunchedManifestId.value = "editor";
+  } finally {
+    clearLaunching("editor");
+  }
+}
+
+function normalizeEditorOpenPath(path: string): string | null {
+  try {
+    return normalizeVfsPath(path);
+  } catch (error) {
+    debugWarn("[mobile-shell]", "editor.open.requested invalid path", path, error);
+    return null;
+  }
+}
+
+function documentPathFor(frame: (typeof nav.stack)[number]): string | null | undefined {
+  if (frame.documentPath !== undefined) {
+    return frame.documentPath;
+  }
+
+  const launchPath = frame.args?.path;
+  if (typeof launchPath !== "string") {
+    return undefined;
+  }
+
+  try {
+    return normalizeVfsPath(launchPath);
+  } catch {
+    return undefined;
+  }
+}
+
+function topmostEditorFrame(
+  predicate: (frame: (typeof nav.stack)[number]) => boolean,
+): (typeof nav.stack)[number] | null {
+  const candidates = nav.stack.filter((frame) => frame.manifestId === "editor" && predicate(frame));
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return (
+    candidates.find((frame) => frame.frameId === nav.foreground.value) ??
+    candidates[candidates.length - 1]!
   );
 }
 

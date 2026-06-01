@@ -97,6 +97,20 @@ describe("navigation orchestrator (v2 — internal stack, no browser history)", 
       expect(Object.isFrozen(frame.args)).toBe(true);
     });
 
+    it("setDocumentPath tracks a live document path by manifest and handle id", async () => {
+      const { kernel } = makeKernelMock();
+      navigation.init(kernel as unknown as Kernel);
+
+      const frame = await navigation.spawnNew("editor");
+
+      expect(navigation.setDocumentPath(frame.handleId, "editor", "/home/a.md")).toBe(true);
+      expect(navigation.stack[0]!.documentPath).toBe("/home/a.md");
+      expect(navigation.setDocumentPath(frame.handleId, "notes", "/home/b.md")).toBe(false);
+      expect(navigation.stack[0]!.documentPath).toBe("/home/a.md");
+      expect(navigation.setDocumentPath(frame.handleId, "editor", null)).toBe(true);
+      expect(navigation.stack[0]!.documentPath).toBeNull();
+    });
+
     it("launch without args leaves frame.args === undefined (no sentinel)", async () => {
       const { kernel } = makeKernelMock();
       navigation.init(kernel as unknown as Kernel);

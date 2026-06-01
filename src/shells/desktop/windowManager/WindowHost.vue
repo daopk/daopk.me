@@ -7,6 +7,7 @@ import { hasAppSettings } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
+import { normalizeVfsPath } from "~/core/vfs/path";
 import type { AppHandle } from "~/types/app";
 import type { CommandContext } from "~/types/command";
 
@@ -116,9 +117,19 @@ const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
   void onSpawnNewRequested(payload.manifestId, payload.args);
 });
 
+const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
+  void onEditorOpenRequested(payload.path);
+});
+
+const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
+  windowManager.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
+});
+
 const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
   windowManager.removeByHandleId(handleId);
 });
+
+type DesktopWindowRecord = (typeof windowManager.windows)[number];
 
 function windowIdFromPayload(ctx: CommandContext, commandId: string): string | null {
   const value = ctx.payload.windowId;
@@ -292,6 +303,119 @@ async function onLaunchRequested(
   });
 }
 
+async function onEditorOpenRequested(path: string): Promise<void> {
+  const normalizedPath = normalizeEditorOpenPath(path);
+  if (normalizedPath === null) {
+    return;
+  }
+
+  const matchingRecord = topmostEditorWindow(
+    (record) => documentPathFor(record) === normalizedPath,
+  );
+  if (matchingRecord !== null) {
+    const wasMinimized = matchingRecord.minimized;
+    windowManager.focus(matchingRecord.id);
+    if (wasMinimized) {
+      await nextTick();
+      kernel.events.emit("editor.window.open.requested", {
+        handleId: matchingRecord.handleId,
+        path: normalizedPath,
+      });
+    }
+    return;
+  }
+
+  const emptyRecord = topmostEditorWindow((record) => record.documentPath === null);
+  if (emptyRecord !== null) {
+    windowManager.focus(emptyRecord.id);
+    await nextTick();
+    kernel.events.emit("editor.window.open.requested", {
+      handleId: emptyRecord.handleId,
+      path: normalizedPath,
+    });
+    return;
+  }
+
+  await openNewEditorWindow(normalizedPath);
+}
+
+function normalizeEditorOpenPath(path: string): string | null {
+  try {
+    return normalizeVfsPath(path);
+  } catch (error) {
+    debugWarn("[window-host]", "editor.open.requested invalid path", path, error);
+    return null;
+  }
+}
+
+function documentPathFor(record: DesktopWindowRecord): string | null | undefined {
+  if (record.documentPath !== undefined) {
+    return record.documentPath;
+  }
+
+  const launchPath = record.args?.path;
+  if (typeof launchPath !== "string") {
+    return undefined;
+  }
+
+  try {
+    return normalizeVfsPath(launchPath);
+  } catch {
+    return undefined;
+  }
+}
+
+function topmostEditorWindow(
+  predicate: (record: DesktopWindowRecord) => boolean,
+): DesktopWindowRecord | null {
+  let topmost: DesktopWindowRecord | null = null;
+
+  for (const record of windowManager.windows) {
+    if (record.manifestId !== "editor" || !predicate(record)) {
+      continue;
+    }
+    if (topmost === null || record.z > topmost.z) {
+      topmost = record;
+    }
+  }
+
+  return topmost;
+}
+
+async function openNewEditorWindow(path: string): Promise<void> {
+  const manifest = kernel.apps.list().find((m) => m.id === "editor");
+
+  if (!manifest) {
+    debugWarn("[window-host] editor.open requested but Editor manifest is missing");
+    return;
+  }
+
+  let handle: AppHandle;
+  try {
+    handle = await kernel.apps.launch(manifest.id, { path });
+  } catch (error) {
+    if (error instanceof AppLaunchError) {
+      debugWarn("[window-host] editor.open launch failed", error.code, error.manifestId);
+      return;
+    }
+    throw error;
+  }
+
+  const defaultSize =
+    manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
+      ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
+      : undefined;
+
+  windowManager.open({
+    manifestId: manifest.id,
+    handleId: handle.id,
+    title: manifest.name,
+    singleton: manifest.singleton === true,
+    size: defaultSize,
+    args: { path },
+  });
+}
+
 function onResize(id: string, x: number, y: number, width: number, height: number): void {
   windowManager.setBounds(id, x, y, width, height);
 }
@@ -348,6 +472,8 @@ async function onSpawnNewRequested(
 onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
+  disposeEditorOpenListener();
+  disposeDocumentChangedListener();
   disposeKilledListener();
   for (const dispose of disposeWindowCommands) {
     dispose();

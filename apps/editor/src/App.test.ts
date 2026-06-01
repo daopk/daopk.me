@@ -43,8 +43,29 @@ function stat(path: string, node: FakeNode): VfsStat {
 
 function makeKernel(seed: Record<string, FakeNode>): Kernel {
   const nodes = { ...seed };
+  const listeners = new Map<string, Set<(payload: Record<string, unknown>) => void>>();
+
+  function emit(channel: string, payload: Record<string, unknown>): void {
+    for (const listener of listeners.get(channel) ?? []) {
+      listener(payload);
+    }
+  }
 
   return {
+    events: {
+      emit: vi.fn(emit),
+      on: vi.fn((channel: string, listener: (payload: Record<string, unknown>) => void) => {
+        const bucket =
+          listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
+        bucket.add(listener);
+        listeners.set(channel, bucket);
+        return (): void => {
+          bucket.delete(listener);
+        };
+      }),
+      once: vi.fn(() => () => undefined),
+      off: vi.fn(),
+    },
     vfs: {
       stat: vi.fn(async (path: string) => {
         const node = nodes[path];
@@ -102,9 +123,15 @@ function buttonByText(wrapper: ReturnType<typeof mount>, text: string) {
 
 describe("Editor App.vue", () => {
   it("opens with no file selected", () => {
-    const wrapper = mountEditor(makeKernel({ "/home": { kind: "directory" } }));
+    const kernel = makeKernel({ "/home": { kind: "directory" } });
+    const wrapper = mountEditor(kernel);
 
     expect(wrapper.text()).toContain("No file open.");
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "editor",
+      handleId: "editor-handle",
+      path: null,
+    });
 
     wrapper.unmount();
   });
@@ -122,23 +149,67 @@ describe("Editor App.vue", () => {
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/note.md", {
       handleId: "editor-handle",
     });
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "editor",
+      handleId: "editor-handle",
+      path: "/home/note.md",
+    });
 
     wrapper.unmount();
   });
 
   it("opens a path from the toolbar", async () => {
-    const wrapper = mountEditor(
-      makeKernel({
-        "/home": { kind: "directory" },
-        "/home/log.txt": { kind: "file", text: "hello", mimeType: "text/plain" },
-      }),
-    );
+    const kernel = makeKernel({
+      "/home": { kind: "directory" },
+      "/home/log.txt": { kind: "file", text: "hello", mimeType: "text/plain" },
+    });
+    const wrapper = mountEditor(kernel);
 
     await wrapper.find("#editor-path").setValue("/home/log.txt");
     await wrapper.find("form").trigger("submit");
     await flushPromises();
 
     expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("hello");
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "editor",
+      handleId: "editor-handle",
+      path: "/home/log.txt",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("opens targeted editor.window.open.requested events for its handle only", async () => {
+    const kernel = makeKernel({
+      "/home": { kind: "directory" },
+      "/home/a.txt": { kind: "file", text: "A", mimeType: "text/plain" },
+      "/home/b.txt": { kind: "file", text: "B", mimeType: "text/plain" },
+    });
+    const wrapper = mountEditor(kernel);
+
+    kernel.events.emit("editor.window.open.requested", {
+      handleId: "other-handle",
+      path: "/home/a.txt",
+    });
+    await flushPromises();
+
+    expect(wrapper.find("textarea").exists()).toBe(false);
+    expect(kernel.vfs.readText).not.toHaveBeenCalledWith("/home/a.txt", {
+      handleId: "editor-handle",
+    });
+
+    kernel.events.emit("editor.window.open.requested", {
+      handleId: "editor-handle",
+      path: "/home/b.txt",
+    });
+    await flushPromises();
+
+    expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("B");
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "editor",
+      handleId: "editor-handle",
+      path: "/home/b.txt",
+    });
 
     wrapper.unmount();
   });

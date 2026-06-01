@@ -66,6 +66,19 @@ declare global {
       source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
       path: string;
     };
+    "editor.open.requested": {
+      source: CommandSource;
+      path: string;
+    };
+    "editor.window.open.requested": {
+      handleId: string;
+      path: string;
+    };
+    "app.document.changed": {
+      manifestId: string;
+      handleId: string;
+      path: string | null;
+    };
     "theme.changed": { theme: ResolvedTheme };
     "app.launch.requested": {
       manifestId: string;

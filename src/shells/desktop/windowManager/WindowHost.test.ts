@@ -422,6 +422,156 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("focuses an Editor window that is already editing the requested path", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("editor", "Editor")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+      args: { path: "/home/a.md" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    bus.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+      args: { path: "/home/b.md" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const [a, b] = manager.windows.filter((entry) => entry.manifestId === "editor");
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+
+    bus.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: a!.handleId,
+      path: "/home/a.md",
+    });
+    bus.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: b!.handleId,
+      path: "/home/b.md",
+    });
+    manager.minimize(b!.id);
+
+    bus.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/a.md",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(manager.windows.find((entry) => entry.id === a!.id)?.focused).toBe(true);
+    expect(manager.windows.find((entry) => entry.id === b!.id)?.minimized).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("reuses a confirmed-empty Editor window when no matching path exists", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("editor", "Editor")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const empty = manager.windows.find((entry) => entry.manifestId === "editor");
+    expect(empty).toBeDefined();
+    bus.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: empty!.handleId,
+      path: null,
+    });
+
+    bus.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/new.md",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.find((entry) => entry.id === empty!.id)?.focused).toBe(true);
+    expect(bus.emitted).toContainEqual({
+      channel: "editor.window.open.requested",
+      payload: { handleId: empty!.handleId, path: "/home/new.md" },
+    });
+
+    wrapper.unmount();
+  });
+
+  it("opens a new Editor window when no matching or empty Editor exists", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("editor", "Editor")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "editor",
+      source: "api",
+      args: { path: "/home/a.md" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const existing = manager.windows.find((entry) => entry.manifestId === "editor");
+    expect(existing).toBeDefined();
+    bus.emit("app.document.changed", {
+      manifestId: "editor",
+      handleId: existing!.handleId,
+      path: "/home/a.md",
+    });
+
+    bus.emit("editor.open.requested", {
+      source: "api",
+      path: "/home/b.md",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(launchSpy).toHaveBeenLastCalledWith("editor", { path: "/home/b.md" });
+    expect(manager.windows.filter((entry) => entry.manifestId === "editor")).toHaveLength(2);
+
+    wrapper.unmount();
+  });
+
   it("registers command-backed window actions", async () => {
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;

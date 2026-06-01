@@ -26,6 +26,7 @@ export interface WindowRecord {
   preMaximize?: WindowBounds;
   snap?: SnapEdge;
   args?: Readonly<Record<string, unknown>>;
+  documentPath?: string | null;
 }
 
 export interface OpenWindowInput {
@@ -61,6 +62,7 @@ export interface WindowManagerApi {
   minimize(id: string): void;
   restore(id: string): void;
   removeByHandleId(handleId: string): boolean;
+  setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
   restoreAllForManifest(manifestId: string): boolean;
   focusTopOfManifest(manifestId: string): boolean;
   hasWindowsForManifest(manifestId: string): boolean;
@@ -229,6 +231,17 @@ function removeByHandleId(handleId: string): boolean {
   }
 
   return removed;
+}
+
+function setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean {
+  const target = state.windows.find((w) => w.handleId === handleId && w.manifestId === manifestId);
+
+  if (!target) {
+    return false;
+  }
+
+  target.documentPath = path;
+  return true;
 }
 
 function focus(id: string): void {
@@ -494,6 +507,7 @@ export function useWindowManager(deps?: WindowManagerDeps): WindowManagerApi {
     minimize,
     restore,
     removeByHandleId,
+    setDocumentPath,
     restoreAllForManifest,
     focusTopOfManifest,
     hasWindowsForManifest,

@@ -127,10 +127,9 @@ function openInEditor(entry: VfsDirEntry): void {
     return;
   }
 
-  kernel.events.emit("app.launch.requested", {
-    manifestId: "editor",
+  kernel.events.emit("editor.open.requested", {
     source: "api",
-    args: { path: entry.path },
+    path: entry.path,
   });
 }
 
