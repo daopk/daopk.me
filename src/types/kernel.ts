@@ -62,6 +62,11 @@ declare global {
       path?: string;
       slug?: string;
     };
+    "blog.post.open.requested": {
+      source: CommandSource;
+      path: string;
+      slug: string;
+    };
     "notes.open.requested": {
       source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
       path: string;

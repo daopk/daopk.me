@@ -6,6 +6,7 @@ import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
+import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
 import { normalizeVfsPath } from "~/core/vfs/path";
 import type { AppHandle } from "~/types/app";
@@ -119,6 +120,10 @@ const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
 
 const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
   void onEditorOpenRequested(payload.path);
+});
+
+const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested", (payload) => {
+  void onBlogPostOpenRequested(payload.path, payload.slug);
 });
 
 const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
@@ -339,11 +344,36 @@ async function onEditorOpenRequested(path: string): Promise<void> {
   await openNewEditorWindow(normalizedPath);
 }
 
+async function onBlogPostOpenRequested(path: string, slug: string): Promise<void> {
+  const normalizedPath = normalizeOpenRequestPath("blog.post.open.requested", path);
+  if (normalizedPath === null || !isBlogPostSlug(slug)) {
+    if (!isBlogPostSlug(slug)) {
+      debugWarn("[window-host]", "blog.post.open.requested invalid slug", slug);
+    }
+    return;
+  }
+
+  const matchingRecord = topmostWindowForManifest(
+    "blog",
+    (record) => documentPathFor(record) === normalizedPath,
+  );
+  if (matchingRecord !== null) {
+    windowManager.focus(matchingRecord.id);
+    return;
+  }
+
+  await openNewWindow("blog", { path: normalizedPath, slug });
+}
+
 function normalizeEditorOpenPath(path: string): string | null {
+  return normalizeOpenRequestPath("editor.open.requested", path);
+}
+
+function normalizeOpenRequestPath(eventName: string, path: string): string | null {
   try {
     return normalizeVfsPath(path);
   } catch (error) {
-    debugWarn("[window-host]", "editor.open.requested invalid path", path, error);
+    debugWarn("[window-host]", `${eventName} invalid path`, path, error);
     return null;
   }
 }
@@ -368,10 +398,17 @@ function documentPathFor(record: DesktopWindowRecord): string | null | undefined
 function topmostEditorWindow(
   predicate: (record: DesktopWindowRecord) => boolean,
 ): DesktopWindowRecord | null {
+  return topmostWindowForManifest("editor", predicate);
+}
+
+function topmostWindowForManifest(
+  manifestId: string,
+  predicate: (record: DesktopWindowRecord) => boolean,
+): DesktopWindowRecord | null {
   let topmost: DesktopWindowRecord | null = null;
 
   for (const record of windowManager.windows) {
-    if (record.manifestId !== "editor" || !predicate(record)) {
+    if (record.manifestId !== manifestId || !predicate(record)) {
       continue;
     }
     if (topmost === null || record.z > topmost.z) {
@@ -383,19 +420,26 @@ function topmostEditorWindow(
 }
 
 async function openNewEditorWindow(path: string): Promise<void> {
-  const manifest = kernel.apps.list().find((m) => m.id === "editor");
+  await openNewWindow("editor", { path });
+}
+
+async function openNewWindow(
+  manifestId: string,
+  args: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  const manifest = kernel.apps.list().find((m) => m.id === manifestId);
 
   if (!manifest) {
-    debugWarn("[window-host] editor.open requested but Editor manifest is missing");
+    debugWarn("[window-host] document open requested but manifest is missing", manifestId);
     return;
   }
 
   let handle: AppHandle;
   try {
-    handle = await kernel.apps.launch(manifest.id, { path });
+    handle = await kernel.apps.launch(manifest.id, args);
   } catch (error) {
     if (error instanceof AppLaunchError) {
-      debugWarn("[window-host] editor.open launch failed", error.code, error.manifestId);
+      debugWarn("[window-host] document open launch failed", error.code, error.manifestId);
       return;
     }
     throw error;
@@ -412,7 +456,7 @@ async function openNewEditorWindow(path: string): Promise<void> {
     title: manifest.name,
     singleton: manifest.singleton === true,
     size: defaultSize,
-    args: { path },
+    args,
   });
 }
 
@@ -473,6 +517,7 @@ onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
   disposeEditorOpenListener();
+  disposeBlogPostOpenListener();
   disposeDocumentChangedListener();
   disposeKilledListener();
   for (const dispose of disposeWindowCommands) {

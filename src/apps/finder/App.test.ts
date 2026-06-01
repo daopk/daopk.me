@@ -438,10 +438,10 @@ describe("Finder App.vue", () => {
     menuItems()[0]!.click();
     await flushReka();
 
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "blog",
+    expect(kernel.events.emit).toHaveBeenCalledWith("blog.post.open.requested", {
       source: "api",
-      args: { path: "/home/posts/field-notes.md", slug: "field-notes" },
+      path: "/home/posts/field-notes.md",
+      slug: "field-notes",
     });
 
     wrapper.unmount();

@@ -607,10 +607,120 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     expect(
       bus.emitted.some(
         (entry) =>
-          entry.channel === "editor.window.open.requested" &&
-          entry.payload.path === "/home/new.md",
+          entry.channel === "editor.window.open.requested" && entry.payload.path === "/home/new.md",
       ),
     ).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("focuses a Blog window that is already showing the requested post", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("blog", "Blog")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/a.md", slug: "a" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    bus.emit("app.spawn.new", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/b.md", slug: "b" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const [a, b] = manager.windows.filter((entry) => entry.manifestId === "blog");
+    expect(a).toBeDefined();
+    expect(b).toBeDefined();
+
+    bus.emit("app.document.changed", {
+      manifestId: "blog",
+      handleId: a!.handleId,
+      path: "/home/posts/a.md",
+    });
+    bus.emit("app.document.changed", {
+      manifestId: "blog",
+      handleId: b!.handleId,
+      path: "/home/posts/b.md",
+    });
+    manager.minimize(b!.id);
+
+    bus.emit("blog.post.open.requested", {
+      source: "api",
+      path: "/home/posts/a.md",
+      slug: "a",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(manager.windows.find((entry) => entry.id === a!.id)?.focused).toBe(true);
+    expect(manager.windows.find((entry) => entry.id === b!.id)?.minimized).toBe(true);
+    expect(bus.emitted.some((entry) => entry.channel === "blog.open.requested")).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("opens a new Blog window when no Blog window is showing the requested post", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("blog", "Blog")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.spawn.new", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/a.md", slug: "a" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const existing = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(existing).toBeDefined();
+    bus.emit("app.document.changed", {
+      manifestId: "blog",
+      handleId: existing!.handleId,
+      path: "/home/posts/a.md",
+    });
+
+    bus.emit("blog.post.open.requested", {
+      source: "api",
+      path: "/home/posts/b.md",
+      slug: "b",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(launchSpy).toHaveBeenLastCalledWith("blog", {
+      path: "/home/posts/b.md",
+      slug: "b",
+    });
+    expect(manager.windows.filter((entry) => entry.manifestId === "blog")).toHaveLength(2);
+    expect(bus.emitted.some((entry) => entry.channel === "blog.open.requested")).toBe(false);
 
     wrapper.unmount();
   });

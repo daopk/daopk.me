@@ -13,9 +13,15 @@ import {
   useAppChrome,
 } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { createBlogContentSource, isBlogPostSlug } from "@daopk/content";
+import { blogPostPathFromSlug, createBlogContentSource, isBlogPostSlug } from "@daopk/content";
 import { ArrowLeft, Check, Share2 } from "@daopk/icons";
-import { AppContextInjectionKey, useKernel, useVfs, type AppChromeBackAction } from "@daopk/sdk";
+import {
+  AppContextInjectionKey,
+  normalizeVfsPath,
+  useKernel,
+  useVfs,
+  type AppChromeBackAction,
+} from "@daopk/sdk";
 
 import { useBlogIndex, type BlogIndexPost } from "./useBlogIndex";
 import { useBlogPost } from "./useBlogPost";
@@ -42,6 +48,9 @@ const debugHandleId = import.meta.env.DEV ? ctx?.handleId : undefined;
 const initialSlug =
   typeof ctx?.args.slug === "string" && ctx.args.slug.length > 0 ? ctx.args.slug : null;
 const view = ref<"index" | "post">(initialSlug === null ? "index" : "post");
+const currentPostPath = ref<string | null>(
+  initialSlug === null ? null : documentPathFromPostArgs(ctx?.args),
+);
 const missingLabel = computed(() => blogPost.slug.value ?? "post");
 const notFoundDescription = computed(() => `The post "${missingLabel.value}" is not available.`);
 const busy = computed(
@@ -106,14 +115,50 @@ function replaceBlogPostPath(slug: string): void {
 
 function openIndex(): void {
   view.value = "index";
+  currentPostPath.value = null;
+  emitDocumentPath(null);
   replaceBrowserPath("/blog");
 }
 
 function openPost(args: { readonly slug: string; readonly path?: string }): void {
   view.value = "post";
+  currentPostPath.value = documentPathFromPostArgs(args);
+  emitDocumentPath(currentPostPath.value);
   blogPost.open(args);
   replaceBlogPostPath(args.slug);
 }
+
+function documentPathFromPostArgs(
+  args: { readonly slug?: unknown; readonly path?: unknown } | null | undefined,
+): string | null {
+  if (typeof args?.path === "string") {
+    try {
+      return normalizeVfsPath(args.path);
+    } catch {
+      // Fall back to slug-derived paths below.
+    }
+  }
+
+  if (typeof args?.slug !== "string") {
+    return null;
+  }
+
+  return blogPostPathFromSlug(args.slug);
+}
+
+function emitDocumentPath(path: string | null): void {
+  if (ctx === null) {
+    return;
+  }
+
+  kernel.events.emit("app.document.changed", {
+    manifestId: ctx.manifestId,
+    handleId: ctx.handleId,
+    path,
+  });
+}
+
+emitDocumentPath(currentPostPath.value);
 
 function onPostSelect(post: BlogIndexPost): void {
   openPost({ slug: post.slug, path: post.path });

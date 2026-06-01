@@ -153,6 +153,10 @@ function openWithSuggestion(entry: VfsDirEntry, suggestion: FinderOpenSuggestion
     openSlides(entry);
     return;
   }
+  if (currentSuggestion.id === "blog") {
+    openBlog(currentSuggestion);
+    return;
+  }
 
   kernel.events.emit("app.launch.requested", {
     manifestId: currentSuggestion.manifestId,
@@ -196,6 +200,18 @@ function openPdf(entry: VfsDirEntry): void {
     manifestId: "pdf-viewer",
     source: "api",
     args: { path: entry.path },
+  });
+}
+
+function openBlog(suggestion: FinderOpenSuggestion): void {
+  if (typeof suggestion.args.path !== "string" || typeof suggestion.args.slug !== "string") {
+    return;
+  }
+
+  kernel.events.emit("blog.post.open.requested", {
+    source: "api",
+    path: suggestion.args.path,
+    slug: suggestion.args.slug,
   });
 }
 

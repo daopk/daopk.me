@@ -433,6 +433,69 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
+  it("focuses a Blog frame that is already showing the requested post", async () => {
+    currentKernel = makeKernel([manifest({ id: "blog", name: "Blog" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/a.md", slug: "a" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-1",
+      path: "/home/posts/a.md",
+    });
+    currentKernel.events.emit("blog.post.open.requested", {
+      source: "api",
+      path: "/home/posts/a.md",
+      slug: "a",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(1);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-1");
+
+    wrapper.unmount();
+  });
+
+  it("spawns a new Blog frame when no frame is showing the requested post", async () => {
+    currentKernel = makeKernel([manifest({ id: "blog", name: "Blog" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.spawn.new", {
+      manifestId: "blog",
+      source: "api",
+      args: { path: "/home/posts/a.md", slug: "a" },
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-1",
+      path: "/home/posts/a.md",
+    });
+    currentKernel.events.emit("blog.post.open.requested", {
+      source: "api",
+      path: "/home/posts/b.md",
+      slug: "b",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(launchCount).toBe(2);
+    expect(wrapper.findAll("section.app-view")).toHaveLength(2);
+    expect(wrapper.find(FOREGROUND_APPVIEW).attributes("data-handle-id")).toBe("h-2");
+
+    wrapper.unmount();
+  });
+
   it("two-app coexistence: launch alpha → back → launch beta → both frames alive in the stack", async () => {
     currentKernel = makeKernel([manifest({ id: "alpha" }), manifest({ id: "beta", name: "Beta" })]);
 

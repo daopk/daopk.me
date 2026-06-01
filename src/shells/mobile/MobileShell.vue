@@ -12,6 +12,7 @@ import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContra
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { debugWarn } from "~/core/debug";
+import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
 import { normalizeVfsPath } from "~/core/vfs/path";
 import { useMobileNavigation } from "./useMobileNavigation";
@@ -33,6 +34,10 @@ const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
 
 const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
   void onEditorOpenRequested(payload.path);
+});
+
+const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested", (payload) => {
+  void onBlogPostOpenRequested(payload.path, payload.slug);
 });
 
 const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
@@ -82,6 +87,7 @@ onBeforeUnmount(() => {
   disposeLaunchListener();
   disposeSpawnNewListener();
   disposeEditorOpenListener();
+  disposeBlogPostOpenListener();
   disposeDocumentChangedListener();
   disposeKilledListener();
   if (typeof window === "undefined") {
@@ -263,11 +269,51 @@ async function onEditorOpenRequested(path: string): Promise<void> {
   }
 }
 
+async function onBlogPostOpenRequested(path: string, slug: string): Promise<void> {
+  const unsupported = unsupportedManifestFor("blog");
+
+  if (unsupported) {
+    showSwitcher.value = false;
+    clearLaunching("blog");
+    alertUnsupportedManifest(unsupported);
+    return;
+  }
+
+  const normalizedPath = normalizeOpenRequestPath("blog.post.open.requested", path);
+  if (normalizedPath === null || !isBlogPostSlug(slug)) {
+    if (!isBlogPostSlug(slug)) {
+      debugWarn("[mobile-shell]", "blog.post.open.requested invalid slug", slug);
+    }
+    return;
+  }
+
+  const matchingFrame = topmostFrameForManifest(
+    "blog",
+    (frame) => documentPathFor(frame) === normalizedPath,
+  );
+  if (matchingFrame !== null) {
+    nav.focusFrame(matchingFrame.frameId);
+    return;
+  }
+
+  addLaunching("blog");
+  try {
+    await nav.spawnNew("blog", { path: normalizedPath, slug });
+    lastLaunchedManifestId.value = "blog";
+  } finally {
+    clearLaunching("blog");
+  }
+}
+
 function normalizeEditorOpenPath(path: string): string | null {
+  return normalizeOpenRequestPath("editor.open.requested", path);
+}
+
+function normalizeOpenRequestPath(eventName: string, path: string): string | null {
   try {
     return normalizeVfsPath(path);
   } catch (error) {
-    debugWarn("[mobile-shell]", "editor.open.requested invalid path", path, error);
+    debugWarn("[mobile-shell]", `${eventName} invalid path`, path, error);
     return null;
   }
 }
@@ -292,7 +338,16 @@ function documentPathFor(frame: (typeof nav.stack)[number]): string | null | und
 function topmostEditorFrame(
   predicate: (frame: (typeof nav.stack)[number]) => boolean,
 ): (typeof nav.stack)[number] | null {
-  const candidates = nav.stack.filter((frame) => frame.manifestId === "editor" && predicate(frame));
+  return topmostFrameForManifest("editor", predicate);
+}
+
+function topmostFrameForManifest(
+  manifestId: string,
+  predicate: (frame: (typeof nav.stack)[number]) => boolean,
+): (typeof nav.stack)[number] | null {
+  const candidates = nav.stack.filter(
+    (frame) => frame.manifestId === manifestId && predicate(frame),
+  );
   if (candidates.length === 0) {
     return null;
   }

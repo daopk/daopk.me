@@ -125,6 +125,14 @@ const blogIndexContext: AppContext = Object.freeze({
 });
 
 function makeKernel() {
+  const listeners = new Map<string, Set<(payload: Record<string, unknown>) => void>>();
+
+  function emit(channel: string, payload: Record<string, unknown>): void {
+    for (const listener of listeners.get(channel) ?? []) {
+      listener(payload);
+    }
+  }
+
   return {
     vfs: {
       stat: vi.fn(async () => null),
@@ -137,7 +145,18 @@ function makeKernel() {
       remove: vi.fn(async () => false),
     },
     events: {
-      on: vi.fn(() => vi.fn()),
+      emit: vi.fn(emit),
+      on: vi.fn((channel: string, listener: (payload: Record<string, unknown>) => void) => {
+        const bucket =
+          listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
+        bucket.add(listener);
+        listeners.set(channel, bucket);
+        return (): void => {
+          bucket.delete(listener);
+        };
+      }),
+      once: vi.fn(() => vi.fn()),
+      off: vi.fn(),
     },
   } as unknown as Kernel;
 }
@@ -290,8 +309,49 @@ Event body`,
     await waitForContent(wrapper);
 
     expect(wrapper.html()).toContain("Field Notes");
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/home/posts/field-notes.md",
+    });
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/posts/field-notes.md", {
       handleId: "h-blog-test",
+    });
+  });
+
+  it("emits null document path for the index and updates when opening a post", async () => {
+    stubBlogFetch({
+      index: [{ slug: "new-post", title: "New Post", date: "2026-05-30" }],
+      posts: {
+        "new-post": "# New Post\n\nNetwork body",
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel, blogIndexContext));
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: null,
+    });
+
+    await waitForIndexItems(wrapper);
+    await wrapper.find(".blog__index-item").trigger("click");
+    await waitForContent(wrapper, 5000);
+
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/home/posts/new-post.md",
+    });
+
+    await wrapper.find(".blog__back").trigger("click");
+    await waitForIndex(wrapper);
+
+    expect(kernel.events.emit).toHaveBeenLastCalledWith("app.document.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: null,
     });
   });
 
