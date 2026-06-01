@@ -1,0 +1,212 @@
+name: Publish apps
+
+# Building or updating a first-party app is just committing to apps/<id>/.
+# This workflow builds ONLY the changed app packages, uploads their immutable,
+# version-pinned ES modules to the Cloudflare R2 bucket the Worker serves under
+# /apps/*, and updates the catalog (/apps/index.json) to point at the new
+# versions. It does NOT deploy the shell: configure Cloudflare's own build to
+# IGNORE apps/** (dashboard -> Workers Build -> "Build watch paths", exclude
+# `apps/**`, exactly as blog/ is excluded) so app publishes and shell deploys
+# stay on independent tracks and never deploy twice.
+#
+# Immutability contract: a module URL is /apps/<id>/<version>/<id>.js and is
+# cached `immutable`. Every app change MUST bump apps/<id>/package.json
+# "version" so the URL changes; the build job hard-fails a push that reuses an
+# already-published version to stop a stale-but-cached release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+  workflow_dispatch:
+    inputs:
+      app:
+        description: "Rebuild a single app id (blank = all apps)"
+        required: false
+        default: ""
+
+# Serialize publishes so two quick pushes can't race the catalog read/modify/write.
+concurrency:
+  group: apps-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  R2_BUCKET: daopk-apps
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.detect.outputs.apps }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so `git diff <before>..<after>` can resolve any base.
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Detect changed apps
+        id: detect
+        run: node scripts/detect-changed-apps.mjs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          DISPATCH_APP: ${{ github.event.inputs.app }}
+
+  build:
+    needs: detect
+    if: needs.detect.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      # One independent build per changed app. Each uploads only its own
+      # version-pinned module keys (no shared keys), so the matrix never races.
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.apps) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build app
+        run: pnpm --filter "@daopk-app/${{ matrix.app }}" build
+
+      - name: Upload module(s) to R2 + emit catalog entry
+        env:
+          APP: ${{ matrix.app }}
+          EVENT_NAME: ${{ github.event_name }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          dist="apps/$APP/dist"
+          if [ ! -d "$dist" ]; then
+            echo "::error::No build output at $dist for '$APP'."
+            exit 1
+          fi
+
+          version="$(node -p "require('./apps/$APP/package.json').version")"
+          # Convention: the lib build emits <id>.js as the entry module.
+          entry_file="$APP.js"
+          if [ ! -f "$dist/$entry_file" ]; then
+            echo "::error::Expected entry $dist/$entry_file (lib build must emit <id>.js)."
+            exit 1
+          fi
+          entry_key="$APP/$version/$entry_file"
+
+          # Immutable URLs must never change bytes: block re-publishing an
+          # existing version on push (manual dispatch may overwrite to recover).
+          if [ "$EVENT_NAME" = "push" ] && \
+             pnpm exec wrangler r2 object get "$R2_BUCKET/$entry_key" --remote >/dev/null 2>&1; then
+            echo "::error::$APP@$version already published at $entry_key. Bump apps/$APP/package.json version."
+            exit 1
+          fi
+
+          shopt -s globstar nullglob
+          for file in "$dist"/**/*; do
+            [ -f "$file" ] || continue
+            rel="${file#"$dist"/}"
+            key="$APP/$version/$rel"
+            case "$file" in
+              *.js)  content_type="text/javascript;charset=utf-8" ;;
+              *.css) content_type="text/css;charset=utf-8" ;;
+              *.map) content_type="application/json;charset=utf-8" ;;
+              *)     content_type="application/octet-stream" ;;
+            esac
+            echo "Uploading $key ($content_type)"
+            pnpm exec wrangler r2 object put "$R2_BUCKET/$key" \
+              --file "$file" \
+              --content-type "$content_type" \
+              --remote
+          done
+
+          mkdir -p catalog-entries
+          APP="$APP" VERSION="$version" ENTRY="/apps/$APP/$version/$entry_file" node -e '
+            const fs = require("node:fs");
+            const entry = { id: process.env.APP, version: process.env.VERSION, entry: process.env.ENTRY };
+            fs.writeFileSync(`catalog-entries/${process.env.APP}.json`, JSON.stringify(entry));
+          '
+          echo "Catalog entry: $(cat "catalog-entries/$APP.json")"
+
+      - name: Stash catalog entry
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-entry-${{ matrix.app }}
+          path: catalog-entries/${{ matrix.app }}.json
+          retention-days: 1
+
+  publish-catalog:
+    needs: [detect, build]
+    if: needs.detect.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Collect catalog entries
+        uses: actions/download-artifact@v4
+        with:
+          path: catalog-entries
+          pattern: catalog-entry-*
+          merge-multiple: true
+
+      - name: Merge + publish catalog
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Pull the live catalog so unchanged apps' entries are preserved. The
+          # key may not exist yet on the very first publish — that's fine, the
+          # merge script then starts from an empty catalog.
+          if ! pnpm exec wrangler r2 object get "$R2_BUCKET/index.json" \
+                --file current-catalog.json --remote 2>/dev/null; then
+            echo "No existing catalog; starting fresh."
+            rm -f current-catalog.json
+          fi
+
+          node scripts/update-apps-catalog.mjs current-catalog.json catalog-entries merged-catalog.json
+          echo "Publishing catalog:"
+          cat merged-catalog.json
+
+          pnpm exec wrangler r2 object put "$R2_BUCKET/index.json" \
+            --file merged-catalog.json \
+            --content-type "application/json;charset=utf-8" \
+            --remote
