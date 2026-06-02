@@ -406,8 +406,9 @@ function setCanvasRef(el: unknown): void {
 }
 
 .pdf-viewer__page {
-  display: grid;
-  justify-content: center;
+  align-items: flex-start;
+  display: flex;
+  inline-size: 100%;
   min-block-size: 100%;
 }
 
@@ -419,6 +420,7 @@ function setCanvasRef(el: unknown): void {
   display: block;
   max-block-size: none;
   max-inline-size: none;
+  margin-inline: auto;
   user-select: none;
 }
 
