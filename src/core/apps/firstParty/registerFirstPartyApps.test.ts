@@ -130,6 +130,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
       icon: defineComponent({ name: "ProbeIcon", template: "<svg />" }),
       category: "dev",
       version: "0.0.0",
+      chrome: { mobile: { titlebar: "hidden" } },
       widgets: [
         {
           id: "probe:widget",
@@ -160,6 +161,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(manifest.version).toBe("1.2.3");
     expect(manifest.build).toBe(42);
     expect(manifest.revision).toBe("abc1234");
+    expect(manifest.chrome).toEqual({ mobile: { titlebar: "hidden" } });
     expect(((await manifest.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(manifest.component)).toContain("probe-app");
 

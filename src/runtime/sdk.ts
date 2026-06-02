@@ -122,6 +122,8 @@ export { activeProfileKvNamespace } from "~/core/profile/storageScope";
 export type {
   AppChromeBackAction,
   AppChromeController,
+  AppChromeManifest,
+  AppChromeTitlebarVisibility,
   AppContext,
   AppHandle,
   AppManifest,

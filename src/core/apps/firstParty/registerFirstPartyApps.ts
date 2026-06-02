@@ -72,6 +72,7 @@ export function firstPartyDescriptorToAppManifest(
   }
   if (descriptor.permissions !== undefined) manifest.permissions = [...descriptor.permissions];
   if (descriptor.defaultWindow !== undefined) manifest.defaultWindow = descriptor.defaultWindow;
+  if (descriptor.chrome !== undefined) manifest.chrome = descriptor.chrome;
   if (descriptor.keywords !== undefined) manifest.keywords = [...descriptor.keywords];
   if (descriptor.settings !== undefined) manifest.settings = descriptor.settings;
   if (descriptor.widgets !== undefined) {

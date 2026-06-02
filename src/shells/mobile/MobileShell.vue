@@ -404,6 +404,10 @@ function onHide(): void {
   nav.goHome();
 }
 
+function onClose(frameId: string): void {
+  nav.dismiss(frameId);
+}
+
 function onSelect(frameId: string): void {
   nav.focusFrame(frameId);
   closeSwitcher();
@@ -464,6 +468,7 @@ watch(
           :is-current="frame.frameId === nav.foreground.value && !switcherActive"
           :is-foreground-frame="frame.frameId === nav.foreground.value"
           @back="onBack"
+          @close="onClose(frame.frameId)"
           @hide="onHide"
           @recents="openSwitcher"
         />

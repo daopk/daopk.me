@@ -1,0 +1,4 @@
+export const MAX_ACTIVE_STICKERS = 24;
+export const STICKER_LIFETIME_MS = 1600;
+export const REDUCED_MOTION_LIFETIME_MS = 700;
+export const PARENT_HOLD_MS = 2000;

@@ -1,4 +1,9 @@
-import type { AppPermission, AppSettingsManifest, WindowDefaults } from "~/types/app";
+import type {
+  AppChromeManifest,
+  AppPermission,
+  AppSettingsManifest,
+  WindowDefaults,
+} from "~/types/app";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
@@ -38,6 +43,7 @@ export interface FirstPartyAppDescriptor {
   readonly supportedShells?: readonly ShellId[];
   readonly permissions?: readonly AppPermission[];
   readonly defaultWindow?: WindowDefaults;
+  readonly chrome?: AppChromeManifest;
   readonly keywords?: readonly string[];
   /** Settings metadata (e.g. search keywords) surfaced for this app. */
   readonly settings?: AppSettingsManifest;

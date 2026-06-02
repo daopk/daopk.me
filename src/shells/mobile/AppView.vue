@@ -2,11 +2,16 @@
 import { ArrowLeft, Layers2, Minimize2 } from "~/icons/lucide";
 import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "vue";
 
+import { useKernel } from "~/composables/useKernel";
 import { useEdgeSwipe } from "~/composables/useEdgeSwipe";
 
 import AppMount from "~/shells/desktop/windowManager/AppMount.vue";
 
-import { AppChromeInjectionKey, type AppChromeBackAction } from "~/types/app";
+import {
+  AppChromeInjectionKey,
+  type AppChromeBackAction,
+  type AppChromeTitlebarVisibility,
+} from "~/types/app";
 import type { NavigationFrame } from "./navigation";
 
 const props = withDefaults(
@@ -30,20 +35,33 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "back"): void;
+  (e: "close"): void;
   (e: "hide"): void;
   (e: "recents"): void;
 }>();
 
+const kernel = useKernel();
 const surface = ref<HTMLElement | null>(null);
 const backButtonRef = ref<HTMLButtonElement | null>(null);
 const chromeTitle = ref<string | null>(null);
 const chromeBackAction = shallowRef<AppChromeBackAction | null>(null);
+const chromeTitlebar = ref<AppChromeTitlebarVisibility | null>(null);
 
+const manifest = computed(() =>
+  kernel.apps.list().find((entry) => entry.id === props.frame.manifestId),
+);
 const animateForeground = computed<boolean>(() =>
   props.isForegroundFrame === undefined ? props.isCurrent : props.isForegroundFrame,
 );
 const displayTitle = computed(() => chromeTitle.value ?? props.title);
 const backAriaLabel = computed(() => chromeBackAction.value?.ariaLabel ?? "Back to home");
+const manifestTitlebar = computed<AppChromeTitlebarVisibility>(
+  () => manifest.value?.chrome?.mobile?.titlebar ?? "visible",
+);
+const resolvedTitlebar = computed<AppChromeTitlebarVisibility>(
+  () => chromeTitlebar.value ?? manifestTitlebar.value,
+);
+const showTitlebar = computed(() => resolvedTitlebar.value !== "hidden");
 
 provide(AppChromeInjectionKey, {
   setTitle(title) {
@@ -52,15 +70,26 @@ provide(AppChromeInjectionKey, {
   setBackAction(action) {
     chromeBackAction.value = action;
   },
+  setTitlebar(visibility) {
+    chromeTitlebar.value = visibility;
+  },
+  hide() {
+    emit("hide");
+  },
+  close() {
+    emit("close");
+  },
 });
 
-const appContentSafeAreaStyle = {
-  "--mobile-shell-app-safe-area-top": "0px",
+const appContentSafeAreaStyle = computed<Record<string, string>>(() => ({
+  "--mobile-shell-app-safe-area-top": showTitlebar.value
+    ? "0px"
+    : "var(--app-view-safe-area-top)",
   "--mobile-shell-app-safe-area-right": "var(--app-view-safe-area-right)",
   "--mobile-shell-app-safe-area-bottom": "var(--app-view-safe-area-bottom)",
   "--mobile-shell-app-safe-area-left": "var(--app-view-safe-area-left)",
   "--mobile-shell-app-bottom-padding": "max(32px, var(--app-view-safe-area-bottom))",
-};
+}));
 
 useEdgeSwipe(surface, {
   edge: "left",
@@ -97,6 +126,9 @@ function onHideClick(): void {
 }
 
 function focusBackButton(): void {
+  if (!showTitlebar.value) {
+    return;
+  }
   void nextTick(() => {
     backButtonRef.value?.focus({ preventScroll: true });
   });
@@ -109,9 +141,9 @@ onMounted(() => {
 });
 
 watch(
-  () => props.isCurrent,
-  (next, prev) => {
-    if (next && !prev) {
+  () => [props.isCurrent, showTitlebar.value] as const,
+  ([nextCurrent, nextTitlebar], [prevCurrent, prevTitlebar]) => {
+    if (nextCurrent && nextTitlebar && (!prevCurrent || !prevTitlebar)) {
       focusBackButton();
     }
   },
@@ -124,6 +156,7 @@ watch(
     class="app-view"
     :class="{
       'app-view--foreground': animateForeground,
+      'app-view--titlebar-hidden': !showTitlebar,
     }"
     :data-handle-id="frame.handleId"
     :data-manifest-id="frame.manifestId"
@@ -131,7 +164,7 @@ watch(
     :aria-hidden="isCurrent ? undefined : 'true'"
     :inert="isCurrent ? undefined : true"
   >
-    <header class="app-view__chrome">
+    <header v-if="showTitlebar" class="app-view__chrome">
       <button
         ref="backButtonRef"
         type="button"

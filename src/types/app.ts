@@ -18,6 +18,16 @@ export interface WindowDefaults {
   centered?: boolean;
 }
 
+export type AppChromeTitlebarVisibility = "visible" | "hidden";
+
+export interface AppMobileChromeManifest {
+  titlebar?: AppChromeTitlebarVisibility;
+}
+
+export interface AppChromeManifest {
+  mobile?: AppMobileChromeManifest;
+}
+
 export interface AppSettingsManifest {
   keywords?: readonly string[];
 }
@@ -54,6 +64,7 @@ export interface AppManifest {
    */
   supportedShells?: readonly ShellId[];
   defaultWindow?: WindowDefaults;
+  chrome?: AppChromeManifest;
   permissions?: AppPermission[];
   widgets?: readonly WidgetManifest[];
   component: () => Promise<{ default: Component }>;
@@ -80,6 +91,9 @@ export interface AppChromeBackAction {
 export interface AppChromeController {
   setTitle(title: string | null): void;
   setBackAction(action: AppChromeBackAction | null): void;
+  setTitlebar?(visibility: AppChromeTitlebarVisibility | null): void;
+  hide?(): void;
+  close?(): void;
 }
 
 // Defined once in the SDK module (single source — see src/runtime/sdk.ts).

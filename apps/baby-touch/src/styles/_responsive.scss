@@ -1,0 +1,144 @@
+@media (max-width: 520px) {
+  .baby-touch__home {
+    gap: var(--space-md);
+    padding: max(72px, var(--space-md)) var(--space-md) var(--space-md);
+  }
+
+  .baby-touch__home-brand {
+    grid-template-columns: 108px 1fr;
+  }
+
+  .baby-touch__home-copy h1 {
+    font-size: 38px;
+  }
+
+  .baby-touch__home-panel {
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+  }
+
+  .baby-touch__background-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .baby-touch__background-option {
+    min-block-size: 104px;
+  }
+
+  .baby-touch__gallery {
+    gap: var(--space-md);
+    padding-inline: var(--space-md);
+  }
+
+  .baby-touch__gallery-topbar h1 {
+    font-size: 26px;
+  }
+
+  .baby-touch__gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .baby-touch__gallery-card {
+    min-block-size: 136px;
+    padding: var(--space-xs);
+  }
+
+  .baby-touch__gallery-art {
+    block-size: 78px;
+    inline-size: 78px;
+  }
+
+  .baby-touch__sticker {
+    --baby-touch-size: 92px;
+  }
+
+  .baby-touch--lively .baby-touch__sticker {
+    --baby-touch-size: 104px;
+  }
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__orientation-frame {
+  block-size: var(--baby-touch-viewport-inline-size, 100%);
+  inline-size: var(--baby-touch-viewport-block-size, 100%);
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  position: absolute;
+  transform: rotate(90deg) translateY(-100%);
+  transform-origin: top left;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home {
+  align-items: center;
+  gap: var(--space-sm);
+  grid-template-columns: minmax(160px, 0.62fr) minmax(0, 1.38fr);
+  inline-size: min(860px, 100%);
+  padding: var(--space-sm) max(64px, var(--space-sm)) var(--space-sm) var(--space-sm);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__hide-app {
+  inset-inline-end: auto;
+  inset-inline-start: max(14px, env(safe-area-inset-left, 0px) + 10px);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-open {
+  inset-inline-end: max(14px, env(safe-area-inset-right, 0px) + 10px);
+  inset-inline-start: auto;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-brand {
+  gap: var(--space-sm);
+  grid-template-columns: minmax(84px, 112px) 1fr;
+  justify-items: stretch;
+  text-align: start;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__mascot {
+  inline-size: 100%;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-copy h1 {
+  font-size: 34px;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-panel {
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__background-grid {
+  gap: var(--space-xs);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__background-option {
+  border-width: 2px;
+  min-block-size: 78px;
+  padding: var(--space-xs);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__background-preview {
+  min-block-size: 30px;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery {
+  gap: var(--space-md);
+  inline-size: min(860px, 100%);
+  padding: var(--space-sm) max(64px, var(--space-md)) var(--space-md);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-body {
+  gap: var(--space-lg);
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-grid {
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-card {
+  min-block-size: 124px;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-art {
+  block-size: 70px;
+  inline-size: 70px;
+}

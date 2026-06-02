@@ -6,6 +6,7 @@ import {
   AppChromeInjectionKey,
   type AppChromeBackAction,
   type AppChromeController,
+  type AppChromeTitlebarVisibility,
 } from "~/types/app";
 
 import ActionRow from "./ActionRow.vue";
@@ -334,15 +335,25 @@ describe("useAppChrome", () => {
   it("pushes a reactive title to the shell chrome and clears on unmount", async () => {
     const titles: Array<string | null> = [];
     const backs: Array<AppChromeBackAction | null> = [];
+    const titlebars: Array<AppChromeTitlebarVisibility | null> = [];
     const controller: AppChromeController = {
       setTitle: (title) => titles.push(title),
       setBackAction: (action) => backs.push(action),
+      setTitlebar: (visibility) => titlebars.push(visibility),
+      hide: () => {},
+      close: () => {},
     };
 
     const Harness = defineComponent({
-      props: { title: { type: String, default: "" } },
+      props: {
+        title: { type: String, default: "" },
+        titlebar: { type: String, default: "visible" },
+      },
       setup(props) {
-        const chrome = useAppChrome({ title: () => props.title });
+        const chrome = useAppChrome({
+          title: () => props.title,
+          titlebar: () => props.titlebar as AppChromeTitlebarVisibility,
+        });
         return { available: chrome.available };
       },
       template: "<div />",
@@ -359,22 +370,40 @@ describe("useAppChrome", () => {
     await wrapper.setProps({ title: "Drafts" });
     expect(titles).toContain("Drafts");
 
+    await wrapper.setProps({ titlebar: "hidden" });
+    expect(titlebars).toContain("hidden");
+
     wrapper.unmount();
     expect(titles.at(-1)).toBeNull();
     expect(backs.at(-1)).toBeNull();
+    expect(titlebars.at(-1)).toBeNull();
   });
 
-  it("forwards imperative setters through the injected controller", () => {
+  it("forwards imperative setters and app actions through the injected controller", () => {
     const backs: Array<AppChromeBackAction | null> = [];
+    const titlebars: Array<AppChromeTitlebarVisibility | null> = [];
+    let hides = 0;
+    let closes = 0;
     const controller: AppChromeController = {
       setTitle: () => {},
       setBackAction: (action) => backs.push(action),
+      setTitlebar: (visibility) => titlebars.push(visibility),
+      hide: () => {
+        hides += 1;
+      },
+      close: () => {
+        closes += 1;
+      },
     };
     const action: AppChromeBackAction = { ariaLabel: "Back", handler: () => {} };
 
     const Harness = defineComponent({
       setup() {
-        useAppChrome().setBackAction(action);
+        const chrome = useAppChrome();
+        chrome.setBackAction(action);
+        chrome.setTitlebar("hidden");
+        chrome.hide();
+        chrome.close();
         return {};
       },
       template: "<div />",
@@ -382,6 +411,9 @@ describe("useAppChrome", () => {
 
     mount(Harness, { global: { provide: { [AppChromeInjectionKey as symbol]: controller } } });
     expect(backs).toContainEqual(action);
+    expect(titlebars).toContain("hidden");
+    expect(hides).toBe(1);
+    expect(closes).toBe(1);
   });
 
   it("no-ops on shells that do not provide app chrome", () => {
@@ -390,6 +422,9 @@ describe("useAppChrome", () => {
         const chrome = useAppChrome();
         chrome.setTitle("Ignored");
         chrome.setBackAction({ ariaLabel: "Back", handler: () => {} });
+        chrome.setTitlebar("hidden");
+        chrome.hide();
+        chrome.close();
         return { available: chrome.available };
       },
       template: "<div />",

@@ -1,0 +1,138 @@
+.baby-touch__gallery {
+  display: grid;
+  gap: var(--space-lg);
+  inline-size: min(980px, 100%);
+  margin-inline: auto;
+  min-block-size: 100%;
+  padding: max(26px, env(safe-area-inset-top, 0px) + 18px) var(--space-lg)
+    max(var(--space-xl), env(safe-area-inset-bottom, 0px) + var(--space-lg));
+}
+
+.baby-touch__gallery-topbar {
+  align-items: center;
+  display: flex;
+  gap: var(--space-md);
+  min-block-size: 52px;
+}
+
+.baby-touch__gallery-back {
+  align-items: center;
+  background: rgb(255 255 255 / 0.78);
+  block-size: 48px;
+  border: 2px solid rgb(255 255 255 / 0.86);
+  border-radius: var(--radius-full);
+  box-shadow: 0 10px 18px rgb(31 28 42 / 0.14);
+  color: var(--baby-touch-home-fg);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  inline-size: 48px;
+  justify-content: center;
+  transition:
+    background var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.baby-touch__gallery-back:hover,
+.baby-touch__gallery-back:focus-visible {
+  background: rgb(255 255 255 / 0.96);
+  transform: translateY(-1px);
+}
+
+.baby-touch__gallery-back:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.baby-touch__gallery-topbar h1 {
+  color: var(--baby-touch-home-fg);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0;
+}
+
+.baby-touch__gallery-body {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.baby-touch__gallery-category {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.baby-touch__gallery-section-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: space-between;
+}
+
+.baby-touch__gallery-section-header h2 {
+  color: var(--baby-touch-home-fg);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: var(--leading-tight);
+  margin: 0;
+}
+
+.baby-touch__gallery-count {
+  align-items: center;
+  background: rgb(255 255 255 / 0.72);
+  block-size: 28px;
+  border: 1px solid rgb(255 255 255 / 0.82);
+  border-radius: var(--radius-full);
+  color: var(--baby-touch-home-muted);
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  inline-size: 36px;
+  justify-content: center;
+}
+
+.baby-touch__gallery-grid {
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+}
+
+.baby-touch__gallery-card {
+  align-items: center;
+  background: rgb(255 255 255 / 0.76);
+  border: 1px solid rgb(255 255 255 / 0.84);
+  border-radius: 8px;
+  box-shadow: 0 12px 22px rgb(31 28 42 / 0.12);
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: center;
+  min-block-size: 156px;
+  min-inline-size: 0;
+  padding: var(--space-sm);
+}
+
+.baby-touch__gallery-art {
+  block-size: 94px;
+  display: grid;
+  filter: drop-shadow(0 10px 12px rgb(18 18 26 / 0.14));
+  inline-size: 94px;
+  place-items: center;
+}
+
+.baby-touch__gallery-art .baby-touch__sticker-art-host,
+.baby-touch__gallery-art .baby-touch__sticker-art {
+  block-size: 100%;
+  inline-size: 100%;
+}
+
+.baby-touch__gallery-label {
+  color: var(--baby-touch-home-fg);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}

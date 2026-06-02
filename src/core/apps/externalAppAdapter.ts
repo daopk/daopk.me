@@ -40,6 +40,13 @@ export function externalToAppManifest(ext: ExternalAppManifest): AppManifest {
   if (ext.defaultWindow !== undefined) {
     manifest.defaultWindow = { ...ext.defaultWindow };
   }
+  if (ext.chrome !== undefined) {
+    manifest.chrome = {
+      ...(ext.chrome.mobile === undefined
+        ? {}
+        : { mobile: { ...ext.chrome.mobile } }),
+    };
+  }
   if (ext.singleton !== undefined) {
     manifest.singleton = ext.singleton;
   }

@@ -1,74 +1,62 @@
+import { AppChromeInjectionKey, type AppChromeController } from "@daopk/sdk";
 import { mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, nextTick } from "vue";
+import { nextTick } from "vue";
 
 import BabyTouchApp from "./App.vue";
-import {
-  MAX_ACTIVE_STICKERS,
-  PARENT_HOLD_MS,
-  REDUCED_MOTION_LIFETIME_MS,
-  STICKER_LIFETIME_MS,
-  useBabyTouch,
-} from "./useBabyTouch";
+import { babyTouchStickerCategories } from "./babyTouchStickerCatalog";
+import { PARENT_HOLD_MS } from "./babyTouchTiming";
 
-function setSurfaceRect(wrapper: VueWrapper, width = 200, height = 100): void {
-  const surface = wrapper.find('[data-testid="baby-touch-surface"]');
-  Object.defineProperty(surface.element, "getBoundingClientRect", {
+function testRect(width: number, height: number): DOMRect {
+  return {
+    bottom: height,
+    height,
+    left: 0,
+    right: width,
+    top: 0,
+    width,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+function setElementRect(element: Element, width: number, height: number): void {
+  Object.defineProperty(element, "getBoundingClientRect", {
     configurable: true,
-    value: () => ({
-      bottom: height,
-      height,
-      left: 0,
-      right: width,
-      top: 0,
-      width,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }),
+    value: () => testRect(width, height),
   });
 }
 
-function mountBabyTouchHarness(options: Parameters<typeof useBabyTouch>[0] = {}) {
-  let api!: ReturnType<typeof useBabyTouch>;
-  const wrapper = mount(
-    defineComponent({
-      name: "BabyTouchHarness",
-      setup() {
-        api = useBabyTouch(options);
-        return () => h("div");
-      },
-    }),
-  );
-  return { api, wrapper };
+function setSurfaceRect(wrapper: VueWrapper, width = 200, height = 100): void {
+  const surface = wrapper.find('[data-testid="baby-touch-surface"]');
+  setElementRect(surface.element, width, height);
 }
 
-class FakeAudioParam {
-  setValueAtTime = vi.fn();
-  linearRampToValueAtTime = vi.fn();
-  exponentialRampToValueAtTime = vi.fn();
+function setOrientationViewportRect(wrapper: VueWrapper, width: number, height: number): void {
+  const viewport = wrapper.find('[data-testid="baby-touch-orientation-viewport"]');
+  setElementRect(viewport.element, width, height);
 }
 
-class FakeOscillator {
-  frequency = new FakeAudioParam();
-  type: OscillatorType = "sine";
-  connect = vi.fn();
-  start = vi.fn();
-  stop = vi.fn();
+function setHomeSliderRect(wrapper: VueWrapper, width = 260, height = 48): void {
+  const slider = wrapper.find('[data-testid="baby-touch-home-slider"]');
+  setElementRect(slider.element, width, height);
 }
 
-class FakeGain {
-  gain = new FakeAudioParam();
-  connect = vi.fn();
+async function startGameFromBackground(wrapper: VueWrapper, index = 0): Promise<void> {
+  const backgrounds = wrapper.findAll('[data-testid="baby-touch-background-option"]');
+  await backgrounds[index]!.trigger("click");
+  await nextTick();
 }
 
-class FakeAudioContext {
-  currentTime = 0;
-  destination = {} as AudioNode;
-  state = "running";
-  createGain = vi.fn(() => new FakeGain() as unknown as GainNode);
-  createOscillator = vi.fn(() => new FakeOscillator() as unknown as OscillatorNode);
-  resume = vi.fn(async () => undefined);
+function appChromeController(): AppChromeController {
+  return {
+    setTitle: vi.fn(),
+    setBackAction: vi.fn(),
+    setTitlebar: vi.fn(),
+    hide: vi.fn(),
+    close: vi.fn(),
+  };
 }
 
 describe("Baby Touch App", () => {
@@ -80,21 +68,61 @@ describe("Baby Touch App", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    document.body.innerHTML = "";
+    delete document.documentElement.dataset.shell;
     localStorage.clear();
   });
 
-  it("renders the play surface first with parent settings hidden", () => {
+  it("renders the streamlined home background picker first", () => {
     const wrapper = mount(BabyTouchApp);
 
-    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-open-gallery"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-hide-app"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="baby-touch-background-option"]')).toHaveLength(4);
     expect(wrapper.find('[data-testid="baby-touch-settings"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-start-game"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-close-app"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="baby-touch-sticker"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("opens a categorized sticker gallery from the home screen", async () => {
+    const wrapper = mount(BabyTouchApp);
+    const expectedStickerCount = babyTouchStickerCategories.reduce(
+      (count, category) => count + category.stickers.length,
+      0,
+    );
+
+    await wrapper.find('[data-testid="baby-touch-open-gallery"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-gallery"]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-testid="baby-touch-gallery-category"]')).toHaveLength(
+      babyTouchStickerCategories.length,
+    );
+    expect(wrapper.findAll('[data-testid="baby-touch-gallery-sticker"]')).toHaveLength(
+      expectedStickerCount,
+    );
+    expect(wrapper.text()).toContain("Animals");
+    expect(wrapper.text()).toContain("Bear");
+    expect(wrapper.text()).not.toContain("Shapes");
+
+    await wrapper.find('[data-testid="baby-touch-gallery-back"]').trigger("click");
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-gallery"]').exists()).toBe(false);
 
     wrapper.unmount();
   });
 
   it("creates a sticker at normalized pointer coordinates", async () => {
     const wrapper = mount(BabyTouchApp);
+    await startGameFromBackground(wrapper);
     setSurfaceRect(wrapper);
 
     await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
@@ -110,142 +138,178 @@ describe("Baby Touch App", () => {
 
     wrapper.unmount();
   });
-});
 
-describe("useBabyTouch", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    localStorage.clear();
-  });
+  it("force-renders landscape-right in a portrait mobile shell body", async () => {
+    document.documentElement.dataset.shell = "mobile";
+    const wrapper = mount(BabyTouchApp, { attachTo: document.body });
+    setOrientationViewportRect(wrapper, 390, 680);
 
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
-    localStorage.clear();
-  });
-
-  it("caps rapid multi-touch bursts to the active sticker limit", () => {
-    const { api, wrapper } = mountBabyTouchHarness();
-
-    for (let index = 0; index < MAX_ACTIVE_STICKERS + 8; index += 1) {
-      api.spawnSticker({ x: index / 100, y: 0.5 });
-    }
-
-    expect(api.stickers.value).toHaveLength(MAX_ACTIVE_STICKERS);
-    expect(api.activeCount.value).toBe(MAX_ACTIVE_STICKERS);
-
-    wrapper.unmount();
-  });
-
-  it("expires stickers after their animation lifetime", async () => {
-    const { api, wrapper } = mountBabyTouchHarness();
-
-    api.spawnSticker({ x: 0.5, y: 0.5 });
-    expect(api.stickers.value).toHaveLength(1);
-
-    await vi.advanceTimersByTimeAsync(STICKER_LIFETIME_MS - 1);
-    expect(api.stickers.value).toHaveLength(1);
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(api.stickers.value).toHaveLength(0);
-
-    wrapper.unmount();
-  });
-
-  it("shortens sticker lifetime when reduced motion is preferred", async () => {
-    const { api, wrapper } = mountBabyTouchHarness({
-      prefersReducedMotion: () => true,
-    });
-
-    const sticker = api.spawnSticker({ x: 0.5, y: 0.5 });
-
-    expect(sticker.lifetimeMs).toBe(REDUCED_MOTION_LIFETIME_MS);
-    await vi.advanceTimersByTimeAsync(REDUCED_MOTION_LIFETIME_MS);
-    expect(api.stickers.value).toHaveLength(0);
-
-    wrapper.unmount();
-  });
-
-  it("opens parent settings only after both top corners are held", async () => {
-    const { api, wrapper } = mountBabyTouchHarness();
-
-    expect(api.handleParentCornerDown(1, { x: 0.08, y: 0.08 })).toBe(true);
-    await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS);
-    expect(api.settingsOpen.value).toBe(false);
-
-    api.handleParentCornerUp(1);
-    expect(api.handleParentCornerDown(2, { x: 0.08, y: 0.08 })).toBe(true);
-    expect(api.handleParentCornerDown(3, { x: 0.92, y: 0.08 })).toBe(true);
-    await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS - 1);
-    expect(api.settingsOpen.value).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(api.settingsOpen.value).toBe(true);
-
-    wrapper.unmount();
-  });
-
-  it("cancels a short or partial parent hold", async () => {
-    const { api, wrapper } = mountBabyTouchHarness();
-
-    api.handleParentCornerDown(1, { x: 0.08, y: 0.08 });
-    api.handleParentCornerDown(2, { x: 0.92, y: 0.08 });
-    await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS - 200);
-    api.handleParentCornerUp(2);
-    await vi.advanceTimersByTimeAsync(300);
-
-    expect(api.settingsOpen.value).toBe(false);
-
-    wrapper.unmount();
-  });
-
-  it("does not create an audio context until sound is enabled", () => {
-    let createdAudioContexts = 0;
-    class CountingAudioContext extends FakeAudioContext {
-      constructor() {
-        super();
-        createdAudioContexts += 1;
-      }
-    }
-    vi.stubGlobal("AudioContext", CountingAudioContext);
-    const { api, wrapper } = mountBabyTouchHarness();
-
-    const sticker = api.spawnSticker({ x: 0.4, y: 0.4 });
-    api.playTapTone(sticker);
-
-    expect(createdAudioContexts).toBe(0);
-    expect(api.hasAudioContext()).toBe(false);
-
-    api.updateSettings({ soundEnabled: true });
-    api.playTapTone(sticker);
-
-    expect(createdAudioContexts).toBe(1);
-    expect(api.hasAudioContext()).toBe(true);
-
-    wrapper.unmount();
-  });
-
-  it("persists parent settings and reloads them", async () => {
-    const first = mountBabyTouchHarness({ storage: localStorage });
-
-    first.api.updateSettings({
-      scene: "animals",
-      intensity: "lively",
-      soundEnabled: true,
-      volume: 72,
-    });
+    window.dispatchEvent(new Event("resize"));
     await nextTick();
-    first.wrapper.unmount();
 
-    const second = mountBabyTouchHarness({ storage: localStorage });
+    const viewport = wrapper.find('[data-testid="baby-touch-orientation-viewport"]');
+    expect(wrapper.classes()).toContain("baby-touch--landscape-right");
+    expect(viewport.attributes("data-orientation-mode")).toBe("landscape-right");
+    expect(
+      (viewport.element as HTMLElement).style.getPropertyValue("--baby-touch-viewport-inline-size"),
+    ).toBe("390px");
+    expect(
+      (viewport.element as HTMLElement).style.getPropertyValue("--baby-touch-viewport-block-size"),
+    ).toBe("680px");
 
-    expect(second.api.settings.value).toEqual({
-      scene: "animals",
-      intensity: "lively",
-      soundEnabled: true,
-      volume: 72,
+    wrapper.unmount();
+  });
+
+  it("maps forced landscape-right taps to logical sticker coordinates", async () => {
+    document.documentElement.dataset.shell = "mobile";
+    const wrapper = mount(BabyTouchApp, { attachTo: document.body });
+    setOrientationViewportRect(wrapper, 100, 200);
+    window.dispatchEvent(new Event("resize"));
+    await nextTick();
+
+    await startGameFromBackground(wrapper);
+    setSurfaceRect(wrapper, 100, 200);
+
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 25,
+      clientY: 50,
+      pointerId: 1,
     });
 
-    second.wrapper.unmount();
+    const sticker = wrapper.find('[data-testid="baby-touch-sticker"]');
+    expect(sticker.exists()).toBe(true);
+    expect(sticker.attributes("style")).toContain("--baby-touch-x: 25%");
+    expect(sticker.attributes("style")).toContain("--baby-touch-y: 75%");
+
+    wrapper.unmount();
+  });
+
+  it("returns home as soon as the game home slider is dragged far enough", async () => {
+    const wrapper = mount(BabyTouchApp, { attachTo: document.body });
+    await startGameFromBackground(wrapper);
+    setHomeSliderRect(wrapper);
+
+    const slider = wrapper.find('[data-testid="baby-touch-home-slider"]');
+    const thumb = wrapper.find('[data-testid="baby-touch-home-slider-thumb"]');
+    expect(slider.classes()).not.toContain("baby-touch__home-slider--active");
+
+    await thumb.trigger("pointerdown", { clientX: 24, clientY: 24, pointerId: 1 });
+    await nextTick();
+    expect(slider.classes()).toContain("baby-touch__home-slider--active");
+    expect(thumb.text()).toBe("→");
+
+    await thumb.trigger("pointermove", { clientX: 74, clientY: 24, pointerId: 1 });
+    await thumb.trigger("pointerup", { clientX: 74, clientY: 24, pointerId: 1 });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-sticker"]').exists()).toBe(false);
+    expect(slider.classes()).not.toContain("baby-touch__home-slider--active");
+    expect(thumb.text()).toBe("X");
+
+    await thumb.trigger("pointerdown", { clientX: 24, clientY: 24, pointerId: 2 });
+    await thumb.trigger("pointermove", { clientX: 210, clientY: 24, pointerId: 2 });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("accepts a vertical slide when the home slider is visually rotated", async () => {
+    const wrapper = mount(BabyTouchApp, { attachTo: document.body });
+    await startGameFromBackground(wrapper);
+    setHomeSliderRect(wrapper, 48, 260);
+
+    const thumb = wrapper.find('[data-testid="baby-touch-home-slider-thumb"]');
+    await thumb.trigger("pointerdown", { clientX: 24, clientY: 24, pointerId: 1 });
+    await thumb.trigger("pointermove", { clientX: 24, clientY: 210, pointerId: 1 });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("starts the game immediately when a background is chosen", async () => {
+    const controller = appChromeController();
+    const wrapper = mount(BabyTouchApp, {
+      attachTo: document.body,
+      global: {
+        provide: { [AppChromeInjectionKey as symbol]: controller },
+      },
+    });
+
+    await startGameFromBackground(wrapper, 2);
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(true);
+    expect(wrapper.attributes("class")).toContain("baby-touch--background-candy");
+    expect(controller.setTitlebar).not.toHaveBeenCalledWith("visible");
+    expect(controller.setTitlebar).toHaveBeenLastCalledWith("hidden");
+
+    setHomeSliderRect(wrapper);
+    const thumb = wrapper.find('[data-testid="baby-touch-home-slider-thumb"]');
+    await thumb.trigger("pointerdown", { clientX: 24, clientY: 24, pointerId: 1 });
+    await thumb.trigger("pointermove", { clientX: 210, clientY: 24, pointerId: 1 });
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.attributes("class")).not.toContain("baby-touch--background-candy");
+
+    wrapper.unmount();
+  });
+
+  it("returns home after the parent corner hold", async () => {
+    const controller = appChromeController();
+    const wrapper = mount(BabyTouchApp, {
+      attachTo: document.body,
+      global: {
+        provide: { [AppChromeInjectionKey as symbol]: controller },
+      },
+    });
+    await startGameFromBackground(wrapper);
+    setSurfaceRect(wrapper);
+
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 16,
+      clientY: 8,
+      pointerId: 1,
+    });
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 184,
+      clientY: 8,
+      pointerId: 2,
+    });
+    await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS);
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
+    expect(controller.setTitlebar).toHaveBeenLastCalledWith("hidden");
+
+    wrapper.unmount();
+  });
+
+  it("wires the custom home hide action to app chrome", async () => {
+    const controller = appChromeController();
+    const wrapper = mount(BabyTouchApp, {
+      attachTo: document.body,
+      global: {
+        provide: { [AppChromeInjectionKey as symbol]: controller },
+      },
+    });
+    const hideButton = wrapper.find('[data-testid="baby-touch-hide-app"]');
+
+    expect(hideButton.exists()).toBe(true);
+    await hideButton.trigger("click");
+
+    expect(controller.hide).toHaveBeenCalledTimes(1);
+    expect(controller.close).not.toHaveBeenCalled();
+
+    wrapper.unmount();
   });
 });

@@ -113,6 +113,25 @@ describe("validateExternalManifest", () => {
     expect(result.manifest.defaultWindow).toEqual({ width: 240, height: 4096, centered: true });
   });
 
+  it("keeps valid mobile chrome fields and strips invalid nested chrome fields", () => {
+    const result = validateExternalManifest(
+      valid({
+        chrome: {
+          mobile: { titlebar: "hidden", toolbar: "floating" },
+          desktop: { titlebar: "hidden" },
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.manifest.chrome).toEqual({ mobile: { titlebar: "hidden" } });
+
+    const invalid = validateExternalManifest(valid({ chrome: { mobile: { titlebar: "gone" } } }));
+    expect(invalid.ok).toBe(true);
+    if (!invalid.ok) return;
+    expect(invalid.manifest.chrome).toBeUndefined();
+  });
+
   it("strips unknown fields including autorun", () => {
     const result = validateExternalManifest(valid({ autorun: true, source: "evil" }));
     expect(result.ok).toBe(true);

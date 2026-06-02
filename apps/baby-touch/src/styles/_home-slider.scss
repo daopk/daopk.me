@@ -1,0 +1,95 @@
+.baby-touch__home-slider {
+  --baby-touch-slider-size: 48px;
+
+  block-size: var(--baby-touch-slider-size);
+  cursor: grab;
+  inline-size: clamp(236px, 34vw, 312px);
+  inset-block-end: max(24px, env(safe-area-inset-bottom, 0px) + 18px);
+  inset-inline-start: max(24px, env(safe-area-inset-left, 0px) + 18px);
+  outline: none;
+  pointer-events: auto;
+  position: absolute;
+  touch-action: none;
+  z-index: 2;
+}
+
+.baby-touch__home-slider:active {
+  cursor: grabbing;
+}
+
+.baby-touch__home-slider:focus-visible .baby-touch__home-slider-thumb {
+  outline: 3px solid rgb(255 255 255 / 0.9);
+  outline-offset: 4px;
+}
+
+.baby-touch__home-slider-track {
+  align-items: center;
+  background: rgb(255 255 255 / 0.26);
+  block-size: 32px;
+  border-radius: var(--radius-full);
+  color: rgb(38 47 55 / 0.62);
+  display: flex;
+  font-size: 30px;
+  font-weight: 800;
+  inset-block: 50% auto;
+  inset-inline: 24px 24px;
+  justify-content: center;
+  line-height: 1;
+  opacity: 0;
+  overflow: hidden;
+  position: absolute;
+  transform: translateY(-50%);
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.baby-touch__home-slider-arrows {
+  letter-spacing: 6px;
+  margin-inline-start: 10px;
+  opacity: 0.62;
+}
+
+.baby-touch__home-slider-target,
+.baby-touch__home-slider-thumb {
+  align-items: center;
+  background: rgb(255 255 255 / 0.96);
+  block-size: var(--baby-touch-slider-size);
+  border-radius: var(--radius-full);
+  box-shadow: 0 6px 14px rgb(18 18 26 / 0.18);
+  color: rgb(14 16 20);
+  display: flex;
+  font-size: 32px;
+  font-weight: 800;
+  inline-size: var(--baby-touch-slider-size);
+  justify-content: center;
+  line-height: 1;
+  position: absolute;
+  top: 0;
+  user-select: none;
+}
+
+.baby-touch__home-slider-target {
+  color: rgb(38 47 55 / 0.72);
+  inset-block-start: 50%;
+  inset-inline-end: 0;
+  transform: translateY(-50%);
+}
+
+.baby-touch__home-slider-thumb {
+  inset-inline-start: var(--baby-touch-slide-thumb-offset, 0px);
+  opacity: 0.56;
+  pointer-events: auto;
+  transition: inset-inline-start var(--duration-fast) var(--ease);
+  z-index: 1;
+}
+
+.baby-touch__home-slider--active .baby-touch__home-slider-track {
+  opacity: 1;
+}
+
+.baby-touch__home-slider--active .baby-touch__home-slider-thumb {
+  opacity: 1;
+}
+
+.baby-touch__home-slider:active .baby-touch__home-slider-thumb {
+  transition: none;
+}

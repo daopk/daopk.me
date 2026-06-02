@@ -1,4 +1,4 @@
-import type { AppPermission } from "~/types/app";
+import type { AppChromeManifest, AppPermission } from "~/types/app";
 
 /**
  * Categories an external (installed) app may declare. Deliberately excludes
@@ -49,6 +49,7 @@ export interface ExternalAppManifest {
   icon: ExternalAppIcon;
   permissions?: AppPermission[];
   defaultWindow?: ExternalAppWindowDefaults;
+  chrome?: AppChromeManifest;
   singleton?: boolean;
   keywords?: string[];
 }

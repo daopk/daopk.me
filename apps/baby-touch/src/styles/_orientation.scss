@@ -1,0 +1,24 @@
+.baby-touch__orientation-viewport {
+  block-size: 100%;
+  inline-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.baby-touch__orientation-frame {
+  background: var(--baby-touch-bg);
+  block-size: 100%;
+  color: var(--baby-touch-home-fg);
+  inline-size: 100%;
+  min-block-size: 0;
+}
+
+.baby-touch--gallery .baby-touch__orientation-frame,
+.baby-touch--home .baby-touch__orientation-frame {
+  overflow: auto;
+}
+
+.baby-touch--game .baby-touch__orientation-frame {
+  overflow: hidden;
+}

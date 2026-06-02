@@ -1,4 +1,4 @@
-import type { AppPermission } from "~/types/app";
+import type { AppChromeManifest, AppChromeTitlebarVisibility, AppPermission } from "~/types/app";
 import type {
   ExternalAppCategory,
   ExternalAppIcon,
@@ -25,6 +25,8 @@ export const EXTERNAL_APP_PERMISSIONS: readonly AppPermission[] = [
   "notifications.post",
   "network.fetch",
 ];
+
+const APP_CHROME_TITLEBAR_VALUES: readonly AppChromeTitlebarVisibility[] = ["visible", "hidden"];
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -127,6 +129,27 @@ function cleanWindowDefaults(input: unknown): ExternalAppWindowDefaults | undefi
     out.centered = input.centered;
   }
   return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function cleanChromeManifest(input: unknown): AppChromeManifest | undefined {
+  if (!isRecord(input)) {
+    return undefined;
+  }
+
+  const mobile = isRecord(input.mobile) ? input.mobile : undefined;
+  if (!mobile) {
+    return undefined;
+  }
+
+  const out: AppChromeManifest = {};
+  if (
+    typeof mobile.titlebar === "string" &&
+    APP_CHROME_TITLEBAR_VALUES.includes(mobile.titlebar as AppChromeTitlebarVisibility)
+  ) {
+    out.mobile = { titlebar: mobile.titlebar as AppChromeTitlebarVisibility };
+  }
+
+  return out.mobile === undefined ? undefined : out;
 }
 
 function cleanKeywords(input: unknown): string[] | undefined {
@@ -238,6 +261,10 @@ export function validateExternalManifest(input: unknown): ExternalManifestValida
   const defaultWindow = cleanWindowDefaults(input.defaultWindow);
   if (defaultWindow !== undefined) {
     manifest.defaultWindow = defaultWindow;
+  }
+  const chrome = cleanChromeManifest(input.chrome);
+  if (chrome !== undefined) {
+    manifest.chrome = chrome;
   }
   if (typeof input.singleton === "boolean") {
     manifest.singleton = input.singleton;

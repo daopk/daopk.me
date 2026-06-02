@@ -37,6 +37,7 @@ describe("externalToAppManifest", () => {
     const ext = external({
       permissions: ["network.fetch"],
       defaultWindow: { width: 400, height: 300 },
+      chrome: { mobile: { titlebar: "hidden" } },
       keywords: ["hi", "demo"],
       singleton: true,
     });
@@ -45,6 +46,8 @@ describe("externalToAppManifest", () => {
     expect(manifest.permissions).not.toBe(ext.permissions);
     expect(manifest.defaultWindow).toEqual({ width: 400, height: 300 });
     expect(manifest.defaultWindow).not.toBe(ext.defaultWindow);
+    expect(manifest.chrome).toEqual({ mobile: { titlebar: "hidden" } });
+    expect(manifest.chrome?.mobile).not.toBe(ext.chrome?.mobile);
     expect(manifest.keywords).toEqual(["hi", "demo"]);
     expect(manifest.singleton).toBe(true);
   });
@@ -53,6 +56,7 @@ describe("externalToAppManifest", () => {
     const manifest = externalToAppManifest(external());
     expect(manifest.permissions).toBeUndefined();
     expect(manifest.defaultWindow).toBeUndefined();
+    expect(manifest.chrome).toBeUndefined();
     expect(manifest.keywords).toBeUndefined();
     expect(manifest.singleton).toBeUndefined();
   });

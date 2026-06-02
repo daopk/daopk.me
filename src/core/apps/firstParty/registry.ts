@@ -46,7 +46,8 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     singleton: true,
     permissions: ["storage.write"],
     defaultWindow: { width: 760, height: 560, centered: true },
-    keywords: ["baby", "touch", "sensory", "animals", "bubbles", "toy", "cause effect"],
+    chrome: { mobile: { titlebar: "hidden" } },
+    keywords: ["baby", "touch", "sensory", "animals", "toy", "cause effect"],
   },
   {
     id: "notes",

@@ -14,13 +14,14 @@ import AppView from "./AppView.vue";
 
 const StubIcon = defineComponent({ template: "<svg />" });
 
-function manifest(): AppManifest {
+function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id: "alpha",
     name: "Alpha",
     icon: StubIcon as Component,
     category: "system",
     component: () => Promise.resolve({ default: defineComponent({ template: "<div />" }) }),
+    ...overrides,
   };
 }
 
@@ -34,10 +35,12 @@ vi.mock("~/composables/useKernel", () => ({
   },
 }));
 
-function makeKernel(): Pick<Kernel, "apps" | "lifecycleCoordinator"> {
+function makeKernel(
+  manifests: readonly AppManifest[] = [manifest()],
+): Pick<Kernel, "apps" | "lifecycleCoordinator"> {
   return {
     apps: {
-      list: () => [manifest()],
+      list: () => [...manifests],
       register: vi.fn(),
       launch: vi.fn(),
       unregister: vi.fn(),
@@ -248,6 +251,125 @@ describe("AppView", () => {
 
     expect(backHandler).toHaveBeenCalledTimes(1);
     expect(wrapper.emitted("back")).toBeFalsy();
+
+    wrapper.unmount();
+  });
+
+  it("hides the mobile titlebar from the manifest chrome default", async () => {
+    currentKernel = makeKernel([manifest({ chrome: { mobile: { titlebar: "hidden" } } })]);
+
+    const wrapper = mount(AppView, {
+      props: {
+        frame: { frameId: "f-fullscreen", handleId: "h-fullscreen", manifestId: "alpha" },
+        title: "Alpha",
+        isCurrent: true,
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.find(".app-view__chrome").exists()).toBe(false);
+    expect(wrapper.find(".app-view__body").attributes("style")).toContain(
+      "--mobile-shell-app-safe-area-top: var(--app-view-safe-area-top)",
+    );
+
+    wrapper.unmount();
+  });
+
+  it("lets hosted apps override titlebar visibility at runtime", async () => {
+    const Probe = defineComponent({
+      name: "Probe",
+      setup() {
+        const chrome = inject(AppChromeInjectionKey, null);
+
+        onMounted(() => {
+          chrome?.setTitlebar("hidden");
+        });
+
+        return () => h("div", { class: "probe" });
+      },
+    });
+
+    const probeManifest: AppManifest = {
+      id: "alpha",
+      name: "Alpha",
+      icon: StubIcon as Component,
+      category: "system",
+      component: () =>
+        Promise.resolve(
+          Object.assign(Object.create(null) as { default: Component }, {
+            default: Probe as Component,
+            __esModule: true,
+          }),
+        ),
+    };
+
+    currentKernel = makeKernel([probeManifest]);
+
+    const wrapper = mount(AppView, {
+      props: {
+        frame: { frameId: "f-runtime", handleId: "h-runtime", manifestId: "alpha" },
+        title: "Alpha",
+        isCurrent: true,
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.find(".app-view__chrome").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("exposes hide and close actions to hosted apps", async () => {
+    const Probe = defineComponent({
+      name: "Probe",
+      setup() {
+        const chrome = inject(AppChromeInjectionKey, null);
+
+        onMounted(() => {
+          chrome?.hide();
+          chrome?.close();
+        });
+
+        return () => h("div", { class: "probe" });
+      },
+    });
+
+    const probeManifest: AppManifest = {
+      id: "alpha",
+      name: "Alpha",
+      icon: StubIcon as Component,
+      category: "system",
+      component: () =>
+        Promise.resolve(
+          Object.assign(Object.create(null) as { default: Component }, {
+            default: Probe as Component,
+            __esModule: true,
+          }),
+        ),
+    };
+
+    currentKernel = makeKernel([probeManifest]);
+
+    const wrapper = mount(AppView, {
+      props: {
+        frame: { frameId: "f-actions", handleId: "h-actions", manifestId: "alpha" },
+        title: "Alpha",
+        isCurrent: true,
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.emitted("hide")).toHaveLength(1);
+    expect(wrapper.emitted("close")).toHaveLength(1);
 
     wrapper.unmount();
   });

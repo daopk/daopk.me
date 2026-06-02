@@ -1,9 +1,9 @@
 import { createPinia, setActivePinia } from "pinia";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, nextTick, type Component } from "vue";
+import { defineComponent, inject, nextTick, type Component } from "vue";
 
-import type { AppHandle, AppManifest } from "~/types/app";
+import { AppChromeInjectionKey, type AppHandle, type AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 import { useSettingsStore } from "~/core/storage/SettingsStore";
 
@@ -275,6 +275,47 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     expect(wrapper.findAll("section.app-view").length).toBe(1);
     expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
     expect(currentKernel.processes.kill).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("close from a hosted app dismisses the frame and kills the process", async () => {
+    const Probe = defineComponent({
+      name: "CloseProbe",
+      setup() {
+        const chrome = inject(AppChromeInjectionKey, null);
+        return { chrome };
+      },
+      template: '<button data-testid="close-app" @click="chrome?.close()">Close</button>',
+    });
+
+    currentKernel = makeKernel([
+      manifest({
+        chrome: { mobile: { titlebar: "hidden" } },
+        component: () =>
+          Promise.resolve(
+            Object.assign(Object.create(null) as { default: Component }, {
+              default: Probe as Component,
+              __esModule: true,
+            }),
+          ),
+      }),
+    ]);
+
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    await wrapper.findComponent(HomeScreenIcon).trigger("click");
+    await flushPromises();
+    await nextTick();
+    expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(true);
+
+    await wrapper.find('[data-testid="close-app"]').trigger("click");
+    await flushPromises();
+    await nextTick();
+    await nextTick();
+
+    expect(wrapper.findAll("section.app-view").length).toBe(0);
+    expect(currentKernel.processes.kill).toHaveBeenCalledWith("h-1", "user");
 
     wrapper.unmount();
   });
