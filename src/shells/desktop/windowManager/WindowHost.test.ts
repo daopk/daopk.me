@@ -148,6 +148,49 @@ function commandCtx(kernel: Kernel, payload: Record<string, unknown>): CommandCo
   };
 }
 
+function rect(bounds: {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}): DOMRect {
+  return {
+    x: bounds.left,
+    y: bounds.top,
+    top: bounds.top,
+    left: bounds.left,
+    right: bounds.left + bounds.width,
+    bottom: bounds.top + bounds.height,
+    width: bounds.width,
+    height: bounds.height,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+function appendDockFixture({
+  autoHide = false,
+  revealed = false,
+}: {
+  autoHide?: boolean;
+  revealed?: boolean;
+} = {}): { dockZone: HTMLElement; dock: HTMLElement } {
+  const dockZone = document.createElement("div");
+  dockZone.className = [
+    "dock-reveal-zone",
+    autoHide ? "dock-reveal-zone--auto-hide" : "",
+    revealed ? "dock-reveal-zone--revealed" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const dock = document.createElement("div");
+  dock.className = "dock";
+  dockZone.append(dock);
+  document.body.append(dockZone);
+
+  return { dockZone, dock };
+}
+
 describe("WindowHost — F1 D3a (shell policy drop)", () => {
   beforeEach(() => {
     debugWarnSpy.mockReset();
@@ -157,6 +200,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     __resetWindowManagerForTests();
+    document.body.innerHTML = "";
   });
 
   it("emits one debugWarn + skips kernel.apps.launch when restore/focus wins AND args were supplied", async () => {
@@ -277,6 +321,145 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     expect(record).toBeDefined();
     expect(record!.x).toBe(Math.floor((1000 - DEFAULT_W) / 2));
     expect(record!.y).toBe(Math.floor((700 - DEFAULT_H) / 2));
+
+    wrapper.unmount();
+  });
+
+  it("maximizes above a visible desktop dock", async () => {
+    const { dock } = appendDockFixture();
+    const { kernel, commands, bus } = makeKernel();
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 28, left: 0, width: 1000, height: 872 }),
+    );
+    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 820, left: 250, width: 500, height: 58 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(record).toBeDefined();
+
+    await commands
+      .get("desktop:window.toggleMaximize")!
+      .run(commandCtx(kernel as Kernel, { windowId: record!.id }));
+
+    const maxed = manager.windows.find((entry) => entry.id === record!.id)!;
+    expect(maxed.maximized).toBe(true);
+    expect(maxed.x).toBe(0);
+    expect(maxed.y).toBe(0);
+    expect(maxed.width).toBe(1000);
+    expect(maxed.height).toBe(792);
+
+    wrapper.unmount();
+  });
+
+  it("keeps maximized bounds when an auto-hidden dock conceals after maximize", async () => {
+    const { dockZone, dock } = appendDockFixture({ autoHide: true, revealed: true });
+    const { kernel, commands, bus } = makeKernel();
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 28, left: 0, width: 1000, height: 872 }),
+    );
+    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 820, left: 250, width: 500, height: 58 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(record).toBeDefined();
+
+    await commands
+      .get("desktop:window.toggleMaximize")!
+      .run(commandCtx(kernel as Kernel, { windowId: record!.id }));
+
+    const maxed = manager.windows.find((entry) => entry.id === record!.id)!;
+    expect(maxed.height).toBe(792);
+
+    dockZone.classList.remove("dock-reveal-zone--revealed");
+    await wrapper.vm.$nextTick();
+
+    const afterDockHide = manager.windows.find((entry) => entry.id === record!.id)!;
+    expect(afterDockHide.height).toBe(792);
+
+    wrapper.unmount();
+  });
+
+  it("maximizes to the full desktop stage when the auto-hidden dock is concealed", async () => {
+    const { dock } = appendDockFixture({ autoHide: true });
+    const { kernel, commands, bus } = makeKernel();
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 28, left: 0, width: 1000, height: 872 }),
+    );
+    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 820, left: 250, width: 500, height: 58 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(record).toBeDefined();
+
+    await commands
+      .get("desktop:window.toggleMaximize")!
+      .run(commandCtx(kernel as Kernel, { windowId: record!.id }));
+
+    const maxed = manager.windows.find((entry) => entry.id === record!.id)!;
+    expect(maxed.height).toBe(872);
 
     wrapper.unmount();
   });

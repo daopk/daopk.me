@@ -39,6 +39,11 @@
   --dock-z: 900;
   --dock-icon-size: 40px;
   --dock-padding: var(--space-sm);
+  --dock-bottom-gap: var(--space-xs);
+  --dock-clearance: calc(
+    var(--dock-icon-size) + var(--dock-padding) + var(--dock-padding) + var(--dock-bottom-gap) +
+      max(0px, env(safe-area-inset-bottom, 0))
+  );
   --dock-radius: var(--radius-lg);
   --dock-gap: var(--space-sm);
   --dock-indicator-size: 4px;

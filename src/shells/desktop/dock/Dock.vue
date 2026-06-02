@@ -511,16 +511,13 @@ watch(dockAutoHide, (enabled) => {
   --dock-reveal-edge-size: 10px;
 
   align-items: flex-end;
-  block-size: calc(
-    var(--dock-icon-size) + var(--dock-padding) + var(--dock-padding) + var(--space-md) +
-      max(0px, env(safe-area-inset-bottom, 0))
-  );
+  block-size: var(--dock-clearance);
   box-sizing: border-box;
   display: flex;
   inset-block-end: 0;
   inset-inline: 0;
   justify-content: center;
-  padding-block-end: max(var(--space-md), env(safe-area-inset-bottom, 0));
+  padding-block-end: max(var(--dock-bottom-gap), env(safe-area-inset-bottom, 0));
   pointer-events: none;
   position: absolute;
   z-index: var(--dock-z);
@@ -532,10 +529,7 @@ watch(dockAutoHide, (enabled) => {
 }
 
 .dock-reveal-zone--auto-hide.dock-reveal-zone--revealed {
-  block-size: calc(
-    var(--dock-icon-size) + var(--dock-padding) + var(--dock-padding) + var(--space-md) +
-      max(0px, env(safe-area-inset-bottom, 0))
-  );
+  block-size: var(--dock-clearance);
 }
 
 .dock {
@@ -558,7 +552,9 @@ watch(dockAutoHide, (enabled) => {
 .dock-reveal-zone--auto-hide:not(.dock-reveal-zone--revealed) .dock {
   opacity: 0;
   pointer-events: none;
-  transform: translateY(calc(100% + var(--space-md) + max(0px, env(safe-area-inset-bottom, 0))));
+  transform: translateY(
+    calc(100% + var(--dock-bottom-gap) + max(0px, env(safe-area-inset-bottom, 0)))
+  );
 }
 
 .dock-reveal-zone--reduced-motion .dock {

@@ -81,6 +81,53 @@ function measuredStageSize(): StageSize {
   };
 }
 
+function dockIsVisible(zone: HTMLElement): boolean {
+  return (
+    !zone.classList.contains("dock-reveal-zone--auto-hide") ||
+    zone.classList.contains("dock-reveal-zone--revealed")
+  );
+}
+
+function maximizeStageSize(): StageSize {
+  const stage = measuredStageSize();
+  const host = hostRef.value;
+
+  if (host === null || stage.width <= 0 || stage.height <= 0) {
+    return stage;
+  }
+
+  const dockZone = document.querySelector<HTMLElement>(".dock-reveal-zone");
+  if (dockZone === null || !dockIsVisible(dockZone)) {
+    return stage;
+  }
+
+  const dock = dockZone.querySelector<HTMLElement>(".dock");
+  if (dock === null) {
+    return stage;
+  }
+
+  const hostRect = host.getBoundingClientRect();
+  const dockRect = dock.getBoundingClientRect();
+  const dockTop = dockRect.top - hostRect.top;
+
+  if (dockRect.height <= 0 || dockTop <= 0 || dockTop >= stage.height) {
+    return stage;
+  }
+
+  return {
+    width: stage.width,
+    height: dockTop,
+  };
+}
+
+function stageForSnap(edge: SnapEdge): StageSize {
+  return edge === "max" ? maximizeStageSize() : stageBounds;
+}
+
+const snapPreviewStage = computed(() =>
+  activeSnap.value?.edge === "max" ? maximizeStageSize() : stageBounds,
+);
+
 function centeredInitialPosition(
   source: AppLaunchSource,
   size?: { width: number; height: number },
@@ -105,8 +152,8 @@ function centeredInitialPosition(
 
 watch(
   () => [stageBounds.width, stageBounds.height] as const,
-  ([width, height]) => {
-    windowManager.rebindToStage({ width, height });
+  () => {
+    windowManager.rebindToStage(maximizeStageSize());
   },
 );
 
@@ -173,7 +220,7 @@ const disposeWindowCommands = [
     run(ctx) {
       const id = windowIdFromPayload(ctx, "desktop:window.toggleMaximize");
       if (id === null) return;
-      windowManager.toggleMaximize(id, stageBounds);
+      windowManager.toggleMaximize(id, maximizeStageSize());
     },
   }),
   kernel.commands.register({
@@ -487,11 +534,11 @@ function onResize(id: string, x: number, y: number, width: number, height: numbe
 }
 
 function onMaximize(id: string): void {
-  windowManager.toggleMaximize(id, stageBounds);
+  windowManager.toggleMaximize(id, maximizeStageSize());
 }
 
 function onSnap(id: string, edge: SnapEdge): void {
-  windowManager.snapTo(id, edge, stageBounds);
+  windowManager.snapTo(id, edge, stageForSnap(edge));
 }
 
 function onMinimize(id: string): void {
@@ -552,7 +599,7 @@ onBeforeUnmount(() => {
 <template>
   <div ref="hostRef" class="window-host">
     <Transition name="snap-preview">
-      <SnapPreview v-if="activeSnap" :edge="activeSnap.edge" :stage="stageBounds" />
+      <SnapPreview v-if="activeSnap" :edge="activeSnap.edge" :stage="snapPreviewStage" />
     </Transition>
     <template v-for="record in windowManager.windows" :key="record.id">
       <Window
