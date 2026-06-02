@@ -205,6 +205,8 @@ const style = computed<Record<string, string>>(() => ({
   top: `${props.record.y.toString()}px`,
   inlineSize: `${props.record.width.toString()}px`,
   blockSize: `${props.record.height.toString()}px`,
+  "--window-min-w": `${props.record.minWidth.toString()}px`,
+  "--window-min-h": `${props.record.minHeight.toString()}px`,
   zIndex: props.record.z.toString(),
 }));
 

@@ -26,6 +26,13 @@ export interface BuildMonthGridOptions {
   readonly weekStartsOn?: number;
 }
 
+export interface BuildDayCellOptions {
+  readonly date: Date;
+  readonly month?: Date;
+  readonly selectedDate?: Date;
+  readonly today?: Date;
+}
+
 const DEFAULT_WEEK_STARTS_ON = 1;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -46,24 +53,22 @@ export function buildMonthGrid({
 
   return Array.from({ length: totalDays }, (_, index) => {
     const date = addDays(gridStart, index);
-    const dateKey = localDateKey(date);
-    const lunar = gregorianToVietnameseLunar(date);
-
-    return {
-      date,
-      dateKey,
-      dayOfMonth: date.getDate(),
-      inCurrentMonth: date.getMonth() === firstDay.getMonth(),
-      isSelected: selectedKey === dateKey,
-      isToday: todayKey === dateKey,
-      lunarDay: lunar?.day ?? null,
-      lunarMonth: lunar?.month ?? null,
-      lunarYear: lunar?.year ?? null,
-      isLeapMonth: lunar?.isLeapMonth ?? null,
-      lunarLabel: lunar === null ? null : formatVietnameseLunarShort(lunar),
-      lunarLongLabel: lunar === null ? null : formatVietnameseLunarLong(lunar),
-    };
+    return createDayCell(date, firstDay, selectedKey, todayKey);
   });
+}
+
+export function buildDayCell({
+  date,
+  month = date,
+  selectedDate,
+  today = new Date(),
+}: BuildDayCellOptions): CalendarDayCell {
+  return createDayCell(
+    date,
+    startOfMonth(month),
+    selectedDate === undefined ? undefined : localDateKey(selectedDate),
+    localDateKey(today),
+  );
 }
 
 export function startOfLocalDay(date: Date): Date {
@@ -124,4 +129,30 @@ export function dateKeyFromLocalDateTime(value: string): string {
 
 function dayOffset(date: Date, weekStartsOn: number): number {
   return (date.getDay() - weekStartsOn + 7) % 7;
+}
+
+function createDayCell(
+  date: Date,
+  monthStart: Date,
+  selectedKey: string | undefined,
+  todayKey: string,
+): CalendarDayCell {
+  const dateKey = localDateKey(date);
+  const lunar = gregorianToVietnameseLunar(date);
+
+  return {
+    date,
+    dateKey,
+    dayOfMonth: date.getDate(),
+    inCurrentMonth:
+      date.getFullYear() === monthStart.getFullYear() && date.getMonth() === monthStart.getMonth(),
+    isSelected: selectedKey === dateKey,
+    isToday: todayKey === dateKey,
+    lunarDay: lunar?.day ?? null,
+    lunarMonth: lunar?.month ?? null,
+    lunarYear: lunar?.year ?? null,
+    isLeapMonth: lunar?.isLeapMonth ?? null,
+    lunarLabel: lunar === null ? null : formatVietnameseLunarShort(lunar),
+    lunarLongLabel: lunar === null ? null : formatVietnameseLunarLong(lunar),
+  };
 }

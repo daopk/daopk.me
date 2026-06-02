@@ -223,6 +223,41 @@ describe("useWindowManager", () => {
     expect(rec.height).toBe(MIN_H);
   });
 
+  it("honors per-window minimum sizes for open, resize, setBounds, and restore", () => {
+    const wm = useWindowManager({ killProcess: vi.fn() });
+    const id = wm.open({
+      manifestId: "calendar",
+      handleId: "h-calendar",
+      title: "Calendar",
+      size: { width: 320, height: 240 },
+      minSize: { width: 520, height: 520 },
+    });
+
+    let rec = wm.windows.find((w) => w.id === id)!;
+    expect(rec.width).toBe(520);
+    expect(rec.height).toBe(520);
+    expect(rec.minWidth).toBe(520);
+    expect(rec.minHeight).toBe(520);
+
+    wm.resize(id, 400, 300);
+    rec = wm.windows.find((w) => w.id === id)!;
+    expect(rec.width).toBe(520);
+    expect(rec.height).toBe(520);
+
+    wm.setBounds(id, 20, 30, 400, 400);
+    rec = wm.windows.find((w) => w.id === id)!;
+    expect(rec.x).toBe(20);
+    expect(rec.y).toBe(30);
+    expect(rec.width).toBe(520);
+    expect(rec.height).toBe(520);
+
+    wm.toggleMaximize(id, { width: 1200, height: 800 });
+    wm.toggleMaximize(id, { width: 1200, height: 800 });
+    rec = wm.windows.find((w) => w.id === id)!;
+    expect(rec.width).toBe(520);
+    expect(rec.height).toBe(520);
+  });
+
   it("setBounds updates x/y/width/height atomically and clamps size", () => {
     const wm = useWindowManager({ killProcess: vi.fn() });
     const id = wm.open({ manifestId: "about", handleId: "h-a", title: "About" });

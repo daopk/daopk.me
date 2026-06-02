@@ -9,7 +9,7 @@ import { AppLaunchError } from "~/core/kernel/errors";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
 import { normalizeVfsPath } from "~/core/vfs/path";
-import type { AppHandle } from "~/types/app";
+import type { AppHandle, AppManifest } from "~/types/app";
 import type { CommandContext } from "~/types/command";
 
 import SnapPreview from "./SnapPreview.vue";
@@ -54,6 +54,21 @@ const stageOffset = computed(() => ({
   x: hostBounds.left.value,
   y: hostBounds.top.value,
 }));
+
+function defaultWindowSize(manifest: AppManifest): { width: number; height: number } | undefined {
+  return manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
+    ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
+    : undefined;
+}
+
+function defaultWindowMinSize(
+  manifest: AppManifest,
+): { width?: number; height?: number } | undefined {
+  const { minWidth, minHeight } = manifest.defaultWindow ?? {};
+  return minWidth === undefined && minHeight === undefined
+    ? undefined
+    : { width: minWidth, height: minHeight };
+}
 
 const activeSnap = ref<{ id: string; edge: SnapEdge } | null>(null);
 
@@ -342,10 +357,8 @@ async function onLaunchRequested(
     throw error;
   }
 
-  const defaultSize =
-    manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
-      ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
-      : undefined;
+  const defaultSize = defaultWindowSize(manifest);
+  const minSize = defaultWindowMinSize(manifest);
   const initialPosition = centeredInitialPosition(source, defaultSize);
 
   windowManager.open({
@@ -354,6 +367,7 @@ async function onLaunchRequested(
     title: manifest.name,
     singleton: manifest.singleton === true,
     size: defaultSize,
+    minSize,
     ...(initialPosition === undefined ? {} : { initial: initialPosition }),
     ...(args === undefined ? {} : { args }),
   });
@@ -514,10 +528,8 @@ async function openNewWindow(
     throw error;
   }
 
-  const defaultSize =
-    manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
-      ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
-      : undefined;
+  const defaultSize = defaultWindowSize(manifest);
+  const minSize = defaultWindowMinSize(manifest);
 
   windowManager.open({
     manifestId: manifest.id,
@@ -525,6 +537,7 @@ async function openNewWindow(
     title: manifest.name,
     singleton: manifest.singleton === true,
     size: defaultSize,
+    minSize,
     args,
   });
 }
@@ -567,10 +580,8 @@ async function onSpawnNewRequested(
     throw error;
   }
 
-  const defaultSize =
-    manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
-      ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
-      : undefined;
+  const defaultSize = defaultWindowSize(manifest);
+  const minSize = defaultWindowMinSize(manifest);
 
   windowManager.open({
     manifestId: manifest.id,
@@ -578,6 +589,7 @@ async function onSpawnNewRequested(
     title: manifest.name,
     singleton: manifest.singleton === true,
     size: defaultSize,
+    minSize,
     ...(args === undefined ? {} : { args }),
   });
 }

@@ -1,268 +1,64 @@
 import { describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
 
-import { normalizeVfsPath, VfsError, type VfsStat } from "@daopk/sdk";
-
-import {
-  CALENDAR_FILE_PATH,
-  CALENDAR_MIME_TYPE,
-  CALENDAR_ROOT,
-  type CalendarEvent,
-  type CalendarVfsClient,
-  serializeCalendar,
-  useCalendar,
-} from "./useCalendar";
-
-interface FakeNode {
-  kind: "file" | "directory";
-  text?: string;
-  mimeType?: string;
-  updatedAt?: number;
-}
-
-interface FakeVfs extends CalendarVfsClient {
-  readonly nodes: Record<string, FakeNode>;
-  readonly writes: Array<{ path: string; text: string; options: Record<string, unknown> }>;
-}
-
-function stat(path: string, node: FakeNode): VfsStat {
-  const normalized = normalizeVfsPath(path);
-  return {
-    path: normalized,
-    kind: node.kind,
-    size: node.text?.length ?? 0,
-    createdAt: node.updatedAt ?? 0,
-    updatedAt: node.updatedAt ?? 0,
-    readonly: false,
-    ...(node.mimeType === undefined ? {} : { mimeType: node.mimeType }),
-  };
-}
-
-function makeVfs(seed: Record<string, FakeNode> = {}): FakeVfs {
-  const nodes: Record<string, FakeNode> = { ...seed };
-  const writes: FakeVfs["writes"] = [];
-  let now = 10;
-
-  return {
-    nodes,
-    writes,
-    mkdir: vi.fn(async (path: string) => {
-      const normalized = normalizeVfsPath(path);
-      nodes[normalized] ??= { kind: "directory", updatedAt: ++now };
-      return stat(normalized, nodes[normalized]!);
-    }),
-    readText: vi.fn(async (path: string) => nodes[normalizeVfsPath(path)]?.text ?? null),
-    writeText: vi.fn(
-      async (
-        path: string,
-        text: string,
-        options: { overwrite?: boolean; mimeType?: string } = {},
-      ) => {
-        const normalized = normalizeVfsPath(path);
-        writes.push({ path: normalized, text, options });
-        nodes[normalized] = {
-          kind: "file",
-          text,
-          updatedAt: ++now,
-          ...(options.mimeType === undefined ? {} : { mimeType: options.mimeType }),
-        };
-        return stat(normalized, nodes[normalized]!);
-      },
-    ),
-  };
-}
-
-function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
-  return {
-    id: "event-a",
-    title: "Planning",
-    startAt: "2026-05-26T09:00",
-    endAt: "2026-05-26T10:00",
-    allDay: false,
-    notes: "",
-    color: "blue",
-    createdAt: "2026-05-26T08:00",
-    updatedAt: "2026-05-26T08:00",
-    ...overrides,
-  };
-}
+import { useCalendar } from "./useCalendar";
 
 describe("useCalendar", () => {
-  it("creates /home/calendar and starts empty when the events file is missing", async () => {
-    const vfs = makeVfs();
-    const calendar = useCalendar({ vfs });
+  it("initializes the selected day, visible month, and month grid from today", () => {
+    const calendar = useCalendar({ now: () => new Date(2026, 4, 26, 10, 15) });
 
-    await expect(calendar.loadCalendar()).resolves.toBe(true);
-
-    expect(vfs.mkdir).toHaveBeenCalledWith(CALENDAR_ROOT, { recursive: true });
-    expect(calendar.status.value).toBe("empty");
-    expect(calendar.events.value).toEqual([]);
-  });
-
-  it("loads valid events sorted by start time", async () => {
-    const vfs = makeVfs({
-      [CALENDAR_ROOT]: { kind: "directory" },
-      [CALENDAR_FILE_PATH]: {
-        kind: "file",
-        text: serializeCalendar([
-          makeEvent({
-            id: "late",
-            title: "Late",
-            startAt: "2026-05-26T16:00",
-            endAt: "2026-05-26T17:00",
-          }),
-          makeEvent({ id: "early", title: "Early", startAt: "2026-05-26T08:00" }),
-        ]),
-        mimeType: CALENDAR_MIME_TYPE,
-      },
+    expect(calendar.selectedDateKey.value).toBe("2026-05-26");
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 4, 1));
+    expect(calendar.monthGrid.value[0]?.dateKey).toBe("2026-04-27");
+    expect(calendar.monthGrid.value.find((cell) => cell.dateKey === "2026-05-26")).toMatchObject({
+      isSelected: true,
+      isToday: true,
     });
-    const calendar = useCalendar({ vfs });
-
-    await calendar.loadCalendar();
-
-    expect(calendar.events.value.map((event) => event.id)).toEqual(["early", "late"]);
-    expect(calendar.status.value).toBe("ready");
   });
 
-  it("surfaces invalid JSON without overwriting the stored file", async () => {
-    const vfs = makeVfs({
-      [CALENDAR_ROOT]: { kind: "directory" },
-      [CALENDAR_FILE_PATH]: { kind: "file", text: "not json", mimeType: CALENDAR_MIME_TYPE },
-    });
-    const calendar = useCalendar({ vfs });
+  it("selects valid dates and moves the visible month when needed", () => {
+    const calendar = useCalendar({ now: () => new Date(2026, 4, 26, 10, 15) });
 
-    await expect(calendar.loadCalendar()).resolves.toBe(false);
+    calendar.selectDate("2026-05-27");
+    expect(calendar.selectedDateKey.value).toBe("2026-05-27");
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 4, 1));
 
-    expect(calendar.status.value).toBe("error");
-    expect(vfs.writes).toHaveLength(0);
+    calendar.selectDate("2026-06-02");
+    expect(calendar.selectedDateKey.value).toBe("2026-06-02");
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 5, 1));
+
+    calendar.selectDate("2026-06-99");
+    expect(calendar.selectedDateKey.value).toBe("2026-06-02");
   });
 
-  it("treats a missing events file error as an empty calendar", async () => {
-    const vfs = makeVfs({ [CALENDAR_ROOT]: { kind: "directory" } });
-    vi.mocked(vfs.readText).mockRejectedValueOnce(
-      new VfsError("NOT_FOUND", "Path not found", { path: CALENDAR_FILE_PATH }),
-    );
-    const calendar = useCalendar({ vfs });
+  it("navigates months and returns to today", () => {
+    const now = vi.fn(() => new Date(2026, 4, 26, 10, 15));
+    const calendar = useCalendar({ now });
 
-    await expect(calendar.loadCalendar()).resolves.toBe(true);
+    calendar.goToNextMonth();
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 5, 1));
 
-    expect(calendar.status.value).toBe("empty");
-    expect(calendar.events.value).toEqual([]);
-    expect(vfs.writes).toHaveLength(0);
+    calendar.goToPreviousMonth();
+    calendar.goToPreviousMonth();
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 3, 1));
+
+    now.mockReturnValue(new Date(2026, 7, 4, 9, 0));
+    calendar.goToToday();
+
+    expect(calendar.selectedDateKey.value).toBe("2026-08-04");
+    expect(calendar.visibleMonth.value).toEqual(new Date(2026, 7, 1));
   });
 
-  it("creates, updates, and deletes events in the versioned JSON document", async () => {
-    const vfs = makeVfs();
+  it("reacts to configured week starts when building the grid", () => {
+    const weekStartsOn = ref<0 | 1>(0);
     const calendar = useCalendar({
-      vfs,
       now: () => new Date(2026, 4, 26, 10, 15),
-      idFactory: () => "event-1",
-    });
-    await calendar.loadCalendar();
-
-    const created = await calendar.createEvent({
-      title: "Design review",
-      startAt: "2026-05-26T11:00",
-      endAt: "2026-05-26T12:00",
-      allDay: false,
-      notes: "Bring notes",
-      color: "green",
-    });
-
-    expect(created.ok).toBe(true);
-    expect(vfs.writes.at(-1)).toMatchObject({
-      path: CALENDAR_FILE_PATH,
-      options: { overwrite: true, mimeType: CALENDAR_MIME_TYPE },
-    });
-    expect(JSON.parse(vfs.writes.at(-1)!.text)).toMatchObject({
-      version: 1,
-      events: [{ id: "event-1", title: "Design review", color: "green" }],
-    });
-
-    const updated = await calendar.updateEvent("event-1", {
-      title: "Design critique",
-      startAt: "2026-05-26T13:00",
-      endAt: "2026-05-26T14:00",
-      allDay: false,
-      notes: "",
-      color: "purple",
-    });
-
-    expect(updated.ok).toBe(true);
-    expect(calendar.events.value[0]).toMatchObject({
-      id: "event-1",
-      title: "Design critique",
-      color: "purple",
-    });
-
-    await expect(calendar.deleteEvent("event-1")).resolves.toBe(true);
-    expect(JSON.parse(vfs.writes.at(-1)!.text)).toMatchObject({ version: 1, events: [] });
-    expect(calendar.status.value).toBe("empty");
-  });
-
-  it("uses configured defaults for week starts and new events", () => {
-    const calendar = useCalendar({
-      vfs: makeVfs(),
-      now: () => new Date(2026, 4, 26, 10, 15),
-      weekStartsOn: 0,
-      defaultEventDurationMinutes: 90,
-      defaultEventColor: "purple",
+      weekStartsOn,
     });
 
     expect(calendar.monthGrid.value[0]?.dateKey).toBe("2026-04-26");
-    expect(calendar.defaultEventInputForDate("2026-05-27")).toMatchObject({
-      startAt: "2026-05-27T09:00",
-      endAt: "2026-05-27T10:30",
-      color: "purple",
-    });
-    expect(calendar.defaultEventInputForDate("2026-05-26")).toMatchObject({
-      startAt: "2026-05-26T11:00",
-      endAt: "2026-05-26T12:30",
-      color: "purple",
-    });
-  });
 
-  it("rejects invalid input before writing", async () => {
-    const vfs = makeVfs();
-    const calendar = useCalendar({ vfs });
-    await calendar.loadCalendar();
-
-    await expect(
-      calendar.createEvent({
-        title: "   ",
-        startAt: "2026-05-26T12:00",
-        endAt: "2026-05-26T11:00",
-        allDay: false,
-        notes: "",
-        color: "blue",
-      }),
-    ).resolves.toEqual({ ok: false, event: null });
-
-    expect(calendar.status.value).toBe("error");
-    expect(vfs.writes).toHaveLength(0);
-  });
-
-  it("keeps the in-memory edit visible when VFS save fails", async () => {
-    const vfs = makeVfs();
-    const calendar = useCalendar({
-      vfs,
-      idFactory: () => "event-offline",
-      now: () => new Date(2026, 4, 26, 10, 0),
-    });
-    await calendar.loadCalendar();
-    vi.mocked(vfs.writeText).mockResolvedValueOnce(null);
-
-    const result = await calendar.createEvent({
-      title: "Offline draft",
-      startAt: "2026-05-26T11:00",
-      endAt: "2026-05-26T12:00",
-      allDay: false,
-      notes: "",
-      color: "gray",
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.event?.id).toBe("event-offline");
-    expect(calendar.events.value).toHaveLength(1);
-    expect(calendar.status.value).toBe("error");
+    weekStartsOn.value = 1;
+    expect(calendar.monthGrid.value[0]?.dateKey).toBe("2026-04-27");
   });
 });

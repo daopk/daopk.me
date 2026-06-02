@@ -14,6 +14,8 @@ export type AppPermission =
 export interface WindowDefaults {
   width?: number;
   height?: number;
+  minWidth?: number;
+  minHeight?: number;
   maximized?: boolean;
   centered?: boolean;
 }

@@ -161,11 +161,11 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     icon: CalendarAppIcon,
     category: "productivity",
     singleton: true,
-    permissions: ["vfs.read", "vfs.write", "storage.write"],
-    defaultWindow: { width: 980, height: 680, centered: true },
-    keywords: ["calendar", "events", "schedule", "agenda", "planner", "settings", "preferences"],
+    permissions: ["storage.write"],
+    defaultWindow: { width: 980, height: 680, minWidth: 520, minHeight: 520, centered: true },
+    keywords: ["calendar", "date", "lunar", "settings", "preferences"],
     settings: {
-      keywords: ["calendar settings", "week start", "lunar calendar", "event defaults"],
+      keywords: ["calendar settings", "week start", "lunar calendar"],
     },
     widgets: [
       {

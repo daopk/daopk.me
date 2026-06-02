@@ -39,7 +39,7 @@ describe("Vietnamese lunar calendar", () => {
     });
   });
 
-  it("formats short grid labels and long agenda labels", () => {
+  it("formats short grid labels and long detail labels", () => {
     const tet2026 = gregorianToVietnameseLunar(new Date(2026, 1, 17));
     expect(tet2026).not.toBeNull();
 

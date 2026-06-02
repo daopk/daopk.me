@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMonthGrid, localDateKey, sameLocalDate } from "./dateGrid";
+import { buildDayCell, buildMonthGrid, localDateKey, sameLocalDate } from "./dateGrid";
 
 describe("calendar dateGrid", () => {
   it("builds full Monday-start weeks across month boundaries", () => {
@@ -81,5 +81,22 @@ describe("calendar dateGrid", () => {
     expect(cell?.isSelected).toBe(true);
     expect(sameLocalDate(new Date(2026, 4, 26, 1), new Date(2026, 4, 26, 23))).toBe(true);
     expect(localDateKey(new Date(2026, 4, 26))).toBe("2026-05-26");
+  });
+
+  it("builds a single day cell without requiring a full month grid", () => {
+    const cell = buildDayCell({
+      date: new Date(2026, 4, 31),
+      month: new Date(2026, 5, 1),
+      selectedDate: new Date(2026, 4, 31, 23, 59),
+      today: new Date(2026, 4, 31, 1, 5),
+    });
+
+    expect(cell).toMatchObject({
+      dateKey: "2026-05-31",
+      dayOfMonth: 31,
+      inCurrentMonth: false,
+      isSelected: true,
+      isToday: true,
+    });
   });
 });

@@ -18,6 +18,8 @@ export interface WindowRecord {
   y: number;
   width: number;
   height: number;
+  minWidth: number;
+  minHeight: number;
   z: number;
   focused: boolean;
   singleton: boolean;
@@ -35,6 +37,7 @@ export interface OpenWindowInput {
   title: string;
   initial?: { x: number; y: number };
   size?: { width: number; height: number };
+  minSize?: { width?: number; height?: number };
   singleton?: boolean;
   args?: Readonly<Record<string, unknown>>;
 }
@@ -156,6 +159,8 @@ function open(input: OpenWindowInput): string {
 
   const position = input.initial ?? nextCascadeOffset();
   const size = input.size ?? { width: DEFAULT_W, height: DEFAULT_H };
+  const minWidth = normalizeMinDimension(input.minSize?.width, MIN_W);
+  const minHeight = normalizeMinDimension(input.minSize?.height, MIN_H);
 
   const record: WindowRecord = {
     id: nextId(input.manifestId),
@@ -164,8 +169,10 @@ function open(input: OpenWindowInput): string {
     title: input.title,
     x: position.x,
     y: position.y,
-    width: Math.max(size.width, MIN_W),
-    height: Math.max(size.height, MIN_H),
+    width: Math.max(size.width, minWidth),
+    height: Math.max(size.height, minHeight),
+    minWidth,
+    minHeight,
     z: bumpZ(),
     focused: true,
     singleton: input.singleton === true,
@@ -285,8 +292,8 @@ function resize(id: string, width: number, height: number): void {
     return;
   }
 
-  target.width = Math.max(width, MIN_W);
-  target.height = Math.max(height, MIN_H);
+  target.width = Math.max(width, target.minWidth);
+  target.height = Math.max(height, target.minHeight);
 
   clearSnapState(target);
 }
@@ -300,8 +307,8 @@ function setBounds(id: string, x: number, y: number, width: number, height: numb
 
   target.x = x;
   target.y = y;
-  target.width = Math.max(width, MIN_W);
-  target.height = Math.max(height, MIN_H);
+  target.width = Math.max(width, target.minWidth);
+  target.height = Math.max(height, target.minHeight);
 
   clearSnapState(target);
 }
@@ -332,13 +339,13 @@ function toggleMaximize(id: string, stage: StageSize): void {
     const previous = target.preMaximize ?? {
       x: target.x,
       y: target.y,
-      width: MIN_W,
-      height: MIN_H,
+      width: target.minWidth,
+      height: target.minHeight,
     };
     target.x = previous.x;
     target.y = previous.y;
-    target.width = Math.max(previous.width, MIN_W);
-    target.height = Math.max(previous.height, MIN_H);
+    target.width = Math.max(previous.width, target.minWidth);
+    target.height = Math.max(previous.height, target.minHeight);
     target.maximized = false;
     delete target.preMaximize;
     delete target.snap;
@@ -398,6 +405,10 @@ function applyBoundsToRecord(record: WindowRecord, bounds: WindowBounds): void {
   record.y = bounds.y;
   record.width = bounds.width;
   record.height = bounds.height;
+}
+
+function normalizeMinDimension(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(fallback, value) : fallback;
 }
 
 function rebindToStage(stage: StageSize): void {

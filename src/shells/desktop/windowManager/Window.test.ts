@@ -18,6 +18,8 @@ function makeRecord(overrides: Partial<WindowRecord> = {}): WindowRecord {
     y: 30,
     width: 400,
     height: 300,
+    minWidth: 240,
+    minHeight: 160,
     z: 101,
     focused: true,
     singleton: false,
