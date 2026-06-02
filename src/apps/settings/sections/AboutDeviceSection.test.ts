@@ -56,6 +56,27 @@ describe("AboutDeviceSection (M2b.1bis)", () => {
     wrapper.unmount();
   });
 
+  it("renders a GitHub card before Software update", () => {
+    const wrapper = mountSection();
+
+    const githubCard = wrapper.find(".about-device__github-card");
+    const updateCard = wrapper.find(".about-device__update-card");
+    const link = githubCard.get("a");
+
+    expect(githubCard.exists()).toBe(true);
+    expect(githubCard.text()).toContain("GitHub");
+    expect(githubCard.text()).toContain("daopk/daopk.me");
+    expect(link.attributes("href")).toBe("https://github.com/daopk/daopk.me");
+    expect(link.attributes("target")).toBe("_blank");
+    expect(link.attributes("rel")).toBe("noopener noreferrer");
+    expect(
+      githubCard.element.compareDocumentPosition(updateCard.element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    wrapper.unmount();
+  });
+
   it("renders Software update as an independent card above the diagnostic list", () => {
     const wrapper = mountSection();
 

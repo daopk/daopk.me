@@ -4,7 +4,7 @@ import { computed } from "vue";
 import { Badge, Panel, SectionHeader } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
 import { useSettings } from "~/composables/useSettings";
-import { RefreshCw as RefreshIcon } from "~/icons/lucide";
+import { ExternalLink as ExternalLinkIcon, RefreshCw as RefreshIcon } from "~/icons/lucide";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
 const settings = useSettings();
@@ -132,6 +132,24 @@ function runSoftwareUpdateAction(): void {
       subtitle="Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics."
     />
 
+    <Panel as="section" class="about-device__github-card" variant="elevated" padding="lg">
+      <div class="about-device__github-copy">
+        <div class="about-device__github-heading">
+          <h2 class="about-device__github-title">GitHub</h2>
+        </div>
+        <p class="about-device__github-note">Source code for this WebOS shell and app catalog.</p>
+      </div>
+      <a
+        class="about-device__github-link"
+        href="https://github.com/daopk/daopk.me"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span>daopk/daopk.me</span>
+        <ExternalLinkIcon class="about-device__github-link-icon" aria-hidden="true" />
+      </a>
+    </Panel>
+
     <Panel as="section" class="about-device__update-card" variant="elevated" padding="lg">
       <div class="about-device__update-copy">
         <div class="about-device__update-heading">
@@ -196,6 +214,7 @@ function runSoftwareUpdateAction(): void {
   margin: 0;
 }
 
+.about-device__github-card,
 .about-device__update-card {
   align-items: center;
   display: grid;
@@ -203,6 +222,7 @@ function runSoftwareUpdateAction(): void {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.about-device__github-copy,
 .about-device__update-copy {
   display: flex;
   flex-direction: column;
@@ -210,6 +230,7 @@ function runSoftwareUpdateAction(): void {
   min-inline-size: 0;
 }
 
+.about-device__github-heading,
 .about-device__update-heading {
   align-items: center;
   display: flex;
@@ -217,6 +238,7 @@ function runSoftwareUpdateAction(): void {
   gap: var(--space-sm);
 }
 
+.about-device__github-title,
 .about-device__update-title {
   color: var(--color-fg);
   font-size: 15px;
@@ -224,6 +246,41 @@ function runSoftwareUpdateAction(): void {
   letter-spacing: 0;
   line-height: 1.3;
   margin: 0;
+}
+
+.about-device__github-link {
+  align-items: center;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  display: inline-flex;
+  font-size: var(--font-size-xs);
+  gap: var(--space-xs);
+  justify-self: end;
+  min-block-size: var(--control-height-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.about-device__github-link:hover,
+.about-device__github-link:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.about-device__github-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.about-device__github-link-icon {
+  block-size: 14px;
+  flex-shrink: 0;
+  inline-size: 14px;
 }
 
 .about-device__update-action {
@@ -237,7 +294,7 @@ function runSoftwareUpdateAction(): void {
   border-radius: var(--radius-md);
   display: grid;
   gap: var(--space-md);
-  grid-template-columns: minmax(140px, 200px) 1fr;
+  grid-template-columns: 100px minmax(0, 1fr);
   padding: var(--space-md);
 }
 
@@ -277,6 +334,7 @@ function runSoftwareUpdateAction(): void {
   line-height: 1.4;
 }
 
+.about-device__github-note,
 .about-device__update-note {
   color: var(--color-fg-muted);
   font-size: 12px;
@@ -314,11 +372,13 @@ function runSoftwareUpdateAction(): void {
 }
 
 @media (max-width: 640px) {
+  .about-device__github-card,
   .about-device__update-card {
     align-items: stretch;
     grid-template-columns: 1fr;
   }
 
+  .about-device__github-link,
   .about-device__update-action {
     justify-self: start;
   }
