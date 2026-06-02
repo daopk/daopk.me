@@ -486,6 +486,10 @@ watch(
 
 <style scoped lang="scss">
 .mobile-shell {
+  --mobile-shell-wallpaper-bottom-bleed: calc(
+    max(0px, env(safe-area-inset-top, 0px)) + max(0px, env(safe-area-inset-bottom, 0px))
+  );
+
   block-size: 100dvh;
   color: var(--color-fg);
   display: flex;
@@ -494,6 +498,13 @@ watch(
   isolation: isolate;
   overflow: clip;
   position: relative;
+}
+
+// iOS standalone + translucent status bars can leave body paint visible below
+// `100dvh`; bleed only the wallpaper so controls keep their safe-area padding.
+.mobile-shell :deep(.wallpaper) {
+  inset-block-end: calc(0px - var(--mobile-shell-wallpaper-bottom-bleed));
+  position: fixed;
 }
 
 .mobile-shell__body {
