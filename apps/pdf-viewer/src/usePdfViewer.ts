@@ -91,7 +91,6 @@ export interface PdfViewerBindings {
   goPrevious(): boolean;
   goNext(): boolean;
   setPage(page: number): boolean;
-  setScale(nextScale: number, point?: PdfViewerZoomPoint): boolean;
   previewScaleAt(nextScale: number, point: PdfViewerZoomPoint): boolean;
   commitPreviewScale(): Promise<boolean>;
   zoomIn(): boolean;
@@ -409,7 +408,7 @@ export function usePdfViewer({
     }
 
     const viewport = page.getViewport({ scale: 1, rotation: rotation.value });
-    pageBaseSize = viewportSize(viewport);
+    pageBaseSize = viewport;
     const availableWidth = Math.max(0, viewportEl.value?.clientWidth ?? 0);
     const nextScale = availableWidth > 0 ? clampScale(availableWidth / viewport.width) : 1;
     fitMode.value = "fit-width";
@@ -544,7 +543,7 @@ export function usePdfViewer({
         throw new Error("Canvas rendering is unavailable in this browser.");
       }
 
-      pageBaseSize = viewportSize(baseViewport);
+      pageBaseSize = baseViewport;
       const outputScale = Math.max(1, window.devicePixelRatio || 1);
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
@@ -731,7 +730,6 @@ export function usePdfViewer({
     goPrevious,
     goNext,
     setPage,
-    setScale,
     previewScaleAt,
     commitPreviewScale,
     zoomIn,
@@ -766,13 +764,6 @@ function safeNormalizePath(path: string): VfsPath | null {
   } catch {
     return null;
   }
-}
-
-function viewportSize(viewport: PdfViewportLike): PdfViewportLike {
-  return {
-    width: viewport.width,
-    height: viewport.height,
-  };
 }
 
 function applyCanvasDisplaySize(canvas: HTMLCanvasElement, size: PdfViewportLike): void {

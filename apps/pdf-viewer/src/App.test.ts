@@ -93,7 +93,6 @@ function makeViewer(
       pageNumber.value = page;
       return true;
     }),
-    setScale: vi.fn(() => true),
     previewScaleAt: vi.fn(() => true),
     commitPreviewScale: vi.fn(async () => true),
     zoomIn: vi.fn(() => true),

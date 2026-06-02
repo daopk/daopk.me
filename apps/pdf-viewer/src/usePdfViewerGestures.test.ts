@@ -182,6 +182,19 @@ describe("usePdfViewerGestures", () => {
     harness.unmount();
   });
 
+  it("clears pending wheel commits when detached", async () => {
+    vi.useFakeTimers();
+    const harness = mountGestures();
+    await nextTick();
+
+    harness.el.dispatchEvent(wheelEvent({ ctrlKey: true, deltaY: -100 }));
+    harness.unmount();
+    vi.runAllTimers();
+    await Promise.resolve();
+
+    expect(harness.viewer.commitPreviewScale).not.toHaveBeenCalled();
+  });
+
   it("previews Safari gesture zoom around the event point and commits on gesture end", async () => {
     const harness = mountGestures();
     await nextTick();

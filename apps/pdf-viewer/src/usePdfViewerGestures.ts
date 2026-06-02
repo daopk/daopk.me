@@ -94,10 +94,7 @@ export function usePdfViewerGestures(
 
   function scheduleWheelCommit(): void {
     clearWheelCommit();
-    wheelCommitTimer = window.setTimeout(() => {
-      wheelCommitTimer = undefined;
-      void viewer.commitPreviewScale();
-    }, WHEEL_COMMIT_DELAY_MS);
+    wheelCommitTimer = window.setTimeout(commitPreview, WHEEL_COMMIT_DELAY_MS);
   }
 
   function beginPinch(): void {
@@ -283,6 +280,7 @@ export function usePdfViewerGestures(
       return;
     }
 
+    clearWheelCommit();
     attachedEl.removeEventListener("pointerdown", onPointerDown);
     attachedEl.removeEventListener("pointermove", onPointerMove);
     attachedEl.removeEventListener("pointerup", onPointerEnd);
@@ -310,7 +308,6 @@ export function usePdfViewerGestures(
   );
 
   function dispose(): void {
-    clearWheelCommit();
     stopWatch();
     detach();
   }
