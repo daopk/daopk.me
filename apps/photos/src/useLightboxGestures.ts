@@ -38,9 +38,14 @@ export function focalTranslate(focalDelta: number, ratio: number, startTranslate
   return focalDelta * (1 - ratio) + ratio * startTranslate;
 }
 
-/** Bound a translation so a `scale`d element cannot be dragged past its edges. */
-export function clampTranslate(value: number, axisSize: number, scale: number): number {
-  const max = Math.max(0, (axisSize * (scale - 1)) / 2);
+/** Bound a translation so scaled content cannot be dragged past the viewport edges. */
+export function clampTranslate(
+  value: number,
+  viewportAxisSize: number,
+  scale: number,
+  contentAxisSize = viewportAxisSize,
+): number {
+  const max = Math.max(0, (contentAxisSize * scale - viewportAxisSize) / 2);
   return Math.min(max, Math.max(-max, value));
 }
 
@@ -66,6 +71,7 @@ export function resolveSwipe(
 }
 
 export interface UseLightboxGesturesOptions {
+  content?: Ref<HTMLElement | null | undefined>;
   onPrev?: () => void;
   onNext?: () => void;
   onClose?: () => void;
@@ -168,6 +174,26 @@ export function useLightboxGestures(
     };
   }
 
+  function contentSize(): { width: number; height: number } {
+    const content = options.content?.value;
+    if (content === null || content === undefined) {
+      if (attachedEl === undefined) {
+        return { width: 0, height: 0 };
+      }
+      const { width, height } = metrics(attachedEl);
+      return { width, height };
+    }
+
+    const width = content.offsetWidth;
+    const height = content.offsetHeight;
+    if (width > 0 && height > 0) {
+      return { width, height };
+    }
+
+    const rect = content.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+
   function applyClampedTranslate(tx: number, ty: number): void {
     if (attachedEl === undefined) {
       translateX.value = tx;
@@ -175,8 +201,9 @@ export function useLightboxGestures(
       return;
     }
     const { width, height } = metrics(attachedEl);
-    translateX.value = clampTranslate(tx, width, scale.value);
-    translateY.value = clampTranslate(ty, height, scale.value);
+    const content = contentSize();
+    translateX.value = clampTranslate(tx, width, scale.value, content.width);
+    translateY.value = clampTranslate(ty, height, scale.value, content.height);
   }
 
   function zoomAt(clientX: number, clientY: number, nextScale: number): void {

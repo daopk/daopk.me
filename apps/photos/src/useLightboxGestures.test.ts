@@ -52,6 +52,11 @@ describe("clampTranslate", () => {
     expect(clampTranslate(-1000, 200, 2)).toBe(-100);
     expect(clampTranslate(40, 200, 2)).toBe(40);
   });
+
+  it("uses content overflow when the viewport is larger than the image", () => {
+    expect(clampTranslate(1000, 300, 2, 100)).toBe(0);
+    expect(clampTranslate(1000, 300, 2, 500)).toBe(350);
+  });
 });
 
 describe("resolveSwipe", () => {

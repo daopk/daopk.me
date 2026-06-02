@@ -51,7 +51,9 @@ function onScrimClick(event: MouseEvent): void {
 }
 
 const stage = ref<HTMLElement | null>(null);
+const image = ref<HTMLImageElement | null>(null);
 const { transformStyle, isZoomed, reset } = useLightboxGestures(stage, {
+  content: image,
   onPrev: showPrevious,
   onNext: showNext,
   onClose: close,
@@ -105,6 +107,7 @@ watch(
 
       <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
         <img
+          ref="image"
           class="photos__lightbox-image"
           :style="transformStyle"
           :src="activePhoto.url"
@@ -130,6 +133,7 @@ watch(
 .photos__lightbox {
   align-items: center;
   background: color-mix(in oklab, var(--color-bg) 18%, rgb(0 0 0 / 82%));
+  box-sizing: border-box;
   display: flex;
   inset: 0;
   justify-content: center;
@@ -165,10 +169,13 @@ watch(
 
 .photos__stage {
   align-items: center;
+  block-size: 100%;
   display: flex;
+  inline-size: 100%;
   justify-content: center;
   max-block-size: 100%;
   max-inline-size: 100%;
+  min-block-size: 0;
   overflow: hidden;
   touch-action: none;
 }
@@ -203,6 +210,7 @@ watch(
   inset-block-start: 50%;
   transform: translateY(-50%);
   transition: background-color var(--duration-fast) var(--ease);
+  z-index: 1;
 }
 
 .photos__nav:hover,
