@@ -18,6 +18,16 @@ body {
   line-height: 1.4;
 }
 
+html[data-shell="mobile"],
+html[data-shell="mobile"] body {
+  // iOS standalone paints the home-indicator safe area from the document canvas.
+  background-color: var(--mobile-shell-page-background-color, var(--color-bg));
+  background-image: var(--mobile-shell-page-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
 @media (hover: none) and (pointer: coarse) {
   input,
   textarea,

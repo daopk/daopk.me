@@ -1,14 +1,34 @@
 <script setup lang="ts">
-import { computed, toRef } from "vue";
+import { computed, toRef, watchEffect } from "vue";
 
 import { useWallpaper } from "~/composables/useWallpaper";
+import type { Wallpaper as WallpaperModel } from "~/core/theme/wallpapers";
 import type { ShellId } from "~/types/shell";
 
 const props = defineProps<{
   readonly shellId: ShellId;
+  readonly syncPageBackground?: boolean;
 }>();
 
 const { current } = useWallpaper({ shellId: toRef(props, "shellId") });
+
+function cssUrl(value: string): string {
+  return `url("${value.replace(/["\\]/g, "\\$&")}")`;
+}
+
+function pageBackgroundVars(wallpaper: WallpaperModel): Record<string, string> {
+  if (wallpaper.type === "image") {
+    return {
+      "--mobile-shell-page-background-color": "transparent",
+      "--mobile-shell-page-background-image": cssUrl(wallpaper.value),
+    };
+  }
+
+  return {
+    "--mobile-shell-page-background-color": wallpaper.value,
+    "--mobile-shell-page-background-image": "none",
+  };
+}
 
 const layerStyle = computed(() => {
   const w = current.value;
@@ -21,6 +41,25 @@ const layerStyle = computed(() => {
     } as Record<string, string>;
   }
   return { background: w.value } as Record<string, string>;
+});
+
+watchEffect((onCleanup) => {
+  if (!props.syncPageBackground || typeof document === "undefined") {
+    return;
+  }
+
+  const rootStyle = document.documentElement.style;
+  const vars = pageBackgroundVars(current.value);
+
+  for (const [key, value] of Object.entries(vars)) {
+    rootStyle.setProperty(key, value);
+  }
+
+  onCleanup(() => {
+    for (const key of Object.keys(vars)) {
+      rootStyle.removeProperty(key);
+    }
+  });
 });
 </script>
 
