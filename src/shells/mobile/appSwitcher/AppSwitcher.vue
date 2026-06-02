@@ -154,12 +154,18 @@ function onScrimClick(event: MouseEvent): void {
 
 .app-switcher__header {
   align-items: center;
-  block-size: var(--app-switcher-header-h);
+  block-size: calc(var(--app-switcher-header-h) + var(--mobile-shell-safe-area-top, 0px));
   border-block-end: 1px solid var(--color-border);
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-md);
-  padding-inline: var(--app-switcher-padding-inline);
+  padding-block-start: var(--mobile-shell-safe-area-top, 0px);
+  padding-inline-end: calc(
+    var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-right, 0px)
+  );
+  padding-inline-start: calc(
+    var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-left, 0px)
+  );
 }
 
 .app-switcher__close,
@@ -219,7 +225,16 @@ function onScrimClick(event: MouseEvent): void {
   flex: 1 1 auto;
   min-block-size: 0;
   overflow-y: auto;
-  padding: var(--app-switcher-padding-inline);
+  padding-block-end: calc(
+    var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-bottom, 0px)
+  );
+  padding-block-start: var(--app-switcher-padding-inline);
+  padding-inline-end: calc(
+    var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-right, 0px)
+  );
+  padding-inline-start: calc(
+    var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-left, 0px)
+  );
 }
 
 .app-switcher__list {

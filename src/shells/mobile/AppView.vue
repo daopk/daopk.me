@@ -84,11 +84,13 @@ provide(AppChromeInjectionKey, {
 });
 
 const appContentSafeAreaStyle = computed<Record<string, string>>(() => ({
-  "--mobile-shell-app-safe-area-top": showTitlebar.value ? "0px" : "var(--app-view-safe-area-top)",
-  "--mobile-shell-app-safe-area-right": "var(--app-view-safe-area-right)",
-  "--mobile-shell-app-safe-area-bottom": "var(--app-view-safe-area-bottom)",
-  "--mobile-shell-app-safe-area-left": "var(--app-view-safe-area-left)",
-  "--mobile-shell-app-bottom-padding": "max(32px, var(--app-view-safe-area-bottom))",
+  "--mobile-shell-app-safe-area-top": showTitlebar.value
+    ? "0px"
+    : "var(--mobile-shell-safe-area-top, 0px)",
+  "--mobile-shell-app-safe-area-right": "var(--mobile-shell-safe-area-right, 0px)",
+  "--mobile-shell-app-safe-area-bottom": "var(--mobile-shell-safe-area-bottom, 0px)",
+  "--mobile-shell-app-safe-area-left": "var(--mobile-shell-safe-area-left, 0px)",
+  "--mobile-shell-app-bottom-padding": "max(32px, var(--mobile-shell-safe-area-bottom, 0px))",
 }));
 
 useEdgeSwipe(edgeSwipeSurface, {
@@ -216,11 +218,6 @@ watch(
 
 <style scoped lang="scss">
 .app-view {
-  --app-view-safe-area-top: max(0px, env(safe-area-inset-top, 0px));
-  --app-view-safe-area-right: max(0px, env(safe-area-inset-right, 0px));
-  --app-view-safe-area-bottom: max(0px, env(safe-area-inset-bottom, 0px));
-  --app-view-safe-area-left: max(0px, env(safe-area-inset-left, 0px));
-
   background: var(--color-bg);
   block-size: 100%;
   color: var(--color-fg);
@@ -269,14 +266,14 @@ watch(
 .app-view__chrome {
   align-items: center;
   background: var(--color-bg-elevated);
-  block-size: calc(48px + var(--app-view-safe-area-top));
+  block-size: calc(48px + var(--mobile-shell-safe-area-top, 0px));
   border-block-end: 1px solid var(--color-border);
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-sm);
-  padding-block-start: var(--app-view-safe-area-top);
-  padding-inline-end: calc(var(--space-md) + var(--app-view-safe-area-right));
-  padding-inline-start: calc(var(--space-md) + var(--app-view-safe-area-left));
+  padding-block-start: var(--mobile-shell-safe-area-top, 0px);
+  padding-inline-end: calc(var(--space-md) + var(--mobile-shell-safe-area-right, 0px));
+  padding-inline-start: calc(var(--space-md) + var(--mobile-shell-safe-area-left, 0px));
 }
 
 .app-view__back,

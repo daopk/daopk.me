@@ -491,6 +491,11 @@ watch(
 
 <style scoped lang="scss">
 .mobile-shell {
+  --mobile-shell-safe-area-top: max(0px, env(safe-area-inset-top, 0px));
+  --mobile-shell-safe-area-right: max(0px, env(safe-area-inset-right, 0px));
+  --mobile-shell-safe-area-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  --mobile-shell-safe-area-left: max(0px, env(safe-area-inset-left, 0px));
+
   block-size: 100vh;
   color: var(--color-fg);
   display: flex;

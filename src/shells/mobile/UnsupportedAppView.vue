@@ -67,11 +67,6 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .unsupported-app-view {
-  --unsupported-app-view-safe-area-top: max(0px, env(safe-area-inset-top, 0px));
-  --unsupported-app-view-safe-area-right: max(0px, env(safe-area-inset-right, 0px));
-  --unsupported-app-view-safe-area-bottom: max(0px, env(safe-area-inset-bottom, 0px));
-  --unsupported-app-view-safe-area-left: max(0px, env(safe-area-inset-left, 0px));
-
   background: var(--color-bg);
   block-size: 100%;
   color: var(--color-fg);
@@ -86,13 +81,13 @@ onMounted(() => {
 .unsupported-app-view__chrome {
   align-items: center;
   background: var(--color-bg-elevated);
-  block-size: calc(48px + var(--unsupported-app-view-safe-area-top));
+  block-size: calc(48px + var(--mobile-shell-safe-area-top, 0px));
   border-block-end: 1px solid var(--color-border);
   display: flex;
   gap: var(--space-sm);
-  padding-block-start: var(--unsupported-app-view-safe-area-top);
-  padding-inline-end: calc(var(--space-md) + var(--unsupported-app-view-safe-area-right));
-  padding-inline-start: calc(var(--space-md) + var(--unsupported-app-view-safe-area-left));
+  padding-block-start: var(--mobile-shell-safe-area-top, 0px);
+  padding-inline-end: calc(var(--space-md) + var(--mobile-shell-safe-area-right, 0px));
+  padding-inline-start: calc(var(--space-md) + var(--mobile-shell-safe-area-left, 0px));
 }
 
 .unsupported-app-view__back {
@@ -137,10 +132,9 @@ onMounted(() => {
   flex-direction: column;
   justify-content: center;
   min-block-size: 0;
-  padding-block: var(--space-xl)
-    calc(var(--space-xl) + var(--unsupported-app-view-safe-area-bottom));
-  padding-inline: calc(var(--space-xl) + var(--unsupported-app-view-safe-area-left))
-    calc(var(--space-xl) + var(--unsupported-app-view-safe-area-right));
+  padding-block: var(--space-xl) calc(var(--space-xl) + var(--mobile-shell-safe-area-bottom, 0px));
+  padding-inline: calc(var(--space-xl) + var(--mobile-shell-safe-area-left, 0px))
+    calc(var(--space-xl) + var(--mobile-shell-safe-area-right, 0px));
   text-align: center;
 }
 

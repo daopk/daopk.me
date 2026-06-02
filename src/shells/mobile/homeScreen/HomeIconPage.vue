@@ -56,16 +56,16 @@ defineExpose({ scrollEl });
   overscroll-behavior: contain;
   overflow-y: auto;
   padding-block-end: calc(
-    var(--home-screen-padding-block) + 96px + max(0px, env(safe-area-inset-bottom, 0px))
+    var(--home-screen-padding-block) + 96px + var(--mobile-shell-safe-area-bottom, 0px)
   );
   padding-block-start: calc(
-    var(--home-screen-padding-block) + max(0px, env(safe-area-inset-top, 0px))
+    var(--home-screen-padding-block) + var(--mobile-shell-safe-area-top, 0px)
   );
   padding-inline-end: calc(
-    var(--home-screen-padding-inline) + max(0px, env(safe-area-inset-right, 0px))
+    var(--home-screen-padding-inline) + var(--mobile-shell-safe-area-right, 0px)
   );
   padding-inline-start: calc(
-    var(--home-screen-padding-inline) + max(0px, env(safe-area-inset-left, 0px))
+    var(--home-screen-padding-inline) + var(--mobile-shell-safe-area-left, 0px)
   );
   position: relative;
 }

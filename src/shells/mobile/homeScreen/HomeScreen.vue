@@ -122,7 +122,7 @@ defineExpose({ scrollEl });
 
 .home-screen__indicator {
   flex: 0 0 auto;
-  padding-block-end: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+  padding-block-end: calc(var(--space-sm) + var(--mobile-shell-safe-area-bottom, 0px));
   padding-block-start: var(--space-sm);
 }
 
@@ -132,13 +132,13 @@ defineExpose({ scrollEl });
   block-size: 44px;
   border: 1px solid var(--color-border);
   border-radius: 50%;
-  bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--space-lg) + var(--mobile-shell-safe-area-bottom, 0px));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   color: var(--color-fg);
   cursor: pointer;
   display: inline-flex;
   inline-size: 44px;
-  inset-inline-end: calc(var(--space-lg) + env(safe-area-inset-right, 0px));
+  inset-inline-end: calc(var(--space-lg) + var(--mobile-shell-safe-area-right, 0px));
   justify-content: center;
   opacity: 1;
   position: fixed;

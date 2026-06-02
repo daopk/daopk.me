@@ -112,7 +112,7 @@ describe("AppView", () => {
 
     const body = wrapper.find(".app-view__body").element as HTMLElement;
     expect(body.style.getPropertyValue("--mobile-shell-app-bottom-padding")).toBe(
-      "max(32px, var(--app-view-safe-area-bottom))",
+      "max(32px, var(--mobile-shell-safe-area-bottom, 0px))",
     );
 
     wrapper.unmount();
@@ -272,7 +272,7 @@ describe("AppView", () => {
 
     expect(wrapper.find(".app-view__chrome").exists()).toBe(false);
     expect(wrapper.find(".app-view__body").attributes("style")).toContain(
-      "--mobile-shell-app-safe-area-top: var(--app-view-safe-area-top)",
+      "--mobile-shell-app-safe-area-top: var(--mobile-shell-safe-area-top, 0px)",
     );
 
     wrapper.unmount();
