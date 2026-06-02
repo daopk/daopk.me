@@ -22,6 +22,7 @@ export function pwaPlugin(): PluginOption {
       start_url: "/",
       scope: "/",
       display: "standalone",
+      orientation: "portrait",
       background_color: "#f7f3fa",
       theme_color: "#5a2d82",
       icons: [
