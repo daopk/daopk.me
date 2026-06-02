@@ -102,10 +102,16 @@ function onRetryClick(): void {
     BlinkMacSystemFont,
     sans-serif;
   inset: 0;
-  min-height: 100dvh;
+  min-height: 100vh;
   padding: clamp(var(--space-xl), 5vw, 48px);
   place-content: center;
   position: fixed;
+}
+
+@supports (min-height: 100svh) {
+  .boot-host {
+    min-height: 100svh;
+  }
 }
 
 .boot-host--failed {

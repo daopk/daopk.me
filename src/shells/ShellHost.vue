@@ -102,23 +102,22 @@ function focusShellMain(rootEl: Element): void {
 <style scoped lang="scss">
 .shell-host {
   isolation: isolate;
-  min-block-size: 100dvh;
+  min-block-size: 100vh;
+}
+
+@supports (min-block-size: 100svh) {
+  .shell-host {
+    min-block-size: 100svh;
+  }
 }
 
 .shell-fade-enter-active,
 .shell-fade-leave-active {
-  transition: opacity var(--duration-base) var(--ease);
+  transition: none;
 }
 
 .shell-fade-enter-from,
 .shell-fade-leave-to {
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shell-fade-enter-active,
-  .shell-fade-leave-active {
-    transition-duration: var(--duration-fast);
-  }
+  opacity: 1;
 }
 </style>

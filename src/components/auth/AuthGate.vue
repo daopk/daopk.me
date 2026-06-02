@@ -495,10 +495,16 @@ onUnmounted(() => {
   background-size: cover;
   color: var(--color-fg);
   display: grid;
-  min-block-size: 100dvh;
+  min-block-size: 100vh;
   padding: clamp(var(--space-lg), 5vw, 56px);
   place-items: center;
   position: relative;
+}
+
+@supports (min-block-size: 100svh) {
+  .auth-gate {
+    min-block-size: 100svh;
+  }
 }
 
 .auth-gate__shell {

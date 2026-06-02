@@ -68,7 +68,7 @@ function labelFor(index: number): string {
   border-radius: 50%;
   display: inline-block;
   inline-size: 8px;
-  transition: background var(--duration-fast) var(--ease);
+  transition: none;
 }
 
 .home-page-indicator__dot--active .home-page-indicator__dot-glyph {

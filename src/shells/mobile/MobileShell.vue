@@ -486,7 +486,7 @@ watch(
 
 <style scoped lang="scss">
 .mobile-shell {
-  block-size: 100dvh;
+  block-size: 100vh;
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
@@ -494,6 +494,12 @@ watch(
   isolation: isolate;
   overflow: clip;
   position: relative;
+}
+
+@supports (block-size: 100svh) {
+  .mobile-shell {
+    block-size: 100svh;
+  }
 }
 
 .mobile-shell__body {

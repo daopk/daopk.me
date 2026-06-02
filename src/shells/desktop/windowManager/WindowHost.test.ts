@@ -148,12 +148,7 @@ function commandCtx(kernel: Kernel, payload: Record<string, unknown>): CommandCo
   };
 }
 
-function rect(bounds: {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}): DOMRect {
+function rect(bounds: { top: number; left: number; width: number; height: number }): DOMRect {
   return {
     x: bounds.left,
     y: bounds.top,

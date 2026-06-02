@@ -142,19 +142,11 @@ defineExpose({ scrollEl });
   justify-content: center;
   opacity: 1;
   position: fixed;
-  transition:
-    background var(--duration-fast) var(--ease),
-    opacity 180ms var(--ease),
-    transform var(--duration-fast) var(--ease);
-  will-change: opacity;
+  transition: none;
   z-index: 2;
 
   &:hover {
     background: var(--color-bg-subtle);
-  }
-
-  &:active {
-    transform: scale(0.96);
   }
 
   &:focus-visible {
@@ -166,14 +158,5 @@ defineExpose({ scrollEl });
 .home-screen__recents-fab--hidden {
   opacity: 0;
   pointer-events: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-screen__recents-fab {
-    transition:
-      background var(--duration-fast) var(--ease),
-      opacity var(--duration-fast) var(--ease),
-      transform var(--duration-fast) var(--ease);
-  }
 }
 </style>

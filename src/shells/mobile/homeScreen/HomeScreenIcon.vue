@@ -95,19 +95,10 @@ function onActivate(): void {
   inline-size: var(--home-screen-icon-size);
   justify-content: center;
   position: relative;
-  transition:
-    transform var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease),
-    opacity var(--duration-fast) var(--ease);
-
-  .home-icon:active &,
-  .home-icon:focus-visible & {
-    transform: scale(0.96);
-  }
+  transition: none;
 
   .home-icon--launching & > :first-child {
     opacity: 0.35;
-    transition: opacity var(--duration-fast) var(--ease);
   }
 }
 
@@ -122,27 +113,6 @@ function onActivate(): void {
   transform-origin: center center;
 
   > svg {
-    animation: home-icon-spin 900ms linear infinite;
-  }
-}
-
-@keyframes home-icon-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-icon__glyph {
-    transition-duration: 0ms;
-  }
-
-  .home-icon:active .home-icon__glyph,
-  .home-icon:focus-visible .home-icon__glyph {
-    transform: none;
-  }
-
-  .home-icon__spinner > svg {
     animation: none;
   }
 }

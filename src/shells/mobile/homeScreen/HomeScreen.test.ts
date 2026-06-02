@@ -228,7 +228,7 @@ describe("HomeScreen multi-page (M1.4)", () => {
     expect(wrapper.find(".mobile-widgets-page__empty").exists()).toBe(true);
   });
 
-  it("keeps the Recents FAB mounted and fades it inert on the widgets page", async () => {
+  it("keeps the Recents FAB mounted and inert on the widgets page", async () => {
     const wrapper = mount(HomeScreen, {
       attachTo: document.body,
       props: { recentsAvailable: true },
