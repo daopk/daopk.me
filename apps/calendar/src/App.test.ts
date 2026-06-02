@@ -320,15 +320,15 @@ describe("Calendar App.vue", () => {
     expectNoViewSwitcher();
     expectNoSidePanelOrSubtitle();
     expect(dayButton("2026-05-26")).toBeInstanceOf(HTMLButtonElement);
-    expect(scrollMonthSections()).toHaveLength(13);
-    expect(scrollMonthLabels()[0]).toBe("Nov 2025");
-    expect(scrollMonthLabels().at(-1)).toBe("Nov 2026");
-    expect(monthHeading("Nov 2025").style.gridColumn).toBe("5 / span 3");
-    expect(monthHeading("Nov 2025").style.justifySelf).toBe("center");
-    expect(monthHeading("Dec 2025").style.gridColumn).toBe("1 / span 2");
-    expect(monthHeading("Dec 2025").style.justifySelf).toBe("start");
-    expect(monthHeading("Feb 2026").style.gridColumn).toBe("6 / span 2");
-    expect(monthHeading("Feb 2026").style.justifySelf).toBe("end");
+    expect(scrollMonthSections()).toHaveLength(37);
+    expect(scrollMonthLabels()[0]).toBe("Nov 2024");
+    expect(scrollMonthLabels().at(-1)).toBe("Nov 2027");
+    expect(monthHeading("Nov 2024").style.gridColumn).toBe("4 / span 3");
+    expect(monthHeading("Nov 2024").style.justifySelf).toBe("center");
+    expect(monthHeading("Dec 2024").style.gridColumn).toBe("6 / span 2");
+    expect(monthHeading("Dec 2024").style.justifySelf).toBe("end");
+    expect(monthHeading("Sep 2025").style.gridColumn).toBe("1 / span 2");
+    expect(monthHeading("Sep 2025").style.justifySelf).toBe("start");
     expect(document.body.querySelector(".calendar__month-panel")).toBeNull();
     expect(document.body.querySelector('button[aria-label="Agenda view"]')).toBeNull();
 
@@ -376,9 +376,9 @@ describe("Calendar App.vue", () => {
     root.dispatchEvent(new Event("scroll"));
     await flushPromises();
 
-    expect(scrollMonthSections()).toHaveLength(19);
-    expect(scrollMonthKeys()[0]).toBe("2026-05");
-    expect(scrollMonthKeys().at(-1)).toBe("2027-11");
+    expect(scrollMonthSections()).toHaveLength(60);
+    expect(scrollMonthKeys()[0]).toBe("2025-12");
+    expect(scrollMonthKeys().at(-1)).toBe("2030-11");
 
     root.scrollTop = 0;
     root.dispatchEvent(new Event("scroll"));
@@ -386,9 +386,9 @@ describe("Calendar App.vue", () => {
     root.dispatchEvent(new Event("scroll"));
     await flushPromises();
 
-    expect(scrollMonthSections()).toHaveLength(19);
-    expect(scrollMonthKeys()[0]).toBe("2025-05");
-    expect(scrollMonthKeys().at(-1)).toBe("2026-11");
+    expect(scrollMonthSections()).toHaveLength(60);
+    expect(scrollMonthKeys()[0]).toBe("2022-12");
+    expect(scrollMonthKeys().at(-1)).toBe("2027-11");
 
     wrapper.unmount();
   });

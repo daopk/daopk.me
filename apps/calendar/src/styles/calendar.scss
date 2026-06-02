@@ -318,6 +318,11 @@
     overscroll-behavior: contain;
     overflow: auto;
     scroll-padding-block-start: 30px;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .calendar__view--scroll-months {

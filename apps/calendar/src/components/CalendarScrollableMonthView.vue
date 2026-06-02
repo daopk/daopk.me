@@ -10,9 +10,9 @@ import {
 } from "../dateGrid";
 import { formatMonthLabel, formatShortMonthLabel } from "../utils/calendarLabels";
 
-const INITIAL_MONTH_RADIUS = 6;
-const MONTH_BUFFER_CHUNK = 6;
-const MAX_RENDERED_MONTHS = INITIAL_MONTH_RADIUS * 2 + 1 + MONTH_BUFFER_CHUNK;
+const INITIAL_MONTH_RADIUS = 18;
+const MONTH_BUFFER_CHUNK = 18;
+const MAX_RENDERED_MONTHS = 60;
 const SCROLL_EDGE_PX = 640;
 
 const props = defineProps<{
