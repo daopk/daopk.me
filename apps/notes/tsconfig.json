@@ -1,5 +1,4 @@
 {
-  "extends": "../tsconfig.base.json",
-  "include": ["src/**/*.ts", "src/**/*.vue"],
-  "exclude": ["**/*.test.ts"]
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.test.json" }]
 }
