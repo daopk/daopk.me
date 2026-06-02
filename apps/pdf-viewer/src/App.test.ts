@@ -1,5 +1,5 @@
 import { mount } from "@vue/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, ref } from "vue";
 
 import {
@@ -22,6 +22,72 @@ const mocks = vi.hoisted(() => ({
   usePdfViewer: vi.fn(),
   useVfs: vi.fn(() => ({ stat: vi.fn(), read: vi.fn() })),
 }));
+
+function click(element: Element): void {
+  element.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: false,
+    }),
+  );
+}
+
+async function flushReka(): Promise<void> {
+  await nextTick();
+  await nextTick();
+}
+
+function menuItem(label: string): Element {
+  const item = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find((candidate) =>
+    candidate.textContent?.includes(label),
+  );
+  expect(item).not.toBeUndefined();
+  return item!;
+}
+
+function sheetOption(label: string): Element {
+  const item = Array.from(document.body.querySelectorAll('[role="option"]')).find((candidate) =>
+    candidate.textContent?.includes(label),
+  );
+  expect(item).not.toBeUndefined();
+  return item!;
+}
+
+function toolbarRect(width: number, height = 44): DOMRect {
+  return {
+    bottom: height,
+    height,
+    left: 0,
+    right: width,
+    top: 0,
+    width,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+function stubToolbarLayout(options: { readonly controlsWidth: number }): void {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function clientWidth() {
+    const el = this as HTMLElement;
+    if (el.classList.contains("pdf-viewer__controls")) {
+      return options.controlsWidth;
+    }
+    return 0;
+  });
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function rect() {
+    const el = this as HTMLElement;
+    if (el.classList.contains("pdf-viewer__page-group")) {
+      return toolbarRect(196);
+    }
+    if (el.classList.contains("ds-kit-icon-button")) {
+      return toolbarRect(44);
+    }
+    return toolbarRect(0, 0);
+  });
+}
 
 vi.mock("./usePdfViewer", () => ({
   usePdfViewer: mocks.usePdfViewer,
@@ -108,7 +174,7 @@ function mountPdfViewer(
   viewer: PdfViewerBindings,
   context = makeContext(),
   kernel = makeKernel(),
-  options: { readonly appChrome?: AppChromeController } = {},
+  options: { readonly appChrome?: AppChromeController; readonly attachTo?: HTMLElement } = {},
 ) {
   mocks.usePdfViewer.mockReturnValue(viewer);
   mocks.useKernel.mockReturnValue(kernel);
@@ -119,14 +185,28 @@ function mountPdfViewer(
     provide[AppChromeInjectionKey as symbol] = options.appChrome;
   }
   return mount(App, {
+    attachTo: options.attachTo,
     global: {
       provide,
     },
   });
 }
 
+beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  );
+});
+
 afterEach(() => {
+  document.body.innerHTML = "";
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("PDF Viewer App.vue", () => {
@@ -250,6 +330,94 @@ describe("PDF Viewer App.vue", () => {
     expect(viewer.rotateClockwise).toHaveBeenCalledTimes(1);
     expect(viewer.download).toHaveBeenCalledTimes(1);
     expect(viewer.setPage).toHaveBeenCalledWith(2);
+
+    wrapper.unmount();
+  });
+
+  it("selects pages from the mobile page sheet", async () => {
+    const viewer = makeViewer({
+      status: "ready",
+      title: "book.pdf",
+      sourceKind: "file",
+      pageNumber: 1,
+      pageCount: 3,
+    });
+    const wrapper = mountPdfViewer(viewer, makeContext(), makeKernel(), {
+      attachTo: document.body,
+    });
+
+    click(wrapper.get('button[aria-label="Select page 1 / 3"]').element);
+    await flushReka();
+
+    expect(document.body.querySelector('[role="listbox"]')).toBeInstanceOf(HTMLElement);
+    expect(
+      Array.from(document.body.querySelectorAll('[role="option"]')).map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(["Page 1", "Page 2", "Page 3"]);
+
+    click(sheetOption("Page 2"));
+    await flushReka();
+
+    expect(viewer.setPage).toHaveBeenCalledWith(2);
+    expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it("wires overflow menu controls to secondary viewer actions", async () => {
+    stubToolbarLayout({ controlsWidth: 344 });
+    const viewer = makeViewer({
+      status: "ready",
+      title: "book.pdf",
+      sourceKind: "file",
+      pageNumber: 1,
+      pageCount: 3,
+    });
+    const wrapper = mountPdfViewer(viewer, makeContext(), makeKernel(), {
+      attachTo: document.body,
+    });
+    const openSpy = vi
+      .spyOn(wrapper.get('input[type="file"]').element, "click")
+      .mockImplementation(() => {});
+
+    async function openMoreMenu(): Promise<void> {
+      await flushReka();
+      click(wrapper.get('button[aria-label="More PDF tools"]').element);
+      await flushReka();
+    }
+
+    await openMoreMenu();
+    expect(
+      Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(["Open PDF", "Zoom out", "Zoom in", "Fit width", "Rotate clockwise", "Download PDF"]);
+
+    click(menuItem("Open PDF"));
+    await flushReka();
+    await openMoreMenu();
+    click(menuItem("Zoom out"));
+    await flushReka();
+    await openMoreMenu();
+    click(menuItem("Zoom in"));
+    await flushReka();
+    await openMoreMenu();
+    click(menuItem("Fit width"));
+    await flushReka();
+    await openMoreMenu();
+    click(menuItem("Rotate clockwise"));
+    await flushReka();
+    await openMoreMenu();
+    click(menuItem("Download PDF"));
+    await flushReka();
+
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(viewer.zoomOut).toHaveBeenCalledTimes(1);
+    expect(viewer.zoomIn).toHaveBeenCalledTimes(1);
+    expect(viewer.fitWidth).toHaveBeenCalledTimes(1);
+    expect(viewer.rotateClockwise).toHaveBeenCalledTimes(1);
+    expect(viewer.download).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });
