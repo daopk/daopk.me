@@ -5,7 +5,10 @@
   inline-size: min(760px, 100%);
   margin-inline: auto;
   min-block-size: 100%;
-  padding: max(72px, var(--space-lg)) var(--space-lg) var(--space-lg);
+  padding: max(72px, var(--baby-touch-safe-area-top) + var(--space-lg))
+    max(var(--space-lg), var(--baby-touch-safe-area-right) + var(--space-lg))
+    max(var(--space-lg), var(--baby-touch-safe-area-bottom) + var(--space-lg))
+    max(var(--space-lg), var(--baby-touch-safe-area-left) + var(--space-lg));
   position: relative;
 }
 
@@ -20,7 +23,7 @@
   cursor: pointer;
   display: inline-flex;
   inline-size: 48px;
-  inset-block-start: max(14px, env(safe-area-inset-top, 0px) + 10px);
+  inset-block-start: max(14px, var(--baby-touch-safe-area-top) + 10px);
   justify-content: center;
   position: absolute;
   transition:
@@ -30,11 +33,11 @@
 }
 
 .baby-touch__gallery-open {
-  inset-inline-start: max(14px, env(safe-area-inset-left, 0px) + 10px);
+  inset-inline-start: max(14px, var(--baby-touch-safe-area-left) + 10px);
 }
 
 .baby-touch__hide-app {
-  inset-inline-end: max(14px, env(safe-area-inset-right, 0px) + 10px);
+  inset-inline-end: max(14px, var(--baby-touch-safe-area-right) + 10px);
 }
 
 .baby-touch__gallery-open:hover,

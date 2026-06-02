@@ -13,6 +13,22 @@
   --baby-touch-home-fg: rgb(39 46 58);
   --baby-touch-home-muted: rgb(78 91 105);
   --baby-touch-panel-border: rgb(255 255 255 / 0.86);
+  --baby-touch-safe-area-top: var(
+    --mobile-shell-app-safe-area-top,
+    max(0px, env(safe-area-inset-top, 0px))
+  );
+  --baby-touch-safe-area-right: var(
+    --mobile-shell-app-safe-area-right,
+    max(0px, env(safe-area-inset-right, 0px))
+  );
+  --baby-touch-safe-area-bottom: var(
+    --mobile-shell-app-safe-area-bottom,
+    max(0px, env(safe-area-inset-bottom, 0px))
+  );
+  --baby-touch-safe-area-left: var(
+    --mobile-shell-app-safe-area-left,
+    max(0px, env(safe-area-inset-left, 0px))
+  );
 
   background: var(--baby-touch-bg);
   block-size: 100%;
@@ -71,4 +87,28 @@
 
 .baby-touch--game {
   overflow: hidden;
+}
+
+html[data-shell="mobile"] .baby-touch {
+  block-size: 100vh;
+  min-block-size: 100vh;
+}
+
+html[data-shell="mobile"] .baby-touch--landscape-right {
+  --baby-touch-safe-area-top: var(
+    --mobile-shell-app-safe-area-right,
+    max(0px, env(safe-area-inset-right, 0px))
+  );
+  --baby-touch-safe-area-right: var(
+    --mobile-shell-app-safe-area-bottom,
+    max(0px, env(safe-area-inset-bottom, 0px))
+  );
+  --baby-touch-safe-area-bottom: var(
+    --mobile-shell-app-safe-area-left,
+    max(0px, env(safe-area-inset-left, 0px))
+  );
+  --baby-touch-safe-area-left: var(
+    --mobile-shell-app-safe-area-top,
+    max(0px, env(safe-area-inset-top, 0px))
+  );
 }

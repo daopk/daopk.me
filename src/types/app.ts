@@ -19,9 +19,11 @@ export interface WindowDefaults {
 }
 
 export type AppChromeTitlebarVisibility = "visible" | "hidden";
+export type AppChromeEdgeSwipe = "enabled" | "disabled";
 
 export interface AppMobileChromeManifest {
   titlebar?: AppChromeTitlebarVisibility;
+  edgeSwipe?: AppChromeEdgeSwipe;
 }
 
 export interface AppChromeManifest {

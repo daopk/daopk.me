@@ -418,6 +418,32 @@ describe("AppView", () => {
     wrapper.unmount();
   });
 
+  it("does not attach default edge-swipe back when mobile chrome disables it", async () => {
+    currentKernel = makeKernel([manifest({ chrome: { mobile: { edgeSwipe: "disabled" } } })]);
+
+    const wrapper = mount(AppView, {
+      props: {
+        frame: { frameId: "f-no-edge-swipe", handleId: "h-no-edge-swipe", manifestId: "alpha" },
+        title: "Alpha",
+        isCurrent: true,
+      },
+      attachTo: document.body,
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    const surface = wrapper.find("section.app-view").element as HTMLElement;
+
+    surface.dispatchEvent(makePointerEvent("pointerdown", { x: 5, y: 400 }));
+    surface.dispatchEvent(makePointerEvent("pointermove", { x: 200, y: 400 }));
+    surface.dispatchEvent(makePointerEvent("pointerup", { x: 200, y: 400 }));
+
+    expect(wrapper.emitted("back")).toBeFalsy();
+
+    wrapper.unmount();
+  });
+
   it("drops `aria-current` when isCurrent is false (background frame)", async () => {
     const wrapper = mount(AppView, {
       props: {

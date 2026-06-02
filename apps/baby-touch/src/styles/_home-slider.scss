@@ -4,8 +4,8 @@
   block-size: var(--baby-touch-slider-size);
   cursor: grab;
   inline-size: clamp(236px, 34vw, 312px);
-  inset-block-end: max(24px, env(safe-area-inset-bottom, 0px) + 18px);
-  inset-inline-start: max(24px, env(safe-area-inset-left, 0px) + 18px);
+  inset-block-end: max(24px, var(--baby-touch-safe-area-bottom) + 18px);
+  inset-inline-start: max(24px, var(--baby-touch-safe-area-left) + 18px);
   outline: none;
   pointer-events: auto;
   position: absolute;

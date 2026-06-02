@@ -62,6 +62,10 @@ const resolvedTitlebar = computed<AppChromeTitlebarVisibility>(
   () => chromeTitlebar.value ?? manifestTitlebar.value,
 );
 const showTitlebar = computed(() => resolvedTitlebar.value !== "hidden");
+const edgeSwipeEnabled = computed(
+  () => manifest.value?.chrome?.mobile?.edgeSwipe !== "disabled",
+);
+const edgeSwipeSurface = ref<HTMLElement | null>(null);
 
 provide(AppChromeInjectionKey, {
   setTitle(title) {
@@ -91,7 +95,7 @@ const appContentSafeAreaStyle = computed<Record<string, string>>(() => ({
   "--mobile-shell-app-bottom-padding": "max(32px, var(--app-view-safe-area-bottom))",
 }));
 
-useEdgeSwipe(surface, {
+useEdgeSwipe(edgeSwipeSurface, {
   edge: "left",
   edgeThreshold: 24,
   distanceThreshold: 80,
@@ -103,6 +107,14 @@ useEdgeSwipe(surface, {
   },
   acceptMouse: false,
 });
+
+watch(
+  [surface, edgeSwipeEnabled],
+  ([nextSurface, nextEnabled]) => {
+    edgeSwipeSurface.value = nextEnabled ? nextSurface : null;
+  },
+  { immediate: true, flush: "post" },
+);
 
 function dispatchBack(): void {
   const action = chromeBackAction.value;

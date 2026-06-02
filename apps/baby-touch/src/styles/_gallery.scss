@@ -4,8 +4,10 @@
   inline-size: min(980px, 100%);
   margin-inline: auto;
   min-block-size: 100%;
-  padding: max(26px, env(safe-area-inset-top, 0px) + 18px) var(--space-lg)
-    max(var(--space-xl), env(safe-area-inset-bottom, 0px) + var(--space-lg));
+  padding: max(26px, var(--baby-touch-safe-area-top) + 18px)
+    max(var(--space-lg), var(--baby-touch-safe-area-right) + var(--space-lg))
+    max(var(--space-xl), var(--baby-touch-safe-area-bottom) + var(--space-lg))
+    max(var(--space-lg), var(--baby-touch-safe-area-left) + var(--space-lg));
 }
 
 .baby-touch__gallery-topbar {

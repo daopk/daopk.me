@@ -63,7 +63,7 @@ function hideApp(): void {
     class="baby-touch"
     :class="appClasses"
     layout="block"
-    :safe-area="screen !== 'game'"
+    :safe-area="false"
     aria-label="Baby Touch"
   >
     <div
