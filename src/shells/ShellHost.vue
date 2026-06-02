@@ -102,13 +102,7 @@ function focusShellMain(rootEl: Element): void {
 <style scoped lang="scss">
 .shell-host {
   isolation: isolate;
-  min-block-size: 100vh;
-}
-
-@supports (min-block-size: 100svh) {
-  .shell-host {
-    min-block-size: 100svh;
-  }
+  min-block-size: var(--app-viewport-block-size);
 }
 
 .shell-fade-enter-active,

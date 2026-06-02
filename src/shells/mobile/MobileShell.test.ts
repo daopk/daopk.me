@@ -735,9 +735,9 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     }
   });
 
-  it("M1.3.X-anim — review nit #5: switcher opens BEFORE the rAF mount flag flips (race window)", async () => {
-    // Launch alpha; do NOT advance rAF yet. Open switcher in the same
-    // switcher's `inert` + `aria-hidden` don't remove the foreground
+  it("M1.3.X-anim — review nit #5: switcher opened during app entry keeps foreground class", async () => {
+    // Launch alpha and open the switcher before any animation duration elapses.
+    // The switcher's `inert` + `aria-hidden` don't remove the foreground class.
     const wrapper = mount(MobileShell, { attachTo: document.body });
     try {
       await wrapper.findComponent(HomeScreenIcon).trigger("click");
@@ -748,12 +748,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await flushPromises();
       await nextTick();
 
-      vi.runOnlyPendingTimers();
-      await flushPromises();
-      await nextTick();
-
       const appView = wrapper.find("section.app-view");
-      expect(appView.classes()).toContain("app-view--anim-active");
       expect(appView.classes()).toContain("app-view--foreground");
       expect(appView.attributes("inert")).toBeDefined();
       expect(appView.attributes("aria-current")).toBeUndefined(); // switcher steals current
@@ -909,10 +904,6 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     const wrapper = mount(MobileShell, { attachTo: document.body });
 
     await wrapper.findComponent(HomeScreenIcon).trigger("click");
-    await flushPromises();
-    await nextTick();
-    // AppView's `mounted` flag flips after a `requestAnimationFrame`
-    vi.runOnlyPendingTimers();
     await flushPromises();
     await nextTick();
 

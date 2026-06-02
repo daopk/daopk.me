@@ -477,15 +477,8 @@ describe("AppView", () => {
 
     await flushPromises();
     await nextTick();
-    await new Promise<void>((r) =>
-      typeof window.requestAnimationFrame === "function"
-        ? window.requestAnimationFrame(() => r())
-        : setTimeout(r, 0),
-    );
-    await nextTick();
 
     const section = wrapper.find("section.app-view");
-    expect(section.classes()).toContain("app-view--anim-active");
     expect(section.classes()).toContain("app-view--foreground");
 
     wrapper.unmount();
@@ -503,15 +496,8 @@ describe("AppView", () => {
 
     await flushPromises();
     await nextTick();
-    await new Promise<void>((r) =>
-      typeof window.requestAnimationFrame === "function"
-        ? window.requestAnimationFrame(() => r())
-        : setTimeout(r, 0),
-    );
-    await nextTick();
 
     const section = wrapper.find("section.app-view");
-    expect(section.classes()).toContain("app-view--anim-active");
     expect(section.classes()).not.toContain("app-view--foreground");
 
     wrapper.unmount();
@@ -531,12 +517,6 @@ describe("AppView", () => {
     });
 
     await flushPromises();
-    await nextTick();
-    await new Promise<void>((r) =>
-      typeof window.requestAnimationFrame === "function"
-        ? window.requestAnimationFrame(() => r())
-        : setTimeout(r, 0),
-    );
     await nextTick();
 
     const section = wrapper.find("section.app-view");

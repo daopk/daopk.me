@@ -4,10 +4,25 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @include meta.load-css("reset");
 
+:root {
+  --app-viewport-block-size: 100vh;
+}
+
+@supports (block-size: 100dvh) {
+  :root {
+    --app-viewport-block-size: 100dvh;
+  }
+}
+
 html,
 body {
+  min-block-size: var(--app-viewport-block-size);
   overscroll-behavior: none;
   touch-action: manipulation;
+}
+
+#app {
+  min-block-size: var(--app-viewport-block-size);
 }
 
 body {
@@ -16,6 +31,12 @@ body {
   background-color: var(--color-bg);
   color: var(--color-fg);
   line-height: 1.4;
+}
+
+html[data-shell="mobile"],
+html[data-shell="mobile"] body,
+html[data-shell="mobile"] #app {
+  block-size: var(--app-viewport-block-size);
 }
 
 html[data-shell="mobile"],

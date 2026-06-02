@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft, Layers2, Minimize2 } from "~/icons/lucide";
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  provide,
-  ref,
-  shallowRef,
-  watch,
-} from "vue";
+import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "vue";
 
 import { useEdgeSwipe } from "~/composables/useEdgeSwipe";
 
@@ -71,32 +62,6 @@ const appContentSafeAreaStyle = {
   "--mobile-shell-app-bottom-padding": "max(32px, var(--app-view-safe-area-bottom))",
 };
 
-const mounted = ref(false);
-
-/**
- * `disposed` latches true in `onBeforeUnmount` so the scheduled rAF /
- * microtask callback from `scheduleMountFlag` skips state mutation
- * after teardown. Without this, dismissing a freshly-launched frame
- * before its first paint commits would trigger a Vue "set on unmounted
- * instance" warning + a wasted re-render.
- */
-let disposed = false;
-
-function scheduleMountFlag(callback: () => void): void {
-  const guarded = (): void => {
-    if (disposed) {
-      return;
-    }
-    callback();
-  };
-
-  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-    window.requestAnimationFrame(guarded);
-    return;
-  }
-  void Promise.resolve().then(guarded);
-}
-
 useEdgeSwipe(surface, {
   edge: "left",
   edgeThreshold: 24,
@@ -138,16 +103,9 @@ function focusBackButton(): void {
 }
 
 onMounted(() => {
-  scheduleMountFlag(() => {
-    mounted.value = true;
-    if (props.isCurrent) {
-      focusBackButton();
-    }
-  });
-});
-
-onBeforeUnmount(() => {
-  disposed = true;
+  if (props.isCurrent) {
+    focusBackButton();
+  }
 });
 
 watch(
@@ -165,8 +123,7 @@ watch(
     ref="surface"
     class="app-view"
     :class="{
-      'app-view--anim-active': mounted,
-      'app-view--foreground': mounted && animateForeground,
+      'app-view--foreground': animateForeground,
     }"
     :data-handle-id="frame.handleId"
     :data-manifest-id="frame.manifestId"
@@ -232,28 +189,39 @@ watch(
   inset: 0;
   position: absolute;
 
-  // The chrome (this `<section>`) is the animated surface — `transform`
-  // (defensive — `inert` from `aria-current` already covers this in
-  // The `app-view--anim-active` class is added one `requestAnimationFrame`
+  // The chrome (this `<section>`) is the animated surface. `transform`
+  // keeps the mobile shell entry/exit path on the compositor.
   transform: translateX(100%);
   pointer-events: none;
+  transition: transform 280ms var(--ease);
   will-change: transform;
   z-index: 0;
 
-  &.app-view--anim-active {
-    transition: transform 280ms var(--ease);
-  }
-
   &.app-view--foreground {
+    animation: app-view-slide-in 280ms var(--ease) both;
     transform: translateX(0);
     pointer-events: auto;
     z-index: 1;
   }
 }
 
+@keyframes app-view-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .app-view.app-view--anim-active {
+  .app-view {
     transition: none;
+  }
+
+  .app-view.app-view--foreground {
+    animation: none;
   }
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, inject, onMounted, reactive, ref, watch } from "vue";
 
 import AuthGate from "~/components/auth/AuthGate.vue";
 import BootHost from "~/components/boot/BootHost.vue";
@@ -28,7 +28,6 @@ const canDismissAuthGate = computed(
 );
 
 const authGateVisible = ref(!activeProfile.value);
-let authGateExitRequest = 0;
 
 let serviceWorkerRegistered = false;
 
@@ -65,27 +64,6 @@ async function handleBootRetry(): Promise<void> {
   await bootManager.boot();
 }
 
-function waitForAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      resolve();
-    });
-  });
-}
-
-async function scheduleAuthGateExit(): Promise<void> {
-  const requestId = ++authGateExitRequest;
-
-  await nextTick();
-  await waitForAnimationFrame();
-
-  if (requestId !== authGateExitRequest || !canDismissAuthGate.value) {
-    return;
-  }
-
-  authGateVisible.value = false;
-}
-
 onMounted(() => {
   registerServiceWorkerOnce();
 });
@@ -94,13 +72,12 @@ watch(
   () => [activeProfile.value, bootReactive.status] as const,
   () => {
     if (!hasActiveProfile.value) {
-      authGateExitRequest += 1;
       authGateVisible.value = true;
       return;
     }
 
     if (canDismissAuthGate.value) {
-      void scheduleAuthGateExit();
+      authGateVisible.value = false;
     }
   },
   { immediate: true },
@@ -136,15 +113,9 @@ watch(
 
 <style scoped lang="scss">
 .app-stage {
-  min-block-size: 100vh;
+  min-block-size: var(--app-viewport-block-size);
   overflow: hidden;
   position: relative;
-}
-
-@supports (min-block-size: 100svh) {
-  .app-stage {
-    min-block-size: 100svh;
-  }
 }
 
 .app-stage__auth-gate {
