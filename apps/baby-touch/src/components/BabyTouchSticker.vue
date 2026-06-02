@@ -29,9 +29,5 @@ const stickerStyle = computed<Record<string, string>>(() => ({
     data-testid="baby-touch-sticker"
   >
     <BabyTouchStickerArt :family="sticker.family" :kind="sticker.kind" />
-
-    <span class="baby-touch__sparkle baby-touch__sparkle--one" />
-    <span class="baby-touch__sparkle baby-touch__sparkle--two" />
-    <span class="baby-touch__sparkle baby-touch__sparkle--three" />
   </div>
 </template>

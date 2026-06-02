@@ -31,41 +31,15 @@
   overflow: visible;
 }
 
-.baby-touch__sparkle {
-  background: rgb(255 255 255 / 0.92);
-  block-size: 9px;
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 16px rgb(255 255 255 / 0.9);
-  inline-size: 9px;
-  position: absolute;
-}
-
-.baby-touch__sparkle--one {
-  inset-block-start: 8%;
-  inset-inline-start: 10%;
-}
-
-.baby-touch__sparkle--two {
-  block-size: 7px;
-  inline-size: 7px;
-  inset-block-start: 20%;
-  inset-inline-end: 4%;
-}
-
-.baby-touch__sparkle--three {
-  block-size: 6px;
-  inline-size: 6px;
-  inset-block-end: 17%;
-  inset-inline-start: 5%;
-}
-
 @keyframes baby-touch-travel {
   0% {
     opacity: 0;
     transform: translate(-50%, -50%);
   }
-  10% {
+  8%,
+  16% {
     opacity: 1;
+    transform: translate(-50%, -50%);
   }
   100% {
     opacity: 1;
