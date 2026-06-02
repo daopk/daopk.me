@@ -35,6 +35,13 @@ vi.mock("~/composables/useKernel", () => ({
 }));
 
 function makeKernel(manifests: AppManifest[]): Pick<Kernel, "apps" | "widgets" | "events"> {
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+  const emit = vi.fn((event: string, payload: unknown) => {
+    for (const listener of listeners.get(event) ?? []) {
+      listener(payload);
+    }
+  });
+
   return {
     apps: {
       list: () => manifests,
@@ -49,8 +56,13 @@ function makeKernel(manifests: AppManifest[]): Pick<Kernel, "apps" | "widgets" |
       get: vi.fn(),
     } as unknown as Kernel["widgets"],
     events: {
-      on: () => () => {},
-      emit: vi.fn(),
+      on: vi.fn((event: string, listener: (payload: unknown) => void) => {
+        const bucket = listeners.get(event) ?? new Set<(payload: unknown) => void>();
+        bucket.add(listener);
+        listeners.set(event, bucket);
+        return () => bucket.delete(listener);
+      }),
+      emit,
     } as unknown as Kernel["events"],
   };
 }
@@ -93,6 +105,28 @@ describe("HomeScreen multi-page (M1.4)", () => {
     expect(icons.length).toBe(2);
     expect(icons[0].props("manifest").id).toBe("alpha");
     expect(icons[1].props("manifest").id).toBe("beta");
+  });
+
+  it("refreshes the mobile icon grid when an app registers after mount", async () => {
+    const manifests = [manifest({ id: "alpha", name: "Alpha" })];
+    currentKernel = makeKernel(manifests);
+
+    const wrapper = mount(HomeScreen, {
+      props: { recentsAvailable: false },
+    });
+
+    expect(wrapper.findAllComponents(HomeScreenIcon).map((c) => c.props("manifest").id)).toEqual([
+      "alpha",
+    ]);
+
+    manifests.push(manifest({ id: "baby-touch", name: "Baby Touch" }));
+    currentKernel.events.emit("app.registered", { id: "baby-touch" });
+    await nextTick();
+
+    expect(wrapper.findAllComponents(HomeScreenIcon).map((c) => c.props("manifest").id)).toEqual([
+      "alpha",
+      "baby-touch",
+    ]);
   });
 
   it("hides private and hidden manifests on page 1", () => {

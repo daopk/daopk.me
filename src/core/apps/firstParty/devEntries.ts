@@ -12,6 +12,7 @@ import type { FirstPartyModuleLoader } from "./registerFirstPartyApps";
  * in `src/main.ts`.
  */
 export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
+  "baby-touch": () => import("@daopk-app/baby-touch"),
   notes: () => import("@daopk-app/notes"),
   browser: () => import("@daopk-app/browser"),
   editor: () => import("@daopk-app/editor"),

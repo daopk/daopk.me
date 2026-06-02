@@ -201,8 +201,8 @@ function onUpdateOpen(next: boolean): void {
 
 .install-consent__warning {
   align-items: flex-start;
-  background: color-mix(in srgb, var(--color-warning-soft, #b8860b) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-warning-soft, #b8860b) 30%, transparent);
+  background: color-mix(in srgb, var(--color-warning-soft, hsl(42 86% 38%)) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning-soft, hsl(42 86% 38%)) 30%, transparent);
   border-radius: var(--radius-md);
   color: var(--color-fg);
   display: flex;

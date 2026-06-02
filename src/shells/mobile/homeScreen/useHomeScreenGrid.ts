@@ -1,4 +1,4 @@
-import { computed, type ComputedRef } from "vue";
+import { computed, onUnmounted, shallowRef, type ComputedRef } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -14,11 +14,27 @@ export interface UseHomeScreenGrid {
 const HIDDEN_PREFIX = "_";
 
 export function useHomeScreenGrid(kernel: Kernel): UseHomeScreenGrid {
-  const manifests = kernel.apps
-    .list()
-    .filter((manifest) => !manifest.id.startsWith(HIDDEN_PREFIX) && manifest.hidden !== true);
+  const manifests = shallowRef<readonly AppManifest[]>(visibleManifests(kernel));
 
-  const slots = computed<HomeScreenSlot[]>(() => manifests.map((manifest) => ({ manifest })));
+  function refresh(): void {
+    manifests.value = visibleManifests(kernel);
+  }
+
+  const stopRegistered = kernel.events.on("app.registered", refresh);
+  const stopUnregistered = kernel.events.on("app.unregistered", refresh);
+
+  onUnmounted(() => {
+    stopRegistered();
+    stopUnregistered();
+  });
+
+  const slots = computed<HomeScreenSlot[]>(() => manifests.value.map((manifest) => ({ manifest })));
 
   return { slots };
+}
+
+function visibleManifests(kernel: Kernel): AppManifest[] {
+  return kernel.apps
+    .list()
+    .filter((manifest) => !manifest.id.startsWith(HIDDEN_PREFIX) && manifest.hidden !== true);
 }

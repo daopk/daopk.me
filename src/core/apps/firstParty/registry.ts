@@ -1,4 +1,5 @@
 import {
+  BabyTouchAppIcon,
   BlogAppIcon,
   BrowserAppIcon,
   CalendarAppIcon,
@@ -36,6 +37,17 @@ import type { FirstPartyAppDescriptor } from "./types";
  * publishes) a catalog entry; nothing else in the shell needs to change.
  */
 export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
+  {
+    id: "baby-touch",
+    name: "Baby Touch",
+    version: "1.0.0",
+    icon: BabyTouchAppIcon,
+    category: "media",
+    singleton: true,
+    permissions: ["storage.write"],
+    defaultWindow: { width: 760, height: 560, centered: true },
+    keywords: ["baby", "touch", "sensory", "animals", "bubbles", "toy", "cause effect"],
+  },
   {
     id: "notes",
     name: "Notes",

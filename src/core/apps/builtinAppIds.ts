@@ -12,6 +12,7 @@
  * additionally rejected by a separate rule, so they need not be listed here.
  */
 export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
+  "baby-touch",
   "blog",
   "browser",
   "calendar",
