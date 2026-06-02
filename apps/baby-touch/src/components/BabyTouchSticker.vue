@@ -11,6 +11,8 @@ const { sticker } = defineProps<{
 const stickerStyle = computed<Record<string, string>>(() => ({
   "--baby-touch-x": `${sticker.x * 100}%`,
   "--baby-touch-y": `${sticker.y * 100}%`,
+  "--baby-touch-travel-x": `${sticker.travelX}px`,
+  "--baby-touch-travel-y": `${sticker.travelY}px`,
   "--baby-touch-hue": `${sticker.hue}deg`,
   "--baby-touch-spin": `${sticker.spin}deg`,
   "--baby-touch-scale": String(sticker.scale),

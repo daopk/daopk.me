@@ -19,10 +19,17 @@ export interface BabyTouchPoint {
   readonly y: number;
 }
 
+export interface BabyTouchStageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface BabyTouchSticker {
   readonly id: number;
   readonly x: number;
   readonly y: number;
+  readonly travelX: number;
+  readonly travelY: number;
   readonly family: BabyTouchFamily;
   readonly kind: string;
   readonly hue: number;

@@ -1,7 +1,7 @@
 .baby-touch__sticker {
   --baby-touch-size: 112px;
 
-  animation: baby-touch-pop var(--baby-touch-lifetime) var(--ease) both;
+  animation: baby-touch-travel var(--baby-touch-lifetime) linear both;
   block-size: var(--baby-touch-size);
   filter: drop-shadow(0 10px 14px rgb(18 18 26 / 0.18));
   inline-size: var(--baby-touch-size);
@@ -17,9 +17,11 @@
 }
 
 .baby-touch__sticker-art-host {
+  animation: baby-touch-art-pop 420ms var(--ease) both;
   block-size: 100%;
   display: block;
   inline-size: 100%;
+  transform-origin: center;
 }
 
 .baby-touch__sticker-art {
@@ -57,31 +59,46 @@
   inset-inline-start: 5%;
 }
 
-@keyframes baby-touch-pop {
+@keyframes baby-touch-travel {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.35) rotate(0deg) scaleX(var(--baby-touch-mirror));
+    transform: translate(-50%, -50%);
   }
-  14% {
+  10% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(calc(var(--baby-touch-scale) * 1.08))
-      rotate(var(--baby-touch-spin)) scaleX(var(--baby-touch-mirror));
-  }
-  72% {
-    opacity: 1;
-    transform: translate(-50%, calc(-50% - 20px)) scale(var(--baby-touch-scale))
-      rotate(var(--baby-touch-spin)) scaleX(var(--baby-touch-mirror));
   }
   100% {
-    opacity: 0;
-    transform: translate(-50%, calc(-50% - 34px)) scale(calc(var(--baby-touch-scale) * 0.86))
-      rotate(var(--baby-touch-spin)) scaleX(var(--baby-touch-mirror));
+    opacity: 1;
+    transform: translate(
+      calc(-50% + var(--baby-touch-travel-x)),
+      calc(-50% + var(--baby-touch-travel-y))
+    );
+  }
+}
+
+@keyframes baby-touch-art-pop {
+  0% {
+    transform: scale(0.35) rotate(0deg) scaleX(var(--baby-touch-mirror));
+  }
+  72% {
+    transform: scale(calc(var(--baby-touch-scale) * 1.08)) rotate(var(--baby-touch-spin))
+      scaleX(var(--baby-touch-mirror));
+  }
+  100% {
+    transform: scale(var(--baby-touch-scale)) rotate(var(--baby-touch-spin))
+      scaleX(var(--baby-touch-mirror));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .baby-touch__sticker {
     animation-name: baby-touch-soft-fade;
+    animation-timing-function: var(--ease);
+  }
+
+  .baby-touch__sticker-art-host {
+    animation: none;
+    transform: none;
   }
 }
 

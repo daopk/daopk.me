@@ -3,7 +3,12 @@ import { computed, onBeforeUnmount, ref, type Ref } from "vue";
 import { defaultPrefersReducedMotion } from "./babyTouchMotion";
 import { createSticker } from "./babyTouchStickerFactory";
 import { MAX_ACTIVE_STICKERS } from "./babyTouchTiming";
-import type { BabyTouchPoint, BabyTouchSettings, BabyTouchSticker } from "./babyTouchTypes";
+import type {
+  BabyTouchPoint,
+  BabyTouchSettings,
+  BabyTouchStageSize,
+  BabyTouchSticker,
+} from "./babyTouchTypes";
 
 interface BabyTouchGameOptions {
   readonly settings: Readonly<Ref<BabyTouchSettings>>;
@@ -53,11 +58,12 @@ export function useBabyTouchGame(options: BabyTouchGameOptions) {
     }
   }
 
-  function spawnSticker(point: BabyTouchPoint): BabyTouchSticker {
+  function spawnSticker(point: BabyTouchPoint, stageSize: BabyTouchStageSize): BabyTouchSticker {
     reducedMotion.value = prefersReducedMotion();
     const sticker = createSticker(
       nextStickerId,
       point,
+      stageSize,
       options.settings.value,
       random,
       reducedMotion.value,

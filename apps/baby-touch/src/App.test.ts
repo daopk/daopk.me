@@ -135,6 +135,8 @@ describe("Baby Touch App", () => {
     expect(sticker.exists()).toBe(true);
     expect(sticker.attributes("style")).toContain("--baby-touch-x: 25%");
     expect(sticker.attributes("style")).toContain("--baby-touch-y: 25%");
+    expect(sticker.attributes("style")).toContain("--baby-touch-travel-x:");
+    expect(sticker.attributes("style")).toContain("--baby-touch-travel-y:");
 
     wrapper.unmount();
   });

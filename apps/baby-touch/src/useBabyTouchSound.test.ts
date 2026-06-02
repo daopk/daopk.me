@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ref } from "vue";
 
-import { STICKER_LIFETIME_MS } from "./babyTouchTiming";
 import type { BabyTouchSettings, BabyTouchSticker } from "./babyTouchTypes";
 import { useBabyTouchSound } from "./useBabyTouchSound";
 
@@ -11,10 +10,12 @@ function makeSticker(overrides: Partial<BabyTouchSticker> = {}): BabyTouchSticke
     hue: 120,
     id: 1,
     kind: "bear",
-    lifetimeMs: STICKER_LIFETIME_MS,
+    lifetimeMs: 1600,
     mirror: false,
     scale: 1,
     spin: 0,
+    travelX: 0,
+    travelY: 0,
     x: 0.4,
     y: 0.4,
     ...overrides,
