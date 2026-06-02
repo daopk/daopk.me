@@ -136,6 +136,41 @@ function visibleMonthDateKeys(): string[] {
     .filter((dateKey): dateKey is string => dateKey !== undefined);
 }
 
+function scrollMonthSections(): HTMLElement[] {
+  return [...document.body.querySelectorAll<HTMLElement>(".calendar__scroll-month")];
+}
+
+function scrollMonthLabels(): string[] {
+  return [...document.body.querySelectorAll(".calendar__scroll-month-heading")].map(
+    (label) => label.textContent?.trim() ?? "",
+  );
+}
+
+function scrollMonthKeys(): string[] {
+  return scrollMonthSections()
+    .map((section) => section.dataset.calendarMonth)
+    .filter((monthKey): monthKey is string => monthKey !== undefined);
+}
+
+function monthHeading(label: string): HTMLElement {
+  const heading = [
+    ...document.body.querySelectorAll<HTMLElement>(".calendar__scroll-month-heading"),
+  ].find((candidate) => candidate.textContent?.trim() === label);
+  if (heading === undefined) {
+    throw new Error(`Month heading not found: ${label}`);
+  }
+
+  return heading;
+}
+
+function scrollRoot(): HTMLElement {
+  const root = document.body.querySelector(".calendar__surface");
+  if (!(root instanceof HTMLElement)) {
+    throw new Error("Calendar scroll root not found");
+  }
+  return root;
+}
+
 function expectNoViewSwitcher(): void {
   expect(document.body.querySelector(".calendar__view-switcher")).toBeNull();
   expect(document.body.querySelector('button[aria-label="Month view"]')).toBeNull();
@@ -285,7 +320,75 @@ describe("Calendar App.vue", () => {
     expectNoViewSwitcher();
     expectNoSidePanelOrSubtitle();
     expect(dayButton("2026-05-26")).toBeInstanceOf(HTMLButtonElement);
+    expect(scrollMonthSections()).toHaveLength(13);
+    expect(scrollMonthLabels()[0]).toBe("Nov 2025");
+    expect(scrollMonthLabels().at(-1)).toBe("Nov 2026");
+    expect(monthHeading("Nov 2025").style.gridColumn).toBe("5 / span 3");
+    expect(monthHeading("Nov 2025").style.justifySelf).toBe("center");
+    expect(monthHeading("Dec 2025").style.gridColumn).toBe("1 / span 2");
+    expect(monthHeading("Dec 2025").style.justifySelf).toBe("start");
+    expect(monthHeading("Feb 2026").style.gridColumn).toBe("6 / span 2");
+    expect(monthHeading("Feb 2026").style.justifySelf).toBe("end");
+    expect(document.body.querySelector(".calendar__month-panel")).toBeNull();
     expect(document.body.querySelector('button[aria-label="Agenda view"]')).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it("selects a day in the mobile scrollable month list", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 26, 10, 15));
+    setViewportWidth(375);
+    const wrapper = mountCalendar();
+
+    await flushPromises();
+    expect(dayButton("2026-05-26").getAttribute("aria-selected")).toBe("true");
+
+    dayButton("2026-06-02").click();
+    await flushPromises();
+
+    expect(dayButton("2026-05-26").getAttribute("aria-selected")).toBe("false");
+    expect(dayButton("2026-06-02").getAttribute("aria-selected")).toBe("true");
+    expect(dayButton("2026-06-02").classList.contains("calendar__day--selected")).toBe(true);
+    expect(document.body.querySelector('[data-calendar-month="2026-06"]')).toBeInstanceOf(
+      HTMLElement,
+    );
+
+    wrapper.unmount();
+  });
+
+  it("caps mobile scrollable months while extending in either direction", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 26, 10, 15));
+    setViewportWidth(375);
+    const wrapper = mountCalendar();
+
+    await flushPromises();
+    const root = scrollRoot();
+    Object.defineProperties(root, {
+      clientHeight: { configurable: true, value: 820 },
+      scrollHeight: { configurable: true, value: 10_000 },
+    });
+
+    root.scrollTop = 9_400;
+    root.dispatchEvent(new Event("scroll"));
+    await flushPromises();
+    root.dispatchEvent(new Event("scroll"));
+    await flushPromises();
+
+    expect(scrollMonthSections()).toHaveLength(19);
+    expect(scrollMonthKeys()[0]).toBe("2026-05");
+    expect(scrollMonthKeys().at(-1)).toBe("2027-11");
+
+    root.scrollTop = 0;
+    root.dispatchEvent(new Event("scroll"));
+    await flushPromises();
+    root.dispatchEvent(new Event("scroll"));
+    await flushPromises();
+
+    expect(scrollMonthSections()).toHaveLength(19);
+    expect(scrollMonthKeys()[0]).toBe("2025-05");
+    expect(scrollMonthKeys().at(-1)).toBe("2026-11");
 
     wrapper.unmount();
   });

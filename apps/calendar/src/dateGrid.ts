@@ -19,6 +19,13 @@ export interface CalendarDayCell {
   readonly lunarLongLabel: string | null;
 }
 
+export interface CalendarMonthSection {
+  readonly month: Date;
+  readonly monthKey: string;
+  readonly leadingOffset: number;
+  readonly cells: readonly CalendarDayCell[];
+}
+
 export interface BuildMonthGridOptions {
   readonly month: Date;
   readonly selectedDate?: Date;
@@ -31,6 +38,13 @@ export interface BuildDayCellOptions {
   readonly month?: Date;
   readonly selectedDate?: Date;
   readonly today?: Date;
+}
+
+export interface BuildMonthSectionOptions {
+  readonly month: Date;
+  readonly selectedDate?: Date;
+  readonly today?: Date;
+  readonly weekStartsOn?: number;
 }
 
 const DEFAULT_WEEK_STARTS_ON = 1;
@@ -55,6 +69,27 @@ export function buildMonthGrid({
     const date = addDays(gridStart, index);
     return createDayCell(date, firstDay, selectedKey, todayKey);
   });
+}
+
+export function buildMonthSection({
+  month,
+  selectedDate,
+  today = new Date(),
+  weekStartsOn = DEFAULT_WEEK_STARTS_ON,
+}: BuildMonthSectionOptions): CalendarMonthSection {
+  const firstDay = startOfMonth(month);
+  const lastDay = new Date(firstDay.getFullYear(), firstDay.getMonth() + 1, 0);
+  const todayKey = localDateKey(today);
+  const selectedKey = selectedDate === undefined ? undefined : localDateKey(selectedDate);
+
+  return {
+    month: firstDay,
+    monthKey: localMonthKey(firstDay),
+    leadingOffset: dayOffset(firstDay, weekStartsOn),
+    cells: Array.from({ length: lastDay.getDate() }, (_, index) =>
+      createDayCell(addDays(firstDay, index), firstDay, selectedKey, todayKey),
+    ),
+  };
 }
 
 export function buildDayCell({
@@ -92,6 +127,13 @@ export function localDateKey(date: Date): string {
     date.getFullYear().toString().padStart(4, "0"),
     (date.getMonth() + 1).toString().padStart(2, "0"),
     date.getDate().toString().padStart(2, "0"),
+  ].join("-");
+}
+
+export function localMonthKey(date: Date): string {
+  return [
+    date.getFullYear().toString().padStart(4, "0"),
+    (date.getMonth() + 1).toString().padStart(2, "0"),
   ].join("-");
 }
 

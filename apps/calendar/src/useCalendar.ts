@@ -3,12 +3,14 @@ import { computed, ref, unref, type ComputedRef, type Ref } from "vue";
 import {
   addMonths,
   buildMonthGrid,
+  buildMonthSection,
   isValidDateKey,
   localDateKey,
   parseLocalDateKey,
   startOfLocalDay,
   startOfMonth,
   type CalendarDayCell,
+  type CalendarMonthSection,
 } from "./dateGrid";
 
 export interface UseCalendarOptions {
@@ -21,6 +23,7 @@ export interface UseCalendarBindings {
   readonly selectedDate: Ref<Date>;
   readonly monthGrid: ComputedRef<readonly CalendarDayCell[]>;
   readonly selectedDateKey: ComputedRef<string>;
+  monthSectionFor(month: Date): CalendarMonthSection;
   selectDate(dateKey: string): void;
   goToPreviousMonth(): void;
   goToNextMonth(): void;
@@ -45,6 +48,15 @@ export function useCalendar({
     }),
   );
 
+  function monthSectionFor(month: Date): CalendarMonthSection {
+    return buildMonthSection({
+      month,
+      selectedDate: selectedDate.value,
+      today: now(),
+      weekStartsOn: normalizeWeekStartsOn(unref(weekStartsOn)),
+    });
+  }
+
   function selectDate(dateKey: string): void {
     if (!isValidDateKey(dateKey)) {
       return;
@@ -52,7 +64,10 @@ export function useCalendar({
 
     const nextDate = startOfLocalDay(parseLocalDateKey(dateKey));
     selectedDate.value = nextDate;
-    if (visibleMonth.value.getMonth() !== nextDate.getMonth()) {
+    if (
+      visibleMonth.value.getFullYear() !== nextDate.getFullYear() ||
+      visibleMonth.value.getMonth() !== nextDate.getMonth()
+    ) {
       visibleMonth.value = startOfMonth(nextDate);
     }
   }
@@ -76,6 +91,7 @@ export function useCalendar({
     selectedDate,
     monthGrid,
     selectedDateKey,
+    monthSectionFor,
     selectDate,
     goToPreviousMonth,
     goToNextMonth,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDayCell, buildMonthGrid, localDateKey, sameLocalDate } from "./dateGrid";
+import {
+  buildDayCell,
+  buildMonthGrid,
+  buildMonthSection,
+  localDateKey,
+  sameLocalDate,
+} from "./dateGrid";
 
 describe("calendar dateGrid", () => {
   it("builds full Monday-start weeks across month boundaries", () => {
@@ -35,6 +41,55 @@ describe("calendar dateGrid", () => {
     expect(grid.some((cell) => cell.dateKey === "2024-02-29" && cell.inCurrentMonth)).toBe(true);
   });
 
+  it("builds month sections with only current-month days", () => {
+    const section = buildMonthSection({
+      month: new Date(2026, 4, 1),
+      today: new Date(2026, 4, 26),
+    });
+
+    expect(section.month).toEqual(new Date(2026, 4, 1));
+    expect(section.monthKey).toBe("2026-05");
+    expect(section.leadingOffset).toBe(4);
+    expect(section.cells).toHaveLength(31);
+    expect(section.cells[0]?.dateKey).toBe("2026-05-01");
+    expect(section.cells.at(-1)?.dateKey).toBe("2026-05-31");
+    expect(section.cells.every((cell) => cell.inCurrentMonth)).toBe(true);
+  });
+
+  it("aligns month sections to Sunday or Monday week starts", () => {
+    expect(
+      buildMonthSection({
+        month: new Date(2026, 4, 1),
+        today: new Date(2026, 4, 26),
+        weekStartsOn: 0,
+      }).leadingOffset,
+    ).toBe(5);
+
+    expect(
+      buildMonthSection({
+        month: new Date(2026, 4, 1),
+        today: new Date(2026, 4, 26),
+        weekStartsOn: 1,
+      }).leadingOffset,
+    ).toBe(4);
+  });
+
+  it("does not duplicate adjacent-month dates between month sections", () => {
+    const may = buildMonthSection({
+      month: new Date(2026, 4, 1),
+      today: new Date(2026, 4, 26),
+    });
+    const june = buildMonthSection({
+      month: new Date(2026, 5, 1),
+      today: new Date(2026, 4, 26),
+    });
+    const dateKeys = [...may.cells, ...june.cells].map((cell) => cell.dateKey);
+
+    expect(new Set(dateKeys).size).toBe(dateKeys.length);
+    expect(may.cells.some((cell) => cell.dateKey === "2026-06-01")).toBe(false);
+    expect(june.cells.some((cell) => cell.dateKey === "2026-05-31")).toBe(false);
+  });
+
   it("adds Vietnamese lunar metadata to supported dates", () => {
     const grid = buildMonthGrid({
       month: new Date(2026, 1, 1),
@@ -49,6 +104,23 @@ describe("calendar dateGrid", () => {
       isLeapMonth: false,
       lunarLabel: "Tháng 1",
       lunarLongLabel: "Âm lịch: 1 tháng 1, Bính Ngọ",
+    });
+  });
+
+  it("adds today, selected, and lunar metadata to month sections", () => {
+    const section = buildMonthSection({
+      month: new Date(2026, 1, 1),
+      selectedDate: new Date(2026, 1, 17, 23, 59),
+      today: new Date(2026, 1, 17, 1, 5),
+    });
+
+    const tet = section.cells.find((candidate) => candidate.dateKey === "2026-02-17");
+    expect(tet).toMatchObject({
+      isSelected: true,
+      isToday: true,
+      lunarDay: 1,
+      lunarMonth: 1,
+      lunarLabel: "Tháng 1",
     });
   });
 

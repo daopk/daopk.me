@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { inject } from "vue";
+import { inject, ref } from "vue";
 
 import { AppFrame } from "@daopk/kit";
 import { AppContextInjectionKey, KernelInjectionKey, useBreakpoint } from "@daopk/sdk";
 
 import CalendarMonthView from "./components/CalendarMonthView.vue";
+import CalendarScrollableMonthView from "./components/CalendarScrollableMonthView.vue";
 import CalendarSettingsPanel from "./components/CalendarSettingsPanel.vue";
 import CalendarToolbar from "./components/CalendarToolbar.vue";
 import { useCalendarAppController } from "./composables/useCalendarAppController";
@@ -13,6 +14,7 @@ import { useCalendarSettings } from "./useCalendarSettings";
 import "./styles/calendar.scss";
 
 const { isMobile } = useBreakpoint();
+const surfaceElement = ref<HTMLElement | null>(null);
 const appContext = inject(AppContextInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
 const calendarSettings = useCalendarSettings();
@@ -41,6 +43,10 @@ const {
   visibleRangeLabel,
   weekdayLabels,
 } = calendarController;
+
+function setVisibleMonth(month: Date): void {
+  calendar.visibleMonth.value = month;
+}
 </script>
 
 <template>
@@ -62,8 +68,21 @@ const {
         @today="calendar.goToToday()"
       />
 
-      <main class="calendar__surface">
+      <main ref="surfaceElement" class="calendar__surface">
+        <CalendarScrollableMonthView
+          v-if="isMobile"
+          :date-cell-aria-label="dateCellAriaLabel"
+          :month-section-for="calendar.monthSectionFor"
+          :scroll-root="surfaceElement"
+          :show-lunar-calendar="showLunarCalendar"
+          :visible-month="calendar.visibleMonth.value"
+          :weekday-labels="weekdayLabels"
+          @select-date="calendar.selectDate"
+          @visible-month-change="setVisibleMonth"
+        />
+
         <CalendarMonthView
+          v-else
           :cells="calendar.monthGrid.value"
           :date-cell-aria-label="dateCellAriaLabel"
           :show-lunar-calendar="showLunarCalendar"
