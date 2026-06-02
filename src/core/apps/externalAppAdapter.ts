@@ -1,7 +1,7 @@
 import { defineComponent, h, markRaw, type Component } from "vue";
 
 import ExternalAppIcon from "~/components/app/ExternalAppIcon.vue";
-import type { AppManifest } from "~/types/app";
+import type { AppChromeManifest, AppManifest } from "~/types/app";
 import type { ExternalAppManifest } from "~/types/externalApp";
 
 /**
@@ -41,11 +41,11 @@ export function externalToAppManifest(ext: ExternalAppManifest): AppManifest {
     manifest.defaultWindow = { ...ext.defaultWindow };
   }
   if (ext.chrome !== undefined) {
-    manifest.chrome = {
-      ...(ext.chrome.mobile === undefined
-        ? {}
-        : { mobile: { ...ext.chrome.mobile } }),
-    };
+    const chrome: AppChromeManifest = {};
+    if (ext.chrome.mobile !== undefined) {
+      chrome.mobile = { ...ext.chrome.mobile };
+    }
+    manifest.chrome = chrome;
   }
   if (ext.singleton !== undefined) {
     manifest.singleton = ext.singleton;

@@ -62,9 +62,7 @@ const resolvedTitlebar = computed<AppChromeTitlebarVisibility>(
   () => chromeTitlebar.value ?? manifestTitlebar.value,
 );
 const showTitlebar = computed(() => resolvedTitlebar.value !== "hidden");
-const edgeSwipeEnabled = computed(
-  () => manifest.value?.chrome?.mobile?.edgeSwipe !== "disabled",
-);
+const edgeSwipeEnabled = computed(() => manifest.value?.chrome?.mobile?.edgeSwipe !== "disabled");
 const edgeSwipeSurface = ref<HTMLElement | null>(null);
 
 provide(AppChromeInjectionKey, {
@@ -86,9 +84,7 @@ provide(AppChromeInjectionKey, {
 });
 
 const appContentSafeAreaStyle = computed<Record<string, string>>(() => ({
-  "--mobile-shell-app-safe-area-top": showTitlebar.value
-    ? "0px"
-    : "var(--app-view-safe-area-top)",
+  "--mobile-shell-app-safe-area-top": showTitlebar.value ? "0px" : "var(--app-view-safe-area-top)",
   "--mobile-shell-app-safe-area-right": "var(--app-view-safe-area-right)",
   "--mobile-shell-app-safe-area-bottom": "var(--app-view-safe-area-bottom)",
   "--mobile-shell-app-safe-area-left": "var(--app-view-safe-area-left)",
