@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { FinderFileIcon } from "~/icons/fluentColor";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
+import type { VfsDirEntry } from "@daopk/sdk";
 
-import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../display";
-import type { FinderPreviewKind } from "../useFinderPreview";
+import { FinderFileIcon } from "~/icons/fluentColor";
+
+import type { FinderPreviewKind } from "../composables/useFinderPreview";
+import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../utils/display";
 
 defineProps<{
   readonly html: string;

@@ -1,14 +1,13 @@
 import { getCurrentScope, onScopeDispose, ref, type Ref } from "vue";
 
-import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
-import type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
 import {
   detectVfsFileType,
   normalizedVfsMimeType,
+  toErrorMessage,
+  type VfsDirEntry,
   type VfsRenderableFileType,
-} from "~/core/vfs/fileTypes";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
-import { toErrorMessage } from "~/utils/errors";
+} from "@daopk/sdk";
+import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
 
 export type FinderPreviewKind =
   | "empty"

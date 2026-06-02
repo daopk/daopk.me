@@ -1,19 +1,19 @@
 import type { Component } from "vue";
 
+import { formatBytes, formatDateTime, type VfsDirEntry } from "@daopk/sdk";
+
 import {
+  CloudFolderIcon,
   FinderFileIcon,
   FinderFolderIcon,
   FinderImageFileIcon,
   FinderPdfFileIcon,
   FinderTextFileIcon,
-  CloudFolderIcon,
   SlidesAppIcon,
 } from "~/icons/fluentColor";
-import { formatBytes, formatDateTime } from "~/utils/format";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
 import { isSlideDeckPath } from "~/core/routing/slidePaths";
 
-import { detectPreviewType } from "./useFinderPreview";
+import { detectPreviewType } from "../composables/useFinderPreview";
 
 export { formatBytes };
 

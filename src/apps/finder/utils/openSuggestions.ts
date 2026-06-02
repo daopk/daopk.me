@@ -1,18 +1,16 @@
-import type { Component } from "vue";
+import {
+  basename,
+  detectVfsFileType,
+  dirname,
+  isEditableVfsTextFile,
+  isNotesMarkdownPath,
+  normalizeVfsPath,
+  vfsFileExtension,
+  type VfsDirEntry,
+} from "@daopk/sdk";
 
-import { isNotesMarkdownPath } from "~/core/notes/notesPaths";
 import { BLOG_POSTS_ROOT, isBlogPostSlug } from "~/core/routing/blogPaths";
 import { isSlideDeckPath } from "~/core/routing/slidePaths";
-import { detectVfsFileType, isEditableVfsTextFile, vfsFileExtension } from "~/core/vfs/fileTypes";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
-import { basename, dirname, normalizeVfsPath } from "~/core/vfs/path";
-import {
-  BlogAppIcon,
-  EditorAppIcon,
-  NotesAppIcon,
-  PdfViewerAppIcon,
-  SlidesAppIcon,
-} from "~/icons/fluentColor";
 
 export type FinderOpenSuggestionId = "blog" | "editor" | "notes" | "pdf-viewer" | "slides";
 
@@ -20,7 +18,6 @@ export interface FinderOpenSuggestion {
   readonly id: FinderOpenSuggestionId;
   readonly label: string;
   readonly manifestId: string;
-  readonly icon: Component;
   readonly args: Readonly<Record<string, unknown>>;
 }
 
@@ -37,7 +34,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
         id: "slides",
         label: "Open in Slides",
         manifestId: "slides",
-        icon: SlidesAppIcon,
         args: { path },
       },
     ];
@@ -49,7 +45,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
         id: "pdf-viewer",
         label: "Open in PDF Viewer",
         manifestId: "pdf-viewer",
-        icon: PdfViewerAppIcon,
         args: { path },
       },
     ];
@@ -62,7 +57,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
       id: "blog",
       label: "Open in Blog",
       manifestId: "blog",
-      icon: BlogAppIcon,
       args: blogPost,
     });
   } else if (isNotesMarkdownPath(path)) {
@@ -70,7 +64,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
       id: "notes",
       label: "Open in Notes",
       manifestId: "notes",
-      icon: NotesAppIcon,
       args: { path },
     });
   }
@@ -80,7 +73,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
       id: "editor",
       label: "Open in Editor",
       manifestId: "editor",
-      icon: EditorAppIcon,
       args: { path },
     });
   }

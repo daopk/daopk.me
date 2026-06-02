@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { Badge, EmptyState, ScrollArea, StatusBanner } from "~/components/kit";
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
-import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "~/icons/lucide";
+import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "@daopk/icons";
+import { Badge, EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
+import type { VfsDirEntry } from "@daopk/sdk";
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
 
-import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../openSuggestions";
-import type { FinderViewMode } from "../useFinder";
-import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../display";
+import type { FinderViewMode } from "../composables/useFinder";
+import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../utils/display";
+import { openSuggestionIcon } from "../utils/openSuggestionIcons";
+import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../utils/openSuggestions";
 
 const GRID_KEYBOARD_COLUMNS = 4;
 const GRID_MIN_COLUMN_WIDTH = 120;
@@ -302,7 +303,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   @select="emit('openWithSuggestion', entry, suggestion)"
                 >
                   <component
-                    :is="suggestion.icon"
+                    :is="openSuggestionIcon(suggestion)"
                     class="finder__context-icon finder__context-icon--app"
                     :size="16"
                     aria-hidden="true"

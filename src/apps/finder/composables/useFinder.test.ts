@@ -38,12 +38,12 @@ function statFromEntry(item: VfsDirEntry): VfsStat {
 interface FakeVfs extends FinderVfsClient {
   readonly nodes: Map<string, VfsDirEntry>;
   readonly bytes: Map<string, Uint8Array>;
-  stat: ReturnType<typeof vi.fn>;
-  list: ReturnType<typeof vi.fn>;
-  read: ReturnType<typeof vi.fn>;
-  write: ReturnType<typeof vi.fn>;
-  mkdir: ReturnType<typeof vi.fn>;
-  remove: ReturnType<typeof vi.fn>;
+  stat: ReturnType<typeof vi.fn<FinderVfsClient["stat"]>>;
+  list: ReturnType<typeof vi.fn<FinderVfsClient["list"]>>;
+  read: ReturnType<typeof vi.fn<FinderVfsClient["read"]>>;
+  write: ReturnType<typeof vi.fn<FinderVfsClient["write"]>>;
+  mkdir: ReturnType<typeof vi.fn<FinderVfsClient["mkdir"]>>;
+  remove: ReturnType<typeof vi.fn<FinderVfsClient["remove"]>>;
 }
 
 function makeVfs(listings: Record<string, readonly VfsDirEntry[] | null>): FakeVfs {
@@ -88,7 +88,7 @@ function makeVfs(listings: Record<string, readonly VfsDirEntry[] | null>): FakeV
   return {
     nodes,
     bytes,
-    stat: vi.fn(async (path: string) => {
+    stat: vi.fn<FinderVfsClient["stat"]>(async (path) => {
       const normalized = normalizeVfsPath(path);
       if (mutableListings.get(normalized) === null) {
         return null;
@@ -97,34 +97,28 @@ function makeVfs(listings: Record<string, readonly VfsDirEntry[] | null>): FakeV
       const item = nodes.get(normalized);
       return item === undefined ? null : statFromEntry(item);
     }),
-    list: vi.fn(async (path: string) => {
+    list: vi.fn<FinderVfsClient["list"]>(async (path) => {
       const normalized = normalizeVfsPath(path);
       return mutableListings.has(normalized) ? mutableListings.get(normalized)! : [];
     }),
-    read: vi.fn(async (path: string) => bytes.get(normalizeVfsPath(path)) ?? null),
-    write: vi.fn(
-      async (
-        path: string,
-        data: Uint8Array,
-        options: { overwrite?: boolean; mimeType?: string } = {},
-      ) => {
-        const normalized = normalizeVfsPath(path);
-        if (nodes.has(normalized) && options.overwrite === false) {
-          return null;
-        }
+    read: vi.fn<FinderVfsClient["read"]>(async (path) => bytes.get(normalizeVfsPath(path)) ?? null),
+    write: vi.fn<FinderVfsClient["write"]>(async (path, data, options = {}) => {
+      const normalized = normalizeVfsPath(path);
+      if (nodes.has(normalized) && options.overwrite === false) {
+        return null;
+      }
 
-        const item = entry(normalized, "file", {
-          size: data.byteLength,
-          updatedAt: ++timestamp,
-          ...(options.mimeType === undefined ? {} : { mimeType: options.mimeType }),
-        });
-        nodes.set(normalized, item);
-        bytes.set(normalized, data);
-        upsertListingItem(dirname(normalized), item);
-        return statFromEntry(item);
-      },
-    ),
-    mkdir: vi.fn(async (path: string) => {
+      const item = entry(normalized, "file", {
+        size: data.byteLength,
+        updatedAt: ++timestamp,
+        ...(options.mimeType === undefined ? {} : { mimeType: options.mimeType }),
+      });
+      nodes.set(normalized, item);
+      bytes.set(normalized, data);
+      upsertListingItem(dirname(normalized), item);
+      return statFromEntry(item);
+    }),
+    mkdir: vi.fn<FinderVfsClient["mkdir"]>(async (path) => {
       const normalized = normalizeVfsPath(path);
       if (nodes.has(normalized)) {
         return null;
@@ -136,7 +130,7 @@ function makeVfs(listings: Record<string, readonly VfsDirEntry[] | null>): FakeV
       upsertListingItem(dirname(normalized), item);
       return statFromEntry(item);
     }),
-    remove: vi.fn(async (path: string) => {
+    remove: vi.fn<FinderVfsClient["remove"]>(async (path) => {
       const normalized = normalizeVfsPath(path);
       if (!nodes.has(normalized)) {
         return false;
@@ -161,10 +155,10 @@ function makeVfs(listings: Record<string, readonly VfsDirEntry[] | null>): FakeV
 }
 
 function makeTrash(vfs: FakeVfs): FinderTrashClient & {
-  moveToTrash: ReturnType<typeof vi.fn>;
+  moveToTrash: ReturnType<typeof vi.fn<FinderTrashClient["moveToTrash"]>>;
 } {
   return {
-    moveToTrash: vi.fn(async (path: string) => {
+    moveToTrash: vi.fn<FinderTrashClient["moveToTrash"]>(async (path) => {
       const normalized = normalizeVfsPath(path);
       const item = vfs.nodes.get(normalized);
       if (item === undefined || !(await vfs.remove(normalized, { recursive: true }))) {

@@ -1,11 +1,18 @@
 import { computed, ref, unref, type ComputedRef, type MaybeRef, type Ref } from "vue";
 
-import { VfsError } from "~/core/vfs/errors";
-import { splitFilename } from "~/core/vfs/fileNames";
-import { basename, dirname, joinVfsPath, normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
-import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
-import type { TrashItem } from "~/types/trash";
-import { toErrorMessage } from "~/utils/errors";
+import {
+  basename,
+  dirname,
+  joinVfsPath,
+  normalizeVfsPath,
+  splitFilename,
+  toErrorMessage,
+  VfsError,
+  type TrashItem,
+  type VfsDirEntry,
+  type VfsPath,
+  type VfsStat,
+} from "@daopk/sdk";
 
 export type FinderViewMode = "list" | "grid";
 

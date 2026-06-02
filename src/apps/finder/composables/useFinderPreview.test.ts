@@ -25,25 +25,27 @@ function entry(path: string, options: Partial<VfsDirEntry> = {}): VfsDirEntry {
   };
 }
 
-function makeVfs(overrides: Partial<FinderPreviewVfsClient> = {}): FinderPreviewVfsClient & {
-  read: ReturnType<typeof vi.fn>;
-  readText: ReturnType<typeof vi.fn>;
-} {
+type FinderPreviewVfsMock = FinderPreviewVfsClient & {
+  read: ReturnType<typeof vi.fn<FinderPreviewVfsClient["read"]>>;
+  readText: ReturnType<typeof vi.fn<FinderPreviewVfsClient["readText"]>>;
+};
+
+function makeVfs(overrides: Partial<FinderPreviewVfsClient> = {}): FinderPreviewVfsMock {
   return {
-    read: vi.fn(async () => new Uint8Array([1, 2, 3])),
-    readText: vi.fn(async () => "hello"),
+    read: vi.fn<FinderPreviewVfsClient["read"]>(async () => new Uint8Array([1, 2, 3])),
+    readText: vi.fn<FinderPreviewVfsClient["readText"]>(async () => "hello"),
     ...overrides,
-  };
+  } as FinderPreviewVfsMock;
 }
 
 function makeRenderer(): MarkdownRenderer & {
-  render: ReturnType<typeof vi.fn>;
-  dispose: ReturnType<typeof vi.fn>;
+  render: ReturnType<typeof vi.fn<MarkdownRenderer["render"]>>;
+  dispose: ReturnType<typeof vi.fn<MarkdownRenderer["dispose"]>>;
 } {
   return {
     ready: Promise.resolve(),
-    render: vi.fn(async (source: string) => ({ html: `<p>${source}</p>` })),
-    dispose: vi.fn(),
+    render: vi.fn<MarkdownRenderer["render"]>(async (source) => ({ html: `<p>${source}</p>` })),
+    dispose: vi.fn<MarkdownRenderer["dispose"]>(),
   };
 }
 

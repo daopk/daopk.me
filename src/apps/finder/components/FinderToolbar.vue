@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "~/icons/lucide";
-import { AppToolbar, IconButton, SegmentedControl } from "~/components/kit";
-import type { SegmentedControlOption } from "~/components/kit";
+import { AppToolbar, IconButton, SegmentedControl } from "@daopk/kit";
+import type { SegmentedControlOption } from "@daopk/kit";
+import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "@daopk/icons";
 
-import type { FinderBreadcrumb, FinderViewMode } from "../useFinder";
+import type { FinderBreadcrumb, FinderViewMode } from "../composables/useFinder";
 
 defineProps<{
   readonly breadcrumbs: readonly FinderBreadcrumb[];

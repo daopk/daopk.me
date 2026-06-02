@@ -1,52 +1,37 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref, watch } from "vue";
+import { AppFrame } from "@daopk/kit";
 
-import { AppFrame } from "~/components/kit";
-import { Button, Dialog } from "~/components/ui";
-import { useActiveShell } from "~/composables/useActiveShell";
-import { useVfs } from "~/composables/useVfs";
-import { useKernel } from "~/composables/useKernel";
-import { isEditableVfsTextFile } from "~/core/vfs/fileTypes";
-import { AppContextInjectionKey } from "~/types/app";
-import type { VfsDirEntry } from "~/core/vfs/nodes";
-
+import FinderDeleteDialog from "./components/FinderDeleteDialog.vue";
 import FinderEntries from "./components/FinderEntries.vue";
 import FinderPreviewPane from "./components/FinderPreviewPane.vue";
 import FinderToolbar from "./components/FinderToolbar.vue";
-import { isSlideDeckEntry } from "./display";
-import { openSuggestionsForEntry, type FinderOpenSuggestion } from "./openSuggestions";
-import { useFinderPreview } from "./useFinderPreview";
-import { useFinder } from "./useFinder";
+import { useFinderController } from "./composables/useFinderController";
 
-const ctx = inject(AppContextInjectionKey, null);
-const kernel = useKernel();
-const vfs = useVfs();
-const { isMobile } = useActiveShell();
-const finder = useFinder({
-  vfs,
-  trash: {
-    moveToTrash: (path) =>
-      ctx === null
-        ? Promise.resolve(null)
-        : kernel.trash.moveToTrash(path, { handleId: ctx.handleId }),
-  },
-  initialPath: typeof ctx?.args.path === "string" ? ctx.args.path : "/",
-  initialReveal: typeof ctx?.args.reveal === "string" ? ctx.args.reveal : undefined,
-  autoSelectFirstEntry: computed(() => !isMobile.value),
-});
-const preview = useFinderPreview({ vfs });
-
+const controller = useFinderController();
+const { finder, preview } = controller;
 const {
-  breadcrumbs,
-  cwd,
-  entries,
-  error,
-  loading,
-  selectedEntry,
-  selectedIndex,
-  selectedPath,
-  viewMode,
-} = finder;
+  activeDescendant,
+  cancelDeleteEntry,
+  confirmDeleteEntry,
+  copyPath,
+  createFolder,
+  deleteDescription,
+  deleteDialogOpen,
+  deletingEntry,
+  duplicateEntry,
+  isMobile,
+  mutationDisabled,
+  onBreadcrumb,
+  onEntryClick,
+  onEntryContextMenu,
+  onEntryDoubleClick,
+  openEntry,
+  openSelectedEntry,
+  openWithSuggestion,
+  requestDeleteEntry,
+} = controller;
+
+const { breadcrumbs, cwd, entries, error, loading, selectedEntry, selectedPath, viewMode } = finder;
 const {
   html: previewHtml,
   imageUrl: previewImageUrl,
@@ -57,241 +42,6 @@ const {
   text: previewText,
   title: previewTitle,
 } = preview;
-
-const deleteDialogOpen = ref(false);
-const pendingDeleteEntry = ref<VfsDirEntry | null>(null);
-const deletingEntry = ref(false);
-const stopRevealRequests = kernel.events.on("finder.reveal.requested", (payload) => {
-  void finder.reveal(payload.path, payload.reveal);
-});
-
-const activeDescendant = computed(() =>
-  selectedIndex.value < 0 ? undefined : `finder-entry-${selectedIndex.value}`,
-);
-const mutationDisabled = computed(
-  () => loading.value || finder.mutating.value || finder.currentDirectoryReadonly.value,
-);
-const deleteDescription = computed(() => {
-  const entry = pendingDeleteEntry.value;
-  if (entry === null) {
-    return "The item can be restored from Trash.";
-  }
-
-  return `Move "${entry.name}" to Trash?`;
-});
-
-onMounted(() => {
-  void finder.refresh();
-});
-
-onUnmounted(() => {
-  stopRevealRequests?.();
-});
-
-watch(
-  [selectedEntry, isMobile],
-  ([entry, mobile]) => {
-    void preview.load(mobile ? null : entry);
-  },
-  { immediate: true },
-);
-
-watch(
-  isMobile,
-  (mobile) => {
-    if (mobile) {
-      finder.select(null);
-    }
-  },
-  { immediate: true },
-);
-
-function onEntryClick(entry: VfsDirEntry): void {
-  finder.select(entry.path);
-}
-
-function onEntryContextMenu(entry: VfsDirEntry): void {
-  finder.select(entry.path);
-}
-
-function onEntryDoubleClick(entry: VfsDirEntry): void {
-  openEntry(entry);
-}
-
-function onBreadcrumb(path: string): void {
-  void finder.openDirectory(path);
-}
-
-function openInEditor(entry: VfsDirEntry): void {
-  if (entry.kind !== "file" || !isEditableVfsTextFile(entry)) {
-    return;
-  }
-
-  kernel.events.emit("editor.open.requested", {
-    source: "api",
-    path: entry.path,
-  });
-}
-
-function openWithSuggestion(entry: VfsDirEntry, suggestion: FinderOpenSuggestion): void {
-  const currentSuggestion = openSuggestionsForEntry(entry).find(
-    (item) => item.id === suggestion.id,
-  );
-  if (currentSuggestion === undefined) {
-    return;
-  }
-
-  openResolvedSuggestion(entry, currentSuggestion);
-}
-
-function openResolvedSuggestion(entry: VfsDirEntry, currentSuggestion: FinderOpenSuggestion): void {
-  if (currentSuggestion.id === "editor") {
-    openInEditor(entry);
-    return;
-  }
-  if (currentSuggestion.id === "pdf-viewer") {
-    openPdf(entry);
-    return;
-  }
-  if (currentSuggestion.id === "slides") {
-    openSlides(entry);
-    return;
-  }
-  if (currentSuggestion.id === "blog") {
-    openBlog(currentSuggestion);
-    return;
-  }
-
-  kernel.events.emit("app.launch.requested", {
-    manifestId: currentSuggestion.manifestId,
-    source: "api",
-    args: currentSuggestion.args,
-  });
-
-  if (currentSuggestion.id === "notes" && typeof currentSuggestion.args.path === "string") {
-    kernel.events.emit("notes.open.requested", {
-      source: "api",
-      path: currentSuggestion.args.path,
-    });
-  }
-}
-
-function openFirstSuggestedApp(entry: VfsDirEntry): void {
-  const suggestion = openSuggestionsForEntry(entry)[0];
-  if (suggestion === undefined) {
-    return;
-  }
-
-  openResolvedSuggestion(entry, suggestion);
-}
-
-function openSelectedEntry(): void {
-  const entry = selectedEntry.value;
-  if (entry !== null) {
-    openEntry(entry);
-  }
-}
-
-function openEntry(entry: VfsDirEntry): void {
-  if (entry.kind === "directory") {
-    void finder.openDirectory(entry.path);
-    return;
-  }
-
-  openFirstSuggestedApp(entry);
-}
-
-function openPdf(entry: VfsDirEntry): void {
-  kernel.events.emit("pdf-viewer.open.requested", {
-    source: "api",
-    path: entry.path,
-  });
-}
-
-function openBlog(suggestion: FinderOpenSuggestion): void {
-  if (typeof suggestion.args.path !== "string" || typeof suggestion.args.slug !== "string") {
-    return;
-  }
-
-  kernel.events.emit("blog.post.open.requested", {
-    source: "api",
-    path: suggestion.args.path,
-    slug: suggestion.args.slug,
-  });
-}
-
-function openSlides(entry: VfsDirEntry): void {
-  if (!isSlideDeckEntry(entry)) {
-    return;
-  }
-
-  kernel.events.emit("app.launch.requested", {
-    manifestId: "slides",
-    source: "api",
-    args: { path: entry.path },
-  });
-  kernel.events.emit("slides.open.requested", {
-    source: "api",
-    path: entry.path,
-  });
-}
-
-function duplicateEntry(entry: VfsDirEntry): void {
-  if (entry.kind !== "file") {
-    return;
-  }
-
-  void finder.duplicateFile(entry.path);
-}
-
-function requestDeleteEntry(entry: VfsDirEntry): void {
-  pendingDeleteEntry.value = entry;
-  deleteDialogOpen.value = true;
-}
-
-function cancelDeleteEntry(): void {
-  if (deletingEntry.value) {
-    return;
-  }
-
-  deleteDialogOpen.value = false;
-  pendingDeleteEntry.value = null;
-}
-
-async function confirmDeleteEntry(): Promise<void> {
-  if (pendingDeleteEntry.value === null || deletingEntry.value) {
-    return;
-  }
-
-  const entry = pendingDeleteEntry.value;
-  deletingEntry.value = true;
-  try {
-    await finder.deleteEntry(entry.path);
-  } finally {
-    deletingEntry.value = false;
-    deleteDialogOpen.value = false;
-    pendingDeleteEntry.value = null;
-  }
-}
-
-function createFolder(): void {
-  void finder.createFolder();
-}
-
-async function copyPath(path: string): Promise<void> {
-  const writeText = navigator.clipboard?.writeText;
-  if (writeText === undefined) {
-    finder.setError("Clipboard is unavailable.");
-    return;
-  }
-
-  try {
-    await writeText.call(navigator.clipboard, path);
-    finder.setError(null);
-  } catch {
-    finder.setError("Finder could not copy the path.");
-  }
-}
 </script>
 
 <template>
@@ -346,19 +96,13 @@ async function copyPath(path: string): Promise<void> {
       />
     </div>
 
-    <Dialog
-      v-model:open="deleteDialogOpen"
-      title="Move item to Trash?"
+    <FinderDeleteDialog
       :description="deleteDescription"
-      @close="cancelDeleteEntry"
-    >
-      <div class="finder__dialog-actions">
-        <Button size="sm" :disabled="deletingEntry" @click="cancelDeleteEntry">Cancel</Button>
-        <Button size="sm" variant="primary" :loading="deletingEntry" @click="confirmDeleteEntry">
-          Move to Trash
-        </Button>
-      </div>
-    </Dialog>
+      :loading="deletingEntry"
+      :open="deleteDialogOpen"
+      @cancel="cancelDeleteEntry"
+      @confirm="confirmDeleteEntry"
+    />
   </AppFrame>
 </template>
 
@@ -379,12 +123,6 @@ async function copyPath(path: string): Promise<void> {
   flex: 1 1 auto;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 32%);
   min-block-size: 0;
-}
-
-.finder__dialog-actions {
-  display: flex;
-  gap: var(--space-sm);
-  justify-content: flex-end;
 }
 
 @media (max-width: 640px) {
