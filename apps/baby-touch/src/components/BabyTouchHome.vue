@@ -3,7 +3,7 @@ import { LayoutGrid, Minimize2 } from "@daopk/icons";
 
 import { backgroundOptions } from "../babyTouchBackgroundOptions";
 import type { BabyTouchBackground } from "../babyTouchTypes";
-import BabyTouchMascot from "./BabyTouchMascot.vue";
+import BabyTouchStickerArt from "./stickers/BabyTouchStickerArt.vue";
 
 const emit = defineEmits<{
   (event: "hide"): void;
@@ -35,9 +35,8 @@ const emit = defineEmits<{
     </button>
 
     <div class="baby-touch__home-brand">
-      <BabyTouchMascot />
-      <div class="baby-touch__home-copy">
-        <h1>Baby Touch</h1>
+      <div class="baby-touch__home-art" data-testid="baby-touch-home-art" aria-hidden="true">
+        <BabyTouchStickerArt family="animal" kind="giraffe" />
       </div>
     </div>
 

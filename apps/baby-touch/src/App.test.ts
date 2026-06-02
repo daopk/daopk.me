@@ -79,12 +79,17 @@ describe("Baby Touch App", () => {
     expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="baby-touch-open-gallery"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="baby-touch-hide-app"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-home-art"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-home-art"] svg').classes()).toContain(
+      "baby-touch__animal--giraffe",
+    );
     expect(wrapper.findAll('[data-testid="baby-touch-background-option"]')).toHaveLength(4);
     expect(wrapper.find('[data-testid="baby-touch-settings"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="baby-touch-start-game"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="baby-touch-close-app"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="baby-touch-sticker"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("Baby Touch");
 
     wrapper.unmount();
   });

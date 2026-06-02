@@ -1,8 +1,8 @@
 .baby-touch__home {
   align-content: center;
   display: grid;
-  gap: var(--space-md);
-  inline-size: min(760px, 100%);
+  gap: var(--space-lg);
+  inline-size: min(920px, 100%);
   margin-inline: auto;
   min-block-size: 100%;
   padding: max(72px, var(--baby-touch-safe-area-top) + var(--space-lg))
@@ -57,82 +57,25 @@
 .baby-touch__home-brand {
   align-items: center;
   display: grid;
-  gap: var(--space-sm);
   justify-items: center;
   text-align: center;
 }
 
-.baby-touch__mascot {
-  block-size: auto;
+.baby-touch__home-art {
+  --baby-touch-mirror: 1;
+  --baby-touch-scale: 1;
+  --baby-touch-spin: 0deg;
+
+  aspect-ratio: 1;
+  display: grid;
   filter: drop-shadow(0 14px 18px rgb(31 28 42 / 0.28));
-  inline-size: min(148px, 42vw);
-  min-inline-size: 0;
+  inline-size: min(190px, 46vw);
 }
 
-.baby-touch__mascot-shadow {
-  fill: rgb(255 255 255 / 0.92);
-}
-
-.baby-touch__mascot-face {
-  fill: hsl(45 100% 50%);
-  stroke: rgb(255 255 255 / 0.96);
-  stroke-linejoin: round;
-  stroke-width: 8;
-}
-
-.baby-touch__mascot-spot,
-.baby-touch__mascot-horn {
-  fill: hsl(32 100% 50%);
-}
-
-.baby-touch__mascot-cheek {
-  fill: hsl(28 100% 55% / 0.65);
-}
-
-.baby-touch__mascot-eye,
-.baby-touch__mascot-horn-tip,
-.baby-touch__mascot-nose {
-  fill: rgb(0 0 0);
-}
-
-.baby-touch__mascot-muzzle {
-  fill: hsl(53 100% 80%);
-}
-
-.baby-touch__mascot-smile {
-  fill: none;
-  stroke: hsl(31 100% 50%);
-  stroke-linecap: round;
-  stroke-width: 6;
-}
-
-.baby-touch__mascot-star {
-  fill: rgb(255 255 255);
-  filter: drop-shadow(0 8px 8px rgb(29 32 38 / 0.26));
-}
-
-.baby-touch__mascot-star--small {
-  opacity: 0.95;
-}
-
-.baby-touch__home-copy h1 {
-  background: linear-gradient(
-    90deg,
-    hsl(199 88% 46%),
-    hsl(137 68% 44%),
-    hsl(45 100% 50%),
-    hsl(333 78% 61%),
-    hsl(266 78% 62%)
-  );
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 3px 0 rgb(255 255 255 / 0.86)) drop-shadow(0 10px 14px rgb(31 28 42 / 0.16));
-  font-size: 58px;
-  font-weight: 800;
-  letter-spacing: 0;
-  line-height: 0.95;
-  margin: 0;
-  -webkit-background-clip: text;
+.baby-touch__home-art .baby-touch__sticker-art-host {
+  animation: none;
+  block-size: 100%;
+  inline-size: 100%;
 }
 
 .baby-touch__home-panel {
@@ -140,13 +83,15 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 20px 34px rgb(31 28 42 / 0.16);
   display: grid;
+  inline-size: min(860px, 100%);
+  justify-self: center;
   padding: var(--space-md);
 }
 
 .baby-touch__background-grid {
   display: grid;
   gap: var(--space-md);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .baby-touch__background-option {

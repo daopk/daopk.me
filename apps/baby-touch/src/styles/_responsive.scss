@@ -5,11 +5,7 @@
   }
 
   .baby-touch__home-brand {
-    grid-template-columns: 108px 1fr;
-  }
-
-  .baby-touch__home-copy h1 {
-    font-size: 38px;
+    justify-items: center;
   }
 
   .baby-touch__home-panel {
@@ -22,7 +18,7 @@
   }
 
   .baby-touch__background-option {
-    min-block-size: 104px;
+    min-block-size: 112px;
   }
 
   .baby-touch__gallery {
@@ -70,8 +66,8 @@ html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__orientation-
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home {
   align-items: center;
   gap: var(--space-sm);
-  grid-template-columns: minmax(160px, 0.62fr) minmax(0, 1.38fr);
-  inline-size: min(860px, 100%);
+  grid-template-columns: minmax(132px, 0.45fr) minmax(0, 1.55fr);
+  inline-size: min(920px, 100%);
   padding: max(var(--space-sm), var(--baby-touch-safe-area-top) + var(--space-sm))
     max(64px, var(--baby-touch-safe-area-right) + var(--space-sm))
     max(var(--space-sm), var(--baby-touch-safe-area-bottom) + var(--space-sm))
@@ -90,17 +86,12 @@ html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-open
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-brand {
   gap: var(--space-sm);
-  grid-template-columns: minmax(84px, 112px) 1fr;
-  justify-items: stretch;
-  text-align: start;
+  justify-items: center;
+  text-align: center;
 }
 
-html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__mascot {
-  inline-size: 100%;
-}
-
-html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-copy h1 {
-  font-size: 34px;
+html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-art {
+  inline-size: min(132px, 100%);
 }
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home-panel {
