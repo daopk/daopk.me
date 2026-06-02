@@ -1,5 +1,5 @@
 .baby-touch__sticker {
-  --baby-touch-size: 112px;
+  --baby-touch-size: 128px;
 
   animation: baby-touch-travel var(--baby-touch-lifetime) linear both;
   block-size: var(--baby-touch-size);
@@ -13,7 +13,7 @@
 }
 
 .baby-touch--lively .baby-touch__sticker {
-  --baby-touch-size: 126px;
+  --baby-touch-size: 144px;
 }
 
 .baby-touch__sticker-art-host {

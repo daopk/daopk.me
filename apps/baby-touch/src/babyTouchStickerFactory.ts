@@ -21,8 +21,8 @@ interface BabyTouchTravelVector {
   readonly travelY: number;
 }
 
-const GENTLE_STICKER_SIZE_PX = 112;
-const LIVELY_STICKER_SIZE_PX = 126;
+const GENTLE_STICKER_SIZE_PX = 128;
+const LIVELY_STICKER_SIZE_PX = 144;
 const STICKER_EXIT_BUFFER_PX = 18;
 const GENTLE_JITTER_DEGREES = 18;
 const LIVELY_JITTER_DEGREES = 26;

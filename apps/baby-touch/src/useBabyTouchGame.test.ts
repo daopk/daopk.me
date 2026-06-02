@@ -173,7 +173,7 @@ describe("useBabyTouchGame", () => {
     });
 
     const sticker = api.spawnSticker({ x: 0.1, y: 0.1 }, STAGE_SIZE);
-    const radius = (112 * sticker.scale) / 2;
+    const radius = (128 * sticker.scale) / 2;
     const finalX = sticker.x * STAGE_SIZE.width + sticker.travelX;
     const finalY = sticker.y * STAGE_SIZE.height + sticker.travelY;
     const fullyOutside =
