@@ -82,9 +82,18 @@ function slotClass(size: WidgetSize): string {
   inline-size: 100%;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  padding-block: var(--home-screen-padding-block);
-  padding-inline: var(--home-screen-padding-inline);
-  padding-block-end: calc(var(--home-screen-padding-block) + 96px);
+  padding-block-end: calc(
+    var(--home-screen-padding-block) + 96px + max(0px, env(safe-area-inset-bottom, 0px))
+  );
+  padding-block-start: calc(
+    var(--home-screen-padding-block) + max(0px, env(safe-area-inset-top, 0px))
+  );
+  padding-inline-end: calc(
+    var(--home-screen-padding-inline) + max(0px, env(safe-area-inset-right, 0px))
+  );
+  padding-inline-start: calc(
+    var(--home-screen-padding-inline) + max(0px, env(safe-area-inset-left, 0px))
+  );
 }
 
 .mobile-widgets-page__empty {
