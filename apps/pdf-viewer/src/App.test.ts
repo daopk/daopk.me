@@ -2,7 +2,12 @@ import { mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { computed, nextTick, ref } from "vue";
 
-import { AppContextInjectionKey, type AppContext } from "@daopk/sdk";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeController,
+  type AppContext,
+} from "@daopk/sdk";
 
 import App from "./App.vue";
 import type {
@@ -88,6 +93,9 @@ function makeViewer(
       pageNumber.value = page;
       return true;
     }),
+    setScale: vi.fn(() => true),
+    previewScaleAt: vi.fn(() => true),
+    commitPreviewScale: vi.fn(async () => true),
     zoomIn: vi.fn(() => true),
     zoomOut: vi.fn(() => true),
     fitWidth: vi.fn(async () => true),
@@ -97,14 +105,23 @@ function makeViewer(
   };
 }
 
-function mountPdfViewer(viewer: PdfViewerBindings, context = makeContext(), kernel = makeKernel()) {
+function mountPdfViewer(
+  viewer: PdfViewerBindings,
+  context = makeContext(),
+  kernel = makeKernel(),
+  options: { readonly appChrome?: AppChromeController } = {},
+) {
   mocks.usePdfViewer.mockReturnValue(viewer);
   mocks.useKernel.mockReturnValue(kernel);
+  const provide: Record<symbol, unknown> = {
+    [AppContextInjectionKey as symbol]: context,
+  };
+  if (options.appChrome !== undefined) {
+    provide[AppChromeInjectionKey as symbol] = options.appChrome;
+  }
   return mount(App, {
     global: {
-      provide: {
-        [AppContextInjectionKey as symbol]: context,
-      },
+      provide,
     },
   });
 }
@@ -132,6 +149,10 @@ describe("PDF Viewer App.vue", () => {
   });
 
   it("passes launch args.path into the viewer composable", () => {
+    const appChrome: AppChromeController = {
+      setTitle: vi.fn(),
+      setBackAction: vi.fn(),
+    };
     const viewer = makeViewer({
       status: "ready",
       title: "spec.pdf",
@@ -139,16 +160,18 @@ describe("PDF Viewer App.vue", () => {
       sourceKind: "vfs",
       pageCount: 2,
     });
-    const wrapper = mountPdfViewer(viewer, makeContext({ path: "/docs/spec.pdf" }));
+    const wrapper = mountPdfViewer(viewer, makeContext({ path: "/docs/spec.pdf" }), makeKernel(), {
+      appChrome,
+    });
 
     expect(mocks.usePdfViewer).toHaveBeenCalledWith({
       vfs: expect.anything(),
       initialPath: "/docs/spec.pdf",
     });
     expect(wrapper.find(".pdf-viewer__toolbar").exists()).toBe(true);
-    expect(wrapper.find(".pdf-viewer__status").exists()).toBe(true);
-    expect(wrapper.text()).toContain("spec.pdf");
-    expect(wrapper.text()).toContain("/docs/spec.pdf");
+    expect(wrapper.find(".pdf-viewer__document").exists()).toBe(false);
+    expect(wrapper.find(".pdf-viewer__status").exists()).toBe(false);
+    expect(appChrome.setTitle).toHaveBeenLastCalledWith("spec.pdf");
 
     wrapper.unmount();
   });

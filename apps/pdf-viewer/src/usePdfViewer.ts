@@ -57,6 +57,11 @@ export interface PdfViewerAdapter {
   loadDocument(bytes: Uint8Array): Promise<PdfLoadingTaskLike>;
 }
 
+export interface PdfViewerZoomPoint {
+  readonly clientX: number;
+  readonly clientY: number;
+}
+
 export interface UsePdfViewerOptions {
   readonly vfs: PdfViewerVfsClient;
   readonly initialPath?: string;
@@ -86,6 +91,9 @@ export interface PdfViewerBindings {
   goPrevious(): boolean;
   goNext(): boolean;
   setPage(page: number): boolean;
+  setScale(nextScale: number, point?: PdfViewerZoomPoint): boolean;
+  previewScaleAt(nextScale: number, point: PdfViewerZoomPoint): boolean;
+  commitPreviewScale(): Promise<boolean>;
   zoomIn(): boolean;
   zoomOut(): boolean;
   fitWidth(): Promise<boolean>;
@@ -134,6 +142,7 @@ export function usePdfViewer({
   let activeRenderTask: PdfRenderTaskLike | undefined;
   let activeRenderRun = 0;
   let activeLoadRun = 0;
+  let pageBaseSize: PdfViewportLike | undefined;
   let disposed = false;
   let resizeObserver: ResizeObserver | undefined;
   let observedViewportEl: HTMLElement | null = null;
@@ -238,6 +247,7 @@ export function usePdfViewer({
     cleanupActiveRender();
     cleanupDocument();
     clearCanvas();
+    pageBaseSize = undefined;
     activeBytes.value = undefined;
     status.value = "loading";
     sourceKind.value = "empty";
@@ -327,19 +337,20 @@ export function usePdfViewer({
     }
 
     pageNumber.value = next;
+    pageBaseSize = undefined;
     void renderCurrentPage();
     return true;
   }
 
   function zoomIn(): boolean {
-    return setScale(scale.value + ZOOM_STEP);
+    return setScale(scale.value + ZOOM_STEP, viewportCenterPoint());
   }
 
   function zoomOut(): boolean {
-    return setScale(scale.value - ZOOM_STEP);
+    return setScale(scale.value - ZOOM_STEP, viewportCenterPoint());
   }
 
-  function setScale(nextScale: number): boolean {
+  function setScale(nextScale: number, point = viewportCenterPoint()): boolean {
     if (activeDocument === undefined) {
       return false;
     }
@@ -350,9 +361,41 @@ export function usePdfViewer({
     }
 
     fitMode.value = "custom";
+    previewCanvasScale(next, point);
     scale.value = next;
     void renderCurrentPage();
     return true;
+  }
+
+  function previewScaleAt(nextScale: number, point: PdfViewerZoomPoint): boolean {
+    if (activeDocument === undefined || pageCount.value <= 0) {
+      return false;
+    }
+
+    const next = clampScale(nextScale);
+    if (Math.abs(next - scale.value) < 0.001) {
+      return false;
+    }
+
+    if (activeRenderTask !== undefined) {
+      activeRenderRun++;
+      cleanupActiveRender();
+      status.value = "ready";
+    }
+
+    fitMode.value = "custom";
+    previewCanvasScale(next, point);
+    scale.value = next;
+    return true;
+  }
+
+  async function commitPreviewScale(): Promise<boolean> {
+    if (activeDocument === undefined || pageCount.value <= 0) {
+      return false;
+    }
+
+    fitMode.value = "custom";
+    return await renderCurrentPage();
   }
 
   async function fitWidth(options: { render?: boolean } = {}): Promise<boolean> {
@@ -366,9 +409,11 @@ export function usePdfViewer({
     }
 
     const viewport = page.getViewport({ scale: 1, rotation: rotation.value });
+    pageBaseSize = viewportSize(viewport);
     const availableWidth = Math.max(0, viewportEl.value?.clientWidth ?? 0);
     const nextScale = availableWidth > 0 ? clampScale(availableWidth / viewport.width) : 1;
     fitMode.value = "fit-width";
+    previewCanvasScale(nextScale);
     scale.value = nextScale;
 
     if (options.render !== false) {
@@ -383,6 +428,7 @@ export function usePdfViewer({
     }
 
     rotation.value = (rotation.value + 90) % 360;
+    pageBaseSize = undefined;
     if (fitMode.value === "fit-width") {
       void fitWidth();
     } else {
@@ -405,6 +451,66 @@ export function usePdfViewer({
     link.click();
     URL.revokeObjectURL(objectUrl);
     return true;
+  }
+
+  function viewportCenterPoint(): PdfViewerZoomPoint | undefined {
+    const el = viewportEl.value;
+    if (el === null) {
+      return undefined;
+    }
+
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      return undefined;
+    }
+
+    return {
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    };
+  }
+
+  function previewCanvasScale(nextScale: number, point?: PdfViewerZoomPoint): void {
+    const canvas = canvasEl.value;
+    const baseSize = pageBaseSize;
+    if (canvas === null || baseSize === undefined) {
+      return;
+    }
+
+    const previousScale = scale.value;
+    const beforeRect = point === undefined ? null : canvas.getBoundingClientRect();
+    applyCanvasDisplaySize(canvas, {
+      width: baseSize.width * nextScale,
+      height: baseSize.height * nextScale,
+    });
+
+    const viewport = viewportEl.value;
+    if (
+      point === undefined ||
+      beforeRect === null ||
+      viewport === null ||
+      beforeRect.width <= 0 ||
+      beforeRect.height <= 0 ||
+      previousScale <= 0
+    ) {
+      return;
+    }
+
+    const ratio = nextScale / previousScale;
+    const afterRect = canvas.getBoundingClientRect();
+    const localX = point.clientX - beforeRect.left;
+    const localY = point.clientY - beforeRect.top;
+    const nextClientX = afterRect.left + localX * ratio;
+    const nextClientY = afterRect.top + localY * ratio;
+    const deltaX = nextClientX - point.clientX;
+    const deltaY = nextClientY - point.clientY;
+
+    if (Number.isFinite(deltaX)) {
+      viewport.scrollLeft += deltaX;
+    }
+    if (Number.isFinite(deltaY)) {
+      viewport.scrollTop += deltaY;
+    }
   }
 
   async function renderCurrentPage(): Promise<boolean> {
@@ -431,17 +537,18 @@ export function usePdfViewer({
         return false;
       }
 
+      const baseViewport = page.getViewport({ scale: 1, rotation: rotation.value });
       const viewport = page.getViewport({ scale: scale.value, rotation: rotation.value });
       const context = canvas.getContext("2d");
       if (context === null) {
         throw new Error("Canvas rendering is unavailable in this browser.");
       }
 
+      pageBaseSize = viewportSize(baseViewport);
       const outputScale = Math.max(1, window.devicePixelRatio || 1);
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.inlineSize = `${Math.floor(viewport.width)}px`;
-      canvas.style.blockSize = `${Math.floor(viewport.height)}px`;
+      applyCanvasDisplaySize(canvas, viewport);
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -538,6 +645,9 @@ export function usePdfViewer({
     context?.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = 0;
     canvas.height = 0;
+    canvas.style.width = "";
+    canvas.style.height = "";
+    canvas.style.aspectRatio = "";
     canvas.style.inlineSize = "";
     canvas.style.blockSize = "";
   }
@@ -621,6 +731,9 @@ export function usePdfViewer({
     goPrevious,
     goNext,
     setPage,
+    setScale,
+    previewScaleAt,
+    commitPreviewScale,
     zoomIn,
     zoomOut,
     fitWidth,
@@ -653,6 +766,23 @@ function safeNormalizePath(path: string): VfsPath | null {
   } catch {
     return null;
   }
+}
+
+function viewportSize(viewport: PdfViewportLike): PdfViewportLike {
+  return {
+    width: viewport.width,
+    height: viewport.height,
+  };
+}
+
+function applyCanvasDisplaySize(canvas: HTMLCanvasElement, size: PdfViewportLike): void {
+  const width = Math.max(1, Math.floor(size.width));
+  const height = Math.max(1, Math.floor(size.height));
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  canvas.style.aspectRatio = `${width} / ${height}`;
+  canvas.style.inlineSize = "";
+  canvas.style.blockSize = "";
 }
 
 function clampPage(page: number, pageCount: number): number {

@@ -152,6 +152,47 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
+function rect(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    top,
+    width,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
+function makeCanvas(): HTMLCanvasElement {
+  const style = {} as CSSStyleDeclaration;
+  return {
+    width: 0,
+    height: 0,
+    style,
+    getBoundingClientRect: vi.fn(() => {
+      const width = Number.parseInt(style.width || "600", 10);
+      const height = Number.parseInt(style.height || "800", 10);
+      return rect(0, 0, width, height);
+    }),
+    getContext: vi.fn(() => ({
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+    })),
+  } as unknown as HTMLCanvasElement;
+}
+
+function makeViewport(clientWidth = 720): HTMLElement {
+  return {
+    clientWidth,
+    scrollLeft: 0,
+    scrollTop: 0,
+    getBoundingClientRect: vi.fn(() => rect(0, 0, clientWidth, 480)),
+  } as unknown as HTMLElement;
+}
+
 describe("PDF file detection", () => {
   it("detects PDFs by extension and MIME type", () => {
     expect(detectVfsFileType(vfsFileTypeInputFromPath("/docs/spec.pdf"))).toBe("pdf");
@@ -290,6 +331,44 @@ describe("usePdfViewer", () => {
 
     expect(viewer.fitMode.value).toBe("fit-width");
     expect(viewer.scale.value).toBe(1.2);
+
+    unmount();
+  });
+
+  it("previews zoom after fit-width without stretching or re-rendering until commit", async () => {
+    const page = makePage();
+    const adapter = makeAdapter(makeLoadingTask(makeDocument(page)));
+    const { viewer, unmount } = harness({ adapter });
+    const canvas = makeCanvas();
+    const viewport = makeViewport(720);
+    viewer.canvasEl.value = canvas;
+    viewer.viewportEl.value = viewport;
+
+    await viewer.loadFromPath("/wide.pdf");
+
+    expect(viewer.scale.value).toBe(1.2);
+    expect(canvas.style.width).toBe("720px");
+    expect(canvas.style.height).toBe("960px");
+    expect(canvas.style.aspectRatio).toBe("720 / 960");
+    expect(page.render).toHaveBeenCalledTimes(1);
+
+    expect(viewer.previewScaleAt(1.5, { clientX: 100, clientY: 100 })).toBe(true);
+
+    expect(viewer.fitMode.value).toBe("custom");
+    expect(viewer.scale.value).toBe(1.5);
+    expect(canvas.style.width).toBe("900px");
+    expect(canvas.style.height).toBe("1200px");
+    expect(canvas.style.aspectRatio).toBe("900 / 1200");
+    expect(viewport.scrollLeft).toBe(25);
+    expect(viewport.scrollTop).toBe(25);
+    expect(page.render).toHaveBeenCalledTimes(1);
+
+    await viewer.commitPreviewScale();
+
+    expect(page.render).toHaveBeenCalledTimes(2);
+    expect(canvas.style.width).toBe("900px");
+    expect(canvas.style.height).toBe("1200px");
+    expect(canvas.style.aspectRatio).toBe("900 / 1200");
 
     unmount();
   });

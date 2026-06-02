@@ -9,17 +9,16 @@ import {
   ScrollArea,
   Separator,
   Spinner,
-  StatusBanner,
   TextInput,
   ToolbarGroup,
-  ToolbarTitle,
+  useAppChrome,
 } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Maximize2,
+  MoveHorizontal,
   RotateCwSquare,
   Upload,
   ZoomIn,
@@ -28,6 +27,7 @@ import {
 import { AppContextInjectionKey, normalizeVfsPath, useKernel, useVfs } from "@daopk/sdk";
 
 import { usePdfViewer } from "./usePdfViewer";
+import { usePdfViewerGestures } from "./usePdfViewerGestures";
 
 const ctx = inject(AppContextInjectionKey, null);
 const kernel = useKernel();
@@ -37,26 +37,19 @@ const viewer = usePdfViewer({
   vfs,
   initialPath,
 });
+usePdfViewerGestures(viewer.viewportEl, viewer);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const pageDraft = ref("1");
 
 const hasDocument = computed(() => viewer.pageCount.value > 0);
 const showChrome = computed(() => viewer.sourceKind.value !== "empty");
+const chromeTitle = computed(() => viewer.title.value || "PDF Viewer");
 const busy = computed(
   () => viewer.status.value === "loading" || viewer.status.value === "rendering",
 );
-const sourceLabel = computed(() => {
-  if (viewer.sourceKind.value === "vfs" && viewer.path.value !== null) {
-    return viewer.path.value;
-  }
 
-  if (viewer.sourceKind.value === "file") {
-    return "Local file";
-  }
-
-  return "No document";
-});
+useAppChrome({ title: chromeTitle });
 
 watch(
   viewer.pageNumber,
@@ -169,89 +162,79 @@ function setCanvasRef(el: unknown): void {
     />
 
     <AppToolbar v-if="showChrome" class="pdf-viewer__toolbar" wrap>
-      <template #start>
-        <ToolbarTitle
-          class="pdf-viewer__document"
-          :title="viewer.title.value || sourceLabel"
-          :subtitle="viewer.title.value ? sourceLabel : undefined"
-        />
-      </template>
+      <div class="pdf-viewer__controls" aria-label="PDF controls">
+        <ToolbarGroup label="Document">
+          <IconButton label="Open PDF" :icon="Upload" :disabled="busy" @click="openFilePicker" />
+        </ToolbarGroup>
 
-      <template #end>
-        <div class="pdf-viewer__controls" aria-label="PDF controls">
-          <ToolbarGroup label="Document">
-            <IconButton label="Open PDF" :icon="Upload" :disabled="busy" @click="openFilePicker" />
-          </ToolbarGroup>
+        <Separator orientation="vertical" decorative />
 
-          <Separator orientation="vertical" decorative />
-
-          <ToolbarGroup label="Pages">
-            <IconButton
-              label="Previous page"
-              :icon="ChevronLeft"
-              :disabled="!viewer.canGoPrevious.value || busy"
-              @click="goPrevious"
-            />
-            <form class="pdf-viewer__page-form" @submit.prevent="submitPage">
-              <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
-              <TextInput
-                id="pdf-viewer-page"
-                v-model="pageDraft"
-                class="pdf-viewer__page-input"
-                type="number"
-                inputmode="numeric"
-                min="1"
-                :max="viewer.pageCount.value || undefined"
-                :disabled="!hasDocument || busy"
-                @blur="submitPage"
-              />
-              <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
-            </form>
-            <IconButton
-              label="Next page"
-              :icon="ChevronRight"
-              :disabled="!viewer.canGoNext.value || busy"
-              @click="goNext"
-            />
-          </ToolbarGroup>
-
-          <Separator orientation="vertical" decorative />
-
-          <ToolbarGroup label="Zoom and page tools">
-            <IconButton
-              label="Zoom out"
-              :icon="ZoomOut"
+        <ToolbarGroup label="Pages">
+          <IconButton
+            label="Previous page"
+            :icon="ChevronLeft"
+            :disabled="!viewer.canGoPrevious.value || busy"
+            @click="goPrevious"
+          />
+          <form class="pdf-viewer__page-form" @submit.prevent="submitPage">
+            <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
+            <TextInput
+              id="pdf-viewer-page"
+              v-model="pageDraft"
+              class="pdf-viewer__page-input"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              :max="viewer.pageCount.value || undefined"
               :disabled="!hasDocument || busy"
-              @click="zoomOut"
+              @blur="submitPage"
             />
-            <span class="pdf-viewer__zoom" aria-live="polite">{{ viewer.zoomLabel.value }}</span>
-            <IconButton
-              label="Zoom in"
-              :icon="ZoomIn"
-              :disabled="!hasDocument || busy"
-              @click="zoomIn"
-            />
-            <IconButton
-              label="Fit width"
-              :icon="Maximize2"
-              :disabled="!hasDocument || busy"
-              @click="fitWidth"
-            />
-            <IconButton
-              label="Rotate clockwise"
-              :icon="RotateCwSquare"
-              :disabled="!hasDocument || busy"
-              @click="rotateClockwise"
-            />
-            <IconButton
-              label="Download PDF"
-              :icon="Download"
-              :disabled="!viewer.canDownload.value || busy"
-              @click="download"
-            />
-          </ToolbarGroup>
-        </div>
-      </template>
+            <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
+          </form>
+          <IconButton
+            label="Next page"
+            :icon="ChevronRight"
+            :disabled="!viewer.canGoNext.value || busy"
+            @click="goNext"
+          />
+        </ToolbarGroup>
+
+        <Separator orientation="vertical" decorative />
+
+        <ToolbarGroup label="Zoom and page tools">
+          <IconButton
+            label="Zoom out"
+            :icon="ZoomOut"
+            :disabled="!hasDocument || busy"
+            @click="zoomOut"
+          />
+          <span class="pdf-viewer__zoom" aria-live="polite">{{ viewer.zoomLabel.value }}</span>
+          <IconButton
+            label="Zoom in"
+            :icon="ZoomIn"
+            :disabled="!hasDocument || busy"
+            @click="zoomIn"
+          />
+          <IconButton
+            label="Fit width"
+            :icon="MoveHorizontal"
+            :disabled="!hasDocument || busy"
+            @click="fitWidth"
+          />
+          <IconButton
+            label="Rotate clockwise"
+            :icon="RotateCwSquare"
+            :disabled="!hasDocument || busy"
+            @click="rotateClockwise"
+          />
+          <IconButton
+            label="Download PDF"
+            :icon="Download"
+            :disabled="!viewer.canDownload.value || busy"
+            @click="download"
+          />
+        </ToolbarGroup>
+      </div>
     </AppToolbar>
 
     <ScrollArea
@@ -297,10 +280,6 @@ function setCanvasRef(el: unknown): void {
         <canvas :ref="setCanvasRef" class="pdf-viewer__canvas" aria-label="PDF page" />
       </div>
     </ScrollArea>
-
-    <StatusBanner v-if="showChrome" as="footer" class="pdf-viewer__status">
-      {{ viewer.message.value }}
-    </StatusBanner>
   </AppFrame>
 </template>
 
@@ -328,11 +307,6 @@ function setCanvasRef(el: unknown): void {
   padding-block: var(--space-xs);
   padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
   padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
-}
-
-.pdf-viewer__document {
-  flex: 1 1 auto;
-  min-inline-size: 150px;
 }
 
 .pdf-viewer__file-input,
@@ -406,6 +380,8 @@ function setCanvasRef(el: unknown): void {
   background-size: 16px 16px;
   flex: 1 1 auto;
   min-block-size: 0;
+  touch-action: pan-x pan-y;
+  user-select: none;
 }
 
 .pdf-viewer__viewport--empty {
@@ -441,21 +417,9 @@ function setCanvasRef(el: unknown): void {
     0 18px 48px color-mix(in srgb, var(--color-fg) 18%, transparent),
     0 0 0 1px color-mix(in srgb, var(--color-fg) 10%, transparent);
   display: block;
-}
-
-.pdf-viewer__status {
-  background: var(--color-bg-subtle);
-  border-block-start: 1px solid var(--color-border);
-  color: var(--color-fg-muted);
-  flex: 0 0 auto;
-  font-size: var(--font-size-xs);
-  min-block-size: 28px;
-  overflow: hidden;
-  padding-block: var(--space-xs);
-  padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
-  padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-block-size: none;
+  max-inline-size: none;
+  user-select: none;
 }
 
 @media (max-width: 760px) {
@@ -466,10 +430,6 @@ function setCanvasRef(el: unknown): void {
 
   .pdf-viewer__controls {
     flex-wrap: wrap;
-  }
-
-  .pdf-viewer__document {
-    inline-size: 100%;
   }
 }
 </style>
