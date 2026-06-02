@@ -38,6 +38,7 @@ export interface PdfPageLike {
     transform?: readonly number[];
     background?: string;
   }): PdfRenderTaskLike;
+  cleanup?(): boolean;
 }
 
 export interface PdfDocumentLike {
@@ -106,6 +107,9 @@ const PDF_MIME_TYPE = "application/pdf";
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 3;
 const ZOOM_STEP = 0.15;
+const MAX_CANVAS_RENDER_DIMENSION = 4096;
+const MAX_CANVAS_RENDER_PIXELS = MAX_CANVAS_RENDER_DIMENSION * MAX_CANVAS_RENDER_DIMENSION;
+const MIN_CANVAS_OUTPUT_SCALE = 0.01;
 
 export function usePdfViewer({
   vfs,
@@ -515,6 +519,7 @@ export function usePdfViewer({
   async function renderCurrentPage(): Promise<boolean> {
     const document = activeDocument;
     const canvas = canvasEl.value;
+    let page: PdfPageLike | undefined;
     if (document === undefined || pageCount.value <= 0) {
       return false;
     }
@@ -531,23 +536,28 @@ export function usePdfViewer({
     message.value = `Rendering page ${pageNumber.value} of ${pageCount.value}...`;
 
     try {
-      const page = await document.getPage(clampPage(pageNumber.value, pageCount.value));
+      page = await document.getPage(clampPage(pageNumber.value, pageCount.value));
       if (!isCurrentRender(renderRun)) {
         return false;
       }
 
       const baseViewport = page.getViewport({ scale: 1, rotation: rotation.value });
       const viewport = page.getViewport({ scale: scale.value, rotation: rotation.value });
+      const outputScale = resolveCanvasOutputScale(viewport, window.devicePixelRatio || 1);
+      const canvasWidth = canvasBitmapDimension(viewport.width, outputScale);
+      const canvasHeight = canvasBitmapDimension(viewport.height, outputScale);
+
+      releaseCanvasBitmap(canvas);
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      applyCanvasDisplaySize(canvas, viewport);
+
       const context = canvas.getContext("2d");
       if (context === null) {
         throw new Error("Canvas rendering is unavailable in this browser.");
       }
 
       pageBaseSize = baseViewport;
-      const outputScale = Math.max(1, window.devicePixelRatio || 1);
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      applyCanvasDisplaySize(canvas, viewport);
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -578,6 +588,7 @@ export function usePdfViewer({
     } finally {
       if (isCurrentRender(renderRun)) {
         activeRenderTask = undefined;
+        cleanupPage(page);
       }
     }
   }
@@ -640,10 +651,7 @@ export function usePdfViewer({
       return;
     }
 
-    const context = canvas.getContext("2d");
-    context?.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.width = 0;
-    canvas.height = 0;
+    releaseCanvasBitmap(canvas);
     canvas.style.width = "";
     canvas.style.height = "";
     canvas.style.aspectRatio = "";
@@ -694,6 +702,8 @@ export function usePdfViewer({
     observedViewportEl = null;
     cleanupActiveRender();
     cleanupDocument();
+    clearCanvas();
+    pageBaseSize = undefined;
   }
 
   onMounted(() => {
@@ -774,6 +784,39 @@ function applyCanvasDisplaySize(canvas: HTMLCanvasElement, size: PdfViewportLike
   canvas.style.aspectRatio = `${width} / ${height}`;
   canvas.style.inlineSize = "";
   canvas.style.blockSize = "";
+}
+
+function releaseCanvasBitmap(canvas: HTMLCanvasElement): void {
+  const context = canvas.getContext("2d");
+  context?.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
+function cleanupPage(page: PdfPageLike | undefined): void {
+  try {
+    page?.cleanup?.();
+  } catch {}
+}
+
+function resolveCanvasOutputScale(size: PdfViewportLike, devicePixelRatio: number): number {
+  const width = Math.max(1, size.width);
+  const height = Math.max(1, size.height);
+  const dpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0 ? devicePixelRatio : 1;
+  const dimensionScale = Math.min(
+    MAX_CANVAS_RENDER_DIMENSION / width,
+    MAX_CANVAS_RENDER_DIMENSION / height,
+  );
+  const areaScale = Math.sqrt(MAX_CANVAS_RENDER_PIXELS / Math.max(1, width * height));
+
+  return Math.max(MIN_CANVAS_OUTPUT_SCALE, Math.min(dpr, dimensionScale, areaScale));
+}
+
+function canvasBitmapDimension(cssPixels: number, outputScale: number): number {
+  return Math.max(
+    1,
+    Math.min(MAX_CANVAS_RENDER_DIMENSION, Math.floor(Math.max(1, cssPixels) * outputScale)),
+  );
 }
 
 function clampPage(page: number, pageCount: number): number {

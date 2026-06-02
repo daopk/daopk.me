@@ -69,6 +69,7 @@ function makeRenderTask(promise: Promise<void> = Promise.resolve()): PdfRenderTa
 function makePage(renderTask = makeRenderTask()): PdfPageLike & {
   getViewport: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
+  cleanup: ReturnType<typeof vi.fn>;
 } {
   return {
     getViewport: vi.fn(({ scale = 1 }: { scale?: number; rotation?: number } = {}) => ({
@@ -76,6 +77,7 @@ function makePage(renderTask = makeRenderTask()): PdfPageLike & {
       height: 800 * scale,
     })),
     render: vi.fn(() => renderTask),
+    cleanup: vi.fn(() => true),
   };
 }
 
@@ -371,6 +373,37 @@ describe("usePdfViewer", () => {
     expect(canvas.style.aspectRatio).toBe("900 / 1200");
 
     unmount();
+  });
+
+  it("caps high-DPR zoom renders to a mobile-safe canvas bitmap", async () => {
+    const originalDevicePixelRatio = window.devicePixelRatio;
+    Object.defineProperty(window, "devicePixelRatio", { configurable: true, value: 3 });
+    const page = makePage();
+    const adapter = makeAdapter(makeLoadingTask(makeDocument(page)));
+    const { viewer, unmount } = harness({ adapter });
+    const canvas = makeCanvas();
+    viewer.canvasEl.value = canvas;
+    viewer.viewportEl.value = makeViewport(720);
+
+    try {
+      await viewer.loadFromPath("/wide.pdf");
+      expect(canvas.width).toBe(2160);
+      expect(canvas.height).toBe(2880);
+
+      expect(viewer.previewScaleAt(3, { clientX: 100, clientY: 100 })).toBe(true);
+      await viewer.commitPreviewScale();
+
+      expect(canvas.style.width).toBe("1800px");
+      expect(canvas.style.height).toBe("2400px");
+      expect(canvas.width).toBe(3072);
+      expect(canvas.height).toBe(4096);
+    } finally {
+      unmount();
+      Object.defineProperty(window, "devicePixelRatio", {
+        configurable: true,
+        value: originalDevicePixelRatio,
+      });
+    }
   });
 
   it("reports render errors from the active page", async () => {
