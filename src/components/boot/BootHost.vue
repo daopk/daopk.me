@@ -102,7 +102,7 @@ function onRetryClick(): void {
     BlinkMacSystemFont,
     sans-serif;
   inset: 0;
-  min-height: var(--app-viewport-block-size);
+  block-size: 100vh;
   padding: clamp(var(--space-xl), 5vw, 48px);
   place-content: center;
   position: fixed;

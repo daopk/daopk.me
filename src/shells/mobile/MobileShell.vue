@@ -486,7 +486,7 @@ watch(
 
 <style scoped lang="scss">
 .mobile-shell {
-  block-size: var(--app-viewport-block-size);
+  block-size: 100vh;
   color: var(--color-fg);
   display: flex;
   flex-direction: column;

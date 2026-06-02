@@ -113,7 +113,7 @@ watch(
 
 <style scoped lang="scss">
 .app-stage {
-  min-block-size: var(--app-viewport-block-size);
+  block-size: 100vh;
   overflow: hidden;
   position: relative;
 }
