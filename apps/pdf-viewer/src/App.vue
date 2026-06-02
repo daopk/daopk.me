@@ -325,7 +325,7 @@ watch([showChrome, viewer.pageCount, viewer.zoomLabel], scheduleToolbarLayoutUpd
 </script>
 
 <template>
-  <AppFrame class="pdf-viewer" layout="flex-column" aria-label="PDF Viewer">
+  <AppFrame class="pdf-viewer" layout="flex-column" :safe-area="false" aria-label="PDF Viewer">
     <input
       ref="fileInput"
       class="pdf-viewer__file-input"
