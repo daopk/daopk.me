@@ -99,7 +99,6 @@ const PDF_MIME_TYPE = "application/pdf";
 const MIN_SCALE = 0.35;
 const MAX_SCALE = 3;
 const ZOOM_STEP = 0.15;
-const FIT_WIDTH_GUTTER = 48;
 
 export function usePdfViewer({
   vfs,
@@ -367,7 +366,7 @@ export function usePdfViewer({
     }
 
     const viewport = page.getViewport({ scale: 1, rotation: rotation.value });
-    const availableWidth = Math.max(0, (viewportEl.value?.clientWidth ?? 0) - FIT_WIDTH_GUTTER);
+    const availableWidth = Math.max(0, viewportEl.value?.clientWidth ?? 0);
     const nextScale = availableWidth > 0 ? clampScale(availableWidth / viewport.width) : 1;
     fitMode.value = "fit-width";
     scale.value = nextScale;

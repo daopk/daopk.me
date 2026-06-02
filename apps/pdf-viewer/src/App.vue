@@ -433,7 +433,6 @@ function setCanvasRef(el: unknown): void {
   display: grid;
   justify-content: center;
   min-block-size: 100%;
-  padding: var(--space-xl);
 }
 
 .pdf-viewer__canvas {
@@ -471,10 +470,6 @@ function setCanvasRef(el: unknown): void {
 
   .pdf-viewer__document {
     inline-size: 100%;
-  }
-
-  .pdf-viewer__page {
-    padding: var(--space-md);
   }
 }
 </style>

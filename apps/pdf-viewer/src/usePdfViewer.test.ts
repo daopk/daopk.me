@@ -283,13 +283,13 @@ describe("usePdfViewer", () => {
     const page = makePage();
     const adapter = makeAdapter(makeLoadingTask(makeDocument(page)));
     const { viewer, unmount } = harness({ adapter });
-    viewer.viewportEl.value = { clientWidth: 648 } as HTMLElement;
+    viewer.viewportEl.value = { clientWidth: 720 } as HTMLElement;
 
     await viewer.loadFromPath("/wide.pdf");
     await viewer.fitWidth();
 
     expect(viewer.fitMode.value).toBe("fit-width");
-    expect(viewer.scale.value).toBe(1);
+    expect(viewer.scale.value).toBe(1.2);
 
     unmount();
   });
