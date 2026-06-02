@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { Copy, FolderOpen, FolderPlus, RefreshCw, Trash2 } from "@daopk/icons";
+import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";
 import { Badge, EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
 import type { VfsDirEntry } from "@daopk/sdk";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
 
 import type { FinderViewMode } from "../composables/useFinder";
-import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../utils/display";
+import {
+  entryIcon,
+  entryKindLabel,
+  formatBytes,
+  formatModified,
+  isCloudDriveEntry,
+} from "../utils/display";
 import { openSuggestionIcon } from "../utils/openSuggestionIcons";
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../utils/openSuggestions";
 
@@ -30,6 +36,7 @@ const props = defineProps<{
   readonly entries: readonly VfsDirEntry[];
   readonly error: string | null;
   readonly loading: boolean;
+  readonly loadingPath: string | null;
   readonly mutationDisabled: boolean;
   readonly selectedPath: string | null;
   readonly viewMode: FinderViewMode;
@@ -114,6 +121,10 @@ function entryId(index: number): string {
 
 function canMutateEntry(entry: VfsDirEntry): boolean {
   return !props.mutationDisabled && !entry.readonly;
+}
+
+function isLoadingCloudEntry(entry: VfsDirEntry): boolean {
+  return props.loadingPath === entry.path && isCloudDriveEntry(entry);
 }
 
 function isTouchLikePointer(event: PointerEvent): boolean {
@@ -241,7 +252,6 @@ function onBrowserKeydown(event: KeyboardEvent): void {
     <template #trigger>
       <section class="finder__browser" aria-label="Directory browser">
         <StatusBanner v-if="error" class="finder__notice" tone="error">{{ error }}</StatusBanner>
-        <StatusBanner v-if="loading" class="finder__notice">Loading folder...</StatusBanner>
         <EmptyState v-else-if="!error && entries.length === 0" class="finder__empty">
           This folder is empty.
         </EmptyState>
@@ -273,8 +283,9 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   @pointerup="onEntryPointerUp(entry, $event)"
                 >
                   <component
-                    :is="entryIcon(entry)"
+                    :is="isLoadingCloudEntry(entry) ? Loader2 : entryIcon(entry)"
                     class="finder__entry-icon"
+                    :class="{ 'finder__entry-icon--loading': isLoadingCloudEntry(entry) }"
                     :size="viewMode === 'grid' ? 28 : 18"
                     aria-hidden="true"
                   />
@@ -445,6 +456,11 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   flex: 0 0 auto;
 }
 
+.finder__entry-icon--loading {
+  animation: finder-entry-icon-spin 0.75s linear infinite;
+  color: var(--color-accent);
+}
+
 .finder__entry-name {
   color: var(--color-fg);
   font-weight: 500;
@@ -496,6 +512,18 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 
 .finder__context-icon--app {
   color: inherit;
+}
+
+@keyframes finder-entry-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finder__entry-icon--loading {
+    animation-duration: 1.5s;
+  }
 }
 
 @media (max-width: 640px) {

@@ -178,6 +178,15 @@ function makeTrash(vfs: FakeVfs): FinderTrashClient & {
   };
 }
 
+function deferred<Value>() {
+  let resolve!: (value: Value) => void;
+  const promise = new Promise<Value>((settle) => {
+    resolve = settle;
+  });
+
+  return { promise, resolve };
+}
+
 describe("useFinder", () => {
   it("loads a directory and selects the first entry", async () => {
     const vfs = makeVfs({
@@ -194,6 +203,35 @@ describe("useFinder", () => {
     expect(finder.breadcrumbs.value).toEqual([{ label: "/", path: "/" }]);
     expect(finder.currentDirectory.value?.path).toBe("/");
     expect(finder.currentDirectoryReadonly.value).toBe(false);
+  });
+
+  it("tracks the directory path currently loading", async () => {
+    const vfs = makeVfs({
+      "/": [entry("/cloud", "directory")],
+      "/cloud": [],
+    });
+    const finder = useFinder({ vfs });
+    await finder.refresh();
+
+    const cloudListing = deferred<readonly VfsDirEntry[] | null>();
+    vfs.list.mockImplementation(async (path) => {
+      if (normalizeVfsPath(path) === "/cloud") {
+        return await cloudListing.promise;
+      }
+
+      return [];
+    });
+
+    const opened = finder.openDirectory("/cloud");
+    await Promise.resolve();
+
+    expect(finder.loading.value).toBe(true);
+    expect(finder.loadingPath.value).toBe("/cloud");
+
+    cloudListing.resolve([]);
+    await expect(opened).resolves.toBe(true);
+    expect(finder.loading.value).toBe(false);
+    expect(finder.loadingPath.value).toBeNull();
   });
 
   it("can load a directory without selecting the first entry", async () => {

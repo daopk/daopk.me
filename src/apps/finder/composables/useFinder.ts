@@ -49,6 +49,7 @@ export interface FinderBindings {
   readonly currentDirectoryReadonly: ComputedRef<boolean>;
   readonly viewMode: Ref<FinderViewMode>;
   readonly loading: Ref<boolean>;
+  readonly loadingPath: Ref<string | null>;
   readonly mutating: Ref<boolean>;
   readonly error: Ref<string | null>;
   refresh(): Promise<boolean>;
@@ -87,6 +88,7 @@ export function useFinder({
   const currentDirectory = ref<VfsStat | null>(null);
   const viewMode = ref<FinderViewMode>("list");
   const loading = ref(false);
+  const loadingPath = ref<string | null>(null);
   const mutating = ref(false);
   const error = ref<string | null>(null);
   const selectionByDirectory = new Map<string, string>();
@@ -124,6 +126,7 @@ export function useFinder({
     }
 
     loading.value = true;
+    loadingPath.value = normalized;
     error.value = null;
 
     try {
@@ -171,6 +174,7 @@ export function useFinder({
     } finally {
       if (run === loadRun) {
         loading.value = false;
+        loadingPath.value = null;
       }
     }
   }
@@ -273,6 +277,7 @@ export function useFinder({
     }
 
     loading.value = true;
+    loadingPath.value = normalized;
     error.value = null;
 
     try {
@@ -299,6 +304,7 @@ export function useFinder({
     } finally {
       if (run === loadRun) {
         loading.value = false;
+        loadingPath.value = null;
       }
     }
   }
@@ -502,6 +508,7 @@ export function useFinder({
     currentDirectoryReadonly,
     viewMode,
     loading,
+    loadingPath,
     mutating,
     error,
     refresh,

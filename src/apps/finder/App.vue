@@ -31,7 +31,17 @@ const {
   requestDeleteEntry,
 } = controller;
 
-const { breadcrumbs, cwd, entries, error, loading, selectedEntry, selectedPath, viewMode } = finder;
+const {
+  breadcrumbs,
+  cwd,
+  entries,
+  error,
+  loading,
+  loadingPath,
+  selectedEntry,
+  selectedPath,
+  viewMode,
+} = finder;
 const {
   html: previewHtml,
   imageUrl: previewImageUrl,
@@ -63,6 +73,7 @@ const {
         :entries="entries"
         :error="error"
         :loading="loading"
+        :loading-path="loadingPath"
         :mutation-disabled="mutationDisabled"
         :selected-path="selectedPath"
         :view-mode="viewMode"
