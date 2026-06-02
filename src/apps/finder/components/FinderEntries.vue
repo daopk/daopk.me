@@ -368,6 +368,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
 .finder__empty {
   color: var(--color-fg-muted);
   padding: var(--space-md);
+  margin-bottom: var(--space-sm);
 }
 
 .finder__notice {
@@ -484,6 +485,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 1px var(--space-xs);
+  margin-right: var(--space-xs);
 }
 
 .finder__context-icon {
