@@ -20,7 +20,7 @@ import {
   ChevronRight,
   Download,
   Maximize2,
-  RotateCw,
+  RotateCwSquare,
   Upload,
   ZoomIn,
   ZoomOut,
@@ -239,7 +239,7 @@ function setCanvasRef(el: unknown): void {
             />
             <IconButton
               label="Rotate clockwise"
-              :icon="RotateCw"
+              :icon="RotateCwSquare"
               :disabled="!hasDocument || busy"
               @click="rotateClockwise"
             />

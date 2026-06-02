@@ -64,6 +64,12 @@ import zoomOutIcon from "@iconify-icons/lucide/zoom-out";
 
 import { createIcon } from "./createIcon";
 
+const rotateCwSquareIcon = {
+  width: 24,
+  height: 24,
+  body: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 5H6a2 2 0 0 0-2 2v3"/><path d="m9 8 3-3-3-3"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/></g>',
+};
+
 export const Activity = createIcon(activityIcon, "Activity");
 export const AlertCircle = createIcon(alertCircleIcon, "AlertCircle");
 export const ArrowLeft = createIcon(arrowLeftIcon, "ArrowLeft");
@@ -111,6 +117,7 @@ export const Plus = createIcon(plusIcon, "Plus");
 export const RotateCcw = createIcon(rotateCcwIcon, "RotateCcw");
 export const RefreshCw = createIcon(refreshCwIcon, "RefreshCw");
 export const RotateCw = createIcon(rotateCwIcon, "RotateCw");
+export const RotateCwSquare = createIcon(rotateCwSquareIcon, "RotateCwSquare");
 export const Save = createIcon(saveIcon, "Save");
 export const Search = createIcon(searchIcon, "Search");
 export const Settings = createIcon(settingsIcon, "Settings");
