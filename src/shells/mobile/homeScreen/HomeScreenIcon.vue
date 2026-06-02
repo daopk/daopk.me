@@ -49,7 +49,12 @@ function onActivate(): void {
     @keydown.space.prevent="onActivate"
   >
     <span class="home-icon__glyph" aria-hidden="true">
-      <component :is="iconComponent" :size="36" :stroke-width="2" />
+      <component
+        :is="iconComponent"
+        class="home-icon__glyph-art"
+        :size="'var(--home-screen-icon-glyph-size)'"
+        :stroke-width="2"
+      />
       <span v-if="launching" class="home-icon__spinner" aria-hidden="true">
         <Loader2 :size="20" :stroke-width="2.25" />
       </span>
@@ -73,9 +78,7 @@ function onActivate(): void {
   user-select: none;
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 4px;
-    border-radius: var(--home-screen-icon-radius);
+    outline: none;
   }
 
   // Keep disabled styling owned by the launching state.
@@ -97,9 +100,36 @@ function onActivate(): void {
   position: relative;
   transition: none;
 
+  &::before {
+    background: var(--home-screen-icon-press-bg);
+    border-radius: var(--home-screen-icon-radius);
+    content: "";
+    inset: 0;
+    opacity: 0;
+    position: absolute;
+  }
+
+  .home-icon:active &::before,
+  .home-icon:focus-visible &::before {
+    opacity: 1;
+  }
+
+  .home-icon:focus-visible & {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
   .home-icon--launching & > :first-child {
     opacity: 0.35;
   }
+}
+
+.home-icon__glyph-art {
+  block-size: var(--home-screen-icon-glyph-size);
+  filter: var(--home-screen-icon-glyph-shadow);
+  inline-size: var(--home-screen-icon-glyph-size);
+  position: relative;
+  z-index: 1;
 }
 
 .home-icon__spinner {
@@ -111,6 +141,7 @@ function onActivate(): void {
   pointer-events: none;
   position: absolute;
   transform-origin: center center;
+  z-index: 2;
 
   > svg {
     animation: none;
@@ -120,7 +151,7 @@ function onActivate(): void {
 .home-icon__label {
   font-size: var(--home-screen-label-font-size);
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
   max-inline-size: 88px;
   overflow: hidden;
   text-align: center;

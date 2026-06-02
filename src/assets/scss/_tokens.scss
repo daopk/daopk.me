@@ -56,9 +56,13 @@
   --home-screen-grid-gap-x: var(--space-lg);
   --home-screen-grid-gap-y: var(--space-xl);
   --home-screen-icon-size: 56px;
+  --home-screen-icon-glyph-size: 44px;
   --home-screen-icon-radius: 18px;
-  --home-screen-icon-bg: var(--color-bg-elevated);
-  --home-screen-icon-shadow: var(--shadow-sm);
+  --home-screen-icon-bg: transparent;
+  --home-screen-icon-press-bg: color-mix(in srgb, var(--home-screen-label-fg) 14%, transparent);
+  --home-screen-icon-shadow: none;
+  --home-screen-icon-glyph-shadow: drop-shadow(0 2px 5px rgb(0 0 0 / 0.24))
+    drop-shadow(0 1px 1px rgb(0 0 0 / 0.22));
   --home-screen-label-font-size: 12px;
   --home-screen-label-gap: var(--space-sm);
   --home-screen-label-fg: var(--color-fg);

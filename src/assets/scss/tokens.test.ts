@@ -51,4 +51,13 @@ describe("design tokens", () => {
     expect(tokens).toContain("--radius-full:");
     expect(tokens).toContain("--space-2xs:");
   });
+
+  it("defines lightweight mobile home icon tokens", () => {
+    expect(tokens).toContain("--home-screen-icon-size: 56px;");
+    expect(tokens).toContain("--home-screen-icon-glyph-size: 44px;");
+    expect(tokens).toContain("--home-screen-icon-bg: transparent;");
+    expect(tokens).toContain("--home-screen-icon-press-bg:");
+    expect(tokens).toContain("--home-screen-icon-shadow: none;");
+    expect(tokens).toContain("--home-screen-icon-glyph-shadow:");
+  });
 });
