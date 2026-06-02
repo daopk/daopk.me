@@ -258,7 +258,7 @@ describe("Settings App.vue", () => {
       "Dock",
       "Account",
       "Privacy",
-      "About device",
+      "About",
     ]);
 
     wrapper.unmount();
@@ -269,14 +269,7 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp();
 
     const labels = wrapper.findAll(".settings__nav-label").map((item) => item.text());
-    expect(labels).toEqual([
-      "Appearance",
-      "Background",
-      "Comfort",
-      "Account",
-      "Privacy",
-      "About device",
-    ]);
+    expect(labels).toEqual(["Appearance", "Background", "Comfort", "Account", "Privacy", "About"]);
     expect(wrapper.text()).not.toContain("Desktop Dock");
     expect(wrapper.text()).not.toContain("Automatically hide the Dock");
 

@@ -86,7 +86,7 @@ const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
   },
   about: {
     id: "about",
-    label: "About device",
+    label: "About",
     icon: AboutIcon as Component,
     component: AboutDeviceSection,
   },

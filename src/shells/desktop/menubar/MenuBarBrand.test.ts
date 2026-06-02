@@ -90,6 +90,21 @@ describe("MenuBarBrand", () => {
     wrapper.unmount();
   });
 
+  it("opens Settings About from the WebOS menu", async () => {
+    const { kernel, wrapper } = mountBrand();
+
+    await openMenu(wrapper);
+    click(menuItem("About"));
+    await flushReka();
+
+    expect(kernel.commands.dispatch).toHaveBeenCalledWith("settings:openSection", {
+      source: "menu",
+      payload: { section: "about" },
+    });
+
+    wrapper.unmount();
+  });
+
   it("opens Spotlight from the WebOS menu", async () => {
     const { kernel, wrapper } = mountBrand();
 
@@ -112,6 +127,7 @@ describe("MenuBarBrand", () => {
       (candidate) => candidate.textContent?.trim(),
     );
     expect(labels).toEqual([
+      "About",
       "System Settings",
       "Spotlight",
       "Toggle Theme",

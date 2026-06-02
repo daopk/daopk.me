@@ -5,8 +5,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "~/components/ui";
-import { Lock, LogOut, Palette, Search, Settings } from "~/icons/lucide";
+import { Info, Lock, LogOut, Palette, Search, Settings } from "~/icons/lucide";
 import { useKernel } from "~/composables/useKernel";
+import type { CommandDispatchOptions } from "~/types/command";
 
 const kernel = useKernel();
 
@@ -18,8 +19,14 @@ function openSpotlight(): void {
   kernel.events.emit("spotlight.open.requested", { source: "menu" });
 }
 
-function dispatchCommand(id: string): void {
-  void kernel.commands.dispatch(id, { source: "menu" });
+function dispatchCommand(
+  id: string,
+  payload?: NonNullable<CommandDispatchOptions["payload"]>,
+): void {
+  void kernel.commands.dispatch(id, {
+    source: "menu",
+    ...(payload === undefined ? {} : { payload }),
+  });
 }
 </script>
 
@@ -34,6 +41,13 @@ function dispatchCommand(id: string): void {
 
     <template #items>
       <DropdownMenuLabel class="ds-dropdown-menu__label">WebOS</DropdownMenuLabel>
+      <DropdownMenuItem
+        text-value="About"
+        @select="dispatchCommand('settings:openSection', { section: 'about' })"
+      >
+        <Info class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+        <span>About</span>
+      </DropdownMenuItem>
       <DropdownMenuItem text-value="System Settings" @select="launchApp('settings')">
         <Settings class="ds-dropdown-menu__item-icon" aria-hidden="true" />
         <span>System Settings</span>

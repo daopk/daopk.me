@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from "vue";
+import { computed } from "vue";
 
 import { Badge, Panel, SectionHeader } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
-import { useBreakpoint } from "~/composables/useBreakpoint";
-import { useKernel } from "~/composables/useKernel";
-import { useReducedMotion } from "~/composables/useReducedMotion";
 import { useSettings } from "~/composables/useSettings";
 import { RefreshCw as RefreshIcon } from "~/icons/lucide";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
-const kernel = useKernel();
 const settings = useSettings();
-const { profile, isTouch } = useBreakpoint();
-const { reduced } = useReducedMotion();
 const updateState = serviceWorkerUpdateController.state;
 const updateCheckState = serviceWorkerUpdateController.checkState;
 
@@ -21,28 +15,11 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
   showHeader: true,
 });
 
-const overridesRef = ref<Record<string, string>>({ ...kernel.theme.currentOverrides() });
-
-const stopTokens = kernel.events.on("tokens.changed", () => {
-  overridesRef.value = { ...kernel.theme.currentOverrides() };
-});
-onUnmounted(stopTokens);
-
-const overrideCount = computed(() => Object.keys(overridesRef.value).length);
-const overrideEntries = computed(() => Object.entries(overridesRef.value));
-
 const userAgent = computed((): string => {
   if (typeof navigator === "undefined") {
     return "—";
   }
   return navigator.userAgent || "—";
-});
-
-const platform = computed((): string => {
-  if (typeof navigator === "undefined") {
-    return "—";
-  }
-  return navigator.platform || "—";
 });
 
 const buildTime = computed((): string => {
@@ -55,11 +32,6 @@ const buildTime = computed((): string => {
     minute: "2-digit",
     second: "2-digit",
   });
-});
-
-const formFactorLabel = computed((): string => {
-  const fmt = profile.value.formFactor;
-  return fmt.charAt(0).toUpperCase() + fmt.slice(1);
 });
 
 const isUpdateRefreshing = computed(
@@ -134,11 +106,12 @@ const softwareUpdateStatus = computed((): string => {
     case "check-error":
       return updateCheckState.value.message;
     case "idle":
-      return "Manual check available.";
+      return "";
   }
 
   return "";
 });
+const showSoftwareUpdateStatus = computed(() => softwareUpdateStatus.value.length > 0);
 
 function runSoftwareUpdateAction(): void {
   if (updateState.value.kind === "update-available" || updateState.value.kind === "refresh-error") {
@@ -151,104 +124,51 @@ function runSoftwareUpdateAction(): void {
 </script>
 
 <template>
-  <article class="about-device" aria-label="About this device">
+  <article class="about-device" aria-label="About">
     <SectionHeader
       v-if="props.showHeader"
       size="page"
-      title="About device"
+      title="About"
       subtitle="Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics."
     />
 
-    <Panel as="dl" class="about-device__list" variant="plain" padding="none">
-      <div class="about-device__row">
-        <dt class="about-device__key">Build time</dt>
-        <dd class="about-device__value">{{ buildTime }}</dd>
-      </div>
-      <div class="about-device__row about-device__row--action">
-        <dt class="about-device__key">Software update</dt>
-        <dd class="about-device__value about-device__value--action">
+    <Panel as="section" class="about-device__update-card" variant="elevated" padding="lg">
+      <div class="about-device__update-copy">
+        <div class="about-device__update-heading">
+          <h2 class="about-device__update-title">Software update</h2>
           <Badge
+            v-if="showSoftwareUpdateStatus"
             class="about-device__update-status"
             :tone="softwareUpdateBadgeTone"
             :data-tone="softwareUpdateTone"
           >
             {{ softwareUpdateStatus }}
           </Badge>
-          <Button
-            size="sm"
-            :variant="updateButtonVariant"
-            :icon-start="RefreshIcon"
-            :loading="isCheckingForUpdates || isUpdateRefreshing"
-            @click="runSoftwareUpdateAction"
-          >
-            {{ updateButtonLabel }}
-          </Button>
-          <span class="about-device__sub about-device__update-note">
-            Updates the system shell only. Apps update on their own from the catalog.
-          </span>
-        </dd>
+        </div>
+        <p class="about-device__update-note">
+          Updates the system shell only. Apps update on their own from the catalog.
+        </p>
+      </div>
+      <Button
+        class="about-device__update-action"
+        size="sm"
+        :variant="updateButtonVariant"
+        :icon-start="RefreshIcon"
+        :loading="isCheckingForUpdates || isUpdateRefreshing"
+        @click="runSoftwareUpdateAction"
+      >
+        {{ updateButtonLabel }}
+      </Button>
+    </Panel>
+
+    <Panel as="dl" class="about-device__list" variant="plain" padding="none">
+      <div class="about-device__row">
+        <dt class="about-device__key">Build time</dt>
+        <dd class="about-device__value">{{ buildTime }}</dd>
       </div>
       <div class="about-device__row">
         <dt class="about-device__key">Boot count</dt>
         <dd class="about-device__value">{{ settings.bootCount }}</dd>
-      </div>
-      <div class="about-device__row">
-        <dt class="about-device__key">Form factor</dt>
-        <dd class="about-device__value">
-          {{ formFactorLabel }}
-          <span class="about-device__sub">({{ isTouch ? "touch" : "no touch" }})</span>
-        </dd>
-      </div>
-      <div class="about-device__row">
-        <dt class="about-device__key">Theme preference</dt>
-        <dd class="about-device__value">
-          <code class="about-device__code">{{ settings.theme }}</code>
-          <span class="about-device__sub">(resolved: {{ kernel.theme.current() }})</span>
-        </dd>
-      </div>
-      <div class="about-device__row">
-        <dt class="about-device__key">Reduce motion</dt>
-        <dd class="about-device__value">
-          <code class="about-device__code">{{ settings.reduceMotion }}</code>
-          <span class="about-device__sub">(active: {{ reduced ? "yes" : "no" }})</span>
-        </dd>
-      </div>
-      <div class="about-device__row">
-        <dt class="about-device__key">Active overrides</dt>
-        <dd class="about-device__value">
-          <Badge
-            class="about-device__badge"
-            :tone="overrideCount === 0 ? 'neutral' : 'accent'"
-            :data-empty="overrideCount === 0"
-          >
-            {{ overrideCount }}
-          </Badge>
-          <span v-if="overrideCount === 0" class="about-device__sub">
-            (stylesheet defaults in use)
-          </span>
-        </dd>
-      </div>
-      <div v-if="overrideCount > 0" class="about-device__row about-device__row--block">
-        <dt class="about-device__key">Override map</dt>
-        <dd class="about-device__value about-device__value--block">
-          <ul class="about-device__overrides">
-            <li
-              v-for="[key, value] in overrideEntries"
-              :key="key"
-              class="about-device__override-item"
-            >
-              <code class="about-device__code">{{ key }}</code>
-              <span class="about-device__override-sep">→</span>
-              <code class="about-device__code">{{ value }}</code>
-            </li>
-          </ul>
-        </dd>
-      </div>
-      <div class="about-device__row about-device__row--block">
-        <dt class="about-device__key">Platform</dt>
-        <dd class="about-device__value about-device__value--block">
-          <code class="about-device__code about-device__code--wrap">{{ platform }}</code>
-        </dd>
       </div>
       <div class="about-device__row about-device__row--block">
         <dt class="about-device__key">User-agent</dt>
@@ -276,6 +196,40 @@ function runSoftwareUpdateAction(): void {
   margin: 0;
 }
 
+.about-device__update-card {
+  align-items: center;
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.about-device__update-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.about-device__update-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.about-device__update-title {
+  color: var(--color-fg);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.about-device__update-action {
+  justify-self: end;
+}
+
 .about-device__row {
   align-items: baseline;
   background: var(--color-bg-elevated);
@@ -289,10 +243,6 @@ function runSoftwareUpdateAction(): void {
 
 .about-device__row--block {
   align-items: flex-start;
-}
-
-.about-device__row--action {
-  align-items: center;
 }
 
 .about-device__key {
@@ -317,11 +267,6 @@ function runSoftwareUpdateAction(): void {
   display: block;
 }
 
-.about-device__value--action {
-  align-items: center;
-  justify-content: space-between;
-}
-
 .about-device__sub {
   color: var(--color-fg-muted);
   font-size: 12px;
@@ -333,8 +278,10 @@ function runSoftwareUpdateAction(): void {
 }
 
 .about-device__update-note {
-  flex-basis: 100%;
-  margin-top: var(--space-2xs);
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .about-device__update-status[data-tone="success"] {
@@ -366,40 +313,14 @@ function runSoftwareUpdateAction(): void {
   word-break: break-all;
 }
 
-.about-device__badge {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  border-radius: 999px;
-  color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 600;
-  min-width: 24px;
-  padding: 2px 8px;
-  text-align: center;
-}
+@media (max-width: 640px) {
+  .about-device__update-card {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
 
-.about-device__badge[data-empty="true"] {
-  background: var(--color-bg-subtle);
-  color: var(--color-fg-muted);
-}
-
-.about-device__overrides {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.about-device__override-item {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.about-device__override-sep {
-  color: var(--color-fg-muted);
-  font-size: 12px;
+  .about-device__update-action {
+    justify-self: start;
+  }
 }
 </style>
