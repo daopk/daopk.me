@@ -4,33 +4,23 @@ import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from "vue
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useWidgetEnabled } from "~/composables/useWidgetEnabled";
-import {
-  autoPlace,
-  resolveNearestFreeWidgetPlacement,
-  useWidgetPlacementStore,
-  type WidgetGridRect,
-  type WidgetPlacement,
-} from "~/core/widgets/WidgetPlacementStore";
+import { useWidgetPlacementStore } from "~/core/widgets/WidgetPlacementStore";
 import {
   createWidgetCatalogItems,
   matchesWidgetCatalogQuery,
   setWidgetVisible,
-  widgetDefaultVisible,
   widgetMatchesSurface,
   type WidgetCatalogItem,
   type WidgetCatalogProviderKind,
 } from "~/core/widgets/catalog";
-import {
-  gridToPixels,
-  snapToGrid,
-  WIDGET_GRID_PITCH_PX,
-  WIDGET_SIZE_GRID_UNITS,
-  widgetPixelDimensions,
-} from "~/core/widgets/sizing";
 import { Check, Plus, Search, X } from "~/icons/lucide";
 import { SettingsWidgetsIcon as WidgetsIcon } from "~/icons/fluentColor";
+import { useDesktopWidgetPlacementResolver } from "~/shells/desktop/widgetPlacement/useDesktopWidgetPlacement";
 import type { AppManifest } from "~/types/app";
 import type { WidgetManifest, WidgetSurface } from "~/types/widget";
+
+import { useWidgetGalleryDesktopDrag } from "./useWidgetGalleryDesktopDrag";
+import { useWidgetGalleryPanelDrag } from "./useWidgetGalleryPanelDrag";
 
 type ConcreteSurface = Exclude<WidgetSurface, "any">;
 type SourceFilter = "all" | Extract<WidgetCatalogProviderKind, "system" | "app">;
@@ -57,18 +47,33 @@ const sourceFilter = ref<SourceFilter>("all");
 const widgets = shallowRef<readonly WidgetManifest[]>(kernel.widgets.list());
 const apps = shallowRef<readonly AppManifest[]>(kernel.apps.list());
 const panelRef = ref<HTMLElement | null>(null);
-const panelPosition = ref<{ x: number; y: number } | null>(null);
-const panelDragging = ref(false);
-const dragging = ref<{
-  item: WidgetCatalogItem;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-} | null>(null);
 
-let stopDocumentDrag: (() => void) | undefined;
-let stopPanelDrag: (() => void) | undefined;
+const placementResolver = useDesktopWidgetPlacementResolver({
+  getWidgets: () => widgets.value,
+  getPlacement: (id) => placements.get(id),
+  isEnabled: (id, defaultVisible) => isEnabled(id, defaultVisible),
+});
+
+const { panelDragging, panelStyle, startPanelDrag, clampPanelToViewport, stopPanelDrag } =
+  useWidgetGalleryPanelDrag({
+    panelRef,
+    isOpen: () => open.value,
+    getDesktopStageTop: () => desktopStageRect()?.top ?? 0,
+  });
+
+const { dragging, dragStyle, startDesktopDrag, stopDesktopDrag } = useWidgetGalleryDesktopDrag({
+  resolveTargetAtPointer(item, clientX, clientY) {
+    const rect = desktopStageRect();
+    if (rect === null) return null;
+    return placementResolver.resolvePointerPlacement(item.manifest, { clientX, clientY }, rect, {
+      excludeId: item.id,
+    });
+  },
+  onPlace(item, placement) {
+    placements.set(item.id, placement);
+    show(item);
+  },
+});
 
 function refreshCatalog(): void {
   widgets.value = kernel.widgets.list();
@@ -98,8 +103,8 @@ onUnmounted(() => {
   stopWidgetUnregistered();
   stopAppRegistered();
   stopAppUnregistered();
-  stopDocumentDrag?.();
-  stopPanelDrag?.();
+  stopDesktopDrag();
+  stopPanelDrag();
   window.removeEventListener("resize", clampPanelToViewport);
 });
 
@@ -134,321 +139,9 @@ function hide(item: WidgetCatalogItem): void {
   setWidgetVisible(setEnabled, item.manifest, false);
 }
 
-function clamp(value: number, min: number, max: number): number {
-  if (max < min) return min;
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
-}
-
 function desktopStageRect(): DOMRect | null {
   return document.querySelector<HTMLElement>(".desktop-stage")?.getBoundingClientRect() ?? null;
 }
-
-function panelDragBounds(
-  width: number,
-  height: number,
-): {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-} {
-  const margin = 8;
-  const desktopTop = desktopStageRect()?.top ?? 0;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const minX = margin;
-  const minY = Math.max(margin, desktopTop + margin);
-
-  return {
-    minX,
-    maxX: Math.max(minX, viewportWidth - width - margin),
-    minY,
-    maxY: Math.max(minY, viewportHeight - height - margin),
-  };
-}
-
-function clampPanelPosition(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): { x: number; y: number } {
-  const bounds = panelDragBounds(width, height);
-
-  return {
-    x: clamp(x, bounds.minX, bounds.maxX),
-    y: clamp(y, bounds.minY, bounds.maxY),
-  };
-}
-
-function clampPanelToViewport(): void {
-  if (!open.value || panelPosition.value === null) return;
-
-  const panel = panelRef.value;
-  if (panel === null) return;
-
-  const rect = panel.getBoundingClientRect();
-  panelPosition.value = clampPanelPosition(
-    panelPosition.value.x,
-    panelPosition.value.y,
-    rect.width,
-    rect.height,
-  );
-}
-
-function startPanelDrag(event: PointerEvent): void {
-  if (event.button !== 0) return;
-
-  const panel = panelRef.value;
-  if (panel === null) return;
-
-  const rect = panel.getBoundingClientRect();
-  const startX = event.clientX;
-  const startY = event.clientY;
-  const width = rect.width;
-  const height = rect.height;
-  const origin = clampPanelPosition(
-    panelPosition.value?.x ?? rect.left,
-    panelPosition.value?.y ?? rect.top,
-    width,
-    height,
-  );
-
-  stopPanelDrag?.();
-  panelPosition.value = origin;
-  panelDragging.value = true;
-
-  const move = (next: PointerEvent): void => {
-    const x = origin.x + next.clientX - startX;
-    const y = origin.y + next.clientY - startY;
-    panelPosition.value = clampPanelPosition(x, y, width, height);
-    next.preventDefault();
-  };
-
-  const end = (): void => {
-    document.removeEventListener("pointermove", move);
-    document.removeEventListener("pointerup", end);
-    document.removeEventListener("pointercancel", end);
-    stopPanelDrag = undefined;
-    panelDragging.value = false;
-  };
-
-  document.addEventListener("pointermove", move);
-  document.addEventListener("pointerup", end);
-  document.addEventListener("pointercancel", end);
-  stopPanelDrag = end;
-  event.preventDefault();
-}
-
-function gridInsetUnits(value: number | undefined): number {
-  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-}
-
-function resolveDefaultPlacement(
-  manifest: WidgetManifest,
-  dims: { w: number; h: number },
-  viewportCols: number,
-): WidgetPlacement | undefined {
-  const placement = manifest.defaultPlacement;
-  if (placement === undefined) return undefined;
-
-  if ("anchor" in placement) {
-    if (placement.anchor === "top-right") {
-      return {
-        gridX: viewportCols - dims.w - gridInsetUnits(placement.insetX),
-        gridY: gridInsetUnits(placement.insetY),
-      };
-    }
-  }
-
-  if ("gridX" in placement) {
-    return { gridX: placement.gridX, gridY: placement.gridY };
-  }
-
-  return undefined;
-}
-
-function clampPlacement(
-  placement: WidgetPlacement,
-  dims: { w: number; h: number },
-  viewportCols: number,
-  viewportRows: number,
-): WidgetPlacement {
-  return {
-    gridX: Math.max(0, Math.min(placement.gridX, viewportCols - dims.w)),
-    gridY: Math.max(0, Math.min(placement.gridY, viewportRows - dims.h)),
-  };
-}
-
-function placementRect(manifest: WidgetManifest, placement: WidgetPlacement): WidgetGridRect {
-  const dims = WIDGET_SIZE_GRID_UNITS[manifest.size];
-  return { x: placement.gridX, y: placement.gridY, w: dims.w, h: dims.h };
-}
-
-function desktopOccupiedRects(
-  excludeId: string,
-  viewportCols: number,
-  viewportRows: number,
-): WidgetGridRect[] {
-  const occupied: WidgetGridRect[] = [];
-
-  for (const manifest of widgets.value) {
-    if (manifest.id === excludeId) continue;
-    if (!widgetMatchesSurface(manifest, "desktop:wallpaper")) continue;
-    if (!isEnabled(manifest.id, widgetDefaultVisible(manifest))) continue;
-
-    const dims = WIDGET_SIZE_GRID_UNITS[manifest.size];
-    const requested =
-      placements.get(manifest.id) ??
-      resolveDefaultPlacement(manifest, dims, viewportCols) ??
-      autoPlace(manifest.size, occupied, viewportCols, viewportRows);
-    const resolved =
-      resolveNearestFreeWidgetPlacement(
-        manifest.size,
-        requested,
-        occupied,
-        viewportCols,
-        viewportRows,
-      ) ?? clampPlacement(requested, dims, viewportCols, viewportRows);
-
-    occupied.push(placementRect(manifest, resolved));
-  }
-
-  return occupied;
-}
-
-function dropTargetAtPointer(
-  item: WidgetCatalogItem,
-  clientX: number,
-  clientY: number,
-): { placement: WidgetPlacement; stageRect: DOMRect } | null {
-  const rect = desktopStageRect();
-  if (rect === null) return null;
-  if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-    return null;
-  }
-
-  const size = widgetPixelDimensions(item.manifest.size);
-  const rawX = clientX - rect.left - size.width / 2;
-  const rawY = clientY - rect.top - size.height / 2;
-  const snappedX = snapToGrid(clamp(rawX, 0, rect.width - size.width));
-  const snappedY = snapToGrid(clamp(rawY, 0, rect.height - size.height));
-  const requested = {
-    gridX: Math.round(snappedX / WIDGET_GRID_PITCH_PX),
-    gridY: Math.round(snappedY / WIDGET_GRID_PITCH_PX),
-  };
-  const viewportCols = Math.floor(rect.width / WIDGET_GRID_PITCH_PX);
-  const viewportRows = Math.floor(rect.height / WIDGET_GRID_PITCH_PX);
-  const placement = resolveNearestFreeWidgetPlacement(
-    item.manifest.size,
-    requested,
-    desktopOccupiedRects(item.id, viewportCols, viewportRows),
-    viewportCols,
-    viewportRows,
-  );
-
-  return placement === undefined ? null : { placement, stageRect: rect };
-}
-
-function dragPreviewPosition(
-  item: WidgetCatalogItem,
-  clientX: number,
-  clientY: number,
-  size: { width: number; height: number },
-): { x: number; y: number } {
-  const target = dropTargetAtPointer(item, clientX, clientY);
-  if (target !== null) {
-    return {
-      x: target.stageRect.left + gridToPixels(target.placement.gridX),
-      y: target.stageRect.top + gridToPixels(target.placement.gridY),
-    };
-  }
-
-  return {
-    x: clientX - size.width / 2,
-    y: clientY - size.height / 2,
-  };
-}
-
-function placeAtPointer(item: WidgetCatalogItem, clientX: number, clientY: number): void {
-  const target = dropTargetAtPointer(item, clientX, clientY);
-  if (target === null) return;
-  placements.set(item.id, target.placement);
-  show(item);
-}
-
-function startDesktopDrag(item: WidgetCatalogItem, event: PointerEvent): void {
-  if (event.button !== 0 || item.visible || !item.desktopPlaceable) return;
-
-  const size = widgetPixelDimensions(item.manifest.size);
-  const startX = event.clientX;
-  const startY = event.clientY;
-  let moved = false;
-
-  stopDocumentDrag?.();
-
-  const move = (next: PointerEvent): void => {
-    const dx = next.clientX - startX;
-    const dy = next.clientY - startY;
-    if (!moved && Math.hypot(dx, dy) < 6) {
-      return;
-    }
-    moved = true;
-    const position = dragPreviewPosition(item, next.clientX, next.clientY, size);
-    dragging.value = {
-      item,
-      x: position.x,
-      y: position.y,
-      width: size.width,
-      height: size.height,
-    };
-    next.preventDefault();
-  };
-
-  const end = (next: PointerEvent): void => {
-    document.removeEventListener("pointermove", move);
-    document.removeEventListener("pointerup", end);
-    document.removeEventListener("pointercancel", end);
-    stopDocumentDrag = undefined;
-    if (moved) {
-      placeAtPointer(item, next.clientX, next.clientY);
-    }
-    dragging.value = null;
-  };
-
-  document.addEventListener("pointermove", move);
-  document.addEventListener("pointerup", end);
-  document.addEventListener("pointercancel", end);
-  stopDocumentDrag = (): void => {
-    document.removeEventListener("pointermove", move);
-    document.removeEventListener("pointerup", end);
-    document.removeEventListener("pointercancel", end);
-    dragging.value = null;
-  };
-}
-
-const dragStyle = computed(() => {
-  const state = dragging.value;
-  if (state === null) return {};
-  return {
-    inlineSize: `${state.width}px`,
-    blockSize: `${state.height}px`,
-    transform: `translate3d(${state.x}px, ${state.y}px, 0)`,
-  };
-});
-
-const panelStyle = computed(() => {
-  const position = panelPosition.value;
-  if (position === null) return {};
-
-  return {
-    insetBlockStart: `${position.y.toString()}px`,
-    insetInlineEnd: "auto",
-    insetInlineStart: `${position.x.toString()}px`,
-  };
-});
 </script>
 
 <template>

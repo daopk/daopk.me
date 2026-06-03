@@ -6,14 +6,8 @@ import { useKernel } from "~/composables/useKernel";
 import { useWidgetEnabled } from "~/composables/useWidgetEnabled";
 import { debugWarn } from "~/core/debug";
 import { widgetDefaultVisible } from "~/core/widgets/catalog";
-import {
-  autoPlace,
-  resolveNearestFreeWidgetPlacement,
-  useWidgetPlacementStore,
-  type WidgetGridRect,
-  type WidgetPlacement,
-} from "~/core/widgets/WidgetPlacementStore";
-import { WIDGET_GRID_PITCH_PX, WIDGET_SIZE_GRID_UNITS } from "~/core/widgets/sizing";
+import { useWidgetPlacementStore, type WidgetPlacement } from "~/core/widgets/WidgetPlacementStore";
+import { useDesktopWidgetPlacementResolver } from "~/shells/desktop/widgetPlacement/useDesktopWidgetPlacement";
 import type { CommandContext } from "~/types/command";
 import type { WidgetManifest } from "~/types/widget";
 
@@ -37,6 +31,12 @@ useResizeObserver(hostRef, (entries) => {
 const widgets = shallowRef<readonly WidgetManifest[]>(
   kernel.widgets.list({ surface: "desktop:wallpaper" }),
 );
+
+const placementResolver = useDesktopWidgetPlacementResolver({
+  getWidgets: () => widgets.value,
+  getPlacement: (id) => placements.get(id),
+  isEnabled: (id, defaultVisible) => isEnabled(id, defaultVisible),
+});
 
 function refreshWidgets(): void {
   widgets.value = kernel.widgets.list({ surface: "desktop:wallpaper" });
@@ -71,51 +71,6 @@ const enabledWidgets = computed<readonly WidgetManifest[]>(() => {
   return widgets.value.filter((m) => isEnabled(m.id, widgetDefaultVisible(m)));
 });
 
-function gridInsetUnits(value: number | undefined): number {
-  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
-}
-
-function resolveDefaultPlacement(
-  manifest: WidgetManifest,
-  dims: { w: number; h: number },
-  viewportCols: number,
-): WidgetPlacement | undefined {
-  const placement = manifest.defaultPlacement;
-  if (placement === undefined) return undefined;
-
-  if ("anchor" in placement) {
-    if (placement.anchor === "top-right") {
-      return {
-        gridX: viewportCols - dims.w - gridInsetUnits(placement.insetX),
-        gridY: gridInsetUnits(placement.insetY),
-      };
-    }
-  }
-
-  if ("gridX" in placement) {
-    return { gridX: placement.gridX, gridY: placement.gridY };
-  }
-
-  return undefined;
-}
-
-function clampPlacement(
-  placement: WidgetPlacement,
-  dims: { w: number; h: number },
-  viewportCols: number,
-  viewportRows: number,
-): WidgetPlacement {
-  return {
-    gridX: Math.max(0, Math.min(placement.gridX, viewportCols - dims.w)),
-    gridY: Math.max(0, Math.min(placement.gridY, viewportRows - dims.h)),
-  };
-}
-
-function placementRect(manifest: WidgetManifest, placement: WidgetPlacement): WidgetGridRect {
-  const dims = WIDGET_SIZE_GRID_UNITS[manifest.size];
-  return { x: placement.gridX, y: placement.gridY, w: dims.w, h: dims.h };
-}
-
 onMounted(() => {
   if (!placements.isHydrated()) {
     placements.hydrate();
@@ -130,38 +85,8 @@ onUnmounted(() => {
 });
 
 const effectivePlacements = computed<Record<string, WidgetPlacement>>(() => {
-  const out: Record<string, WidgetPlacement> = {};
-
-  if (hostSize.width === 0 || hostSize.height === 0) {
-    return out;
-  }
-
-  const viewportCols = Math.floor(hostSize.width / WIDGET_GRID_PITCH_PX);
-  const viewportRows = Math.floor(hostSize.height / WIDGET_GRID_PITCH_PX);
-  const occupied: WidgetGridRect[] = [];
-
-  for (const manifest of enabledWidgets.value) {
-    const dims = WIDGET_SIZE_GRID_UNITS[manifest.size];
-
-    const requested =
-      placements.get(manifest.id) ??
-      resolveDefaultPlacement(manifest, dims, viewportCols) ??
-      autoPlace(manifest.size, occupied, viewportCols, viewportRows);
-
-    const resolved =
-      resolveNearestFreeWidgetPlacement(
-        manifest.size,
-        requested,
-        occupied,
-        viewportCols,
-        viewportRows,
-      ) ?? clampPlacement(requested, dims, viewportCols, viewportRows);
-
-    out[manifest.id] = resolved;
-    occupied.push(placementRect(manifest, resolved));
-  }
-
-  return out;
+  void enabledMap.value;
+  return placementResolver.resolveEffectivePlacements(hostSize);
 });
 
 function onSlotDrop(id: string, gridX: number, gridY: number): void {
@@ -170,23 +95,10 @@ function onSlotDrop(id: string, gridX: number, gridY: number): void {
     return;
   }
 
-  const viewportCols = Math.floor(hostSize.width / WIDGET_GRID_PITCH_PX);
-  const viewportRows = Math.floor(hostSize.height / WIDGET_GRID_PITCH_PX);
-  const occupied = enabledWidgets.value
-    .filter((candidate) => candidate.id !== id)
-    .map((candidate) => {
-      const placement = effectivePlacements.value[candidate.id];
-      return placement === undefined ? undefined : placementRect(candidate, placement);
-    })
-    .filter((rect): rect is WidgetGridRect => rect !== undefined);
-
-  const resolved = resolveNearestFreeWidgetPlacement(
-    manifest.size,
-    { gridX, gridY },
-    occupied,
-    viewportCols,
-    viewportRows,
-  );
+  const resolved = placementResolver.resolveGridPlacement(manifest, { gridX, gridY }, hostSize, {
+    excludeId: id,
+    occupiedPlacements: effectivePlacements.value,
+  });
   if (resolved === undefined) {
     return;
   }
