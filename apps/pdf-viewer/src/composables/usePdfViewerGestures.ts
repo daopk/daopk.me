@@ -1,6 +1,6 @@
 import { onScopeDispose, watch, type Ref } from "vue";
 
-import type { PdfViewerBindings, PdfViewerZoomPoint } from "./usePdfViewer";
+import type { PdfViewerBindings, PdfViewerZoomPoint } from "../usePdfViewer";
 
 const WHEEL_ZOOM_INTENSITY = 0.0035;
 const WHEEL_COMMIT_DELAY_MS = 140;
