@@ -203,6 +203,10 @@ const dragStyle = computed(() =>
   transition: filter var(--duration-fast) var(--ease);
 }
 
+img.dock-item__icon {
+  border-radius: var(--radius-sm);
+}
+
 .dock-item__indicator {
   background: var(--dock-indicator-bg);
   block-size: var(--dock-indicator-size);

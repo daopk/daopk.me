@@ -132,6 +132,10 @@ function onActivate(): void {
   z-index: 1;
 }
 
+img.home-icon__glyph-art {
+  border-radius: calc(var(--home-screen-icon-radius) * 0.65);
+}
+
 .home-icon__spinner {
   align-items: center;
   color: var(--color-accent);

@@ -1,5 +1,6 @@
 import type { Component } from "vue";
 
+import { BabyTouchAppIcon } from "./babyTouchAppIcon";
 import { createPaletteIcon } from "./createIcon";
 import {
   fluentColorIconData,
@@ -8,6 +9,7 @@ import {
 } from "./generated/fluentColor";
 
 export type { FluentColorIconName };
+export { BabyTouchAppIcon };
 
 function createFluentIcon(name: FluentColorIconName, componentName: string): Component {
   return createPaletteIcon(fluentColorIconData[name], componentName);
@@ -15,14 +17,6 @@ function createFluentIcon(name: FluentColorIconName, componentName: string): Com
 
 export const FLUENT_COLOR_ICON_NAMES = fluentColorIconNames;
 
-export const BabyTouchAppIcon = createPaletteIcon(
-  {
-    width: 32,
-    height: 32,
-    body: '<g fill="none"><rect width="28" height="28" x="2" y="2" fill="url(#SVGBabyTouchBg)" rx="8"/><path fill="url(#SVGBabyTouchStripeA)" d="M2 10c4.5-3.5 9-3.5 13.5 0s9 3.5 14.5 0v8c-5.5 3.5-10 3.5-14.5 0S6.5 14.5 2 18z" opacity=".9"/><path fill="url(#SVGBabyTouchStripeB)" d="M2 20c4-2 8.5-2 13.5 1s9.5 3 14.5 0v5a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z" opacity=".9"/><circle cx="16" cy="14.5" r="7.5" fill="url(#SVGBabyTouchFace)" stroke="#fff" stroke-width="1.8"/><circle cx="12.7" cy="13.4" r="1.1" fill="#26202a"/><circle cx="19.3" cy="13.4" r="1.1" fill="#26202a"/><path stroke="#26202a" stroke-linecap="round" stroke-width="1.25" d="M13.8 17c1.4 1.2 3 1.2 4.4 0"/><path fill="url(#SVGBabyTouchSparkle)" d="m23.5 6.5.9 2 2.1.8-2.1.8-.9 2-.8-2-2.2-.8 2.2-.8z"/><path fill="url(#SVGBabyTouchSparkle)" d="m8 6 .6 1.4L10 8l-1.4.6L8 10l-.6-1.4L6 8l1.4-.6z"/><defs><linearGradient id="SVGBabyTouchBg" x1="2" x2="30" y1="2" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="#9deaff"/><stop offset=".45" stop-color="#ffe994"/><stop offset="1" stop-color="#f9b3d1"/></linearGradient><linearGradient id="SVGBabyTouchStripeA" x1="2" x2="30" y1="9" y2="19" gradientUnits="userSpaceOnUse"><stop stop-color="#fff6a8"/><stop offset="1" stop-color="#b4f1dd"/></linearGradient><linearGradient id="SVGBabyTouchStripeB" x1="2" x2="30" y1="20" y2="30" gradientUnits="userSpaceOnUse"><stop stop-color="#f6c1d7"/><stop offset="1" stop-color="#b9d4ff"/></linearGradient><linearGradient id="SVGBabyTouchFace" x1="10" x2="22" y1="8" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#ffd638"/><stop offset="1" stop-color="#ff921f"/></linearGradient><linearGradient id="SVGBabyTouchSparkle" x1="21" x2="26" y1="6" y2="12" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#fff6a8"/></linearGradient></defs></g>',
-  },
-  "FluentBabyTouchAppIcon",
-);
 export const BlogAppIcon = createFluentIcon("document-text-24", "FluentBlogAppIcon");
 export const BrowserAppIcon = createFluentIcon("globe-24", "FluentBrowserAppIcon");
 export const CalendarAppIcon = createFluentIcon("calendar-32", "FluentCalendarAppIcon");
