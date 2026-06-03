@@ -260,6 +260,23 @@ describe("SEO Worker — runtime content from R2", () => {
     await expect(response.text()).resolves.toBe("thumbnail-bytes");
   });
 
+  it("serves a manually named blog thumbnail image from R2", async () => {
+    const { env, get } = makeEnv({
+      ...DEFAULT_OBJECTS,
+      "thumbnails/building-a-tiny-web-os/cover-v2.png": "manual-thumbnail-bytes",
+    });
+
+    const response = await handleRequest(
+      browser("/_worker/blog/thumbnails/building-a-tiny-web-os/cover-v2.png"),
+      env,
+    );
+
+    expect(get).toHaveBeenCalledWith("thumbnails/building-a-tiny-web-os/cover-v2.png");
+    expect(response.headers.get("Content-Type")).toBe("image/png");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    await expect(response.text()).resolves.toBe("manual-thumbnail-bytes");
+  });
+
   it("serves blog thumbnail headers to HEAD requests", async () => {
     const { env } = makeEnv();
 

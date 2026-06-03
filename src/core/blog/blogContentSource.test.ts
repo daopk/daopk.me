@@ -57,7 +57,7 @@ describe("createBlogContentSource — index", () => {
         date: "2026-05-01",
         description: "Desc A",
         thumbnail: {
-          url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          url: "/_worker/blog/thumbnails/post-a/cover-v2.png",
           width: 1024,
           height: 576,
           alt: "Post A thumbnail",
@@ -67,7 +67,7 @@ describe("createBlogContentSource — index", () => {
       {
         slug: "post-b",
         thumbnail: {
-          url: "/_worker/blog/thumbnails/other-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          url: "/_worker/blog/thumbnails/other-post/cover-v2.png",
           width: 1024,
           height: 576,
           alt: "Wrong slug",
@@ -88,7 +88,7 @@ describe("createBlogContentSource — index", () => {
         date: "2026-05-01",
         description: "Desc A",
         thumbnail: {
-          url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          url: "/_worker/blog/thumbnails/post-a/cover-v2.png",
           width: 1024,
           height: 576,
           alt: "Post A thumbnail",

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -18,8 +18,8 @@ export const BLOG_THUMBNAIL_DEFAULT_MODEL = "flux-2-klein-9b";
 export const CLOUDFLARE_IMAGE_MODEL_PREFIX = "@cf/black-forest-labs/";
 
 const SITE_ORIGIN = "https://daopk.me";
-const IMAGE_HASH_PATTERN = /^[a-f0-9]{64}$/;
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const THUMBNAIL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const MODEL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function isRecord(value) {
@@ -99,7 +99,7 @@ export function isBlogThumbnail(value, slug) {
 
   const escapedSlug = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
-    `^${BLOG_THUMBNAIL_BASE_PATH}/${escapedSlug}/([a-f0-9]{64})\\.(jpe?g|png|webp)$`,
+    `^${BLOG_THUMBNAIL_BASE_PATH}/${escapedSlug}/([A-Za-z0-9][A-Za-z0-9._-]*)\\.(jpe?g|png|webp)$`,
     "i",
   );
   const match = pattern.exec(value.url);
@@ -107,9 +107,7 @@ export function isBlogThumbnail(value, slug) {
     return false;
   }
 
-  return (
-    IMAGE_HASH_PATTERN.test(match[1].toLowerCase()) && IMAGE_EXTENSIONS.has(match[2].toLowerCase())
-  );
+  return THUMBNAIL_ID_PATTERN.test(match[1]) && IMAGE_EXTENSIONS.has(match[2].toLowerCase());
 }
 
 export function validateRegenerateSlug({ entries, regenerate, slug }) {
@@ -133,7 +131,7 @@ export function validateRegenerateSlug({ entries, regenerate, slug }) {
   return normalizedSlug;
 }
 
-export function mergeReusableThumbnails(entries, currentEntries, regenerateSlug = null) {
+export function mergeReusableThumbnails(entries, currentEntries) {
   const currentBySlug = new Map();
   for (const entry of currentEntries) {
     if (
@@ -149,7 +147,7 @@ export function mergeReusableThumbnails(entries, currentEntries, regenerateSlug 
     const reusableThumbnail = currentBySlug.get(entry.slug) ?? null;
     return {
       ...entry,
-      thumbnail: entry.slug === regenerateSlug ? null : reusableThumbnail,
+      thumbnail: reusableThumbnail,
     };
   });
 }
@@ -186,16 +184,21 @@ export function detectImageFormat(bytes) {
   throw new Error("Cloudflare AI returned an unsupported thumbnail image format.");
 }
 
-export function createThumbnailMetadata({ bytes, slug, title }) {
+export function createThumbnailMetadata({ bytes, id = randomUUID(), slug, title }) {
+  if (typeof id !== "string" || !THUMBNAIL_ID_PATTERN.test(id)) {
+    throw new Error(
+      `Invalid blog thumbnail id "${id}". Use letters, numbers, dots, underscores, or hyphens.`,
+    );
+  }
+
   const format = detectImageFormat(bytes);
-  const hash = createHash("sha256").update(bytes).digest("hex");
-  const key = `${BLOG_THUMBNAIL_R2_PREFIX}/${slug}/${hash}.${format.extension}`;
+  const key = `${BLOG_THUMBNAIL_R2_PREFIX}/${slug}/${id}.${format.extension}`;
 
   return {
     contentType: format.contentType,
     key,
     thumbnail: {
-      url: `${BLOG_THUMBNAIL_BASE_PATH}/${slug}/${hash}.${format.extension}`,
+      url: `${BLOG_THUMBNAIL_BASE_PATH}/${slug}/${id}.${format.extension}`,
       width: BLOG_THUMBNAIL_WIDTH,
       height: BLOG_THUMBNAIL_HEIGHT,
       alt: `${title} thumbnail`,
@@ -352,6 +355,7 @@ export async function generateBlogThumbnailsInBundle({
   fetchImpl = globalThis.fetch,
   generateImage,
   model = firstNonEmptyString(process.env.BLOG_THUMBNAIL_MODEL, BLOG_THUMBNAIL_DEFAULT_MODEL),
+  onError,
   onPrompt,
   outDir,
   postsDir,
@@ -364,43 +368,59 @@ export async function generateBlogThumbnailsInBundle({
     currentIndexFile === undefined ? [] : await readJsonArrayIfExists(currentIndexFile);
   const regenerateSlug = validateRegenerateSlug({ entries, regenerate, slug });
   const thumbnailModel = normalizeCloudflareImageModel(model);
-  const mergedEntries = mergeReusableThumbnails(entries, currentEntries, regenerateSlug);
+  const mergedEntries = mergeReusableThumbnails(entries, currentEntries);
   const nextEntries = [];
+  let failed = 0;
   let generated = 0;
   let reused = 0;
 
   for (const entry of mergedEntries) {
     let thumbnail = entry.thumbnail;
-    if (thumbnail !== null) {
-      reused += 1;
-    }
+    let thumbnailGenerated = false;
 
     const shouldGenerate =
       regenerateSlug === null ? thumbnail === null : entry.slug === regenerateSlug;
     if (shouldGenerate) {
-      const promptData = await postPromptData(postsDir, entry);
-      const prompt = buildThumbnailPrompt(promptData);
-      if (typeof onPrompt === "function") {
-        onPrompt({ model: thumbnailModel, prompt, slug: entry.slug, title: promptData.title });
+      let promptData;
+      try {
+        promptData = await postPromptData(postsDir, entry);
+        const prompt = buildThumbnailPrompt(promptData);
+        if (typeof onPrompt === "function") {
+          onPrompt({ model: thumbnailModel, prompt, slug: entry.slug, title: promptData.title });
+        }
+        const bytes = await (generateImage ?? runCloudflareImageGeneration)({
+          accountId,
+          apiToken,
+          fetchImpl,
+          height: BLOG_THUMBNAIL_HEIGHT,
+          model: thumbnailModel,
+          prompt,
+          slug: entry.slug,
+          width: BLOG_THUMBNAIL_WIDTH,
+        });
+        const metadata = createThumbnailMetadata({
+          bytes,
+          slug: entry.slug,
+          title: promptData.title,
+        });
+        await writeGeneratedThumbnail({ bytes, metadata, outDir });
+        thumbnail = metadata.thumbnail;
+        thumbnailGenerated = true;
+        generated += 1;
+      } catch (error) {
+        failed += 1;
+        if (typeof onError === "function") {
+          onError({
+            error,
+            slug: entry.slug,
+            title: promptData?.title ?? entry.title ?? entry.slug,
+          });
+        }
       }
-      const bytes = await (generateImage ?? runCloudflareImageGeneration)({
-        accountId,
-        apiToken,
-        fetchImpl,
-        height: BLOG_THUMBNAIL_HEIGHT,
-        model: thumbnailModel,
-        prompt,
-        slug: entry.slug,
-        width: BLOG_THUMBNAIL_WIDTH,
-      });
-      const metadata = createThumbnailMetadata({
-        bytes,
-        slug: entry.slug,
-        title: promptData.title,
-      });
-      await writeGeneratedThumbnail({ bytes, metadata, outDir });
-      thumbnail = metadata.thumbnail;
-      generated += 1;
+    }
+
+    if (thumbnail !== null && !thumbnailGenerated) {
+      reused += 1;
     }
 
     const nextEntry = { ...entry, thumbnail };
@@ -416,5 +436,5 @@ export async function generateBlogThumbnailsInBundle({
   }
 
   await writeFile(indexFile, `${JSON.stringify(nextEntries, null, 2)}\n`, "utf8");
-  return { generated, reused, total: nextEntries.length };
+  return { failed, generated, reused, total: nextEntries.length };
 }

@@ -27,26 +27,18 @@ const posts: DevBlogPost[] = [
 
 describe("blogThumbnailProxyTargetUrl", () => {
   it("maps blog thumbnail requests to the production origin", () => {
-    expect(
-      blogThumbnailProxyTargetUrl(
-        "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
-      ),
-    ).toBe(
-      "https://daopk.me/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+    expect(blogThumbnailProxyTargetUrl("/_worker/blog/thumbnails/post-a/cover-v2.png")).toBe(
+      "https://daopk.me/_worker/blog/thumbnails/post-a/cover-v2.png",
     );
-    expect(
-      blogThumbnailProxyTargetUrl(
-        "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp?v=1",
-      ),
-    ).toBe(
-      "https://daopk.me/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp?v=1",
+    expect(blogThumbnailProxyTargetUrl("/_worker/blog/thumbnails/post-a/cover_v3.webp?v=1")).toBe(
+      "https://daopk.me/_worker/blog/thumbnails/post-a/cover_v3.webp?v=1",
     );
   });
 
   it("leaves non-thumbnail routes alone", () => {
     expect(blogThumbnailProxyTargetUrl("/_worker/blog/index.json")).toBeNull();
     expect(blogThumbnailProxyTargetUrl("/_worker/blog/post-a.md")).toBeNull();
-    expect(blogThumbnailProxyTargetUrl("/_worker/blog/thumbnails/post-a/nope.png")).toBeNull();
+    expect(blogThumbnailProxyTargetUrl("/_worker/blog/thumbnails/post-a/nope.gif")).toBeNull();
     expect(blogThumbnailProxyTargetUrl("/_worker/photos/thumbnails/post-a/image.png")).toBeNull();
     expect(blogThumbnailProxyTargetUrl("http://[::1")).toBeNull();
   });
@@ -61,7 +53,7 @@ describe("buildDevBlogIndex", () => {
           thumbnail: {
             alt: "Post A thumbnail",
             height: 576,
-            url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+            url: "/_worker/blog/thumbnails/post-a/cover-v2.png",
             width: 1024,
           },
         },
@@ -74,7 +66,7 @@ describe("buildDevBlogIndex", () => {
         thumbnail: {
           alt: "Post A thumbnail",
           height: 576,
-          url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          url: "/_worker/blog/thumbnails/post-a/cover-v2.png",
           width: 1024,
         },
         title: "Post A",
@@ -97,7 +89,7 @@ describe("buildDevBlogIndex", () => {
           thumbnail: {
             alt: "Wrong slug",
             height: 576,
-            url: "/_worker/blog/thumbnails/post-b/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+            url: "/_worker/blog/thumbnails/post-b/cover-v2.png",
             width: 1024,
           },
         },

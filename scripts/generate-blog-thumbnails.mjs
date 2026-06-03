@@ -19,6 +19,14 @@ function logThumbnailPrompt({ model, prompt, slug }) {
   console.log(`Blog thumbnail prompt for "${slug}" using "${model}":\n${prompt}`);
 }
 
+function messageFromError(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function logThumbnailError({ error, slug }) {
+  console.warn(`Skipping blog thumbnail for "${slug}": ${messageFromError(error)}`);
+}
+
 const outDir = argValue("--out-dir", join(ROOT, "blog-dist"));
 const postsDir = argValue("--posts-dir", join(ROOT, "blog"));
 const currentIndexFile = argValue("--current-index", join(ROOT, "current-index.json"));
@@ -33,13 +41,14 @@ generateBlogThumbnailsInBundle({
   outDir,
   postsDir,
   model,
+  onError: logThumbnailError,
   onPrompt: logThumbnailPrompt,
   regenerate,
   slug,
 })
-  .then(({ generated, reused, total }) => {
+  .then(({ failed, generated, reused, total }) => {
     console.log(
-      `Blog thumbnails ready: ${generated} generated, ${reused} reused, ${total} post${
+      `Blog thumbnails ready: ${generated} generated, ${reused} reused, ${failed} skipped, ${total} post${
         total === 1 ? "" : "s"
       }.`,
     );

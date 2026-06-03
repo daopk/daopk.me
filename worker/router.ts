@@ -73,7 +73,7 @@ const WORKER_PREFIX = "/_worker";
 const WORKER_BLOG_INDEX_PATHNAME = `${WORKER_PREFIX}/blog/index.json`;
 const WORKER_BLOG_POST_FILE_PATTERN = /^\/_worker\/blog\/([a-z0-9-]+)\.md$/;
 const WORKER_BLOG_THUMBNAIL_PATTERN =
-  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/([a-f0-9]{64}\.(?:jpe?g|png|webp))$/i;
+  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/([A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp))$/i;
 const LEGACY_BLOG_INDEX_PATHNAME = "/blog/index.json";
 const LEGACY_BLOG_POST_FILE_PATTERN = /^\/blog\/([a-z0-9-]+)\.md$/;
 

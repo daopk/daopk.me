@@ -7,7 +7,7 @@ export const BLOG_INDEX_CACHE_PATH = `${BLOG_POSTS_ROOT}/index.json`;
 export const BLOG_POST_MIME_TYPE = "text/markdown;charset=utf-8";
 const BLOG_INDEX_MIME_TYPE = "application/json;charset=utf-8";
 const BLOG_THUMBNAIL_URL_PATTERN =
-  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/[a-f0-9]{64}\.(?:jpe?g|png|webp)$/i;
+  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp)$/i;
 
 export interface BlogThumbnail {
   readonly url: string;

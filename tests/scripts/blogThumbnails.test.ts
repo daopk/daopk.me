@@ -8,6 +8,7 @@ import {
   BLOG_THUMBNAIL_DEFAULT_MODEL,
   BLOG_THUMBNAIL_HEIGHT,
   BLOG_THUMBNAIL_WIDTH,
+  createThumbnailMetadata,
   generateBlogThumbnailsInBundle,
   isBlogThumbnail,
   mergeReusableThumbnails,
@@ -24,6 +25,15 @@ const OLD_THUMBNAIL = {
   height: BLOG_THUMBNAIL_HEIGHT,
   alt: "Post A thumbnail",
 };
+
+const MANUAL_THUMBNAIL = {
+  url: "/_worker/blog/thumbnails/post-a/cover-v2.png",
+  width: BLOG_THUMBNAIL_WIDTH,
+  height: BLOG_THUMBNAIL_HEIGHT,
+  alt: "Post A thumbnail",
+};
+
+const UUID_V4_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 
 const SEO_HTML = `<!doctype html>
 <html>
@@ -86,13 +96,43 @@ afterEach(async () => {
 describe("blog thumbnails", () => {
   it("recognizes and reuses valid thumbnail metadata from the current R2 index", () => {
     expect(isBlogThumbnail(OLD_THUMBNAIL, "post-a")).toBe(true);
+    expect(isBlogThumbnail(MANUAL_THUMBNAIL, "post-a")).toBe(true);
 
     const [entry] = mergeReusableThumbnails(
       [{ slug: "post-a", title: "Post A", date: null, description: null, thumbnail: null }],
-      [{ slug: "post-a", thumbnail: OLD_THUMBNAIL }],
+      [{ slug: "post-a", thumbnail: MANUAL_THUMBNAIL }],
     );
 
-    expect(entry?.thumbnail).toEqual(OLD_THUMBNAIL);
+    expect(entry?.thumbnail).toEqual(MANUAL_THUMBNAIL);
+  });
+
+  it("creates thumbnail metadata with a custom safe id", () => {
+    expect(
+      createThumbnailMetadata({
+        bytes: PNG_BYTES,
+        id: "manual-cover_v2",
+        slug: "post-a",
+        title: "Post A",
+      }),
+    ).toEqual({
+      contentType: "image/png",
+      key: "thumbnails/post-a/manual-cover_v2.png",
+      thumbnail: {
+        url: "/_worker/blog/thumbnails/post-a/manual-cover_v2.png",
+        width: BLOG_THUMBNAIL_WIDTH,
+        height: BLOG_THUMBNAIL_HEIGHT,
+        alt: "Post A thumbnail",
+      },
+    });
+
+    expect(() =>
+      createThumbnailMetadata({
+        bytes: PNG_BYTES,
+        id: "../cover",
+        slug: "post-a",
+        title: "Post A",
+      }),
+    ).toThrow(/Invalid blog thumbnail id/);
   });
 
   it("generates and writes a thumbnail when a post is missing one", async () => {
@@ -109,12 +149,14 @@ describe("blog thumbnails", () => {
 
     const index = JSON.parse(await readFile(join(outDir, "index.json"), "utf8"));
     const thumbnail = index[0].thumbnail;
-    expect(result).toEqual({ generated: 1, reused: 0, total: 1 });
+    expect(result).toEqual({ failed: 0, generated: 1, reused: 0, total: 1 });
     expect(generateImage).toHaveBeenCalledTimes(1);
     expect(generateImage).toHaveBeenCalledWith(
       expect.objectContaining({ apiToken: "fallback-token", model: BLOG_THUMBNAIL_DEFAULT_MODEL }),
     );
-    expect(thumbnail.url).toMatch(/^\/_worker\/blog\/thumbnails\/post-a\/[a-f0-9]{64}\.png$/);
+    expect(thumbnail.url).toMatch(
+      new RegExp(`^/_worker/blog/thumbnails/post-a/${UUID_V4_PATTERN}\\.png$`),
+    );
     await expect(
       readFile(join(outDir, thumbnail.url.replace("/_worker/blog/", ""))),
     ).resolves.toEqual(PNG_BYTES);
@@ -123,6 +165,68 @@ describe("blog thumbnails", () => {
     expect(seo).toContain('content="summary_large_image"');
     expect(seo).toContain('property="og:image"');
     expect(seo).toContain('"image":"https://daopk.me/_worker/blog/thumbnails/post-a/');
+  });
+
+  it("continues when thumbnail generation fails for a missing thumbnail", async () => {
+    const { outDir, postsDir } = await makeBundle([
+      { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },
+      { slug: "post-b", title: "Post B", date: null, description: "B post.", thumbnail: null },
+    ]);
+    const generateImage = vi.fn(async ({ slug }: { slug: string }) => {
+      if (slug === "post-a") {
+        throw new Error("AI quota exhausted");
+      }
+      return PNG_BYTES;
+    });
+    const onError = vi.fn();
+
+    const result = await generateBlogThumbnailsInBundle({
+      generateImage,
+      onError,
+      outDir,
+      postsDir,
+    });
+
+    const index = JSON.parse(await readFile(join(outDir, "index.json"), "utf8"));
+    expect(result).toEqual({ failed: 1, generated: 1, reused: 0, total: 2 });
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.any(Error), slug: "post-a", title: "Post A" }),
+    );
+    expect(index.find((entry: { slug: string }) => entry.slug === "post-a").thumbnail).toBeNull();
+    expect(index.find((entry: { slug: string }) => entry.slug === "post-b").thumbnail.url).toMatch(
+      new RegExp(`^/_worker/blog/thumbnails/post-b/${UUID_V4_PATTERN}\\.png$`),
+    );
+
+    const seo = await readFile(join(outDir, "seo/posts/post-a.html"), "utf8");
+    expect(seo).toContain('content="summary"');
+    expect(seo).not.toContain('property="og:image"');
+  });
+
+  it("keeps the reusable thumbnail when regeneration fails", async () => {
+    const { outDir, postsDir, root } = await makeBundle([
+      { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },
+    ]);
+    const currentIndexFile = join(root, "current-index.json");
+    await writeFile(
+      currentIndexFile,
+      JSON.stringify([{ slug: "post-a", thumbnail: OLD_THUMBNAIL }]),
+    );
+    const generateImage = vi.fn(async () => {
+      throw new Error("AI quota exhausted");
+    });
+
+    const result = await generateBlogThumbnailsInBundle({
+      currentIndexFile,
+      generateImage,
+      outDir,
+      postsDir,
+      regenerate: true,
+      slug: "post-a",
+    });
+
+    const index = JSON.parse(await readFile(join(outDir, "index.json"), "utf8"));
+    expect(result).toEqual({ failed: 1, generated: 0, reused: 1, total: 1 });
+    expect(index[0].thumbnail).toEqual(OLD_THUMBNAIL);
   });
 
   it("regenerates only the requested single slug", async () => {
