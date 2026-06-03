@@ -274,14 +274,15 @@ New body`,
     expect(window.location.pathname).toBe("/blog/new-post");
     expect(wrapper.find(".blog__content").text()).toContain("New Post");
     expect(wrapper.find(".blog__content").text()).toContain("New body");
-    const thumbnail = wrapper.find(".blog__post-thumbnail");
-    expect(thumbnail.attributes("src")).toBe(
+    const cover = wrapper.find(".blog__post-cover");
+    const coverImage = wrapper.find(".blog__post-cover-image");
+    expect(coverImage.attributes("src")).toBe(
       "/_worker/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
     );
-    expect(thumbnail.attributes("alt")).toBe("New Post thumbnail");
-    expect(thumbnail.attributes("width")).toBe("1024");
-    expect(thumbnail.attributes("height")).toBe("576");
-    expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(thumbnail.element);
+    expect(coverImage.attributes("alt")).toBe("New Post thumbnail");
+    expect(coverImage.attributes("width")).toBe("1024");
+    expect(coverImage.attributes("height")).toBe("576");
+    expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(cover.element);
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
@@ -354,7 +355,7 @@ Event body`,
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/posts/field-notes.md", {
       handleId: "h-blog-test",
     });
-    expect(wrapper.find(".blog__post-thumbnail").exists()).toBe(false);
+    expect(wrapper.find(".blog__post-cover").exists()).toBe(false);
   });
 
   it("renders a detail thumbnail from index metadata when available", async () => {
@@ -378,11 +379,11 @@ Event body`,
 
     await waitForContent(wrapper);
     await vi.waitFor(() => {
-      expect(wrapper.find(".blog__post-thumbnail").exists()).toBe(true);
+      expect(wrapper.find(".blog__post-cover").exists()).toBe(true);
     });
 
-    const thumbnail = wrapper.find(".blog__post-thumbnail");
-    expect(thumbnail.attributes()).toMatchObject({
+    const coverImage = wrapper.find(".blog__post-cover-image");
+    expect(coverImage.attributes()).toMatchObject({
       alt: "Field Notes thumbnail",
       height: "576",
       src: "/_worker/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",

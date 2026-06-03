@@ -58,7 +58,7 @@ const busy = computed(
     (view.value === "index" && blogIndex.status.value === "loading") ||
     (view.value === "post" && blogPost.status.value === "loading"),
 );
-const currentPostThumbnail = computed(() => {
+const currentPostCover = computed(() => {
   if (view.value !== "post" || blogPost.status.value !== "ready") {
     return null;
   }
@@ -284,15 +284,16 @@ function onShareClick(): void {
 
       <template v-else>
         <div class="blog__post-shell">
-          <img
-            v-if="currentPostThumbnail"
-            class="blog__post-thumbnail"
-            :src="currentPostThumbnail.url"
-            :alt="currentPostThumbnail.alt"
-            :width="currentPostThumbnail.width"
-            :height="currentPostThumbnail.height"
-            decoding="async"
-          />
+          <div v-if="currentPostCover" class="blog__post-cover">
+            <img
+              class="blog__post-cover-image"
+              :src="currentPostCover.url"
+              :alt="currentPostCover.alt"
+              :width="currentPostCover.width"
+              :height="currentPostCover.height"
+              decoding="async"
+            />
+          </div>
           <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
           <StatusBanner
             v-else-if="blogPost.status.value === 'loading'"
@@ -412,13 +413,20 @@ function onShareClick(): void {
   max-inline-size: 68ch;
 }
 
-.blog__post-thumbnail {
+.blog__post-cover {
   aspect-ratio: 16 / 9;
   border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
   border-radius: var(--radius-md);
   display: block;
   inline-size: 100%;
   margin-block-end: var(--space-lg);
+  overflow: hidden;
+}
+
+.blog__post-cover-image {
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
   object-fit: cover;
 }
 
