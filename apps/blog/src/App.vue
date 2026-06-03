@@ -58,6 +58,18 @@ const busy = computed(
     (view.value === "index" && blogIndex.status.value === "loading") ||
     (view.value === "post" && blogPost.status.value === "loading"),
 );
+const currentPostThumbnail = computed(() => {
+  if (view.value !== "post" || blogPost.status.value !== "ready") {
+    return null;
+  }
+
+  const slug = blogPost.slug.value;
+  if (slug === null) {
+    return null;
+  }
+
+  return blogIndex.posts.value.find((post) => post.slug === slug)?.thumbnail ?? null;
+});
 
 const stopOpenRequests = kernel.events.on("blog.open.requested", (payload) => {
   const slug = typeof payload.slug === "string" && payload.slug.length > 0 ? payload.slug : null;
@@ -260,16 +272,6 @@ function onShareClick(): void {
         <ol v-else class="blog__index-list">
           <li v-for="post in blogIndex.posts.value" :key="post.slug">
             <ListButton class="blog__index-item" @click="onPostSelect(post)">
-              <img
-                v-if="post.thumbnail"
-                class="blog__index-thumbnail"
-                :src="post.thumbnail.url"
-                :alt="post.thumbnail.alt"
-                :width="post.thumbnail.width"
-                :height="post.thumbnail.height"
-                loading="lazy"
-                decoding="async"
-              />
               <span v-if="post.date && post.formattedDate" class="blog__index-date">
                 <time :datetime="post.date">{{ post.formattedDate }}</time>
               </span>
@@ -282,6 +284,15 @@ function onShareClick(): void {
 
       <template v-else>
         <div class="blog__post-shell">
+          <img
+            v-if="currentPostThumbnail"
+            class="blog__post-thumbnail"
+            :src="currentPostThumbnail.url"
+            :alt="currentPostThumbnail.alt"
+            :width="currentPostThumbnail.width"
+            :height="currentPostThumbnail.height"
+            decoding="async"
+          />
           <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
           <StatusBanner
             v-else-if="blogPost.status.value === 'loading'"
@@ -384,15 +395,6 @@ function onShareClick(): void {
   font-size: var(--font-size-xs);
 }
 
-.blog__index-thumbnail {
-  aspect-ratio: 16 / 9;
-  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
-  border-radius: var(--radius-md);
-  display: block;
-  inline-size: min(100%, 480px);
-  object-fit: cover;
-}
-
 .blog__index-title {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
@@ -408,6 +410,16 @@ function onShareClick(): void {
 .blog__post-shell {
   margin-inline: auto;
   max-inline-size: 68ch;
+}
+
+.blog__post-thumbnail {
+  aspect-ratio: 16 / 9;
+  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+  border-radius: var(--radius-md);
+  display: block;
+  inline-size: 100%;
+  margin-block-end: var(--space-lg);
+  object-fit: cover;
 }
 
 .blog__share-status {

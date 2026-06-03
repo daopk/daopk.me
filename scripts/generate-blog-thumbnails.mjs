@@ -19,6 +19,7 @@ const outDir = argValue("--out-dir", join(ROOT, "blog-dist"));
 const postsDir = argValue("--posts-dir", join(ROOT, "blog"));
 const currentIndexFile = argValue("--current-index", join(ROOT, "current-index.json"));
 const slug = argValue("--slug", process.env.BLOG_THUMBNAIL_SLUG ?? "");
+const model = argValue("--model", process.env.BLOG_THUMBNAIL_MODEL ?? "");
 const regenerate = envBoolean(
   argValue("--regenerate", process.env.BLOG_REGENERATE_THUMBNAIL ?? "false"),
 );
@@ -27,6 +28,7 @@ generateBlogThumbnailsInBundle({
   currentIndexFile,
   outDir,
   postsDir,
+  model,
   regenerate,
   slug,
 })

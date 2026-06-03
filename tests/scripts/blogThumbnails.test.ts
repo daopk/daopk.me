@@ -5,11 +5,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  BLOG_THUMBNAIL_DEFAULT_MODEL,
   BLOG_THUMBNAIL_HEIGHT,
   BLOG_THUMBNAIL_WIDTH,
   generateBlogThumbnailsInBundle,
   isBlogThumbnail,
   mergeReusableThumbnails,
+  runCloudflareImageGeneration,
 } from "../../scripts/lib/blogThumbnails.mjs";
 
 const PNG_BYTES = Buffer.from([
@@ -33,6 +35,13 @@ const SEO_HTML = `<!doctype html>
   <body></body>
 </html>
 `;
+
+function cloudflareImageResponse() {
+  return new Response(JSON.stringify({ result: { image: PNG_BYTES.toString("base64") } }), {
+    headers: { "Content-Type": "application/json" },
+    status: 200,
+  });
+}
 
 let tmpRoots: string[] = [];
 
@@ -103,7 +112,7 @@ describe("blog thumbnails", () => {
     expect(result).toEqual({ generated: 1, reused: 0, total: 1 });
     expect(generateImage).toHaveBeenCalledTimes(1);
     expect(generateImage).toHaveBeenCalledWith(
-      expect.objectContaining({ apiToken: "fallback-token" }),
+      expect.objectContaining({ apiToken: "fallback-token", model: BLOG_THUMBNAIL_DEFAULT_MODEL }),
     );
     expect(thumbnail.url).toMatch(/^\/_worker\/blog\/thumbnails\/post-a\/[a-f0-9]{64}\.png$/);
     await expect(
@@ -154,6 +163,74 @@ describe("blog thumbnails", () => {
     );
     expect(index.find((entry: { slug: string }) => entry.slug === "post-b").thumbnail).toEqual(
       postBThumbnail,
+    );
+  });
+
+  it("passes a custom model slug into bundle image generation", async () => {
+    const { outDir, postsDir } = await makeBundle([
+      { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },
+    ]);
+    const generateImage = vi.fn(async () => PNG_BYTES);
+
+    await generateBlogThumbnailsInBundle({
+      generateImage,
+      model: "flux-2-dev",
+      outDir,
+      postsDir,
+    });
+
+    expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({ model: "flux-2-dev" }));
+  });
+
+  it("rejects invalid custom model slugs before generation", async () => {
+    const { outDir, postsDir } = await makeBundle([
+      { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },
+    ]);
+    const generateImage = vi.fn(async () => PNG_BYTES);
+
+    await expect(
+      generateBlogThumbnailsInBundle({
+        generateImage,
+        model: "@cf/black-forest-labs/flux-2-dev",
+        outDir,
+        postsDir,
+      }),
+    ).rejects.toThrow(/bare Black Forest Labs model slug/);
+    expect(generateImage).not.toHaveBeenCalled();
+  });
+
+  it("uses the default Cloudflare Black Forest Labs model URL", async () => {
+    const fetchImpl = vi.fn(async () => cloudflareImageResponse());
+
+    await expect(
+      runCloudflareImageGeneration({
+        accountId: "test-account",
+        apiToken: "test-token",
+        fetchImpl,
+        prompt: "Generate a thumbnail",
+      }),
+    ).resolves.toEqual(PNG_BYTES);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.cloudflare.com/client/v4/accounts/test-account/ai/run/@cf/black-forest-labs/flux-2-klein-9b",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("uses a custom Cloudflare Black Forest Labs model URL", async () => {
+    const fetchImpl = vi.fn(async () => cloudflareImageResponse());
+
+    await runCloudflareImageGeneration({
+      accountId: "test-account",
+      apiToken: "test-token",
+      fetchImpl,
+      model: "flux-2-dev",
+      prompt: "Generate a thumbnail",
+    });
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.cloudflare.com/client/v4/accounts/test-account/ai/run/@cf/black-forest-labs/flux-2-dev",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

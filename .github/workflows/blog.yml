@@ -26,6 +26,10 @@ on:
         required: false
         default: false
         type: boolean
+      thumbnail_model:
+        description: "Black Forest Labs Workers AI model slug for thumbnail generation"
+        required: false
+        default: "flux-2-klein-9b"
 
 # Serialize publishes so two quick pushes can't race uploads to the same keys.
 concurrency:
@@ -76,6 +80,7 @@ jobs:
       - name: Generate blog thumbnails
         env:
           BLOG_REGENERATE_THUMBNAIL: ${{ github.event.inputs.regenerate_thumbnail || 'false' }}
+          BLOG_THUMBNAIL_MODEL: ${{ github.event.inputs.thumbnail_model || 'flux-2-klein-9b' }}
           BLOG_THUMBNAIL_SLUG: ${{ github.event.inputs.slug || '' }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_AI_API_TOKEN: ${{ secrets.CLOUDFLARE_AI_API_TOKEN }}

@@ -236,18 +236,26 @@ describe("Blog app", () => {
       "New Post",
       "Old Post",
     ]);
-    const thumbnail = wrapper.find(".blog__index-thumbnail");
-    expect(thumbnail.attributes("src")).toBe(
-      "/_worker/blog/thumbnails/new-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
-    );
-    expect(thumbnail.attributes("alt")).toBe("New Post thumbnail");
+    expect(wrapper.find(".blog__index-thumbnail").exists()).toBe(false);
   });
 
   it("opens an index item in the reader and returns to the index", async () => {
     window.history.replaceState({ preserved: true }, "", "/");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
     stubBlogFetch({
-      index: [{ slug: "new-post", title: "New Post", date: "2026-05-30" }],
+      index: [
+        {
+          slug: "new-post",
+          title: "New Post",
+          date: "2026-05-30",
+          thumbnail: {
+            url: "/_worker/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
+            width: 1024,
+            height: 576,
+            alt: "New Post thumbnail",
+          },
+        },
+      ],
       posts: {
         "new-post": `---
 title: "New Post"
@@ -266,6 +274,14 @@ New body`,
     expect(window.location.pathname).toBe("/blog/new-post");
     expect(wrapper.find(".blog__content").text()).toContain("New Post");
     expect(wrapper.find(".blog__content").text()).toContain("New body");
+    const thumbnail = wrapper.find(".blog__post-thumbnail");
+    expect(thumbnail.attributes("src")).toBe(
+      "/_worker/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
+    );
+    expect(thumbnail.attributes("alt")).toBe("New Post thumbnail");
+    expect(thumbnail.attributes("width")).toBe("1024");
+    expect(thumbnail.attributes("height")).toBe("576");
+    expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(thumbnail.element);
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
@@ -338,6 +354,41 @@ Event body`,
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/posts/field-notes.md", {
       handleId: "h-blog-test",
     });
+    expect(wrapper.find(".blog__post-thumbnail").exists()).toBe(false);
+  });
+
+  it("renders a detail thumbnail from index metadata when available", async () => {
+    stubBlogFetch({
+      index: [
+        {
+          slug: "field-notes",
+          title: "Field Notes",
+          date: "2026-05-30",
+          thumbnail: {
+            url: "/_worker/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
+            width: 1024,
+            height: 576,
+            alt: "Field Notes thumbnail",
+          },
+        },
+      ],
+      posts: { "field-notes": "# Field Notes\n\nNetwork body" },
+    });
+    const wrapper = mount(wrap(makeKernel()));
+
+    await waitForContent(wrapper);
+    await vi.waitFor(() => {
+      expect(wrapper.find(".blog__post-thumbnail").exists()).toBe(true);
+    });
+
+    const thumbnail = wrapper.find(".blog__post-thumbnail");
+    expect(thumbnail.attributes()).toMatchObject({
+      alt: "Field Notes thumbnail",
+      height: "576",
+      src: "/_worker/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
+      width: "1024",
+    });
+    expect(wrapper.find(".blog__index-thumbnail").exists()).toBe(false);
   });
 
   it("emits null document path for the index and updates when opening a post", async () => {

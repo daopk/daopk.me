@@ -14,11 +14,13 @@ export const BLOG_THUMBNAIL_WIDTH = 1024;
 export const BLOG_THUMBNAIL_HEIGHT = 576;
 export const BLOG_THUMBNAIL_BASE_PATH = "/_worker/blog/thumbnails";
 export const BLOG_THUMBNAIL_R2_PREFIX = "thumbnails";
-export const CLOUDFLARE_IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
+export const BLOG_THUMBNAIL_DEFAULT_MODEL = "flux-2-klein-9b";
+export const CLOUDFLARE_IMAGE_MODEL_PREFIX = "@cf/black-forest-labs/";
 
 const SITE_ORIGIN = "https://daopk.me";
 const IMAGE_HASH_PATTERN = /^[a-f0-9]{64}$/;
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const MODEL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -30,6 +32,22 @@ function normalizeBoolean(value) {
 
 function firstNonEmptyString(...values) {
   return values.find((value) => typeof value === "string" && value.trim().length > 0)?.trim();
+}
+
+export function normalizeCloudflareImageModel(model = BLOG_THUMBNAIL_DEFAULT_MODEL) {
+  const normalized = firstNonEmptyString(model, BLOG_THUMBNAIL_DEFAULT_MODEL);
+
+  if (!MODEL_SLUG_PATTERN.test(normalized)) {
+    throw new Error(
+      `Invalid blog thumbnail model "${normalized}". Use a bare Black Forest Labs model slug such as "${BLOG_THUMBNAIL_DEFAULT_MODEL}".`,
+    );
+  }
+
+  return normalized;
+}
+
+export function cloudflareImageModelId(model = BLOG_THUMBNAIL_DEFAULT_MODEL) {
+  return `${CLOUDFLARE_IMAGE_MODEL_PREFIX}${normalizeCloudflareImageModel(model)}`;
 }
 
 function jsonLdScript(value) {
@@ -207,6 +225,7 @@ export async function runCloudflareImageGeneration({
   apiToken,
   fetchImpl = globalThis.fetch,
   height = BLOG_THUMBNAIL_HEIGHT,
+  model = BLOG_THUMBNAIL_DEFAULT_MODEL,
   prompt,
   width = BLOG_THUMBNAIL_WIDTH,
 }) {
@@ -222,6 +241,7 @@ export async function runCloudflareImageGeneration({
     throw new Error("fetch is unavailable in this environment.");
   }
 
+  const modelId = cloudflareImageModelId(model);
   const form = new FormData();
   form.append("prompt", prompt);
   form.append("width", String(width));
@@ -230,7 +250,7 @@ export async function runCloudflareImageGeneration({
   const response = await fetchImpl(
     `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
       accountId,
-    )}/ai/run/${CLOUDFLARE_IMAGE_MODEL}`,
+    )}/ai/run/${modelId}`,
     {
       body: form,
       headers: {
@@ -330,6 +350,7 @@ export async function generateBlogThumbnailsInBundle({
   currentIndexFile,
   fetchImpl = globalThis.fetch,
   generateImage,
+  model = firstNonEmptyString(process.env.BLOG_THUMBNAIL_MODEL, BLOG_THUMBNAIL_DEFAULT_MODEL),
   outDir,
   postsDir,
   regenerate = false,
@@ -340,6 +361,7 @@ export async function generateBlogThumbnailsInBundle({
   const currentEntries =
     currentIndexFile === undefined ? [] : await readJsonArrayIfExists(currentIndexFile);
   const regenerateSlug = validateRegenerateSlug({ entries, regenerate, slug });
+  const thumbnailModel = normalizeCloudflareImageModel(model);
   const mergedEntries = mergeReusableThumbnails(entries, currentEntries, regenerateSlug);
   const nextEntries = [];
   let generated = 0;
@@ -361,6 +383,7 @@ export async function generateBlogThumbnailsInBundle({
         apiToken,
         fetchImpl,
         height: BLOG_THUMBNAIL_HEIGHT,
+        model: thumbnailModel,
         prompt,
         slug: entry.slug,
         width: BLOG_THUMBNAIL_WIDTH,
