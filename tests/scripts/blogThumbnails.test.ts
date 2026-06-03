@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   BLOG_THUMBNAIL_HEIGHT,
@@ -36,6 +36,12 @@ const SEO_HTML = `<!doctype html>
 
 let tmpRoots: string[] = [];
 
+beforeEach(() => {
+  vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "test-account");
+  vi.stubEnv("CLOUDFLARE_AI_API_TOKEN", "");
+  vi.stubEnv("CLOUDFLARE_API_TOKEN", "fallback-token");
+});
+
 async function makeBundle(entries: unknown[]) {
   const root = await mkdtemp(join(tmpdir(), "blog-thumbnails-"));
   tmpRoots.push(root);
@@ -65,6 +71,7 @@ This is a post about browser operating system experiments.`,
 afterEach(async () => {
   await Promise.all(tmpRoots.map((root) => rm(root, { recursive: true, force: true })));
   tmpRoots = [];
+  vi.unstubAllEnvs();
 });
 
 describe("blog thumbnails", () => {
@@ -95,6 +102,9 @@ describe("blog thumbnails", () => {
     const thumbnail = index[0].thumbnail;
     expect(result).toEqual({ generated: 1, reused: 0, total: 1 });
     expect(generateImage).toHaveBeenCalledTimes(1);
+    expect(generateImage).toHaveBeenCalledWith(
+      expect.objectContaining({ apiToken: "fallback-token" }),
+    );
     expect(thumbnail.url).toMatch(/^\/_worker\/blog\/thumbnails\/post-a\/[a-f0-9]{64}\.png$/);
     await expect(
       readFile(join(outDir, thumbnail.url.replace("/_worker/blog/", ""))),

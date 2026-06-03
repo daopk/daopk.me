@@ -28,6 +28,10 @@ function normalizeBoolean(value) {
   return value === true || value === "true" || value === "1";
 }
 
+function firstNonEmptyString(...values) {
+  return values.find((value) => typeof value === "string" && value.trim().length > 0)?.trim();
+}
+
 function jsonLdScript(value) {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
@@ -319,7 +323,10 @@ async function postPromptData(postsDir, entry) {
 
 export async function generateBlogThumbnailsInBundle({
   accountId = process.env.CLOUDFLARE_ACCOUNT_ID,
-  apiToken = process.env.CLOUDFLARE_AI_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN,
+  apiToken = firstNonEmptyString(
+    process.env.CLOUDFLARE_AI_API_TOKEN,
+    process.env.CLOUDFLARE_API_TOKEN,
+  ),
   currentIndexFile,
   fetchImpl = globalThis.fetch,
   generateImage,
