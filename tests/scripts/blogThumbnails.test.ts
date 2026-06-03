@@ -182,6 +182,32 @@ describe("blog thumbnails", () => {
     expect(generateImage).toHaveBeenCalledWith(expect.objectContaining({ model: "flux-2-dev" }));
   });
 
+  it("reports the generated prompt before requesting an image", async () => {
+    const { outDir, postsDir } = await makeBundle([
+      { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },
+    ]);
+    const generateImage = vi.fn(async () => PNG_BYTES);
+    const onPrompt = vi.fn();
+
+    await generateBlogThumbnailsInBundle({
+      generateImage,
+      model: "flux-2-dev",
+      onPrompt,
+      outDir,
+      postsDir,
+    });
+
+    expect(onPrompt).toHaveBeenCalledWith({
+      model: "flux-2-dev",
+      prompt: expect.stringContaining("Title: Post A"),
+      slug: "post-a",
+      title: "Post A",
+    });
+    expect(generateImage.mock.invocationCallOrder[0]).toBeGreaterThan(
+      onPrompt.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
   it("rejects invalid custom model slugs before generation", async () => {
     const { outDir, postsDir } = await makeBundle([
       { slug: "post-a", title: "Post A", date: null, description: "A post.", thumbnail: null },

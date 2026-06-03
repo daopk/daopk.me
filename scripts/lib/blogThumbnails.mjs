@@ -351,6 +351,7 @@ export async function generateBlogThumbnailsInBundle({
   fetchImpl = globalThis.fetch,
   generateImage,
   model = firstNonEmptyString(process.env.BLOG_THUMBNAIL_MODEL, BLOG_THUMBNAIL_DEFAULT_MODEL),
+  onPrompt,
   outDir,
   postsDir,
   regenerate = false,
@@ -378,6 +379,9 @@ export async function generateBlogThumbnailsInBundle({
     if (shouldGenerate) {
       const promptData = await postPromptData(postsDir, entry);
       const prompt = buildThumbnailPrompt(promptData);
+      if (typeof onPrompt === "function") {
+        onPrompt({ model: thumbnailModel, prompt, slug: entry.slug, title: promptData.title });
+      }
       const bytes = await (generateImage ?? runCloudflareImageGeneration)({
         accountId,
         apiToken,

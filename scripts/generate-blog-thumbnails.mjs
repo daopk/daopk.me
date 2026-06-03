@@ -15,6 +15,10 @@ function envBoolean(value) {
   return value === "true" || value === "1";
 }
 
+function logThumbnailPrompt({ model, prompt, slug }) {
+  console.log(`Blog thumbnail prompt for "${slug}" using "${model}":\n${prompt}`);
+}
+
 const outDir = argValue("--out-dir", join(ROOT, "blog-dist"));
 const postsDir = argValue("--posts-dir", join(ROOT, "blog"));
 const currentIndexFile = argValue("--current-index", join(ROOT, "current-index.json"));
@@ -29,6 +33,7 @@ generateBlogThumbnailsInBundle({
   outDir,
   postsDir,
   model,
+  onPrompt: logThumbnailPrompt,
   regenerate,
   slug,
 })
