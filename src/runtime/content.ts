@@ -32,4 +32,5 @@ export type {
   BlogContentSourceOptions,
   BlogContentVfs,
   BlogIndexEntry,
+  BlogThumbnail,
 } from "~/core/blog/blogContentSource";

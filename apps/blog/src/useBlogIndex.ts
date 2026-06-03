@@ -18,6 +18,7 @@ export interface BlogIndexPost {
   readonly formattedDate: string | null;
   readonly path: string;
   readonly slug: string;
+  readonly thumbnail: BlogIndexEntry["thumbnail"];
   readonly title: string;
 }
 
@@ -55,6 +56,7 @@ export function blogIndexPostFromEntry(entry: BlogIndexEntry): BlogIndexPost {
     formattedDate: date === null ? null : formatBlogDate(date),
     path: blogPostPathFromSlug(entry.slug) ?? `${BLOG_POSTS_ROOT}/${entry.slug}.md`,
     slug: entry.slug,
+    thumbnail: entry.thumbnail ?? null,
     title: entry.title ?? titleFromSlug(entry.slug),
   };
 }

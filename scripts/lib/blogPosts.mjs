@@ -114,6 +114,7 @@ export function parsePostSource(slug, source) {
   }
 
   const date = frontmatter.date === undefined ? null : validDate(frontmatter.date);
+  const thumbnailPrompt = frontmatter.thumbnailPrompt?.trim() || null;
   const updated = frontmatter.updated === undefined ? null : validDate(frontmatter.updated);
   const title = frontmatter.title?.trim() || firstMarkdownH1(body) || titleFromSlug(slug);
   const description = truncateDescription(frontmatter.description || plainTextFromMarkdown(body));
@@ -125,6 +126,7 @@ export function parsePostSource(slug, source) {
       date,
       description,
       formattedDate: date === null ? null : formatPostDate(date),
+      thumbnailPrompt,
       title,
       updated,
     },

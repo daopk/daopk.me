@@ -31,6 +31,12 @@ interface BlogIndexFixture {
   readonly title?: string | null;
   readonly date?: string | null;
   readonly description?: string | null;
+  readonly thumbnail?: {
+    readonly url: string;
+    readonly width: number;
+    readonly height: number;
+    readonly alt: string;
+  } | null;
 }
 
 interface BlogFetchFixture {
@@ -207,7 +213,17 @@ describe("Blog app", () => {
     stubBlogFetch({
       index: [
         { slug: "old-post", title: "Old Post", date: "2026-05-01" },
-        { slug: "new-post", title: "New Post", date: "2026-05-30" },
+        {
+          slug: "new-post",
+          title: "New Post",
+          date: "2026-05-30",
+          thumbnail: {
+            url: "/_worker/blog/thumbnails/new-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+            width: 1024,
+            height: 576,
+            alt: "New Post thumbnail",
+          },
+        },
       ],
     });
     const wrapper = mount(wrap(makeKernel(), blogIndexContext));
@@ -220,6 +236,11 @@ describe("Blog app", () => {
       "New Post",
       "Old Post",
     ]);
+    const thumbnail = wrapper.find(".blog__index-thumbnail");
+    expect(thumbnail.attributes("src")).toBe(
+      "/_worker/blog/thumbnails/new-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+    );
+    expect(thumbnail.attributes("alt")).toBe("New Post thumbnail");
   });
 
   it("opens an index item in the reader and returns to the index", async () => {

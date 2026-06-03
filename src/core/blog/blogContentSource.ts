@@ -6,6 +6,15 @@ import { VfsError } from "~/core/vfs/errors";
 export const BLOG_INDEX_CACHE_PATH = `${BLOG_POSTS_ROOT}/index.json`;
 export const BLOG_POST_MIME_TYPE = "text/markdown;charset=utf-8";
 const BLOG_INDEX_MIME_TYPE = "application/json;charset=utf-8";
+const BLOG_THUMBNAIL_URL_PATTERN =
+  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/[a-f0-9]{64}\.(?:jpe?g|png|webp)$/i;
+
+export interface BlogThumbnail {
+  readonly url: string;
+  readonly width: number;
+  readonly height: number;
+  readonly alt: string;
+}
 
 /** Minimal post metadata shipped in `blog/index.json`. */
 export interface BlogIndexEntry {
@@ -13,6 +22,7 @@ export interface BlogIndexEntry {
   readonly title: string | null;
   readonly date: string | null;
   readonly description: string | null;
+  readonly thumbnail: BlogThumbnail | null;
 }
 
 /** VFS surface the content source needs for its read-through cache. */
@@ -91,10 +101,40 @@ function parseIndexEntries(raw: string): readonly BlogIndexEntry[] {
         typeof record.description === "string" && record.description.length > 0
           ? record.description
           : null,
+      thumbnail: parseIndexThumbnail(record.thumbnail, slug),
     });
   }
 
   return entries;
+}
+
+function parseIndexThumbnail(value: unknown, slug: string): BlogThumbnail | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.url !== "string" ||
+    typeof record.alt !== "string" ||
+    record.alt.length === 0 ||
+    record.width !== 1024 ||
+    record.height !== 576
+  ) {
+    return null;
+  }
+
+  const match = BLOG_THUMBNAIL_URL_PATTERN.exec(record.url);
+  if (match === null || match[1] !== slug) {
+    return null;
+  }
+
+  return {
+    url: record.url,
+    width: record.width,
+    height: record.height,
+    alt: record.alt,
+  };
 }
 
 export function createBlogContentSource(options: BlogContentSourceOptions): BlogContentSource {

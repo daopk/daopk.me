@@ -20,6 +20,7 @@ function entry(overrides: Partial<BlogIndexEntry> & { slug: string }): BlogIndex
     title: null,
     date: null,
     description: null,
+    thumbnail: null,
     ...overrides,
   };
 }
@@ -61,8 +62,28 @@ describe("blogIndexPostFromEntry", () => {
       formattedDate: "May 30, 2026",
       path: "/home/posts/hello-world.md",
       slug: "hello-world",
+      thumbnail: null,
       title: "Hello World",
     });
+  });
+
+  it("keeps valid thumbnail metadata for rendering", () => {
+    const thumbnail = {
+      url: "/_worker/blog/thumbnails/hello-world/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp",
+      width: 1024,
+      height: 576,
+      alt: "Hello World thumbnail",
+    };
+
+    expect(
+      blogIndexPostFromEntry({
+        slug: "hello-world",
+        title: "Hello World",
+        date: null,
+        description: null,
+        thumbnail,
+      }).thumbnail,
+    ).toBe(thumbnail);
   });
 
   it("falls back to a slug-derived title and drops invalid dates", () => {
@@ -77,6 +98,7 @@ describe("blogIndexPostFromEntry", () => {
     expect(post.date).toBeNull();
     expect(post.formattedDate).toBeNull();
     expect(post.excerpt).toBe("");
+    expect(post.thumbnail).toBeNull();
   });
 });
 

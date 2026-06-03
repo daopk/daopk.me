@@ -72,6 +72,8 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/;
 const WORKER_PREFIX = "/_worker";
 const WORKER_BLOG_INDEX_PATHNAME = `${WORKER_PREFIX}/blog/index.json`;
 const WORKER_BLOG_POST_FILE_PATTERN = /^\/_worker\/blog\/([a-z0-9-]+)\.md$/;
+const WORKER_BLOG_THUMBNAIL_PATTERN =
+  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/([a-f0-9]{64}\.(?:jpe?g|png|webp))$/i;
 const LEGACY_BLOG_INDEX_PATHNAME = "/blog/index.json";
 const LEGACY_BLOG_POST_FILE_PATTERN = /^\/blog\/([a-z0-9-]+)\.md$/;
 
@@ -81,6 +83,7 @@ const R2_SITEMAP_KEY = "sitemap.xml";
 const R2_SEO_INDEX_KEY = "seo/blog-index.html";
 
 const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+const BLOG_THUMBNAIL_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const CROSS_ORIGIN_ISOLATION_HEADERS = {
   "Cross-Origin-Embedder-Policy": "credentialless",
   "Cross-Origin-Opener-Policy": "same-origin",
@@ -218,6 +221,13 @@ function appModuleContentType(key: string): string {
   if (key.endsWith(".css")) return "text/css;charset=utf-8";
   if (key.endsWith(".map")) return "application/json;charset=utf-8";
   return "text/javascript;charset=utf-8";
+}
+
+function blogThumbnailContentType(key: string): string {
+  const lowerKey = key.toLowerCase();
+  if (lowerKey.endsWith(".png")) return "image/png";
+  if (lowerKey.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
 }
 
 /** Serve a prerendered SEO page from R2 with crawler caching hints. */
@@ -455,6 +465,20 @@ async function routeRequest(request: Request, env: WorkerEnv): Promise<Response>
         "text/markdown;charset=utf-8",
         request,
       )) ?? noIndexResponse("Blog post not found.")
+    );
+  }
+
+  const thumbnailFile = WORKER_BLOG_THUMBNAIL_PATTERN.exec(pathname);
+  if (thumbnailFile !== null) {
+    const key = `thumbnails/${thumbnailFile[1]}/${thumbnailFile[2]}`;
+    return (
+      (await serveR2Asset(
+        env.BLOG,
+        key,
+        blogThumbnailContentType(key),
+        request,
+        BLOG_THUMBNAIL_CACHE_CONTROL,
+      )) ?? noIndexResponse("Blog thumbnail not found.")
     );
   }
 

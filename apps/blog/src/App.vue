@@ -260,6 +260,16 @@ function onShareClick(): void {
         <ol v-else class="blog__index-list">
           <li v-for="post in blogIndex.posts.value" :key="post.slug">
             <ListButton class="blog__index-item" @click="onPostSelect(post)">
+              <img
+                v-if="post.thumbnail"
+                class="blog__index-thumbnail"
+                :src="post.thumbnail.url"
+                :alt="post.thumbnail.alt"
+                :width="post.thumbnail.width"
+                :height="post.thumbnail.height"
+                loading="lazy"
+                decoding="async"
+              />
               <span v-if="post.date && post.formattedDate" class="blog__index-date">
                 <time :datetime="post.date">{{ post.formattedDate }}</time>
               </span>
@@ -372,6 +382,15 @@ function onShareClick(): void {
 .blog__index-date {
   color: var(--color-fg-muted);
   font-size: var(--font-size-xs);
+}
+
+.blog__index-thumbnail {
+  aspect-ratio: 16 / 9;
+  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+  border-radius: var(--radius-md);
+  display: block;
+  inline-size: min(100%, 480px);
+  object-fit: cover;
 }
 
 .blog__index-title {

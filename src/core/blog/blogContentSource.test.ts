@@ -51,9 +51,28 @@ beforeEach(() => {
 describe("createBlogContentSource — index", () => {
   it("fetches, parses, filters invalid slugs, and caches the raw manifest", async () => {
     const raw = JSON.stringify([
-      { slug: "post-a", title: "Post A", date: "2026-05-01", description: "Desc A" },
+      {
+        slug: "post-a",
+        title: "Post A",
+        date: "2026-05-01",
+        description: "Desc A",
+        thumbnail: {
+          url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          width: 1024,
+          height: 576,
+          alt: "Post A thumbnail",
+        },
+      },
       { slug: "Invalid Slug", title: "Skip me" },
-      { slug: "post-b" },
+      {
+        slug: "post-b",
+        thumbnail: {
+          url: "/_worker/blog/thumbnails/other-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          width: 1024,
+          height: 576,
+          alt: "Wrong slug",
+        },
+      },
     ]);
     const vfs = makeVfs();
     const fetchImpl = vi.fn(async () => textResponse(raw));
@@ -63,8 +82,19 @@ describe("createBlogContentSource — index", () => {
 
     expect(fetchImpl).toHaveBeenCalledWith(`${RAW_BASE}/index.json`, expect.any(Object));
     expect(entries).toEqual([
-      { slug: "post-a", title: "Post A", date: "2026-05-01", description: "Desc A" },
-      { slug: "post-b", title: null, date: null, description: null },
+      {
+        slug: "post-a",
+        title: "Post A",
+        date: "2026-05-01",
+        description: "Desc A",
+        thumbnail: {
+          url: "/_worker/blog/thumbnails/post-a/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+          width: 1024,
+          height: 576,
+          alt: "Post A thumbnail",
+        },
+      },
+      { slug: "post-b", title: null, date: null, description: null, thumbnail: null },
     ]);
     expect(vfs.mkdir).toHaveBeenCalledWith("/home/posts", { recursive: true });
     expect(vfs.writeText).toHaveBeenCalledWith(

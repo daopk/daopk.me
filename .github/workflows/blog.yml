@@ -12,8 +12,20 @@ on:
     paths:
       - "blog/**"
       - "scripts/build-blog-bundle.mjs"
+      - "scripts/generate-blog-thumbnails.mjs"
       - "scripts/lib/blogPosts.mjs"
-  workflow_dispatch: {}
+      - "scripts/lib/blogThumbnails.mjs"
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "Single blog slug to regenerate a thumbnail for"
+        required: false
+        default: ""
+      regenerate_thumbnail:
+        description: "Regenerate the thumbnail for the provided single slug"
+        required: false
+        default: false
+        type: boolean
 
 # Serialize publishes so two quick pushes can't race uploads to the same keys.
 concurrency:
@@ -47,8 +59,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Download current blog index
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if ! pnpm exec wrangler r2 object get "$R2_BUCKET/index.json" \
+                --file current-index.json --remote 2>/dev/null; then
+            echo "No existing blog index; thumbnails will be generated where missing."
+            rm -f current-index.json
+          fi
+
       - name: Build blog bundle
         run: pnpm blog:bundle
+
+      - name: Generate blog thumbnails
+        env:
+          BLOG_REGENERATE_THUMBNAIL: ${{ github.event.inputs.regenerate_thumbnail || 'false' }}
+          BLOG_THUMBNAIL_SLUG: ${{ github.event.inputs.slug || '' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_AI_API_TOKEN: ${{ secrets.CLOUDFLARE_AI_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: pnpm exec node scripts/generate-blog-thumbnails.mjs
 
       - name: Upload bundle to R2
         env:
@@ -65,6 +97,10 @@ jobs:
               *.md)   content_type="text/markdown;charset=utf-8" ;;
               *.html) content_type="text/html;charset=utf-8" ;;
               *.xml)  content_type="application/xml;charset=utf-8" ;;
+              *.png)  content_type="image/png" ;;
+              *.jpg)  content_type="image/jpeg" ;;
+              *.jpeg) content_type="image/jpeg" ;;
+              *.webp) content_type="image/webp" ;;
               *)      content_type="application/octet-stream" ;;
             esac
             echo "Uploading $key ($content_type)"

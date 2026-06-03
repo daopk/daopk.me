@@ -4,6 +4,7 @@
  * Output layout (mirrors the keys worker/router.ts reads):
  *   blog-dist/index.json            -> runtime manifest for the blog index list
  *   blog-dist/posts/<slug>.md       -> raw markdown the app fetches per post
+ *   blog-dist/thumbnails/*          -> generated social/list thumbnails
  *   blog-dist/seo/blog-index.html   -> prerendered index for crawlers
  *   blog-dist/seo/posts/<slug>.html -> prerendered post for crawlers
  *   blog-dist/sitemap.xml           -> sitemap served at /sitemap.xml
@@ -514,6 +515,7 @@ async function main() {
     title: post.metadata.title,
     date: post.metadata.date,
     description: post.metadata.description,
+    thumbnail: null,
   }));
 
   await writeTextFile(INDEX_FILE, `${JSON.stringify(index, null, 2)}\n`);

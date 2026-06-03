@@ -16,6 +16,8 @@ const COOP_HEADER = "Cross-Origin-Opener-Policy";
 const DEFAULT_OBJECTS: Record<string, string> = {
   "index.json": '[{"slug":"building-a-tiny-web-os","title":"Building a Tiny OS in the Browser"}]',
   "posts/building-a-tiny-web-os.md": "# Building a Tiny OS in the Browser\n",
+  "thumbnails/building-a-tiny-web-os/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png":
+    "thumbnail-bytes",
   "seo/blog-index.html": "<main>Latest posts</main>",
   "seo/posts/building-a-tiny-web-os.html": "<article>Building a Tiny OS in the Browser</article>",
   "sitemap.xml": '<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>',
@@ -238,6 +240,54 @@ describe("SEO Worker — runtime content from R2", () => {
     expect(get).toHaveBeenCalledWith("posts/building-a-tiny-web-os.md");
     expect(response.headers.get("Content-Type")).toBe("text/markdown;charset=utf-8");
     await expect(response.text()).resolves.toContain("# Building a Tiny OS in the Browser");
+  });
+
+  it("serves a blog thumbnail image from R2 with immutable caching", async () => {
+    const { env, get } = makeEnv();
+
+    const response = await handleRequest(
+      browser(
+        "/_worker/blog/thumbnails/building-a-tiny-web-os/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+      ),
+      env,
+    );
+
+    expect(get).toHaveBeenCalledWith(
+      "thumbnails/building-a-tiny-web-os/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+    );
+    expect(response.headers.get("Content-Type")).toBe("image/png");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
+    await expect(response.text()).resolves.toBe("thumbnail-bytes");
+  });
+
+  it("serves blog thumbnail headers to HEAD requests", async () => {
+    const { env } = makeEnv();
+
+    const response = await handleRequest(
+      new Request(
+        "https://daopk.me/_worker/blog/thumbnails/building-a-tiny-web-os/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+        { method: "HEAD" },
+      ),
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/png");
+    await expect(response.text()).resolves.toBe("");
+  });
+
+  it("returns noindex 404 when a blog thumbnail is missing", async () => {
+    const { env } = makeEnv({});
+
+    const response = await handleRequest(
+      browser(
+        "/_worker/blog/thumbnails/missing-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+      ),
+      env,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
   });
 
   it("serves the sitemap from R2", async () => {
