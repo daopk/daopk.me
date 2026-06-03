@@ -193,6 +193,32 @@ describe("AuthGate", () => {
     expect(wrapper.emitted("authenticated")).toHaveLength(1);
   });
 
+  it("unlocks a selected profile from a multi-account picker", async () => {
+    const store = new ProfileStore();
+    store.add(profile);
+    store.add(betaProfile);
+    store.setLastActive("alpha");
+    store.markGlobalImported();
+    store.dispose();
+    mocks.unlockProfile.mockResolvedValue(betaSession);
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    const betaButton = wrapper
+      .findAll(".auth-gate__profile")
+      .find((button) => button.text().includes("Beta"));
+    expect(betaButton).toBeDefined();
+
+    await betaButton?.trigger("click");
+    await findButtonByText(wrapper, "Unlock")?.trigger("click");
+    await flushPromises();
+
+    expect(mocks.unlockProfile).toHaveBeenCalledWith(expect.objectContaining({ id: "beta" }));
+    expect(getActiveProfileSession()?.profileId).toBe("beta");
+    expect(wrapper.emitted("authenticated")).toHaveLength(1);
+  });
+
   it("creates and opens a guest account without passkey availability", async () => {
     const store = new ProfileStore();
     store.add(profile);

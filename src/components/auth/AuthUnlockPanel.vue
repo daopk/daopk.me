@@ -1,0 +1,168 @@
+<script setup lang="ts">
+import { Button } from "~/components/ui";
+import { CloudOff, KeyRound, Plus } from "~/icons/lucide";
+import type { ProfileRecord } from "~/types/profile";
+
+import { profileMeta } from "./authGateLabels";
+
+defineProps<{
+  profiles: ProfileRecord[];
+  selectedProfileId: string | null;
+  selectedProfile: ProfileRecord | null;
+  busy: boolean;
+  canUnlockSelected: boolean;
+  showProfileList: boolean;
+  unlockButtonLabel: string;
+  addAccountLabel: string;
+  initialImportPending: boolean;
+}>();
+
+const emit = defineEmits<{
+  "select-profile": [profileId: string];
+  unlock: [];
+  "add-account": [];
+}>();
+</script>
+
+<template>
+  <div class="auth-gate__profiles">
+    <div v-if="showProfileList" class="auth-gate__profile-list" role="list">
+      <button
+        v-for="profile in profiles"
+        :key="profile.id"
+        class="auth-gate__profile"
+        :class="{ 'auth-gate__profile--selected': selectedProfileId === profile.id }"
+        type="button"
+        role="listitem"
+        :disabled="busy"
+        @click="emit('select-profile', profile.id)"
+      >
+        <span class="auth-gate__profile-name">{{ profile.displayName }}</span>
+        <span class="auth-gate__profile-meta">{{ profileMeta(profile) }}</span>
+      </button>
+    </div>
+
+    <Button
+      class="auth-gate__button"
+      variant="primary"
+      type="button"
+      :loading="busy"
+      :disabled="!canUnlockSelected"
+      :icon-start="selectedProfile?.authMode === 'guest' ? CloudOff : KeyRound"
+      @click="emit('unlock')"
+    >
+      {{ unlockButtonLabel }}
+    </Button>
+
+    <Button
+      class="auth-gate__button"
+      variant="secondary"
+      type="button"
+      :disabled="busy || initialImportPending"
+      :icon-start="Plus"
+      @click="emit('add-account')"
+    >
+      {{ addAccountLabel }}
+    </Button>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.auth-gate__profiles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  margin-block-start: var(--space-lg);
+}
+
+.auth-gate__profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.auth-gate__profile {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-bg) 48%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  cursor: pointer;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: space-between;
+  min-block-size: 46px;
+  padding: 0 var(--space-md);
+  text-align: start;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.auth-gate__profile:hover {
+  background: color-mix(in srgb, var(--color-bg-elevated) 54%, transparent);
+}
+
+.auth-gate__profile--selected {
+  background: color-mix(in srgb, var(--color-accent) 13%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 68%, var(--color-border));
+  outline: 1px solid color-mix(in srgb, var(--color-accent) 42%, transparent);
+  outline-offset: -2px;
+}
+
+.auth-gate__profile-name {
+  font-size: 14px;
+  font-weight: 650;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-gate__profile-meta {
+  color: var(--color-fg-muted);
+  flex: 0 0 auto;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.auth-gate__button {
+  justify-content: center;
+  min-block-size: 42px;
+}
+
+@media (max-width: 760px) {
+  .auth-gate__profiles {
+    gap: var(--space-md);
+    margin-block-start: 28px;
+  }
+
+  .auth-gate__button {
+    min-block-size: 48px;
+  }
+
+  .auth-gate__profile-list {
+    gap: var(--space-sm);
+    max-block-size: 34dvh;
+    overflow-y: auto;
+    padding: 2px;
+  }
+
+  .auth-gate__profile {
+    align-items: flex-start;
+    backdrop-filter: blur(18px) saturate(1.08);
+    background: color-mix(in srgb, var(--color-bg-elevated) 54%, transparent);
+    flex-direction: column;
+    gap: 2px;
+    justify-content: center;
+    min-block-size: 56px;
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .auth-gate__profile-meta {
+    white-space: normal;
+  }
+}
+</style>
