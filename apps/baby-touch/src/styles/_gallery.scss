@@ -23,7 +23,6 @@
   block-size: 48px;
   border: 2px solid rgb(255 255 255 / 0.86);
   border-radius: var(--radius-full);
-  box-shadow: 0 10px 18px rgb(31 28 42 / 0.14);
   color: var(--baby-touch-home-fg);
   cursor: pointer;
   display: inline-flex;
@@ -98,7 +97,7 @@
 .baby-touch__gallery-grid {
   display: grid;
   gap: var(--space-sm);
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
 }
 
 .baby-touch__gallery-card {
@@ -110,16 +109,16 @@
   display: grid;
   gap: var(--space-xs);
   justify-items: center;
-  min-block-size: 156px;
+  min-block-size: 190px;
   min-inline-size: 0;
   padding: var(--space-sm);
 }
 
 .baby-touch__gallery-art {
-  block-size: 94px;
+  block-size: 122px;
   display: grid;
   filter: drop-shadow(0 10px 12px rgb(18 18 26 / 0.14));
-  inline-size: 94px;
+  inline-size: 122px;
   place-items: center;
 }
 

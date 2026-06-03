@@ -7,7 +7,7 @@
   inset-block-end: max(24px, var(--baby-touch-safe-area-bottom) + 18px);
   inset-inline-start: max(24px, var(--baby-touch-safe-area-left) + 18px);
   outline: none;
-  pointer-events: auto;
+  pointer-events: none;
   position: absolute;
   touch-action: none;
   z-index: 2;
@@ -45,7 +45,9 @@
 .baby-touch__home-slider-arrows {
   letter-spacing: 6px;
   margin-inline-start: 10px;
+  min-inline-size: max-content;
   opacity: 0.62;
+  white-space: nowrap;
 }
 
 .baby-touch__home-slider-target,
@@ -68,7 +70,10 @@
 }
 
 .baby-touch__home-slider-target {
+  block-size: 40px;
   color: rgb(38 47 55 / 0.72);
+  font-size: 28px;
+  inline-size: 40px;
   inset-block-start: 50%;
   inset-inline-end: 0;
   transform: translateY(-50%);
@@ -84,6 +89,10 @@
 
 .baby-touch__home-slider--active .baby-touch__home-slider-track {
   opacity: 1;
+}
+
+.baby-touch__home-slider--active {
+  pointer-events: auto;
 }
 
 .baby-touch__home-slider--active .baby-touch__home-slider-thumb {

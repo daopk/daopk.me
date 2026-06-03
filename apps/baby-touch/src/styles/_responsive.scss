@@ -1,6 +1,6 @@
 @media (max-width: 520px) {
   .baby-touch__home {
-    gap: var(--space-md);
+    gap: 48px;
     padding: max(72px, var(--space-md)) var(--space-md) var(--space-md);
   }
 
@@ -18,7 +18,7 @@
   }
 
   .baby-touch__background-option {
-    min-block-size: 112px;
+    min-block-size: 132px;
   }
 
   .baby-touch__gallery {
@@ -31,17 +31,17 @@
   }
 
   .baby-touch__gallery-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   }
 
   .baby-touch__gallery-card {
-    min-block-size: 136px;
-    padding: var(--space-xs);
+    min-block-size: 184px;
+    padding: var(--space-sm);
   }
 
   .baby-touch__gallery-art {
-    block-size: 78px;
-    inline-size: 78px;
+    block-size: 116px;
+    inline-size: 116px;
   }
 
   .baby-touch__sticker {
@@ -65,7 +65,7 @@ html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__orientation-
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__home {
   align-items: center;
-  gap: var(--space-sm);
+  gap: 36px;
   grid-template-columns: minmax(132px, 0.45fr) minmax(0, 1.55fr);
   inline-size: min(920px, 100%);
   padding: max(var(--space-sm), var(--baby-touch-safe-area-top) + var(--space-sm))
@@ -106,7 +106,7 @@ html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__background-g
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__background-option {
   border-width: 2px;
-  min-block-size: 78px;
+  min-block-size: 104px;
   padding: var(--space-xs);
 }
 
@@ -128,14 +128,14 @@ html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-body
 }
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-grid {
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
 }
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-card {
-  min-block-size: 124px;
+  min-block-size: 168px;
 }
 
 html[data-shell="mobile"] .baby-touch--landscape-right .baby-touch__gallery-art {
-  block-size: 70px;
-  inline-size: 70px;
+  block-size: 106px;
+  inline-size: 106px;
 }
