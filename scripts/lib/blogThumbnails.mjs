@@ -210,9 +210,10 @@ export function buildThumbnailPrompt({ body, description, thumbnailPrompt, title
 
   const excerpt = truncateDescription(description || plainTextFromMarkdown(body));
   return [
-    "Create a 16:9 editorial blog thumbnail for daopk.me.",
+    "Create a 16:9 editorial blog thumbnail.",
     "Make it visually specific, polished, and suitable for a technical personal blog.",
     "Do not include text, logos, watermarks, UI labels, or readable writing.",
+    "Reference the blog post title and content for thematic inspiration, but do not directly depict specific scenes or characters from the post.",
     `Title: ${title}`,
     excerpt.length > 0 ? `Context: ${excerpt}` : "",
   ]

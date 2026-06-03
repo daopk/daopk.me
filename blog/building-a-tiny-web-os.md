@@ -1,6 +1,7 @@
 ---
 title: "Building a Tiny OS in the Browser"
 date: "2026-05-30"
+description: "A short note about the daopk.me project, a web-based operating system simulation."
 ---
 
 This is the first post on this site, so I want to write a short note about what this project is.
