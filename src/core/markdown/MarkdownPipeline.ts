@@ -38,6 +38,7 @@ const SUPPORTED_CODE_LANGUAGES = new Set([
   "css",
   "javascript",
   "json",
+  "jsonc",
   "markdown",
   "scss",
   "text",

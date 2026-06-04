@@ -14,6 +14,7 @@ const LANGUAGE_LOADERS = {
   css: () => import("@shikijs/langs/css"),
   javascript: () => import("@shikijs/langs/javascript"),
   json: () => import("@shikijs/langs/json"),
+  jsonc: () => import("@shikijs/langs/jsonc"),
   markdown: () => import("@shikijs/langs/markdown"),
   scss: () => import("@shikijs/langs/scss"),
   tsx: () => import("@shikijs/langs/tsx"),

@@ -111,6 +111,17 @@ describe("MarkdownPipeline", () => {
     expect(html).toContain("--shiki-dark");
   });
 
+  it("highlights jsonc fenced code with Shiki", async () => {
+    const { html } = await renderMarkdownToHtml(
+      '```jsonc\n{\n  // theme preference\n  "theme": "dark"\n}\n```',
+    );
+
+    expect(html).toContain("<pre");
+    expect(html).toContain("shiki");
+    expect(html).toContain("theme preference");
+    expect(html).toContain("--shiki-dark");
+  });
+
   it("shares sanitize/url policy with processor hooks", async () => {
     const file = await createMarkdownProcessor({ normalizeCodeLanguage: true }).process(
       "[bad](javascript:alert(1))\n\n```ts\nconst answer = 42;\n```",
@@ -141,12 +152,16 @@ describe("MarkdownPipeline", () => {
           "hello",
           "~~~",
           "",
+          "```jsonc",
+          '{ "trailing": true, }',
+          "```",
+          "",
           "```vue",
           "<template />",
           "```",
         ].join("\n"),
       ),
-    ).toEqual(["typescript", "vue"]);
+    ).toEqual(["typescript", "jsonc", "vue"]);
   });
 
   it("keeps hostile HTML inside fenced code escaped", async () => {
