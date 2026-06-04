@@ -204,6 +204,27 @@ const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
 
 type DesktopWindowRecord = (typeof windowManager.windows)[number];
 
+function shouldMaximizeLaunch(manifestId: string, source: AppLaunchSource): boolean {
+  return manifestId === "blog" && source === "deeplink";
+}
+
+function focusedWindowForManifest(manifestId: string): DesktopWindowRecord | undefined {
+  return windowManager.windows.find((record) => record.manifestId === manifestId && record.focused);
+}
+
+function maximizeFocusedLaunchWindow(manifestId: string, source: AppLaunchSource): void {
+  if (!shouldMaximizeLaunch(manifestId, source)) {
+    return;
+  }
+
+  const record = focusedWindowForManifest(manifestId);
+  if (record === undefined) {
+    return;
+  }
+
+  windowManager.snapTo(record.id, "max", maximizeStageSize());
+}
+
 function windowIdFromPayload(ctx: CommandContext, commandId: string): string | null {
   const value = ctx.payload.windowId;
   if (typeof value !== "string" || value.length === 0) {
@@ -285,8 +306,7 @@ const disposeWindowCommands = [
 ];
 
 function focusedHandleIdForManifest(manifestId: string): string | undefined {
-  return windowManager.windows.find((record) => record.manifestId === manifestId && record.focused)
-    ?.handleId;
+  return focusedWindowForManifest(manifestId)?.handleId;
 }
 
 function manifestHasSettings(manifestId: string): boolean {
@@ -355,6 +375,7 @@ async function onLaunchRequested(
 
   // is intentionally NOT rewritten — that would violate AppContext.args
   if (windowManager.restoreAllForManifest(manifest.id)) {
+    maximizeFocusedLaunchWindow(manifest.id, source);
     const replayed = await replayAppResume(manifest.id, args, source);
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "restore — dropping launch args", manifest.id, args);
@@ -363,6 +384,7 @@ async function onLaunchRequested(
   }
 
   if (windowManager.focusTopOfManifest(manifest.id)) {
+    maximizeFocusedLaunchWindow(manifest.id, source);
     const replayed = await replayAppResume(manifest.id, args, source);
     if (!replayed && args !== undefined) {
       debugWarn("[window-host]", "focus — dropping launch args", manifest.id, args);
@@ -388,7 +410,7 @@ async function onLaunchRequested(
   const minSize = defaultWindowMinSize(manifest);
   const initialPosition = centeredInitialPosition(source, defaultSize);
 
-  windowManager.open({
+  const windowId = windowManager.open({
     manifestId: manifest.id,
     handleId: handle.id,
     title: manifest.name,
@@ -398,6 +420,10 @@ async function onLaunchRequested(
     ...(initialPosition === undefined ? {} : { initial: initialPosition }),
     ...(args === undefined ? {} : { args }),
   });
+
+  if (shouldMaximizeLaunch(manifest.id, source)) {
+    windowManager.snapTo(windowId, "max", maximizeStageSize());
+  }
 }
 
 async function onEditorOpenRequested(path: string): Promise<void> {

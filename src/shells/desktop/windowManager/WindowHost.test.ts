@@ -321,6 +321,165 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("maximizes Blog deeplink windows to the desktop stage", async () => {
+    const { kernel, bus } = makeKernel([
+      manifest("blog", "Blog", {
+        defaultWindow: { width: 720, height: 520, centered: true },
+      }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 0, left: 0, width: 1200, height: 800 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "deeplink",
+      args: {
+        path: "/home/posts/moving-apps-out-of-the-shell.md",
+        slug: "moving-apps-out-of-the-shell",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(record).toBeDefined();
+    expect(record!.maximized).toBe(true);
+    expect(record!.snap).toBe("max");
+    expect(record!.x).toBe(0);
+    expect(record!.y).toBe(0);
+    expect(record!.width).toBe(1200);
+    expect(record!.height).toBe(800);
+    expect(record!.preMaximize).toEqual({
+      x: Math.floor((1200 - 720) / 2),
+      y: Math.floor((800 - 520) / 2),
+      width: 720,
+      height: 520,
+    });
+
+    wrapper.unmount();
+  });
+
+  it("keeps non-deeplink Blog launches at the default window size", async () => {
+    const { kernel, bus } = makeKernel([
+      manifest("blog", "Blog", {
+        defaultWindow: { width: 720, height: 520, centered: true },
+      }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 0, left: 0, width: 1200, height: 800 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(record).toBeDefined();
+    expect(record!.maximized).toBe(false);
+    expect(record!.snap).toBeUndefined();
+    expect(record!.width).toBe(720);
+    expect(record!.height).toBe(520);
+
+    wrapper.unmount();
+  });
+
+  it("maximizes an existing Blog window for deeplinks and replays the post intent", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([
+      manifest("blog", "Blog", {
+        defaultWindow: { width: 720, height: 520, centered: true },
+      }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 0, left: 0, width: 1200, height: 800 }),
+    );
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const existing = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(existing).toBeDefined();
+    expect(existing!.maximized).toBe(false);
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "deeplink",
+      args: {
+        path: "/home/posts/moving-apps-out-of-the-shell.md",
+        slug: "moving-apps-out-of-the-shell",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.filter((entry) => entry.manifestId === "blog")).toHaveLength(1);
+
+    const maxed = manager.windows.find((entry) => entry.id === existing!.id)!;
+    expect(maxed.maximized).toBe(true);
+    expect(maxed.snap).toBe("max");
+    expect(maxed.x).toBe(0);
+    expect(maxed.y).toBe(0);
+    expect(maxed.width).toBe(1200);
+    expect(maxed.height).toBe(800);
+    expect(bus.emitted).toContainEqual({
+      channel: "blog.open.requested",
+      payload: {
+        source: "deeplink",
+        path: "/home/posts/moving-apps-out-of-the-shell.md",
+        slug: "moving-apps-out-of-the-shell",
+      },
+    });
+
+    wrapper.unmount();
+  });
+
   it("resizes a deeplink window from its top-left when the app requests a content size", async () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
       rect({ top: 0, left: 0, width: 1000, height: 700 }),
