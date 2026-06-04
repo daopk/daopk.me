@@ -27,14 +27,12 @@
     "@shikijs/rehype": "^4.1.0",
     "@shikijs/themes": "^4.1.0",
     "@vueuse/core": "^14.3.0",
-    "@webcontainer/api": "1.6.4",
     "comlink": "^4.4.2",
     "focus-trap-vue": "^4.1.0",
     "idb": "^8.0.3",
     "isbot": "^5.1.40",
     "minisearch": "^7.2.0",
     "motion-v": "^2.2.1",
-    "pdfjs-dist": "^6.0.227",
     "pinia": "^3.0.4",
     "rehype-sanitize": "^6.0.0",
     "rehype-stringify": "^10.0.1",
@@ -44,8 +42,7 @@
     "remark-rehype": "^11.1.2",
     "shiki": "^4.1.0",
     "unified": "^11.0.5",
-    "vue": "^3.5.35",
-    "vue-router": "^5.1.0"
+    "vue": "^3.5.35"
   },
   "devDependencies": {
     "@daopk-app/baby-touch": "workspace:*",
