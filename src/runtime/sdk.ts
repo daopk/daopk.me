@@ -1,24 +1,25 @@
 /**
- * Host SDK for external (installed) apps — the public `@daopk/sdk` surface.
+ * Host SDK for independently-published first-party apps — the public
+ * `@daopk/sdk` surface.
  *
  * This module is the SINGLE definition site for the kernel injection keys and
  * `useKernel`. The host imports these symbols (directly or via the `~/types/*`
- * re-exports) and external apps import them at runtime via the import map the
- * host injects into `index.html`. Because both resolve to THIS one module, the
- * host and every external app share ONE set of injection-key symbols and ONE
- * Vue instance (the import map also maps the bare `vue` specifier to the
+ * re-exports) and published first-party apps import them at runtime via the
+ * import map the host injects into `index.html`. Because both resolve to THIS
+ * one module, the host and every published first-party app share ONE set of
+ * injection-key symbols and ONE Vue instance (the import map also maps the bare
+ * `vue` specifier to the
  * host's Vue chunk). Without that, `inject()` / `useKernel()` silently fail
  * across the boundary.
  *
- * External-app build preset (Vite/Rollup):
+ * First-party app package build preset (Vite/Rollup):
  *
- *   // vite.config.ts of the external app
+ *   // apps/<id>/vite.config.ts
  *   build: { rollupOptions: { external: ["vue", "@daopk/sdk"] } }
  *
  * The app entry module must `export default` a Vue component and import Vue
  * from `"vue"` (resolved to the host instance via the import map). Serve the
- * built module over HTTPS with permissive CORS — the host page runs under COEP
- * `credentialless`, so cross-origin module scripts must send CORS headers.
+ * built module from a versioned same-origin `/apps/<id>/...` URL.
  *
  * See `src/runtime/README.md` for the full authoring guide.
  */

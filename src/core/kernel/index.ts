@@ -6,8 +6,6 @@ import type { ResolvedTheme } from "~/types/theme";
 import type { Kernel, KernelBootFacade } from "~/types/kernel";
 import type { SettingsState } from "~/types/settings";
 
-import { useInstalledAppsStore } from "~/core/apps/InstalledAppsStore";
-import { reconcileInstalledApps } from "~/core/apps/reconcileInstalledApps";
 import { resetAutorunLatch } from "~/core/boot/autorun";
 import { debugLog, debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
@@ -317,15 +315,6 @@ function buildKernel(): Kernel {
           storageNamespace: profileKvNamespace(profile.profileId, "permissions"),
         });
 
-        // Hydrate only here; the `installed-apps` boot phase registers the
-        // stored apps. `onReconcile` keeps the registry in sync on cross-tab
-        // install/uninstall.
-        const installedAppsStore = useInstalledAppsStore(requirePinia());
-        installedAppsStore.hydrate({
-          storageNamespace: profileKvNamespace(profile.profileId, "apps"),
-          onReconcile: (records) => reconcileInstalledApps(kernel, records),
-        });
-
         // init → dispose → init cycle (HMR + tests) stays clean.
         stopBuiltinCommands?.();
         stopBuiltinCommands = registerBuiltinCommands(kernel);
@@ -387,7 +376,6 @@ function buildKernel(): Kernel {
         useTokenOverridesStore(pinia).dispose();
         useWallpaperStore(pinia).dispose();
         usePermissionStore(pinia).dispose();
-        useInstalledAppsStore(pinia).dispose();
         useWidgetPlacementStore(pinia).dispose();
         useSpotlightRecentsStore(pinia).dispose();
       }

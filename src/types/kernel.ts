@@ -390,6 +390,6 @@ export interface Kernel {
 
 export type KernelInjection = Kernel;
 
-// Defined once in the SDK module so the host and external apps share the same
-// symbol instance (single source — see src/runtime/sdk.ts).
+// Defined once in the SDK module so the host and published first-party apps
+// share the same symbol instance (single source — see src/runtime/sdk.ts).
 export { KernelInjectionKey } from "~/runtime/sdk";

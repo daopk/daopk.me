@@ -48,10 +48,9 @@ export interface FirstPartyAppDescriptor {
   /** Settings metadata (e.g. search keywords) surfaced for this app. */
   readonly settings?: AppSettingsManifest;
   /**
-   * Widgets this app contributes. Unlike user-installed external apps (whose
-   * widgets are dropped), first-party apps are trusted to register widgets.
-   * Each references a named export in the published app module ({@link
-   * FirstPartyWidgetDescriptor}); the host builds the real loaders at
+   * Widgets this app contributes. First-party apps are trusted to register
+   * widgets. Each references a named export in the published app module
+   * ({@link FirstPartyWidgetDescriptor}); the host builds the real loaders at
    * registration time and carries them through to the built `AppManifest`.
    */
   readonly widgets?: readonly FirstPartyWidgetDescriptor[];

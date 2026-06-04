@@ -14,7 +14,7 @@ describe("appStoreManifest", () => {
     expect(appStoreManifest.singleton).toBe(true);
   });
 
-  it("reserves its id so external apps cannot shadow it", () => {
+  it("reserves its id in the built-in app roster", () => {
     expect(BUILTIN_APP_IDS.has(appStoreManifest.id)).toBe(true);
   });
 });

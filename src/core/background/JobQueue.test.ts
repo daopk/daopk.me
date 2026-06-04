@@ -192,5 +192,4 @@ describe("JobQueue", () => {
     await expect(active.promise).rejects.toBeInstanceOf(JobQueueDisposedError);
     await expect(queued.promise).rejects.toBeInstanceOf(JobQueueDisposedError);
   });
-
 });

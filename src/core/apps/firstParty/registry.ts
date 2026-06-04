@@ -19,8 +19,7 @@ import type { FirstPartyAppDescriptor } from "./types";
  * The shell's roster of first-party apps that are built + published
  * independently (out of the shell bundle) and loaded at runtime from the
  * catalog. This is the trusted lane: entries here may use reserved built-in
- * ids, the `system` category, `autorun`, and widgets — none of which untrusted
- * external apps may declare.
+ * ids, the `system` category, `autorun`, and widgets.
  *
  * Rollout (staged on purpose — externalize in waves, not all at once):
  *  - Wave 1 (done): `notes` — the pilot that proved the runtime contract, lib
@@ -241,7 +240,7 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
   },
 ];
 
-/** Reserved ids owned by the first-party roster (kept out of external apps). */
+/** Reserved ids owned by the first-party roster. */
 export const FIRST_PARTY_APP_IDS: ReadonlySet<string> = new Set(
   FIRST_PARTY_APPS.map((app) => app.id),
 );

@@ -18,10 +18,11 @@ function findChunkFileByName(bundle: RuntimeBundle, chunkName: string): string |
 
 /**
  * Build-only: after chunks are emitted, inject an import map (+ modulepreloads)
- * into index.html so externally-loaded app modules resolve `import "vue"` and
- * `import "@daopk/sdk"` to the host's hashed runtime chunks. The map is only
- * injected at build time, so external apps are testable under `npm run preview`
- * (not `npm run dev`) — documented in src/runtime/README.md.
+ * into index.html so independently-published first-party app modules resolve
+ * `import "vue"` and `import "@daopk/sdk"` to the host's hashed runtime chunks.
+ * The map is only injected at build time, so published app modules are testable
+ * under `npm run preview` (not `npm run dev`) — documented in
+ * src/runtime/README.md.
  */
 export function externalRuntimeImportMap(): PluginOption {
   return {

@@ -8,7 +8,7 @@
  *
  * Mirrors `src/runtime/vue.ts` / `src/runtime/sdk.ts`: it is a build *entry*
  * (vite.config.ts `rollupOptions.input`) and `preserveEntrySignatures: "strict"`
- * keeps its full, real-named export surface so externally-loaded app modules
- * can import kit names the host never references statically.
+ * keeps its full, real-named export surface so published first-party app
+ * modules can import kit names the host never references statically.
  */
 export * from "~/components/kit";
