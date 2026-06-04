@@ -107,6 +107,7 @@ export {
 } from "~/core/vfs/fileTypes";
 export { splitFilename } from "~/core/vfs/fileNames";
 export { isNotesMarkdownPath, NOTES_ROOT } from "~/core/notes/notesPaths";
+export { isFirstPartyAppProtocolUrl, parseAppProtocolIntent } from "~/core/routing/appUrlIntents";
 
 // Shared composables + infra the satellite first-party apps reuse. Each resolves
 // to ONE instance via this chunk, so `VfsError` `instanceof` checks, the profile
@@ -121,6 +122,7 @@ export { activeProfileKvNamespace } from "~/core/profile/storageScope";
 
 export type {
   AppChromeBackAction,
+  AppChromeContentSize,
   AppChromeController,
   AppChromeManifest,
   AppChromeTitlebarVisibility,

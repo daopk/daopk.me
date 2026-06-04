@@ -44,6 +44,10 @@ export type AppResumeEmission =
   | {
       event: "blog.open.requested";
       payload: KernelEventPayloads["blog.open.requested"];
+    }
+  | {
+      event: "youtube-player.open.requested";
+      payload: KernelEventPayloads["youtube-player.open.requested"];
     };
 
 type AppResumeHandler = (ctx: AppResumeContext) => AppResumeEmission | null;
@@ -118,16 +122,45 @@ const resumeBlogOpen: AppResumeHandler = ({ manifestId, args, source }) => {
   };
 };
 
+const resumeYouTubePlayerOpen: AppResumeHandler = ({
+  manifestId,
+  args,
+  source,
+  resolveHandleId,
+}) => {
+  if (manifestId !== "youtube-player") {
+    return null;
+  }
+
+  const videoId = typeof args?.videoId === "string" ? args.videoId : undefined;
+  const url = typeof args?.url === "string" ? args.url : undefined;
+  if (videoId === undefined && url === undefined) {
+    return null;
+  }
+
+  const handleId = resolveHandleId(manifestId);
+  return {
+    event: "youtube-player.open.requested",
+    payload: {
+      source,
+      ...(handleId === undefined ? {} : { handleId }),
+      ...(videoId === undefined ? {} : { videoId }),
+      ...(url === undefined ? {} : { url }),
+    },
+  };
+};
+
 /**
  * Ordered registry of resume handlers. Order matters: the first handler that
- * matches wins, mirroring the original desktop `||` precedence
- * (finder → settings section → app settings → blog).
+ * matches wins, mirroring the original desktop `||` precedence for the
+ * shared system handlers before app-specific resume handlers.
  */
 const APP_RESUME_HANDLERS: readonly AppResumeHandler[] = [
   resumeFinderReveal,
   resumeSettingsSection,
   resumeAppSettings,
   resumeBlogOpen,
+  resumeYouTubePlayerOpen,
 ];
 
 /**
@@ -159,6 +192,9 @@ export function emitAppResume(events: KernelEventsFacade, emission: AppResumeEmi
       events.emit(emission.event, emission.payload);
       return;
     case "blog.open.requested":
+      events.emit(emission.event, emission.payload);
+      return;
+    case "youtube-player.open.requested":
       events.emit(emission.event, emission.payload);
       return;
   }

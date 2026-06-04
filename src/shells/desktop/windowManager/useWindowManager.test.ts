@@ -45,6 +45,42 @@ describe("useWindowManager", () => {
     expect(record.args).toBeUndefined();
   });
 
+  it("setArgs() replaces args snapshots and bumps argsRevision", () => {
+    const wm = useWindowManager({ killProcess: vi.fn() });
+    const id = wm.open({
+      manifestId: "about",
+      handleId: "h-args-replace",
+      title: "About",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+
+    expect(wm.windows[0]!.argsRevision).toBe(0);
+
+    const nextArgs = { url: "https://www.youtube.com/watch?v=u8vJjTH9Igg" };
+    expect(wm.setArgs(id, nextArgs)).toBe(true);
+    nextArgs.url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+    expect(wm.windows[0]!.argsRevision).toBe(1);
+    expect(wm.windows[0]!.args).toEqual({
+      url: "https://www.youtube.com/watch?v=u8vJjTH9Igg",
+    });
+    expect(Object.isFrozen(wm.windows[0]!.args)).toBe(true);
+
+    expect(
+      wm.setArgs(id, {
+        url: "https://www.youtube.com/watch?v=u8vJjTH9Igg",
+      }),
+    ).toBe(true);
+    expect(wm.windows[0]!.argsRevision).toBe(1);
+
+    expect(wm.setArgs(id)).toBe(true);
+    expect(wm.windows[0]!.argsRevision).toBe(2);
+    expect(wm.windows[0]!.args).toBeUndefined();
+    expect(wm.setArgs(id)).toBe(true);
+    expect(wm.windows[0]!.argsRevision).toBe(2);
+    expect(wm.setArgs("missing", nextArgs)).toBe(false);
+  });
+
   it("tracks a live document path by manifest and handle id", () => {
     const wm = useWindowManager({ killProcess: vi.fn() });
 
@@ -56,6 +92,21 @@ describe("useWindowManager", () => {
     expect(wm.windows[0]!.documentPath).toBe("/home/a.md");
     expect(wm.setDocumentPath("h-editor", "editor", null)).toBe(true);
     expect(wm.windows[0]!.documentPath).toBeNull();
+  });
+
+  it("updates a window title by id and ignores unknown windows", () => {
+    const wm = useWindowManager({ killProcess: vi.fn() });
+
+    const id = wm.open({
+      manifestId: "youtube-player",
+      handleId: "h-youtube",
+      title: "YouTube Player",
+    });
+
+    expect(wm.setTitle(id, "YouTube Developers Live")).toBe(true);
+    expect(wm.windows[0]!.title).toBe("YouTube Developers Live");
+    expect(wm.setTitle("missing", "Nope")).toBe(false);
+    expect(wm.windows[0]!.title).toBe("YouTube Developers Live");
   });
 
   it("opens a window with monotonic z above the base and flags it focused", () => {

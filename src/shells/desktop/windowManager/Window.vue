@@ -10,6 +10,7 @@ import {
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
+import type { AppChromeContentSize, AppChromeController } from "~/types/app";
 import AppMount from "./AppMount.vue";
 import { TITLEBAR_HEIGHT, type SnapEdge, type WindowRecord } from "./useWindowManager";
 import { clampWindowPosition } from "./windowGeometry";
@@ -32,6 +33,8 @@ const emit = defineEmits<{
   "minimize:window": [id: string];
   "snap:window": [id: string, edge: SnapEdge];
   "snap-intent:window": [id: string, edge: SnapEdge | null];
+  "title:window": [id: string, title: string];
+  "content-size:window": [id: string, size: AppChromeContentSize | null];
 }>();
 
 const titleId = useId();
@@ -214,6 +217,31 @@ const maximizeLabel = computed(() =>
   props.record.maximized ? `Restore ${props.record.title}` : `Maximize ${props.record.title}`,
 );
 
+function fallbackWindowTitle(): string {
+  return manifest.value?.name ?? props.record.title;
+}
+
+function normalizeWindowTitle(title: string | null): string {
+  const trimmed = title?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : fallbackWindowTitle();
+}
+
+const appChrome: AppChromeController = {
+  setTitle(title) {
+    emit("title:window", props.record.id, normalizeWindowTitle(title));
+  },
+  setBackAction() {},
+  setContentSize(size) {
+    emit("content-size:window", props.record.id, size);
+  },
+  hide() {
+    emit("minimize:window", props.record.id);
+  },
+  close() {
+    emit("close:window", props.record.id);
+  },
+};
+
 function onPointerDownAnywhere(): void {
   if (!props.record.focused) {
     emit("focus:window", props.record.id);
@@ -327,10 +355,12 @@ function dispatchWindowCommand(id: string): void {
     </ContextMenu>
     <div class="window__body">
       <AppMount
+        :key="`${record.handleId}:${record.argsRevision}`"
         :manifest-id="record.manifestId"
         :handle-id="record.handleId"
         :focused="record.focused"
         :args="record.args"
+        :chrome="appChrome"
       />
     </div>
     <template v-if="!record.maximized">

@@ -33,6 +33,14 @@ export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminal
 export const SettingsAppIcon = createFluentIcon("settings-32", "FluentSettingsAppIcon");
 export const TemplateAppIcon = createFluentIcon("apps-32", "FluentTemplateAppIcon");
 export const AppStoreAppIcon = createFluentIcon("apps-list-detail-24", "FluentAppStoreAppIcon");
+export const YoutubePlayerAppIcon = createPaletteIcon(
+  {
+    width: 32,
+    height: 32,
+    body: '<g fill="none"><rect width="26" height="18" x="3" y="7" fill="url(#SVGYoutubePlayerBody)" rx="5"/><path fill="url(#SVGYoutubePlayerSheen)" fill-opacity=".65" d="M3 12a5 5 0 0 1 5-5h16a5 5 0 0 1 5 5v1.4c-3.38 1.2-7.76 1.9-13 1.9s-9.62-.7-13-1.9z"/><path fill="url(#SVGYoutubePlayerTriangle)" d="M13 12.25v7.5a.75.75 0 0 0 1.14.64l6.15-3.75a.75.75 0 0 0 0-1.28l-6.15-3.75a.75.75 0 0 0-1.14.64"/><defs><linearGradient id="SVGYoutubePlayerBody" x1="5.6" x2="24.8" y1="7" y2="25" gradientUnits="userSpaceOnUse"><stop stop-color="#ff5d5d"/><stop offset="1" stop-color="#d9142b"/></linearGradient><linearGradient id="SVGYoutubePlayerSheen" x1="7.2" x2="24" y1="5.8" y2="17.2" gradientUnits="userSpaceOnUse"><stop stop-color="#ffb1b1"/><stop offset="1" stop-color="#ffb1b1" stop-opacity="0"/></linearGradient><linearGradient id="SVGYoutubePlayerTriangle" x1="13" x2="19.8" y1="12" y2="20.4" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#ffe9e9"/></linearGradient></defs></g>',
+  },
+  "FluentYoutubePlayerAppIcon",
+);
 export const TrashAppIcon = createPaletteIcon(
   {
     width: 32,
@@ -83,6 +91,7 @@ export const fluentColorIconComponents = {
   PhotosAppIcon,
   PdfViewerAppIcon,
   SlidesAppIcon,
+  YoutubePlayerAppIcon,
   TerminalAppIcon,
   SettingsAppIcon,
   TemplateAppIcon,

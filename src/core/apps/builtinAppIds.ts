@@ -28,6 +28,7 @@ export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
   "slides",
   "terminal",
   "trash",
+  "youtube-player",
   // Reserved for the first-party App Store (registered in a later phase).
   "app-store",
 ]);

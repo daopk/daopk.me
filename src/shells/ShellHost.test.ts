@@ -13,6 +13,18 @@ vi.mock("~/core/boot/autorun", () => ({
 
 vi.mock("~/core/routing/appUrlIntents", () => ({
   consumeInitialAppUrlIntent: vi.fn(() => false),
+  isFirstPartyAppProtocolUrl: vi.fn((href: string) => href.startsWith("youtube-player://")),
+  parseAppProtocolIntent: vi.fn((href: string) => {
+    const url = new URL(href);
+    const videoId = url.hostname === "video" ? url.pathname.slice(1).replace(/\/$/, "") : "";
+    return videoId.length > 0
+      ? {
+          kind: "app",
+          manifestId: "youtube-player",
+          args: { videoId },
+        }
+      : { kind: "none" };
+  }),
   resetInitialAppUrlIntentLatch: vi.fn(),
 }));
 
@@ -113,5 +125,42 @@ describe("ShellHost — shell-ready wiring", () => {
     expect(scheduleIdle).toHaveBeenCalledTimes(1);
     expect(consumeInitialAppUrlIntent).toHaveBeenCalledTimes(1);
     expect(runAutorunManifests).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it("captures first-party app protocol links and routes them through the shell", async () => {
+    const { kernel, eventsEmit } = makeFakeKernel();
+
+    const wrapper = mount(ShellHost, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+        stubs: {
+          SessionLockOverlay: { template: "<div data-session-lock-overlay />" },
+        },
+      },
+    });
+    await wrapper.vm.$nextTick();
+
+    eventsEmit.mockClear();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "youtube-player://video/M7lc1UVf-VE");
+    wrapper.element.appendChild(link);
+
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+
+    wrapper.unmount();
   });
 });

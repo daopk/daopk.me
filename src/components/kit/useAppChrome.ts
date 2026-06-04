@@ -3,6 +3,7 @@ import { inject, onScopeDispose, toValue, watch, type MaybeRefOrGetter } from "v
 import {
   AppChromeInjectionKey,
   type AppChromeBackAction,
+  type AppChromeContentSize,
   type AppChromeTitlebarVisibility,
 } from "~/types/app";
 
@@ -13,6 +14,8 @@ export interface UseAppChromeOptions {
   backAction?: MaybeRefOrGetter<AppChromeBackAction | null>;
   /** Reactive mobile titlebar visibility override; `null` falls back to the manifest default. */
   titlebar?: MaybeRefOrGetter<AppChromeTitlebarVisibility | null>;
+  /** Reactive preferred content size for desktop windows. */
+  contentSize?: MaybeRefOrGetter<AppChromeContentSize | null>;
 }
 
 export interface UseAppChrome {
@@ -21,6 +24,7 @@ export interface UseAppChrome {
   setTitle(title: string | null): void;
   setBackAction(action: AppChromeBackAction | null): void;
   setTitlebar(visibility: AppChromeTitlebarVisibility | null): void;
+  setContentSize(size: AppChromeContentSize | null): void;
   hide(): void;
   close(): void;
 }
@@ -47,6 +51,9 @@ export function useAppChrome(options: UseAppChromeOptions = {}): UseAppChrome {
   const setTitlebar = (visibility: AppChromeTitlebarVisibility | null): void => {
     controller?.setTitlebar?.(visibility);
   };
+  const setContentSize = (size: AppChromeContentSize | null): void => {
+    controller?.setContentSize?.(size);
+  };
   const hide = (): void => {
     controller?.hide?.();
   };
@@ -64,11 +71,15 @@ export function useAppChrome(options: UseAppChromeOptions = {}): UseAppChrome {
     if (options.titlebar !== undefined) {
       watch(() => toValue(options.titlebar) ?? null, setTitlebar, { immediate: true });
     }
+    if (options.contentSize !== undefined) {
+      watch(() => toValue(options.contentSize) ?? null, setContentSize, { immediate: true });
+    }
 
     onScopeDispose(() => {
       setTitle(null);
       setBackAction(null);
       setTitlebar(null);
+      setContentSize(null);
     });
   }
 
@@ -77,6 +88,7 @@ export function useAppChrome(options: UseAppChromeOptions = {}): UseAppChrome {
     setTitle,
     setBackAction,
     setTitlebar,
+    setContentSize,
     hide,
     close,
   };

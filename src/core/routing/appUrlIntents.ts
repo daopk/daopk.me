@@ -21,6 +21,9 @@ export interface AppUrlLaunchIntent {
 
 export type AppUrlIntent = AppUrlLaunchIntent | { kind: "none" };
 
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const FIRST_PARTY_APP_PROTOCOLS = new Map([["youtube-player", "youtube-player"]]);
+
 let initialAppUrlIntentConsumed = false;
 
 function urlFrom(input: string | URL): URL {
@@ -29,6 +32,18 @@ function urlFrom(input: string | URL): URL {
   }
 
   return new URL(input, "https://daopk.me");
+}
+
+function absoluteUrlFrom(input: string | URL): URL | null {
+  if (input instanceof URL) {
+    return input;
+  }
+
+  try {
+    return new URL(input);
+  } catch {
+    return null;
+  }
 }
 
 function currentUrl(): URL | null {
@@ -71,6 +86,71 @@ function finderPathFromSearch(searchParams: URLSearchParams): string | null {
   }
 }
 
+function nonEmptySearchParam(searchParams: URLSearchParams, key: string): string | null {
+  const value = searchParams.get(key);
+  if (value === null || value.length === 0) {
+    return null;
+  }
+
+  return value;
+}
+
+function normalizedYouTubeVideoId(input: string | null | undefined): string | null {
+  if (input === null || input === undefined) {
+    return null;
+  }
+
+  const trimmed = input.trim();
+  return YOUTUBE_VIDEO_ID_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+function youTubeVideoIdFromUrl(input: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  const pathParts = url.pathname.split("/").filter(Boolean);
+
+  if (hostname === "youtu.be") {
+    return normalizedYouTubeVideoId(pathParts[0]);
+  }
+
+  if (
+    hostname !== "youtube.com" &&
+    hostname !== "m.youtube.com" &&
+    hostname !== "music.youtube.com"
+  ) {
+    return null;
+  }
+
+  if (url.pathname === "/watch") {
+    return normalizedYouTubeVideoId(url.searchParams.get("v"));
+  }
+
+  const [section, id] = pathParts;
+  if (section === "embed" || section === "shorts" || section === "live") {
+    return normalizedYouTubeVideoId(id);
+  }
+
+  return null;
+}
+
+export function youtubePlayerVideoIdFromArgs(
+  args: Readonly<Record<string, unknown>> | undefined,
+): string | null {
+  const videoId =
+    typeof args?.videoId === "string" ? normalizedYouTubeVideoId(args.videoId) : null;
+  if (videoId !== null) {
+    return videoId;
+  }
+
+  return typeof args?.url === "string" ? youTubeVideoIdFromUrl(args.url) : null;
+}
+
 function argsForApp(
   manifestId: string,
   searchParams: URLSearchParams,
@@ -95,7 +175,50 @@ function argsForApp(
     }
   }
 
+  if (manifestId === "youtube-player") {
+    const videoId = nonEmptySearchParam(searchParams, "videoId");
+    const url = nonEmptySearchParam(searchParams, "url");
+    if (videoId !== null) {
+      args.videoId = videoId;
+    }
+    if (url !== null) {
+      args.url = url;
+    }
+  }
+
   return Object.keys(args).length === 0 ? undefined : args;
+}
+
+function youtubePlayerProtocolArgs(url: URL): Readonly<Record<string, unknown>> | undefined {
+  const action = url.hostname.toLowerCase();
+  const pathSegments = url.pathname.split("/").filter(Boolean);
+
+  if (action === "video" && pathSegments.length === 1) {
+    const videoId = normalizedYouTubeVideoId(decodePathSegment(pathSegments[0]!) ?? null);
+    return videoId === null ? undefined : { videoId };
+  }
+
+  if (action === "url" && pathSegments.length === 0) {
+    const youtubeUrl = nonEmptySearchParam(url.searchParams, "url");
+    if (youtubeUrl === null || youTubeVideoIdFromUrl(youtubeUrl) === null) {
+      return undefined;
+    }
+
+    return { url: youtubeUrl };
+  }
+
+  return undefined;
+}
+
+function protocolArgsForApp(
+  manifestId: string,
+  url: URL,
+): Readonly<Record<string, unknown>> | undefined {
+  if (manifestId === "youtube-player") {
+    return youtubePlayerProtocolArgs(url);
+  }
+
+  return undefined;
 }
 
 function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
@@ -126,7 +249,46 @@ function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
   };
 }
 
+export function isFirstPartyAppProtocolUrl(input: string | URL): boolean {
+  const url = absoluteUrlFrom(input);
+  if (url === null) {
+    return false;
+  }
+
+  const protocol = url.protocol.slice(0, -1).toLowerCase();
+  return FIRST_PARTY_APP_PROTOCOLS.has(protocol);
+}
+
+export function parseAppProtocolIntent(input: string | URL): AppUrlIntent {
+  const url = absoluteUrlFrom(input);
+  if (url === null) {
+    return { kind: "none" };
+  }
+
+  const protocol = url.protocol.slice(0, -1).toLowerCase();
+  const manifestId = FIRST_PARTY_APP_PROTOCOLS.get(protocol);
+  if (manifestId === undefined) {
+    return { kind: "none" };
+  }
+
+  const args = protocolArgsForApp(manifestId, url);
+  if (args === undefined) {
+    return { kind: "none" };
+  }
+
+  return {
+    kind: "app",
+    manifestId,
+    args,
+  };
+}
+
 export function parseAppUrlIntent(input: string | URL): AppUrlIntent {
+  const protocolIntent = parseAppProtocolIntent(input);
+  if (protocolIntent.kind !== "none") {
+    return protocolIntent;
+  }
+
   const url = urlFrom(input);
   const segments = url.pathname.split("/").filter(Boolean);
 

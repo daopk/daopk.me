@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import { defineComponent, nextTick, type Component } from "vue";
 
-import type { AppManifest } from "~/types/app";
+import type { AppChromeController, AppManifest } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
 import Window from "./Window.vue";
@@ -25,6 +25,7 @@ function makeRecord(overrides: Partial<WindowRecord> = {}): WindowRecord {
     singleton: false,
     maximized: false,
     minimized: false,
+    argsRevision: 0,
     ...overrides,
   };
 }
@@ -41,7 +42,11 @@ function manifest(overrides: Partial<AppManifest> & { id: string }): AppManifest
   };
 }
 
-function mountWindow(record: WindowRecord = makeRecord(), manifests: readonly AppManifest[] = []) {
+function mountWindow(
+  record: WindowRecord = makeRecord(),
+  manifests: readonly AppManifest[] = [],
+  options: { readonly appMount?: Component } = {},
+) {
   const dispatch = vi.fn(async () => undefined);
   const kernel = {
     apps: {
@@ -69,7 +74,7 @@ function mountWindow(record: WindowRecord = makeRecord(), manifests: readonly Ap
         [KernelInjectionKey as symbol]: kernel,
       },
       stubs: {
-        AppMount: { template: "<div data-app-mount-stub />" },
+        AppMount: options.appMount ?? { template: "<div data-app-mount-stub />" },
       },
     },
   });
@@ -108,6 +113,38 @@ describe("Window context menu", () => {
     expect(icon.element.compareDocumentPosition(title.element)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it("passes desktop app chrome through AppMount and emits title updates", async () => {
+    const ChromeProbe = defineComponent({
+      props: {
+        chrome: { type: Object, required: true },
+      },
+      mounted() {
+        const chrome = this.chrome as AppChromeController;
+        chrome.setTitle("YouTube Developers Live");
+        chrome.setContentSize?.({ width: 640, height: 360 });
+        chrome.setTitle(null);
+        chrome.setContentSize?.(null);
+      },
+      template: "<div data-app-mount-stub />",
+    });
+    const { wrapper } = mountWindow(
+      makeRecord({ manifestId: "youtube-player", title: "YouTube Player" }),
+      [manifest({ id: "youtube-player", name: "YouTube Player" })],
+      { appMount: ChromeProbe },
+    );
+
+    await nextTick();
+
+    expect(wrapper.emitted("title:window")).toEqual([
+      ["window-1", "YouTube Developers Live"],
+      ["window-1", "YouTube Player"],
+    ]);
+    expect(wrapper.emitted("content-size:window")).toEqual([
+      ["window-1", { width: 640, height: 360 }],
+      ["window-1", null],
+    ]);
   });
 
   it("opens command-backed titlebar actions", async () => {

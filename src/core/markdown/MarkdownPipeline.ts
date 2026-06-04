@@ -31,7 +31,7 @@ interface MarkdownProcessorOptions {
 const SCHEME_PATTERN = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
 const FENCED_CODE_PATTERN = /^[ \t]{0,3}(```|~~~)/m;
 const FENCED_CODE_LANGUAGE_PATTERN = /^[ \t]{0,3}(```+|~~~+)[ \t]*([^\s`~]*)?/gm;
-const ALLOWED_LINK_SCHEMES = new Set(["http", "https", "mailto"]);
+const ALLOWED_LINK_SCHEMES = new Set(["http", "https", "mailto", "youtube-player"]);
 const ALLOWED_IMAGE_SCHEMES = new Set(["http", "https"]);
 const SUPPORTED_CODE_LANGUAGES = new Set([
   "bash",
@@ -85,7 +85,7 @@ export const markdownSanitizeSchema: SanitizeSchema = {
   clobber: ["ariaDescribedBy", "ariaLabelledBy", "id", "name"],
   clobberPrefix: "user-content-",
   protocols: {
-    href: ["http", "https", "mailto"],
+    href: ["http", "https", "mailto", "youtube-player"],
     src: ["http", "https"],
   },
   required: {

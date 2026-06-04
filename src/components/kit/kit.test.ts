@@ -5,6 +5,7 @@ import { defineComponent } from "vue";
 import {
   AppChromeInjectionKey,
   type AppChromeBackAction,
+  type AppChromeContentSize,
   type AppChromeController,
   type AppChromeTitlebarVisibility,
 } from "~/types/app";
@@ -336,10 +337,12 @@ describe("useAppChrome", () => {
     const titles: Array<string | null> = [];
     const backs: Array<AppChromeBackAction | null> = [];
     const titlebars: Array<AppChromeTitlebarVisibility | null> = [];
+    const contentSizes: Array<AppChromeContentSize | null> = [];
     const controller: AppChromeController = {
       setTitle: (title) => titles.push(title),
       setBackAction: (action) => backs.push(action),
       setTitlebar: (visibility) => titlebars.push(visibility),
+      setContentSize: (size) => contentSizes.push(size),
       hide: () => {},
       close: () => {},
     };
@@ -348,11 +351,13 @@ describe("useAppChrome", () => {
       props: {
         title: { type: String, default: "" },
         titlebar: { type: String, default: "visible" },
+        contentWidth: { type: Number, default: 320 },
       },
       setup(props) {
         const chrome = useAppChrome({
           title: () => props.title,
           titlebar: () => props.titlebar as AppChromeTitlebarVisibility,
+          contentSize: () => ({ width: props.contentWidth, height: 180 }),
         });
         return { available: chrome.available };
       },
@@ -373,21 +378,27 @@ describe("useAppChrome", () => {
     await wrapper.setProps({ titlebar: "hidden" });
     expect(titlebars).toContain("hidden");
 
+    await wrapper.setProps({ contentWidth: 640 });
+    expect(contentSizes).toContainEqual({ width: 640, height: 180 });
+
     wrapper.unmount();
     expect(titles.at(-1)).toBeNull();
     expect(backs.at(-1)).toBeNull();
     expect(titlebars.at(-1)).toBeNull();
+    expect(contentSizes.at(-1)).toBeNull();
   });
 
   it("forwards imperative setters and app actions through the injected controller", () => {
     const backs: Array<AppChromeBackAction | null> = [];
     const titlebars: Array<AppChromeTitlebarVisibility | null> = [];
+    const contentSizes: Array<AppChromeContentSize | null> = [];
     let hides = 0;
     let closes = 0;
     const controller: AppChromeController = {
       setTitle: () => {},
       setBackAction: (action) => backs.push(action),
       setTitlebar: (visibility) => titlebars.push(visibility),
+      setContentSize: (size) => contentSizes.push(size),
       hide: () => {
         hides += 1;
       },
@@ -402,6 +413,7 @@ describe("useAppChrome", () => {
         const chrome = useAppChrome();
         chrome.setBackAction(action);
         chrome.setTitlebar("hidden");
+        chrome.setContentSize({ width: 640, height: 360 });
         chrome.hide();
         chrome.close();
         return {};
@@ -412,6 +424,7 @@ describe("useAppChrome", () => {
     mount(Harness, { global: { provide: { [AppChromeInjectionKey as symbol]: controller } } });
     expect(backs).toContainEqual(action);
     expect(titlebars).toContain("hidden");
+    expect(contentSizes).toContainEqual({ width: 640, height: 360 });
     expect(hides).toBe(1);
     expect(closes).toBe(1);
   });
@@ -423,6 +436,7 @@ describe("useAppChrome", () => {
         chrome.setTitle("Ignored");
         chrome.setBackAction({ ariaLabel: "Back", handler: () => {} });
         chrome.setTitlebar("hidden");
+        chrome.setContentSize({ width: 640, height: 360 });
         chrome.hide();
         chrome.close();
         return { available: chrome.available };

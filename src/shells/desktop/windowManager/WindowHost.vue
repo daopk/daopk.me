@@ -8,8 +8,9 @@ import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
+import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
 import { normalizeVfsPath } from "~/core/vfs/path";
-import type { AppHandle, AppManifest } from "~/types/app";
+import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
 import type { CommandContext } from "~/types/command";
 
 import SnapPreview from "./SnapPreview.vue";
@@ -19,6 +20,7 @@ import {
   DEFAULT_W,
   MIN_H,
   MIN_W,
+  TITLEBAR_HEIGHT,
   useWindowManager,
   type SnapEdge,
   type StageSize,
@@ -292,6 +294,30 @@ function manifestHasSettings(manifestId: string): boolean {
   return manifest !== undefined && hasAppSettings(manifest);
 }
 
+function refreshArgsSnapshotForResume(
+  manifestId: string,
+  args: Readonly<Record<string, unknown>> | undefined,
+): void {
+  if (manifestId !== "youtube-player" || args === undefined) {
+    return;
+  }
+
+  const focusedWindow = windowManager.windows.find(
+    (record) => record.manifestId === manifestId && record.focused,
+  );
+  if (focusedWindow === undefined) {
+    return;
+  }
+
+  const currentVideoId = youtubePlayerVideoIdFromArgs(focusedWindow.args);
+  const nextVideoId = youtubePlayerVideoIdFromArgs(args);
+  if (currentVideoId !== null && currentVideoId === nextVideoId) {
+    return;
+  }
+
+  windowManager.setArgs(focusedWindow.id, args);
+}
+
 async function replayAppResume(
   manifestId: string,
   args: Readonly<Record<string, unknown>> | undefined,
@@ -308,6 +334,7 @@ async function replayAppResume(
     return false;
   }
 
+  refreshArgsSnapshotForResume(manifestId, args);
   await nextTick();
   emitAppResume(kernel.events, emission);
   return true;
@@ -546,6 +573,44 @@ function onResize(id: string, x: number, y: number, width: number, height: numbe
   windowManager.setBounds(id, x, y, width, height);
 }
 
+function normalizedContentDimension(value: number): number | null {
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
+
+function onContentSize(id: string, size: AppChromeContentSize | null): void {
+  if (size === null) {
+    return;
+  }
+
+  const record = windowManager.windows.find((entry) => entry.id === id);
+  if (record === undefined || record.maximized || record.snap !== undefined) {
+    return;
+  }
+
+  const contentWidth = normalizedContentDimension(size.width);
+  const contentHeight = normalizedContentDimension(size.height);
+  if (contentWidth === null || contentHeight === null) {
+    return;
+  }
+
+  const stage = measuredStageSize();
+  const requestedWidth = Math.max(contentWidth, record.minWidth);
+  const requestedHeight = Math.max(contentHeight + TITLEBAR_HEIGHT, record.minHeight);
+  const width = stage.width > 0 ? Math.min(requestedWidth, stage.width) : requestedWidth;
+  const height = stage.height > 0 ? Math.min(requestedHeight, stage.height) : requestedHeight;
+  let x = record.x;
+  let y = record.y;
+
+  if (stage.width > 0) {
+    x = Math.min(Math.max(x, 0), Math.max(stage.width - width, 0));
+  }
+  if (stage.height > 0) {
+    y = Math.min(Math.max(y, 0), Math.max(stage.height - height, 0));
+  }
+
+  windowManager.setBounds(id, x, y, width, height);
+}
+
 function onMaximize(id: string): void {
   windowManager.toggleMaximize(id, maximizeStageSize());
 }
@@ -627,6 +692,8 @@ onBeforeUnmount(() => {
         @minimize:window="onMinimize"
         @snap:window="onSnap"
         @snap-intent:window="onSnapIntent"
+        @title:window="windowManager.setTitle"
+        @content-size:window="onContentSize"
       />
     </template>
   </div>

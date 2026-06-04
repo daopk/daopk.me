@@ -142,6 +142,50 @@ describe("resolveAppResume", () => {
     });
   });
 
+  it("resolves a YouTube Player open emission with the focused handle id", () => {
+    const emission = resolveAppResume(
+      context({
+        manifestId: "youtube-player",
+        args: { videoId: "M7lc1UVf-VE" },
+        source: "deeplink",
+        resolveHandleId: () => "handle-youtube-player",
+      }),
+    );
+
+    expect(emission).toEqual({
+      event: "youtube-player.open.requested",
+      payload: {
+        handleId: "handle-youtube-player",
+        source: "deeplink",
+        videoId: "M7lc1UVf-VE",
+      },
+    });
+  });
+
+  it("resolves a YouTube Player open emission with a URL arg", () => {
+    const emission = resolveAppResume(
+      context({
+        manifestId: "youtube-player",
+        args: { url: "https://www.youtube.com/watch?v=u8vJjTH9Igg" },
+        source: "deeplink",
+        resolveHandleId: () => "handle-youtube-player",
+      }),
+    );
+
+    expect(emission).toEqual({
+      event: "youtube-player.open.requested",
+      payload: {
+        handleId: "handle-youtube-player",
+        source: "deeplink",
+        url: "https://www.youtube.com/watch?v=u8vJjTH9Igg",
+      },
+    });
+  });
+
+  it("returns null for YouTube Player resumes without video args", () => {
+    expect(resolveAppResume(context({ manifestId: "youtube-player", args: {} }))).toBeNull();
+  });
+
   it("returns null for a non-deeplink blog launch without args", () => {
     expect(
       resolveAppResume(context({ manifestId: "blog", args: undefined, source: "api" })),

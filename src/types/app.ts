@@ -92,10 +92,16 @@ export interface AppChromeBackAction {
   readonly handler: () => void;
 }
 
+export interface AppChromeContentSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 export interface AppChromeController {
   setTitle(title: string | null): void;
   setBackAction(action: AppChromeBackAction | null): void;
   setTitlebar?(visibility: AppChromeTitlebarVisibility | null): void;
+  setContentSize?(size: AppChromeContentSize | null): void;
   hide?(): void;
   close?(): void;
 }

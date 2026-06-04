@@ -2,7 +2,7 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, type Component } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AppHandle, AppManifest } from "~/types/app";
+import type { AppChromeController, AppHandle, AppManifest } from "~/types/app";
 import type { CommandContext, CommandManifest } from "~/types/command";
 import type { Kernel } from "~/types/kernel";
 
@@ -10,6 +10,7 @@ import WindowHost from "./WindowHost.vue";
 import {
   DEFAULT_H,
   DEFAULT_W,
+  TITLEBAR_HEIGHT,
   __resetWindowManagerForTests,
   useWindowManager,
 } from "./useWindowManager";
@@ -320,6 +321,58 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     wrapper.unmount();
   });
 
+  it("resizes a deeplink window from its top-left when the app requests a content size", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      rect({ top: 0, left: 0, width: 1000, height: 700 }),
+    );
+
+    const ChromeProbe = defineComponent({
+      props: {
+        chrome: { type: Object, required: true },
+      },
+      mounted() {
+        const chrome = this.chrome as AppChromeController;
+        chrome.setContentSize?.({ width: 720, height: 540 });
+      },
+      template: "<div data-app-mount-stub />",
+    });
+    const { kernel, bus } = makeKernel([
+      manifest("youtube-player", "YouTube Player", {
+        defaultWindow: { width: 960, height: 540, centered: true },
+      }),
+    ]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          AppMount: ChromeProbe,
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "fY6h5FBTZM8" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "youtube-player");
+    expect(record).toBeDefined();
+    expect(record!.width).toBe(720);
+    expect(record!.height).toBe(540 + TITLEBAR_HEIGHT);
+    expect(record!.x).toBe(Math.floor((1000 - 960) / 2));
+    expect(record!.y).toBe(Math.floor((700 - 540) / 2));
+
+    wrapper.unmount();
+  });
+
   it("maximizes above a visible desktop dock", async () => {
     const { dock } = appendDockFixture();
     const { kernel, commands, bus } = makeKernel();
@@ -541,6 +594,217 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     expect(bus.emitted).toContainEqual({
       channel: "settings.section.requested",
       payload: { section: "dock" },
+    });
+    expect(
+      debugWarnSpy.mock.calls.some(
+        (call) => typeof call[1] === "string" && call[1].includes("dropping launch args"),
+      ),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("replays YouTube Player deeplink args when the player is already open", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("youtube-player", "YouTube Player")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "IQsLEaj89bg" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const playerWindow = manager.windows.find((record) => record.manifestId === "youtube-player");
+    expect(playerWindow).toBeDefined();
+    debugWarnSpy.mockClear();
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.args).toEqual({
+      videoId: "M7lc1UVf-VE",
+    });
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.argsRevision).toBe(1);
+    expect(bus.emitted).toContainEqual({
+      channel: "youtube-player.open.requested",
+      payload: {
+        handleId: playerWindow!.handleId,
+        source: "deeplink",
+        videoId: "M7lc1UVf-VE",
+      },
+    });
+    expect(
+      debugWarnSpy.mock.calls.some(
+        (call) => typeof call[1] === "string" && call[1].includes("dropping launch args"),
+      ),
+    ).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("does not bump YouTube Player args revision for repeated same deeplink args", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("youtube-player", "YouTube Player")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "fY6h5FBTZM8" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const playerWindow = manager.windows.find((record) => record.manifestId === "youtube-player");
+    expect(playerWindow).toBeDefined();
+    expect(playerWindow!.argsRevision).toBe(0);
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "fY6h5FBTZM8" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.argsRevision).toBe(0);
+    expect(bus.emitted).toContainEqual({
+      channel: "youtube-player.open.requested",
+      payload: {
+        handleId: playerWindow!.handleId,
+        source: "deeplink",
+        videoId: "fY6h5FBTZM8",
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it("does not bump YouTube Player args revision when the same video resumes through URL args", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("youtube-player", "YouTube Player")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "fY6h5FBTZM8" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const playerWindow = manager.windows.find((record) => record.manifestId === "youtube-player");
+    expect(playerWindow).toBeDefined();
+    expect(playerWindow!.argsRevision).toBe(0);
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { url: "https://www.youtube.com/watch?v=fY6h5FBTZM8" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.args).toEqual({
+      videoId: "fY6h5FBTZM8",
+    });
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.argsRevision).toBe(0);
+    expect(bus.emitted).toContainEqual({
+      channel: "youtube-player.open.requested",
+      payload: {
+        handleId: playerWindow!.handleId,
+        source: "deeplink",
+        url: "https://www.youtube.com/watch?v=fY6h5FBTZM8",
+      },
+    });
+
+    wrapper.unmount();
+  });
+
+  it("replays YouTube Player URL deeplink args when the player is already open", async () => {
+    const { kernel, launchSpy, bus } = makeKernel([manifest("youtube-player", "YouTube Player")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const playerWindow = manager.windows.find((record) => record.manifestId === "youtube-player");
+    expect(playerWindow).toBeDefined();
+    debugWarnSpy.mockClear();
+
+    bus.emit("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { url: "https://www.youtube.com/watch?v=u8vJjTH9Igg" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(launchSpy).toHaveBeenCalledTimes(1);
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.args).toEqual({
+      url: "https://www.youtube.com/watch?v=u8vJjTH9Igg",
+    });
+    expect(manager.windows.find((record) => record.id === playerWindow!.id)?.argsRevision).toBe(1);
+    expect(bus.emitted).toContainEqual({
+      channel: "youtube-player.open.requested",
+      payload: {
+        handleId: playerWindow!.handleId,
+        source: "deeplink",
+        url: "https://www.youtube.com/watch?v=u8vJjTH9Igg",
+      },
     });
     expect(
       debugWarnSpy.mock.calls.some(

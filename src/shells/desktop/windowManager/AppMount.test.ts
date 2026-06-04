@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, inject, nextTick, type Component } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 
-import { AppContextInjectionKey, type AppContext, type AppManifest } from "~/types/app";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeController,
+  type AppContext,
+  type AppManifest,
+} from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 import AppMount from "./AppMount.vue";
@@ -275,5 +281,39 @@ describe("AppMount", () => {
       handleId: "h-8",
       args: { greeting: "hi" },
     });
+  });
+
+  it("provides the optional AppChrome controller to descendants", async () => {
+    const appChrome: AppChromeController = {
+      setTitle: vi.fn(),
+      setBackAction: vi.fn(),
+    };
+
+    const Probe = defineComponent({
+      name: "Probe",
+      setup() {
+        const chrome = inject(AppChromeInjectionKey);
+        chrome?.setTitle("Dynamic Title");
+        return () => h("div", { class: "probe" });
+      },
+    });
+
+    currentKernel = makeKernel([
+      manifest({ component: () => Promise.resolve(asEsm(Probe as Component)) }),
+    ]);
+
+    mount(AppMount, {
+      props: {
+        manifestId: "template",
+        handleId: "h-chrome",
+        focused: false,
+        chrome: appChrome,
+      },
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    expect(appChrome.setTitle).toHaveBeenCalledWith("Dynamic Title");
   });
 });

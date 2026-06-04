@@ -25,6 +25,7 @@ export interface WindowRecord {
   singleton: boolean;
   maximized: boolean;
   minimized: boolean;
+  argsRevision: number;
   preMaximize?: WindowBounds;
   snap?: SnapEdge;
   args?: Readonly<Record<string, unknown>>;
@@ -65,6 +66,8 @@ export interface WindowManagerApi {
   minimize(id: string): void;
   restore(id: string): void;
   removeByHandleId(handleId: string): boolean;
+  setTitle(id: string, title: string): boolean;
+  setArgs(id: string, args?: Readonly<Record<string, unknown>>): boolean;
   setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
   restoreAllForManifest(manifestId: string): boolean;
   focusTopOfManifest(manifestId: string): boolean;
@@ -178,6 +181,7 @@ function open(input: OpenWindowInput): string {
     singleton: input.singleton === true,
     maximized: false,
     minimized: false,
+    argsRevision: 0,
     // Freeze a shallow snapshot so post-`open` mutations on the
     ...(input.args === undefined ? {} : { args: Object.freeze({ ...input.args }) }),
   };
@@ -248,6 +252,56 @@ function setDocumentPath(handleId: string, manifestId: string, path: string | nu
   }
 
   target.documentPath = path;
+  return true;
+}
+
+function setTitle(id: string, title: string): boolean {
+  const target = state.windows.find((w) => w.id === id);
+
+  if (!target) {
+    return false;
+  }
+
+  target.title = title;
+  return true;
+}
+
+function argsSnapshotsEqual(
+  left: Readonly<Record<string, unknown>> | undefined,
+  right: Readonly<Record<string, unknown>> | undefined,
+): boolean {
+  if (left === undefined || right === undefined) {
+    return left === right;
+  }
+
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+
+  return leftKeys.every(
+    (key) => Object.prototype.hasOwnProperty.call(right, key) && Object.is(left[key], right[key]),
+  );
+}
+
+function setArgs(id: string, args?: Readonly<Record<string, unknown>>): boolean {
+  const target = state.windows.find((w) => w.id === id);
+
+  if (!target) {
+    return false;
+  }
+
+  if (argsSnapshotsEqual(target.args, args)) {
+    return true;
+  }
+
+  if (args === undefined) {
+    delete target.args;
+  } else {
+    target.args = Object.freeze({ ...args });
+  }
+  target.argsRevision += 1;
   return true;
 }
 
@@ -518,6 +572,8 @@ export function useWindowManager(deps?: WindowManagerDeps): WindowManagerApi {
     minimize,
     restore,
     removeByHandleId,
+    setTitle,
+    setArgs,
     setDocumentPath,
     restoreAllForManifest,
     focusTopOfManifest,

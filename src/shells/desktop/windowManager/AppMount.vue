@@ -3,7 +3,12 @@ import { computed, defineAsyncComponent, onMounted, watch, provide } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { debugWarn } from "~/core/debug";
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeController,
+  type AppContext,
+} from "~/types/app";
 
 import AppMountError from "./AppMountError.vue";
 import AppMountLoading from "./AppMountLoading.vue";
@@ -13,6 +18,7 @@ const props = defineProps<{
   handleId: string;
   focused: boolean;
   args?: Record<string, unknown>;
+  chrome?: AppChromeController;
 }>();
 
 const kernel = useKernel();
@@ -28,6 +34,10 @@ const context: AppContext = Object.freeze({
 });
 
 provide(AppContextInjectionKey, context);
+
+if (props.chrome !== undefined) {
+  provide(AppChromeInjectionKey, props.chrome);
+}
 
 /**
  * Normalize an unknown thrown value into the structured-clone-safe shape

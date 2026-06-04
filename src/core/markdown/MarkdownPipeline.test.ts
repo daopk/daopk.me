@@ -62,15 +62,27 @@ describe("MarkdownPipeline", () => {
     }
   });
 
-  it("allows http, https, mailto, relative paths, and anchors", async () => {
+  it("allows http, https, mailto, first-party app protocols, relative paths, and anchors", async () => {
     expect(sanitizeMarkdownUrl("https://example.com")).toBe("https://example.com");
     expect(sanitizeMarkdownUrl("http://example.com")).toBe("http://example.com");
     expect(sanitizeMarkdownUrl("mailto:a@b.c")).toBe("mailto:a@b.c");
+    expect(sanitizeMarkdownUrl("youtube-player://video/M7lc1UVf-VE")).toBe(
+      "youtube-player://video/M7lc1UVf-VE",
+    );
     expect(sanitizeMarkdownUrl("HTTPS://example.com")).toBe("https://example.com");
     expect(sanitizeMarkdownUrl("MAILTO:a@b.c")).toBe("mailto:a@b.c");
+    expect(sanitizeMarkdownUrl("YOUTUBE-PLAYER://video/M7lc1UVf-VE")).toBe(
+      "youtube-player://video/M7lc1UVf-VE",
+    );
     expect(sanitizeMarkdownUrl("./local")).toBe("./local");
     expect(sanitizeMarkdownUrl("#section")).toBe("#section");
     expect(sanitizeMarkdownUrl("   ")).toBe("#");
+  });
+
+  it("preserves first-party app protocol links after sanitizer runs", async () => {
+    const { html } = await renderMarkdownToHtml("[video](youtube-player://video/M7lc1UVf-VE)");
+
+    expect(html).toContain('href="youtube-player://video/M7lc1UVf-VE"');
   });
 
   it("preserves allowed uppercase URL schemes after sanitizer runs", async () => {

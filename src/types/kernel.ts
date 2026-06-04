@@ -62,6 +62,12 @@ declare global {
       path?: string;
       slug?: string;
     };
+    "youtube-player.open.requested": {
+      source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
+      handleId?: string;
+      videoId?: string;
+      url?: string;
+    };
     "blog.post.open.requested": {
       source: CommandSource;
       path: string;

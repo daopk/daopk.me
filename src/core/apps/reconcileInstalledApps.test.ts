@@ -62,10 +62,16 @@ describe("reconcileInstalledApps", () => {
   });
 
   it("never unregisters built-ins, first-party apps, or dev-only (_) apps", () => {
-    const { kernel, manifests } = createFakeKernel(["settings", "baby-touch", "_kit-gallery"]);
+    const { kernel, manifests } = createFakeKernel([
+      "settings",
+      "baby-touch",
+      "youtube-player",
+      "_kit-gallery",
+    ]);
     reconcileInstalledApps(kernel, []);
     expect(manifests.has("settings")).toBe(true);
     expect(manifests.has("baby-touch")).toBe(true);
+    expect(manifests.has("youtube-player")).toBe(true);
     expect(manifests.has("_kit-gallery")).toBe(true);
   });
 

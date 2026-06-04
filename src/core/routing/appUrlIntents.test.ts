@@ -4,8 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   consumeInitialAppUrlIntent,
   hasRegisteredAppUrlIntent,
+  isFirstPartyAppProtocolUrl,
+  parseAppProtocolIntent,
   parseAppUrlIntent,
   resetInitialAppUrlIntentLatch,
+  youtubePlayerVideoIdFromArgs,
 } from "./appUrlIntents";
 
 import type { AppManifest } from "~/types/app";
@@ -136,6 +139,77 @@ describe("app URL intents", () => {
     expect(parseAppUrlIntent("/apps/finder?path=")).toEqual({
       kind: "app",
       manifestId: "finder",
+    });
+  });
+
+  it("maps YouTube Player query values to launch args", () => {
+    expect(parseAppUrlIntent("/apps/youtube-player?videoId=IQsLEaj89bg")).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { videoId: "IQsLEaj89bg" },
+    });
+
+    expect(
+      parseAppUrlIntent(
+        "/apps/youtube-player?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DIQsLEaj89bg",
+      ),
+    ).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { url: "https://www.youtube.com/watch?v=IQsLEaj89bg" },
+    });
+  });
+
+  it("parses whitelisted YouTube Player protocol video links", () => {
+    expect(parseAppProtocolIntent("youtube-player://video/M7lc1UVf-VE")).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+
+    expect(parseAppUrlIntent("youtube-player://video/M7lc1UVf-VE")).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+  });
+
+  it("parses whitelisted YouTube Player protocol URL links", () => {
+    const youtubeUrl = "https://www.youtube.com/watch?v=M7lc1UVf-VE";
+
+    expect(
+      parseAppProtocolIntent(`youtube-player://url?url=${encodeURIComponent(youtubeUrl)}`),
+    ).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { url: youtubeUrl },
+    });
+  });
+
+  it("normalizes YouTube Player launch args to a video id", () => {
+    expect(youtubePlayerVideoIdFromArgs({ videoId: " fY6h5FBTZM8 " })).toBe("fY6h5FBTZM8");
+    expect(
+      youtubePlayerVideoIdFromArgs({
+        url: "https://www.youtube.com/watch?v=fY6h5FBTZM8",
+      }),
+    ).toBe("fY6h5FBTZM8");
+    expect(youtubePlayerVideoIdFromArgs({ url: "https://example.com" })).toBeNull();
+    expect(youtubePlayerVideoIdFromArgs(undefined)).toBeNull();
+  });
+
+  it("rejects unknown or invalid app protocol links", () => {
+    expect(isFirstPartyAppProtocolUrl("youtube-player://video/M7lc1UVf-VE")).toBe(true);
+    expect(isFirstPartyAppProtocolUrl("notes://video/M7lc1UVf-VE")).toBe(false);
+    expect(parseAppProtocolIntent("notes://video/M7lc1UVf-VE")).toEqual({ kind: "none" });
+    expect(parseAppProtocolIntent("youtube-player://watch?v=M7lc1UVf-VE")).toEqual({
+      kind: "none",
+    });
+    expect(parseAppProtocolIntent("youtube-player://video/not-a-video-id")).toEqual({
+      kind: "none",
+    });
+    expect(parseAppProtocolIntent("youtube-player://url")).toEqual({ kind: "none" });
+    expect(parseAppProtocolIntent("youtube-player://url?url=https%3A%2F%2Fexample.com")).toEqual({
+      kind: "none",
     });
   });
 

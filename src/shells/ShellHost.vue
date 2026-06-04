@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, useTemplateRef, watchEffect } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
 import { runAutorunManifests } from "~/core/boot/autorun";
-import { consumeInitialAppUrlIntent } from "~/core/routing/appUrlIntents";
+import {
+  consumeInitialAppUrlIntent,
+  isFirstPartyAppProtocolUrl,
+  parseAppProtocolIntent,
+} from "~/core/routing/appUrlIntents";
 import { useBreakpoint } from "~/composables/useBreakpoint";
 import { useKernel } from "~/composables/useKernel";
 import { peekShellStickyOverride, pickShell, type PickedShell } from "~/shells/shellRegistry";
@@ -65,6 +69,8 @@ function onShellAfterEnter(shellRoot: Element): void {
 }
 
 onMounted(() => {
+  document.addEventListener("click", onDocumentClick, true);
+
   void nextTick(() => {
     const shellRoot = hostRef.value?.firstElementChild;
     if (shellRoot) {
@@ -72,6 +78,47 @@ onMounted(() => {
     }
   });
 });
+
+onUnmounted(() => {
+  document.removeEventListener("click", onDocumentClick, true);
+});
+
+function anchorFromClick(event: MouseEvent): HTMLAnchorElement | null {
+  if (!(event.target instanceof Element)) {
+    return null;
+  }
+
+  const anchor = event.target.closest("a[href]");
+  return anchor instanceof HTMLAnchorElement ? anchor : null;
+}
+
+function onDocumentClick(event: MouseEvent): void {
+  if (event.button !== 0 || event.defaultPrevented) {
+    return;
+  }
+
+  const href = anchorFromClick(event)?.getAttribute("href");
+  if (href === undefined || href === null) {
+    return;
+  }
+
+  const intent = parseAppProtocolIntent(href);
+  if (intent.kind !== "app") {
+    if (isFirstPartyAppProtocolUrl(href)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  kernel.events.emit("app.launch.requested", {
+    manifestId: intent.manifestId,
+    source: "deeplink",
+    ...(intent.args === undefined ? {} : { args: intent.args }),
+  });
+}
 
 function focusShellMain(rootEl: Element): void {
   if (!(rootEl instanceof HTMLElement)) {

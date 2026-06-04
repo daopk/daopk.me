@@ -10,6 +10,7 @@ import {
   PdfViewerAppIcon,
   PhotosAppIcon,
   SlidesAppIcon,
+  YoutubePlayerAppIcon,
 } from "~/icons/fluentColor";
 
 import type { FirstPartyAppDescriptor } from "./types";
@@ -70,6 +71,16 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     singleton: false,
     defaultWindow: { width: 980, height: 640, centered: true },
     keywords: ["web", "internet", "browser", "url", "site", "iframe"],
+  },
+  {
+    id: "youtube-player",
+    name: "YouTube Player",
+    version: "1.0.0",
+    icon: YoutubePlayerAppIcon,
+    category: "media",
+    singleton: false,
+    defaultWindow: { width: 960, height: 540, centered: true },
+    keywords: ["youtube", "video", "player", "media", "embed"],
   },
   {
     id: "editor",
