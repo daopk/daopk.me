@@ -66,6 +66,7 @@ const edgeSwipeEnabled = computed(() => manifest.value?.chrome?.mobile?.edgeSwip
 const edgeSwipeSurface = ref<HTMLElement | null>(null);
 
 provide(AppChromeInjectionKey, {
+  rendersAppChrome: true,
   setTitle(title) {
     chromeTitle.value = title;
   },

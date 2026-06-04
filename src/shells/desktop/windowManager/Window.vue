@@ -227,6 +227,7 @@ function normalizeWindowTitle(title: string | null): string {
 }
 
 const appChrome: AppChromeController = {
+  rendersAppChrome: false,
   setTitle(title) {
     emit("title:window", props.record.id, normalizeWindowTitle(title));
   },

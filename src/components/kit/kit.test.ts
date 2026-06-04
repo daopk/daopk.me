@@ -429,6 +429,27 @@ describe("useAppChrome", () => {
     expect(closes).toBe(1);
   });
 
+  it("reports unavailable when the controller does not render visible app chrome", () => {
+    const controller: AppChromeController = {
+      rendersAppChrome: false,
+      setTitle: () => {},
+      setBackAction: () => {},
+    };
+
+    const Harness = defineComponent({
+      setup() {
+        return { available: useAppChrome().available };
+      },
+      template: "<div />",
+    });
+
+    const wrapper = mount(Harness, {
+      global: { provide: { [AppChromeInjectionKey as symbol]: controller } },
+    });
+
+    expect((wrapper.vm as { available: boolean }).available).toBe(false);
+  });
+
   it("no-ops on shells that do not provide app chrome", () => {
     const Harness = defineComponent({
       setup() {

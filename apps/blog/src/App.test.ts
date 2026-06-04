@@ -477,6 +477,25 @@ Event body`,
     expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
   });
 
+  it("keeps the post toolbar when desktop app chrome only updates the window", async () => {
+    const appChrome: AppChromeController = {
+      rendersAppChrome: false,
+      setTitle: vi.fn(),
+      setBackAction: vi.fn(),
+    };
+    stubBlogFetch({
+      posts: { "field-notes": "# Field Notes\n\nNetwork body" },
+    });
+    const wrapper = mount(wrap(makeKernel(), blogContext, { appChrome }));
+
+    await waitForContent(wrapper);
+
+    expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
+    expect(wrapper.find(".blog__back").exists()).toBe(true);
+    expect(wrapper.find(".blog__share").exists()).toBe(true);
+    expect(appChrome.setTitle).toHaveBeenLastCalledWith("Blog");
+  });
+
   it("renders an in-app 404 for a missing post", async () => {
     stubBlogFetch();
     const wrapper = mount(wrap(makeKernel()));

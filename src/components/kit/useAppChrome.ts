@@ -19,7 +19,7 @@ export interface UseAppChromeOptions {
 }
 
 export interface UseAppChrome {
-  /** `false` on shells that do not surface app chrome (e.g. the desktop window). */
+  /** `false` when the injected controller does not render visible app chrome. */
   readonly available: boolean;
   setTitle(title: string | null): void;
   setBackAction(action: AppChromeBackAction | null): void;
@@ -31,9 +31,9 @@ export interface UseAppChrome {
 
 /**
  * Wrap `AppChromeInjectionKey` so apps set the shell title / back action the
- * same way regardless of shell. The mobile shell provides the controller (it
- * drives the AppView header); the desktop window does not, so calls no-op
- * there instead of forcing every app to null-check the injection.
+ * same way regardless of shell. Shells may inject a controller for window-level
+ * actions without rendering visible app chrome; `available` only means the
+ * controller's chrome can replace in-app navigation/actions.
  *
  * Pass reactive `title` / `backAction` / `titlebar` to keep the chrome in sync,
  * or call the returned setters imperatively. Whatever this scope sets is cleared on
@@ -41,6 +41,7 @@ export interface UseAppChrome {
  */
 export function useAppChrome(options: UseAppChromeOptions = {}): UseAppChrome {
   const controller = inject(AppChromeInjectionKey, null);
+  const available = controller !== null && (controller.rendersAppChrome ?? true);
 
   const setTitle = (title: string | null): void => {
     controller?.setTitle(title);
@@ -84,7 +85,7 @@ export function useAppChrome(options: UseAppChromeOptions = {}): UseAppChrome {
   }
 
   return {
-    available: controller !== null,
+    available,
     setTitle,
     setBackAction,
     setTitlebar,

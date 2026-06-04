@@ -98,6 +98,12 @@ export interface AppChromeContentSize {
 }
 
 export interface AppChromeController {
+  /**
+   * Whether this controller backs visible shell chrome around the app content.
+   * Desktop windows may still provide a controller for title / size / window
+   * actions without replacing in-app toolbars.
+   */
+  readonly rendersAppChrome?: boolean;
   setTitle(title: string | null): void;
   setBackAction(action: AppChromeBackAction | null): void;
   setTitlebar?(visibility: AppChromeTitlebarVisibility | null): void;
