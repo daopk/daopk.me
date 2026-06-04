@@ -6,6 +6,7 @@
  */
 
 import { debugWarn } from "~/core/debug";
+import { BUILTIN_APP_IDS } from "~/core/apps/builtinAppIds";
 import { appSettingsLaunchArgs, APP_SETTINGS_PANE } from "~/core/apps/appSettings";
 import { blogPostPathFromSlug } from "~/core/routing/blogPaths";
 import { normalizeVfsPath } from "~/core/vfs/path";
@@ -325,6 +326,23 @@ export function hasRegisteredAppUrlIntent(kernel: Kernel, input?: string | URL):
   }
 
   return kernel.apps.list().some((entry) => entry.id === intent.manifestId);
+}
+
+export function hasAutoGuestLoginUrlIntent(kernel: Kernel, input?: string | URL): boolean {
+  const url = input === undefined ? currentUrl() : urlFrom(input);
+  if (url === null) {
+    return false;
+  }
+
+  const intent = parseAppUrlIntent(url);
+  if (intent.kind !== "app") {
+    return false;
+  }
+
+  return (
+    BUILTIN_APP_IDS.has(intent.manifestId) ||
+    kernel.apps.list().some((entry) => entry.id === intent.manifestId)
+  );
 }
 
 export function consumeInitialAppUrlIntent(kernel: Kernel, input?: string | URL): boolean {

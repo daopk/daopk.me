@@ -298,6 +298,76 @@ describe("AuthGate", () => {
     expect(wrapper.emitted("authenticated")).toHaveLength(1);
   });
 
+  it("auto-opens a sole guest account for a Blog deep link before Blog is registered", async () => {
+    const store = new ProfileStore();
+    store.add({
+      id: "guest",
+      displayName: "Guest",
+      createdAt: 1,
+      authMode: "guest",
+      encryption: "none",
+    });
+    store.markGlobalImported();
+    store.dispose();
+    mocks.registeredAppIds.splice(0, mocks.registeredAppIds.length, "about", "settings");
+    window.history.replaceState(null, "", "/blog/field-notes");
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(mocks.registeredAppIds).not.toContain("blog");
+    expect(getActiveProfileSession()).toMatchObject({
+      profileId: "guest",
+      authMode: "guest",
+    });
+    expect(wrapper.emitted("authenticated")).toHaveLength(1);
+  });
+
+  it("auto-opens a sole guest account for a first-party app deep link before registration", async () => {
+    const store = new ProfileStore();
+    store.add({
+      id: "guest",
+      displayName: "Guest",
+      createdAt: 1,
+      authMode: "guest",
+      encryption: "none",
+    });
+    store.markGlobalImported();
+    store.dispose();
+    window.history.replaceState(null, "", "/apps/calendar");
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(mocks.registeredAppIds).not.toContain("calendar");
+    expect(getActiveProfileSession()).toMatchObject({
+      profileId: "guest",
+      authMode: "guest",
+    });
+    expect(wrapper.emitted("authenticated")).toHaveLength(1);
+  });
+
+  it("does not auto-open a sole guest account for an unknown app deep link", async () => {
+    const store = new ProfileStore();
+    store.add({
+      id: "guest",
+      displayName: "Guest",
+      createdAt: 1,
+      authMode: "guest",
+      encryption: "none",
+    });
+    store.markGlobalImported();
+    store.dispose();
+    window.history.replaceState(null, "", "/apps/not-real");
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(getActiveProfileSession()).toBeNull();
+    expect(wrapper.emitted("authenticated")).toBeUndefined();
+    expect(wrapper.text()).toContain("Guest account");
+  });
+
   it("does not auto-open a sole guest account from the homepage", async () => {
     const store = new ProfileStore();
     store.add({

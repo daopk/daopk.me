@@ -8,7 +8,7 @@ import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService"
 import { ProfileStore } from "~/core/profile/ProfileStore";
 import { migrateGlobalDataToProfile } from "~/core/profile/migration";
 import { setActiveProfileSession } from "~/core/profile/ProfileSession";
-import { hasRegisteredAppUrlIntent } from "~/core/routing/appUrlIntents";
+import { hasAutoGuestLoginUrlIntent } from "~/core/routing/appUrlIntents";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 import type { ActiveProfileSession, GuestProfileRecord, ProfileRecord } from "~/types/profile";
 
@@ -338,7 +338,7 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     }
 
     const soleProfile = profiles.value.length === 1 ? profiles.value[0] : null;
-    if (soleProfile?.authMode === "guest" && hasRegisteredAppUrlIntent(kernel)) {
+    if (soleProfile?.authMode === "guest" && hasAutoGuestLoginUrlIntent(kernel)) {
       void openGuestProfile(soleProfile);
     }
   });
