@@ -20,18 +20,8 @@ import {
   type HtmlInCanvasShardOverlayRunner,
   type HtmlInCanvasSnapshot,
   type HtmlInCanvasStartIntent,
-  type HtmlInCanvasTransitionOrigin,
   type HtmlInCanvasTransitionPhase,
 } from "../engine/transition/transitionController";
-
-export type {
-  HtmlInCanvasShardOverlayRunner,
-  HtmlInCanvasSnapshot,
-  HtmlInCanvasStartIntent,
-  HtmlInCanvasTransitionOrigin,
-  HtmlInCanvasTransitionPhase,
-};
-export { captureDesktopSnapshot };
 
 export interface HtmlInCanvasTransition {
   readonly phase: Readonly<Ref<HtmlInCanvasTransitionPhase>>;

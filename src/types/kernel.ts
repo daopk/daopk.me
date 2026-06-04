@@ -388,8 +388,6 @@ export interface Kernel {
   readonly wallpapers: KernelWallpapersFacade;
 }
 
-export type KernelInjection = Kernel;
-
 // Defined once in the SDK module so the host and published first-party apps
 // share the same symbol instance (single source — see src/runtime/sdk.ts).
 export { KernelInjectionKey } from "~/runtime/sdk";

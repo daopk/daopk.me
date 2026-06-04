@@ -14,10 +14,3 @@ export const THEMES = {
 } as const;
 
 export type ThemeName = keyof typeof THEMES;
-
-export const TOKEN_KEYS = [
-  ["--color-accent", "accent"],
-  ["--color-bg", "bg"],
-  ["--color-fg", "fg"],
-  ["--color-accent-sheen", "accentSheen"],
-] as const;

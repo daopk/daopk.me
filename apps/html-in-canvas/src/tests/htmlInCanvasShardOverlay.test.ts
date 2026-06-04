@@ -1,9 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  runHtmlInCanvasShardOverlay,
-  type HtmlInCanvasShardRenderer,
-} from "../engine/cinematics/shards";
+import { runHtmlInCanvasShardOverlay } from "../engine/cinematics/shards";
+import type { HtmlInCanvasShardRenderer } from "../engine/cinematics/shards/types";
 import type { HtmlInCanvasSnapshot } from "../engine/transition/transitionController";
 
 const snapshot: HtmlInCanvasSnapshot = {

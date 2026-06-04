@@ -18,7 +18,7 @@ import type { HtmlInCanvasVector3 } from "./types";
 
 export type HtmlInCanvasShardVector3 = HtmlInCanvasVector3;
 
-export interface MutableVector3 {
+interface MutableVector3 {
   x: number;
   y: number;
   z: number;

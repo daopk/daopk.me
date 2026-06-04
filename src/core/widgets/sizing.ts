@@ -4,8 +4,6 @@ export const WIDGET_GRID_PITCH_PX = 24;
 
 export const WIDGET_GRID_GAP_UNITS = 1;
 
-export const WIDGET_GRID_GAP_PX = WIDGET_GRID_GAP_UNITS * WIDGET_GRID_PITCH_PX;
-
 export const WIDGET_SIZE_GRID_UNITS: Record<WidgetSize, { w: number; h: number }> = {
   sm: { w: 4, h: 4 },
   md: { w: 8, h: 4 },

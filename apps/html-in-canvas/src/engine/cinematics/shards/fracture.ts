@@ -12,7 +12,7 @@ export interface HtmlInCanvasShardPolygon {
   readonly seed: number;
 }
 
-export interface HtmlInCanvasPolygonBounds {
+interface HtmlInCanvasPolygonBounds {
   readonly minX: number;
   readonly minY: number;
   readonly maxX: number;
@@ -105,19 +105,7 @@ export function createHtmlInCanvasShardPolygons({
   }));
 }
 
-export function polygonArea(points: readonly HtmlInCanvasPoint[]): number {
-  let sum = 0;
-
-  for (let index = 0; index < points.length; index++) {
-    const current = points[index]!;
-    const next = points[(index + 1) % points.length]!;
-    sum += current.x * next.y - next.x * current.y;
-  }
-
-  return Math.abs(sum) / 2;
-}
-
-export function polygonCentroid(points: readonly HtmlInCanvasPoint[]): HtmlInCanvasPoint {
+function polygonCentroid(points: readonly HtmlInCanvasPoint[]): HtmlInCanvasPoint {
   let crossSum = 0;
   let x = 0;
   let y = 0;
@@ -146,7 +134,7 @@ export function polygonCentroid(points: readonly HtmlInCanvasPoint[]): HtmlInCan
   return { x: x * factor, y: y * factor };
 }
 
-export function polygonBounds(points: readonly HtmlInCanvasPoint[]): HtmlInCanvasPolygonBounds {
+function polygonBounds(points: readonly HtmlInCanvasPoint[]): HtmlInCanvasPolygonBounds {
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;

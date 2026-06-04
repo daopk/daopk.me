@@ -1,14 +1,8 @@
-import { loadThree, type ThreeLoader } from "../../rendering/three";
 import type {
   HtmlInCanvasSnapshot,
   HtmlInCanvasTransitionOrigin,
 } from "../../transition/transitionController";
-import {
-  CAMERA_FOV_DEGREES,
-  CRACK_STEP_PROGRESS,
-  DEFAULT_CONFIG,
-  REDUCED_DURATION_MS,
-} from "./config";
+import { CRACK_STEP_PROGRESS, DEFAULT_CONFIG, REDUCED_DURATION_MS } from "./config";
 import { clamp } from "./math";
 import { createHtmlInCanvasShardRenderer } from "./renderer";
 import type {
@@ -16,8 +10,6 @@ import type {
   HtmlInCanvasShardOverlayRunnerOptions,
   HtmlInCanvasShardRenderer,
 } from "./types";
-
-let preloadPromise: Promise<void> | null = null;
 
 export async function runHtmlInCanvasShardOverlay(
   snapshot: HtmlInCanvasSnapshot,
@@ -81,19 +73,6 @@ export async function runHtmlInCanvasShardOverlay(
   } finally {
     renderer.dispose();
   }
-}
-
-export function preloadHtmlInCanvasShardOverlay({
-  documentRef = document,
-  loadThreeModule = loadThree,
-}: {
-  readonly documentRef?: Document;
-  readonly loadThreeModule?: ThreeLoader;
-} = {}): Promise<void> {
-  preloadPromise ??= warmHtmlInCanvasShardOverlay(documentRef, loadThreeModule).catch(
-    () => undefined,
-  );
-  return preloadPromise;
 }
 
 function animateRenderer(
@@ -355,26 +334,6 @@ function centerDropOrigin(canvas: HTMLCanvasElement): HtmlInCanvasTransitionOrig
     x: Math.max(1, rect.width) / 2,
     y: Math.max(1, rect.height) / 2,
   };
-}
-
-async function warmHtmlInCanvasShardOverlay(
-  documentRef: Document,
-  loadThreeModule: ThreeLoader,
-): Promise<void> {
-  const THREE = await loadThreeModule();
-  const canvas = documentRef.createElement("canvas");
-  const renderer = new THREE.WebGPURenderer({ canvas, alpha: true, antialias: true });
-
-  try {
-    await renderer.init();
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(CAMERA_FOV_DEGREES, 1, 0.1, 10);
-
-    renderer.setSize(1, 1, false);
-    renderer.render(scene, camera);
-  } finally {
-    renderer.dispose();
-  }
 }
 
 function resolvedConfig(

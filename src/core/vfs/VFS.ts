@@ -19,10 +19,6 @@ import {
   type VfsPath,
 } from "~/core/vfs/path";
 
-export interface VfsGlobOptions {
-  depth?: number;
-}
-
 export interface VfsMount {
   readonly id: string;
   readonly path: VfsPath;

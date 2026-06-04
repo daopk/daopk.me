@@ -1,7 +1,5 @@
 import type { Endpoint } from "comlink";
 
-export type StructuredCloneable = Record<string, unknown>;
-
 export type MessagingPort = Endpoint;
 
 export function createDetachedPortPair(): readonly [MessagingPort, MessagingPort] | [] {

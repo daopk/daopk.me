@@ -6,8 +6,6 @@ export const breakpoints = {
   xl: 1440,
 } as const;
 
-export type BreakpointTokens = typeof breakpoints;
-
 export type LogicalBreakpointBand = "mobile" | "tablet" | "desktop";
 
 export function matchBreakpoint(width: number): LogicalBreakpointBand {

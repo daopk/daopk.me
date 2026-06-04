@@ -1,7 +1,7 @@
 import { detectHtmlInCanvasSupport, type HtmlInCanvasSupport } from "./htmlInCanvasSupport";
 import { DESKTOP_SHELL_SELECTOR } from "./constants";
 
-export type HtmlInCanvasCaptureMode = "html-in-canvas";
+type HtmlInCanvasCaptureMode = "html-in-canvas";
 
 export interface HtmlInCanvasCaptureSupport {
   readonly supported: boolean;

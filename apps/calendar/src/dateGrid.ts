@@ -114,7 +114,7 @@ export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-export function addDays(date: Date, amount: number): Date {
+function addDays(date: Date, amount: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + amount);
 }
 
@@ -152,21 +152,6 @@ export function isValidDateKey(value: string): boolean {
 
 export function sameLocalDate(a: Date, b: Date): boolean {
   return localDateKey(a) === localDateKey(b);
-}
-
-export function localDateTimeString(date: Date): string {
-  return `${localDateKey(date)}T${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-}
-
-export function localDateTimeFromParts(dateKey: string, time: string): string {
-  return `${dateKey}T${time}`;
-}
-
-export function dateKeyFromLocalDateTime(value: string): string {
-  return value.slice(0, 10);
 }
 
 function dayOffset(date: Date, weekStartsOn: number): number {

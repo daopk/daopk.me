@@ -44,7 +44,7 @@ export interface HtmlInCanvasShardRenderer {
   dispose(): void;
 }
 
-export type HtmlInCanvasShardRendererFactory = (
+type HtmlInCanvasShardRendererFactory = (
   snapshot: HtmlInCanvasSnapshot,
   options: HtmlInCanvasShardOverlayRunnerOptions,
 ) => Promise<HtmlInCanvasShardRenderer>;

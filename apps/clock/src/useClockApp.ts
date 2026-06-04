@@ -2,10 +2,10 @@ import { computed, onBeforeUnmount, ref, type ComputedRef, type Ref } from "vue"
 
 import { activeProfileKvNamespace, KVStore } from "@daopk/sdk";
 
-export const CLOCK_KV_NAMESPACE = "clock";
+const CLOCK_KV_NAMESPACE = "clock";
 export const CLOCK_KV_PRIMARY_KEY = "state";
-export const DEFAULT_TIMER_DURATION_MS = 5 * 60_000;
-export const MAX_TIMER_DURATION_MS = 23 * 60 * 60_000 + 59 * 60_000 + 59_000;
+const DEFAULT_TIMER_DURATION_MS = 5 * 60_000;
+const MAX_TIMER_DURATION_MS = 23 * 60 * 60_000 + 59 * 60_000 + 59_000;
 const DEFAULT_TICK_MS = 1000;
 const STOPWATCH_TICK_MS = 10;
 
@@ -14,14 +14,14 @@ export type TimerStatus = "idle" | "running" | "paused" | "finished";
 export type StopwatchStatus = "idle" | "running" | "paused";
 export type TimerPart = "hours" | "minutes" | "seconds";
 
-export interface TimerState {
+interface TimerState {
   status: TimerStatus;
   durationMs: number;
   remainingMs: number;
   endsAtMs: number | null;
 }
 
-export interface StopwatchState {
+interface StopwatchState {
   status: StopwatchStatus;
   startedAtMs: number | null;
   accumulatedMs: number;
@@ -94,12 +94,12 @@ function nullableMs(value: unknown): number | null {
   return finiteNumber(value);
 }
 
-export function clampTimerDurationMs(value: number): number {
+function clampTimerDurationMs(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(MAX_TIMER_DURATION_MS, Math.floor(value / 1000) * 1000));
 }
 
-export function durationPartsFromMs(value: number): DurationParts {
+function durationPartsFromMs(value: number): DurationParts {
   const totalSeconds = Math.floor(clampTimerDurationMs(value) / 1000);
   return {
     hours: Math.floor(totalSeconds / 3600),
@@ -108,7 +108,7 @@ export function durationPartsFromMs(value: number): DurationParts {
   };
 }
 
-export function durationMsFromParts(parts: DurationParts): number {
+function durationMsFromParts(parts: DurationParts): number {
   return clampTimerDurationMs(
     (Math.max(0, Math.floor(parts.hours)) * 3600 +
       Math.max(0, Math.floor(parts.minutes)) * 60 +
@@ -263,7 +263,7 @@ function coerceStopwatch(
   };
 }
 
-export function coerceClockAppState(candidate: unknown, nowMs: number): CoerceResult {
+function coerceClockAppState(candidate: unknown, nowMs: number): CoerceResult {
   if (!isRecord(candidate)) {
     return { state: defaultState(), changed: true };
   }

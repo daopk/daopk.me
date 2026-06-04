@@ -19,10 +19,6 @@ export function photosIndexUrl(base: string = PHOTOS_CONTENT_BASE): string {
   return `${base}/${PHOTOS_INDEX_FILENAME}`;
 }
 
-export function photoUrl(key: string, base: string = PHOTOS_CONTENT_BASE): string {
-  return `${base}/${key}`;
-}
-
 /**
  * Thumbnail widths the Worker is allowed to generate (see `PHOTO_THUMB_WIDTHS`
  * in `worker/router.ts`). The grid renders the 1x size and lets the browser

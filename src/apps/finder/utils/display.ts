@@ -72,10 +72,6 @@ export function formatModified(timestamp: number): string {
   return formatDateTime(timestamp);
 }
 
-export function isPdfEntry(entry: VfsDirEntry | null): entry is VfsDirEntry {
-  return entry?.kind === "file" && detectPreviewType(entry) === "pdf";
-}
-
-export function isSlideDeckEntry(entry: VfsDirEntry | null): entry is VfsDirEntry {
+function isSlideDeckEntry(entry: VfsDirEntry | null): entry is VfsDirEntry {
   return entry?.kind === "file" && isSlideDeckPath(entry.path);
 }

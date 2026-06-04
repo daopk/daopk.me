@@ -1,5 +1,3 @@
-export type StorageKey = string;
-
 export interface Serializer<T> {
   stringify(value: T): string;
   parse(raw: string): T;

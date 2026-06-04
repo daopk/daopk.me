@@ -1,9 +1,4 @@
-const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
-
-export function utf8Bytes(value: string): Uint8Array {
-  return TEXT_ENCODER.encode(value);
-}
 
 export function utf8Decode(bytes: BufferSource): string {
   return TEXT_DECODER.decode(bytes);

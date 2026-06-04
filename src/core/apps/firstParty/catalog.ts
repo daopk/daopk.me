@@ -3,7 +3,7 @@ import { debugWarn } from "~/core/debug";
 import type { FirstPartyCatalog, FirstPartyCatalogEntry } from "./types";
 
 /** Same-origin catalog of published first-party apps; served by the Worker from R2. */
-export const FIRST_PARTY_CATALOG_URL = "/apps/index.json";
+const FIRST_PARTY_CATALOG_URL = "/apps/index.json";
 
 const DEFAULT_TIMEOUT_MS = 4000;
 

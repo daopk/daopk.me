@@ -11,6 +11,5 @@ export { StorageError } from "~/core/storage/types";
 export type {
   MigrationFn,
   Serializer,
-  StorageKey,
   StorageWriteOptions,
 } from "~/core/storage/types";

@@ -186,7 +186,7 @@ function rectViolatesGap(
   );
 }
 
-export function widgetGridRectViolatesGap(
+function widgetGridRectViolatesGap(
   candidate: WidgetGridRect,
   occupied: ReadonlyArray<WidgetGridRect>,
   gapUnits = WIDGET_GRID_GAP_UNITS,

@@ -1,6 +1,6 @@
 export type { LogicalBreakpointBand } from "~/core/devices/breakpoints";
 
-export { breakpoints, matchBreakpoint, type BreakpointTokens } from "~/core/devices/breakpoints";
+export { breakpoints, matchBreakpoint } from "~/core/devices/breakpoints";
 
 export type { WatchDeviceProfileHandle } from "~/core/devices/deviceProfile";
 

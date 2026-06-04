@@ -25,20 +25,6 @@ export type PersistedPermissionState = Record<
   Partial<Record<AppPermission, PersistedPermissionDecision>>
 >;
 
-export class PermissionDeniedError extends Error {
-  readonly manifestId: string;
-  readonly permission: AppPermission;
-  readonly persisted: boolean;
-
-  constructor(manifestId: string, permission: AppPermission, persisted: boolean) {
-    super(`Permission '${permission}' denied for app '${manifestId}'.`);
-    this.name = "PermissionDeniedError";
-    this.manifestId = manifestId;
-    this.permission = permission;
-    this.persisted = persisted;
-  }
-}
-
 export interface PermissionResponseInput {
   readonly granted: boolean;
   readonly persist: boolean;

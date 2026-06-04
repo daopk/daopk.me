@@ -1,5 +1,5 @@
 export { ThemeManager } from "~/core/theme/ThemeManager";
-export { THEMES, TOKEN_KEYS } from "~/core/theme/tokens";
+export { THEMES } from "~/core/theme/tokens";
 export type { ThemeName } from "~/core/theme/tokens";
 export {
   type TokenOverridesHydrateHooks,

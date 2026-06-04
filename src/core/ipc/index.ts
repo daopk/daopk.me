@@ -1,5 +1,5 @@
 export { createDetachedPortPair } from "~/core/ipc/channel";
-export type { MessagingPort, StructuredCloneable } from "~/core/ipc/channel";
+export type { MessagingPort } from "~/core/ipc/channel";
 export {
   fromRpcError,
   RPC_ENVELOPE_VERSION,

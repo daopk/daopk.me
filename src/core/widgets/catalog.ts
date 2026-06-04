@@ -32,13 +32,13 @@ export interface CreateWidgetCatalogItemsOptions {
   isVisible: (manifest: WidgetManifest, defaultVisible: boolean) => boolean;
 }
 
-export const WIDGET_SIZE_LABEL: Record<WidgetSize, string> = {
+const WIDGET_SIZE_LABEL: Record<WidgetSize, string> = {
   sm: "Small",
   md: "Medium",
   lg: "Large",
 };
 
-export const WIDGET_SURFACE_LABEL: Record<WidgetSurface, string> = {
+const WIDGET_SURFACE_LABEL: Record<WidgetSurface, string> = {
   "desktop:wallpaper": "Desktop",
   "desktop:menubar": "Menubar",
   "mobile:widgets": "Mobile",
@@ -80,7 +80,7 @@ export function widgetMatchesShellScope(
   return widgetShellScopeForSurface(manifest.surface) === scope;
 }
 
-export function widgetIsDesktopPlaceable(manifest: WidgetManifest): boolean {
+function widgetIsDesktopPlaceable(manifest: WidgetManifest): boolean {
   return widgetMatchesSurface(manifest, "desktop:wallpaper");
 }
 
