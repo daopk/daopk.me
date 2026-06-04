@@ -383,7 +383,7 @@ Event body`,
     });
   });
 
-  it("opens YouTube URL protocol links through the shell", async () => {
+  it("opens legacy YouTube URL protocol links through the shell", async () => {
     const youtubeUrl = "https://www.youtube.com/watch?v=u8vJjTH9Igg";
     stubBlogFetch({
       posts: {
@@ -407,6 +407,57 @@ Event body`,
       source: "deeplink",
       args: { url: youtubeUrl },
     });
+  });
+
+  it("opens regular YouTube video links through the shell", async () => {
+    const youtubeUrl = "https://www.youtube.com/watch?v=u8vJjTH9Igg";
+    stubBlogFetch({
+      posts: {
+        "field-notes": `[Open video](${youtubeUrl})`,
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    expect(link.attributes("href")).toBe(youtubeUrl);
+
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { url: youtubeUrl },
+    });
+  });
+
+  it("does not hijack modified clicks on regular YouTube video links", async () => {
+    const youtubeUrl = "https://www.youtube.com/watch?v=u8vJjTH9Igg";
+    stubBlogFetch({
+      posts: {
+        "field-notes": `[Open video](${youtubeUrl})`,
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+      metaKey: true,
+    });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(kernel.events.emit).not.toHaveBeenCalledWith("app.launch.requested", expect.anything());
   });
 
   it("captures app protocol links before inner content can stop propagation", async () => {

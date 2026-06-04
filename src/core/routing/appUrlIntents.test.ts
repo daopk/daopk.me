@@ -8,6 +8,7 @@ import {
   isFirstPartyAppProtocolUrl,
   parseAppProtocolIntent,
   parseAppUrlIntent,
+  parseYouTubePlayerUrlIntent,
   resetInitialAppUrlIntentLatch,
   youtubePlayerVideoIdFromArgs,
 } from "./appUrlIntents";
@@ -159,6 +160,31 @@ describe("app URL intents", () => {
       manifestId: "youtube-player",
       args: { url: "https://www.youtube.com/watch?v=IQsLEaj89bg" },
     });
+  });
+
+  it.each([
+    ["watch URL", "https://www.youtube.com/watch?v=IQsLEaj89bg"],
+    ["short URL", "https://youtu.be/IQsLEaj89bg"],
+    ["embed URL", "https://www.youtube.com/embed/IQsLEaj89bg"],
+    ["shorts URL", "https://www.youtube.com/shorts/IQsLEaj89bg"],
+    ["live URL", "https://www.youtube.com/live/IQsLEaj89bg"],
+    ["mobile URL", "https://m.youtube.com/watch?v=IQsLEaj89bg"],
+    ["music URL", "https://music.youtube.com/watch?v=IQsLEaj89bg"],
+  ])("parses YouTube Player URL intents from %s", (_label, url) => {
+    expect(parseYouTubePlayerUrlIntent(url)).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { url },
+    });
+  });
+
+  it.each([
+    ["non-YouTube host", "https://example.com/watch?v=IQsLEaj89bg"],
+    ["invalid video id", "https://www.youtube.com/watch?v=not-a-video-id"],
+    ["unsupported protocol", "ftp://www.youtube.com/watch?v=IQsLEaj89bg"],
+    ["missing protocol", "youtube.com/watch?v=IQsLEaj89bg"],
+  ])("rejects YouTube Player URL intents for %s", (_label, url) => {
+    expect(parseYouTubePlayerUrlIntent(url)).toEqual({ kind: "none" });
   });
 
   it("parses whitelisted YouTube Player protocol video links", () => {

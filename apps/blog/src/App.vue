@@ -20,6 +20,7 @@ import {
   isFirstPartyAppProtocolUrl,
   normalizeVfsPath,
   parseAppProtocolIntent,
+  parseYouTubePlayerUrlIntent,
   useKernel,
   useVfs,
   type AppChromeBackAction,
@@ -227,6 +228,21 @@ function anchorFromClick(event: MouseEvent): HTMLAnchorElement | null {
   return anchor instanceof HTMLAnchorElement ? anchor : null;
 }
 
+function isPlainPrimaryClick(event: MouseEvent): boolean {
+  return event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+}
+
+function launchIntent(intent: {
+  manifestId: string;
+  args?: Readonly<Record<string, unknown>>;
+}): void {
+  kernel.events.emit("app.launch.requested", {
+    manifestId: intent.manifestId,
+    source: "deeplink",
+    ...(intent.args === undefined ? {} : { args: intent.args }),
+  });
+}
+
 function onPostContentClick(event: MouseEvent): void {
   if (event.button !== 0) {
     return;
@@ -239,19 +255,28 @@ function onPostContentClick(event: MouseEvent): void {
   }
 
   const intent = parseAppProtocolIntent(href);
-  if (intent.kind !== "app") {
-    if (isFirstPartyAppProtocolUrl(href)) {
-      event.preventDefault();
-    }
+  if (intent.kind === "app") {
+    event.preventDefault();
+    launchIntent(intent);
+    return;
+  }
+
+  if (isFirstPartyAppProtocolUrl(href)) {
+    event.preventDefault();
+    return;
+  }
+
+  if (!isPlainPrimaryClick(event)) {
+    return;
+  }
+
+  const youtubeIntent = parseYouTubePlayerUrlIntent(href);
+  if (youtubeIntent.kind !== "app") {
     return;
   }
 
   event.preventDefault();
-  kernel.events.emit("app.launch.requested", {
-    manifestId: intent.manifestId,
-    source: "deeplink",
-    ...(intent.args === undefined ? {} : { args: intent.args }),
-  });
+  launchIntent(youtubeIntent);
 }
 </script>
 

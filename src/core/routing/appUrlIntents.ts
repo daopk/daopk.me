@@ -24,6 +24,7 @@ export type AppUrlIntent = AppUrlLaunchIntent | { kind: "none" };
 
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const FIRST_PARTY_APP_PROTOCOLS = new Map([["youtube-player", "youtube-player"]]);
+const YOUTUBE_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
 let initialAppUrlIntentConsumed = false;
 
@@ -105,11 +106,19 @@ function normalizedYouTubeVideoId(input: string | null | undefined): string | nu
   return YOUTUBE_VIDEO_ID_PATTERN.test(trimmed) ? trimmed : null;
 }
 
-function youTubeVideoIdFromUrl(input: string): string | null {
+function youTubeVideoIdFromUrl(input: string | URL): string | null {
   let url: URL;
-  try {
-    url = new URL(input);
-  } catch {
+  if (input instanceof URL) {
+    url = input;
+  } else {
+    try {
+      url = new URL(input);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!YOUTUBE_URL_PROTOCOLS.has(url.protocol)) {
     return null;
   }
 
@@ -280,6 +289,21 @@ export function parseAppProtocolIntent(input: string | URL): AppUrlIntent {
     kind: "app",
     manifestId,
     args,
+  };
+}
+
+export function parseYouTubePlayerUrlIntent(input: string | URL): AppUrlIntent {
+  const url = absoluteUrlFrom(input);
+  if (url === null || youTubeVideoIdFromUrl(url) === null) {
+    return { kind: "none" };
+  }
+
+  return {
+    kind: "app",
+    manifestId: "youtube-player",
+    args: {
+      url: url.href,
+    },
   };
 }
 
