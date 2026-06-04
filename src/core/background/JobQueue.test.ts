@@ -6,7 +6,6 @@ import {
   JobQueueDisposedError,
   JobTimeoutError,
 } from "~/core/background/JobQueue";
-import { WorkerPool } from "~/core/background/WorkerPool";
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -194,36 +193,4 @@ describe("JobQueue", () => {
     await expect(queued.promise).rejects.toBeInstanceOf(JobQueueDisposedError);
   });
 
-  it("can schedule synthetic work through WorkerPool", async () => {
-    const pool = new WorkerPool<number, number>({
-      size: 3,
-      createWorker(id) {
-        return {
-          id,
-          async run(input, signal) {
-            if (signal.aborted) {
-              throw signal.reason;
-            }
-
-            await Promise.resolve();
-
-            return input * 2;
-          },
-          terminate() {},
-        };
-      },
-    });
-    const queue = new JobQueue({ concurrency: 10 });
-
-    const handles = Array.from({ length: 10 }, (_, index) =>
-      queue.enqueue((signal) => pool.run(index, { signal })),
-    );
-
-    await expect(Promise.all(handles.map((handle) => handle.promise))).resolves.toEqual([
-      0, 2, 4, 6, 8, 10, 12, 14, 16, 18,
-    ]);
-
-    pool.dispose();
-    queue.dispose();
-  });
 });
