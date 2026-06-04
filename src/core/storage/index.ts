@@ -8,8 +8,4 @@ export {
 } from "~/core/storage/preflight";
 export { type SettingsHydrateHooks, useSettingsStore } from "~/core/storage/SettingsStore";
 export { StorageError } from "~/core/storage/types";
-export type {
-  MigrationFn,
-  Serializer,
-  StorageWriteOptions,
-} from "~/core/storage/types";
+export type { MigrationFn, Serializer, StorageWriteOptions } from "~/core/storage/types";

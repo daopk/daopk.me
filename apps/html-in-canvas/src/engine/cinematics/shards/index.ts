@@ -1,4 +1,2 @@
 export { runHtmlInCanvasShardOverlay } from "./timeline";
-export type {
-  HtmlInCanvasShardOverlayRunnerOptions,
-} from "./types";
+export type { HtmlInCanvasShardOverlayRunnerOptions } from "./types";
