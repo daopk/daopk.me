@@ -1,4 +1,4 @@
-import { TerminalIcon } from "~/icons/lucide";
+import { Terminal } from "~/icons/lucide";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runAutorunManifests, resetAutorunLatch } from "./autorun";
@@ -20,7 +20,7 @@ function makeManifest(overrides: Partial<AppManifest>): AppManifest {
   return {
     id: "test-app",
     name: "Test",
-    icon: TerminalIcon,
+    icon: Terminal,
     category: "system",
     component: async () => ({ default: { template: "<div />" } }),
     ...overrides,

@@ -131,7 +131,6 @@ export const Share2 = createIcon(share2Icon, "Share2");
 export const Shield = createIcon(shieldIcon, "Shield");
 export const Sparkles = createIcon(sparklesIcon, "Sparkles");
 export const Terminal = createIcon(terminalIcon, "Terminal");
-export const TerminalIcon = Terminal;
 export const Timer = createIcon(timerIcon, "Timer");
 export const Trash2 = createIcon(trash2Icon, "Trash2");
 export const Type = createIcon(typeIcon, "Type");
