@@ -61,7 +61,7 @@ const markdownSanitizeSchema = {
   clobber: ["ariaDescribedBy", "ariaLabelledBy", "id", "name"],
   clobberPrefix: "user-content-",
   protocols: {
-    href: ["http", "https", "mailto"],
+    href: ["http", "https", "mailto", "youtube-player"],
     src: ["http", "https"],
   },
   required: {

@@ -142,8 +142,7 @@ function youTubeVideoIdFromUrl(input: string): string | null {
 export function youtubePlayerVideoIdFromArgs(
   args: Readonly<Record<string, unknown>> | undefined,
 ): string | null {
-  const videoId =
-    typeof args?.videoId === "string" ? normalizedYouTubeVideoId(args.videoId) : null;
+  const videoId = typeof args?.videoId === "string" ? normalizedYouTubeVideoId(args.videoId) : null;
   if (videoId !== null) {
     return videoId;
   }

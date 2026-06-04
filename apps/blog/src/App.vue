@@ -17,7 +17,9 @@ import { blogPostPathFromSlug, createBlogContentSource, isBlogPostSlug } from "@
 import { ArrowLeft, Check, Share2 } from "@daopk/icons";
 import {
   AppContextInjectionKey,
+  isFirstPartyAppProtocolUrl,
   normalizeVfsPath,
+  parseAppProtocolIntent,
   useKernel,
   useVfs,
   type AppChromeBackAction,
@@ -215,6 +217,42 @@ async function copyCurrentUrl(): Promise<void> {
 function onShareClick(): void {
   void copyCurrentUrl();
 }
+
+function anchorFromClick(event: MouseEvent): HTMLAnchorElement | null {
+  if (!(event.target instanceof Element)) {
+    return null;
+  }
+
+  const anchor = event.target.closest("a[href]");
+  return anchor instanceof HTMLAnchorElement ? anchor : null;
+}
+
+function onPostContentClick(event: MouseEvent): void {
+  if (event.button !== 0) {
+    return;
+  }
+
+  const anchor = anchorFromClick(event);
+  const href = anchor?.getAttribute("href");
+  if (href === undefined || href === null) {
+    return;
+  }
+
+  const intent = parseAppProtocolIntent(href);
+  if (intent.kind !== "app") {
+    if (isFirstPartyAppProtocolUrl(href)) {
+      event.preventDefault();
+    }
+    return;
+  }
+
+  event.preventDefault();
+  kernel.events.emit("app.launch.requested", {
+    manifestId: intent.manifestId,
+    source: "deeplink",
+    ...(intent.args === undefined ? {} : { args: intent.args }),
+  });
+}
 </script>
 
 <template>
@@ -294,7 +332,12 @@ function onShareClick(): void {
               decoding="async"
             />
           </div>
-          <div v-if="blogPost.html.value" class="blog__content" v-html="blogPost.html.value" />
+          <div
+            v-if="blogPost.html.value"
+            class="blog__content"
+            @click.capture="onPostContentClick"
+            v-html="blogPost.html.value"
+          />
           <StatusBanner
             v-else-if="blogPost.status.value === 'loading'"
             class="blog__status"

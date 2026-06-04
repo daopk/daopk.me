@@ -358,6 +358,122 @@ Event body`,
     expect(wrapper.find(".blog__post-cover").exists()).toBe(false);
   });
 
+  it("opens whitelisted app protocol links through the shell", async () => {
+    stubBlogFetch({
+      posts: {
+        "field-notes": "[Open video](youtube-player://video/M7lc1UVf-VE)",
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    expect(link.attributes("href")).toBe("youtube-player://video/M7lc1UVf-VE");
+
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+  });
+
+  it("opens YouTube URL protocol links through the shell", async () => {
+    const youtubeUrl = "https://www.youtube.com/watch?v=u8vJjTH9Igg";
+    stubBlogFetch({
+      posts: {
+        "field-notes": `[Open video](youtube-player://url?url=${youtubeUrl})`,
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    expect(link.attributes("href")).toBe(`youtube-player://url?url=${youtubeUrl}`);
+
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { url: youtubeUrl },
+    });
+  });
+
+  it("captures app protocol links before inner content can stop propagation", async () => {
+    stubBlogFetch({
+      posts: {
+        "field-notes": "[Open video](youtube-player://video/M7lc1UVf-VE)",
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    link.element.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "youtube-player",
+      source: "deeplink",
+      args: { videoId: "M7lc1UVf-VE" },
+    });
+  });
+
+  it("blocks invalid whitelisted app protocol links without launching an app", async () => {
+    stubBlogFetch({
+      posts: {
+        "field-notes": "[Bad video](youtube-player://video/not-a-video-id)",
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(kernel.events.emit).not.toHaveBeenCalledWith("app.launch.requested", expect.anything());
+  });
+
+  it("does not hijack regular markdown links", async () => {
+    stubBlogFetch({
+      posts: {
+        "field-notes": "[Regular link](https://example.com)",
+      },
+    });
+    const kernel = makeKernel();
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper);
+
+    const link = wrapper.find<HTMLAnchorElement>(".blog__content a");
+    const event = new MouseEvent("click", { bubbles: true, button: 0, cancelable: true });
+    link.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(kernel.events.emit).not.toHaveBeenCalledWith("app.launch.requested", expect.anything());
+  });
+
   it("renders a detail thumbnail from index metadata when available", async () => {
     stubBlogFetch({
       index: [
