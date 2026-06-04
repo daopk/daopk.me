@@ -47,11 +47,12 @@ describe("useWidgetDrag (M3.7)", () => {
   });
 
   describe("pointerdown gate", () => {
-    it("primary (left) button starts drag and fires onStart", () => {
+    it("primary (left) button arms drag without consuming click before threshold", () => {
       const onStart = vi.fn();
+      const onMove = vi.fn();
       const drag = useWidgetDrag({
         ...defaultHarness(),
-        onMove: vi.fn(),
+        onMove,
         onDrop: vi.fn(),
         onStart,
       });
@@ -60,7 +61,17 @@ describe("useWidgetDrag (M3.7)", () => {
       Object.defineProperty(down, "currentTarget", { value: element });
       drag.onPointerDown(down);
 
+      expect(down.defaultPrevented).toBe(false);
+      expect(onStart).not.toHaveBeenCalled();
+
+      const smallMove = fakePointerEvent("pointermove", { clientX: 13, clientY: 14 });
+      expect(element.dispatchEvent(smallMove)).toBe(true);
+      expect(onStart).not.toHaveBeenCalled();
+      expect(onMove).not.toHaveBeenCalled();
+
+      element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 10, clientY: 0 }));
       expect(onStart).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledTimes(1);
     });
 
     it("right-click pointerdown is ignored (no drag start, no listeners attached)", () => {
@@ -256,15 +267,16 @@ describe("useWidgetDrag (M3.7)", () => {
       expect(onDrop).toHaveBeenCalledWith(1, 1);
     });
 
-    it("onDrop receives snapped position even when no pointermove fired (drop-in-place)", () => {
-      // gets idempotent persistence and `onEnd` cleanup runs.
+    it("does not drop when released before the drag threshold", () => {
       const onDrop = vi.fn();
+      const onEnd = vi.fn();
       const drag = useWidgetDrag({
         getPosition: () => ({ x: 48, y: 48 }),
         getSize: () => ({ ...SM_PX }),
         getHostSize: () => ({ width: 1920, height: 1080 }),
         onMove: vi.fn(),
         onDrop,
+        onEnd,
       });
 
       const down = fakePointerEvent("pointerdown", { clientX: 50, clientY: 50 });
@@ -273,7 +285,8 @@ describe("useWidgetDrag (M3.7)", () => {
 
       element.dispatchEvent(fakePointerEvent("pointerup"));
 
-      expect(onDrop).toHaveBeenCalledWith(2, 2);
+      expect(onDrop).not.toHaveBeenCalled();
+      expect(onEnd).not.toHaveBeenCalled();
     });
   });
 
@@ -294,6 +307,7 @@ describe("useWidgetDrag (M3.7)", () => {
       Object.defineProperty(down, "currentTarget", { value: element });
       drag.onPointerDown(down);
 
+      element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 48, clientY: 48 }));
       element.dispatchEvent(fakePointerEvent("pointerup"));
       expect(calls).toEqual(["drop", "end"]);
 
@@ -320,6 +334,7 @@ describe("useWidgetDrag (M3.7)", () => {
       Object.defineProperty(down, "currentTarget", { value: element });
       drag.onPointerDown(down);
 
+      element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 48, clientY: 48 }));
       element.dispatchEvent(fakePointerEvent("pointercancel"));
       expect(onDrop).toHaveBeenCalledTimes(1);
       expect(onEnd).toHaveBeenCalledTimes(1);
@@ -332,7 +347,7 @@ describe("useWidgetDrag (M3.7)", () => {
 
   describe("re-entrant safety", () => {
     it("a second pointerdown WHILE a drag is in flight is ignored (no listener stacking)", () => {
-      // `active` flag must block the second gesture entirely so
+      // `active` flag must block the second gesture entirely so move/drop listeners don't stack.
       const onStart = vi.fn();
       const onMove = vi.fn();
       const onDrop = vi.fn();
@@ -346,28 +361,40 @@ describe("useWidgetDrag (M3.7)", () => {
       const down1 = fakePointerEvent("pointerdown", { clientX: 0, clientY: 0, pointerId: 1 });
       Object.defineProperty(down1, "currentTarget", { value: element });
       drag.onPointerDown(down1);
-      expect(onStart).toHaveBeenCalledTimes(1);
+      expect(onStart).not.toHaveBeenCalled();
 
       const down2 = fakePointerEvent("pointerdown", { clientX: 100, clientY: 100, pointerId: 2 });
       Object.defineProperty(down2, "currentTarget", { value: element });
       drag.onPointerDown(down2);
-      expect(onStart).toHaveBeenCalledTimes(1);
+      expect(onStart).not.toHaveBeenCalled();
 
-      element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 48, clientY: 48 }));
+      element.dispatchEvent(
+        fakePointerEvent("pointermove", { clientX: 48, clientY: 48, pointerId: 2 }),
+      );
+      expect(onMove).not.toHaveBeenCalled();
+
+      element.dispatchEvent(
+        fakePointerEvent("pointermove", { clientX: 48, clientY: 48, pointerId: 1 }),
+      );
+      expect(onStart).toHaveBeenCalledTimes(1);
       expect(onMove).toHaveBeenCalledTimes(1);
 
-      element.dispatchEvent(fakePointerEvent("pointerup"));
+      element.dispatchEvent(fakePointerEvent("pointerup", { pointerId: 2 }));
+      expect(onDrop).not.toHaveBeenCalled();
+
+      element.dispatchEvent(fakePointerEvent("pointerup", { pointerId: 1 }));
       expect(onDrop).toHaveBeenCalledTimes(1);
 
       const down3 = fakePointerEvent("pointerdown", { clientX: 0, clientY: 0 });
       Object.defineProperty(down3, "currentTarget", { value: element });
       drag.onPointerDown(down3);
+      element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 24, clientY: 0 }));
       expect(onStart).toHaveBeenCalledTimes(2);
     });
 
     it("second drag reads fresh getPosition (no accumulated offset error)", () => {
       const onDrop = vi.fn();
-      // ref after the first drop. The composable must NOT cache the
+      // Mutate the backing position after the first drop. The composable must NOT cache it.
       let pos = { x: 0, y: 0 };
       const drag = useWidgetDrag({
         getPosition: () => pos,
@@ -386,7 +413,7 @@ describe("useWidgetDrag (M3.7)", () => {
 
       pos = { x: 48, y: 48 };
 
-      // Drag 2: offset must anchor on 48, not 0. Pointer at 100 →
+      // Drag 2: offset must anchor on 48, not 0. Pointer at 100 means raw x/y = 72.
       const down2 = fakePointerEvent("pointerdown", { clientX: 100, clientY: 100 });
       Object.defineProperty(down2, "currentTarget", { value: element });
       drag.onPointerDown(down2);

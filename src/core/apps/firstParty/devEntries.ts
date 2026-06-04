@@ -16,6 +16,7 @@ export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
   notes: () => import("@daopk-app/notes"),
   browser: () => import("@daopk-app/browser"),
   editor: () => import("@daopk-app/editor"),
+  "html-in-canvas": () => import("@daopk-app/html-in-canvas"),
   "pdf-viewer": () => import("@daopk-app/pdf-viewer"),
   photos: () => import("@daopk-app/photos"),
   blog: () => import("@daopk-app/blog"),

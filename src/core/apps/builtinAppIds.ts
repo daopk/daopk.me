@@ -19,6 +19,7 @@ export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
   "clock",
   "editor",
   "finder",
+  "html-in-canvas",
   // first-party, published independently (see firstParty/registry.ts)
   "notes",
   "pdf-viewer",

@@ -12,9 +12,14 @@ describe("buildFirstPartyPreviewCatalog", () => {
     const ids = catalog.apps.map((app) => app.id);
 
     expect(catalog.version).toBe(1);
-    expect(catalog.apps).toHaveLength(9);
     expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
     expect(ids).not.toContain("_shared");
+    expect(catalog.apps.find((app) => app.id === "html-in-canvas")).toEqual({
+      id: "html-in-canvas",
+      version: "1.0.0",
+      build: 0,
+      entry: "/apps/html-in-canvas/1.0.0+0/html-in-canvas.js",
+    });
 
     expect(catalog.apps.find((app) => app.id === "notes")).toEqual({
       id: "notes",

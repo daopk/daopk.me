@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick } from "vue";
@@ -167,11 +167,15 @@ describe("DesktopWidgetSlot (M3.7)", () => {
   });
 
   describe("drag lifecycle", () => {
-    it("pointerdown sets data-dragging while drag is active", async () => {
+    it("pointerdown arms the gesture; movement past threshold sets data-dragging", async () => {
       const wrapper = mountSlot(makeManifest(), { gridX: 0, gridY: 0 });
       const el = slotEl(wrapper);
 
       dispatchPointer(el, "pointerdown", { clientX: 0, clientY: 0 });
+      await wrapper.vm.$nextTick();
+      expect(el.dataset.dragging).toBeUndefined();
+
+      dispatchPointer(el, "pointermove", { clientX: 12, clientY: 0 });
       await wrapper.vm.$nextTick();
 
       expect(el.dataset.dragging).toBe("true");
@@ -180,6 +184,37 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       await wrapper.vm.$nextTick();
 
       expect(el.dataset.dragging).toBeUndefined();
+    });
+
+    it("lets interactive widget controls receive click when no drag starts", async () => {
+      const onClick = vi.fn();
+      const ButtonWidget = defineComponent({
+        name: "ButtonWidget",
+        setup() {
+          return () => h("button", { class: "widget-button", onClick }, "Launch");
+        },
+      });
+      const buttonModule = { default: ButtonWidget };
+      Object.defineProperty(buttonModule, Symbol.toStringTag, { value: "Module" });
+      const wrapper = mountSlot(
+        makeManifest({
+          component: () => Promise.resolve(buttonModule),
+        }),
+        { gridX: 0, gridY: 0 },
+      );
+      await flushPromises();
+
+      const el = slotEl(wrapper);
+      const button = wrapper.get("button").element;
+
+      expect(dispatchPointer(button, "pointerdown", { clientX: 4, clientY: 4 })).toBe(true);
+      expect(dispatchPointer(button, "pointerup", { clientX: 4, clientY: 4 })).toBe(true);
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      await wrapper.vm.$nextTick();
+
+      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(el.dataset.dragging).toBeUndefined();
+      expect(wrapper.emitted("drop")).toBeUndefined();
     });
 
     it("pointermove overrides the persisted position (transform follows pointer)", async () => {
@@ -357,6 +392,10 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       expect(el.style.zIndex).toBe("");
 
       dispatchPointer(el, "pointerdown", { clientX: 0, clientY: 0 });
+      await wrapper.vm.$nextTick();
+      expect(el.style.zIndex).toBe("");
+
+      dispatchPointer(el, "pointermove", { clientX: 12, clientY: 0 });
       await wrapper.vm.$nextTick();
       expect(el.style.zIndex).toBe("var(--desktop-widget-drag-z)");
 

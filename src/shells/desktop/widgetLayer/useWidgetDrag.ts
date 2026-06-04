@@ -15,7 +15,7 @@ export interface UseWidgetDragOptions {
   onMove: (x: number, y: number) => void;
   onDrop: (gridX: number, gridY: number) => void;
   /**
-   * Optional hook — fires once at `pointerdown` after capture succeeds.
+   * Optional hook — fires once the pointer crosses the drag threshold.
    * Useful for lifting `z-index` during drag (raises the dragged
    * widget to `--desktop-widget-layer-z` + 1 so it sits above its
    * neighbours but still below windows).
@@ -33,6 +33,9 @@ export interface WidgetDragHandlers {
   onPointerDown: (event: PointerEvent) => void;
 }
 
+const DRAG_START_THRESHOLD_PX = 6;
+const DRAG_START_THRESHOLD_SQ = DRAG_START_THRESHOLD_PX * DRAG_START_THRESHOLD_PX;
+
 function clamp(value: number, min: number, max: number): number {
   if (max < min) return min;
   if (value < min) return min;
@@ -41,7 +44,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 export function useWidgetDrag(options: UseWidgetDragOptions): WidgetDragHandlers {
-  // Guards against a re-entrant `pointerdown` while a drag is in
+  // Guards against a re-entrant `pointerdown` while a gesture is armed.
   let active = false;
 
   function onPointerDown(event: PointerEvent): void {
@@ -61,19 +64,17 @@ export function useWidgetDrag(options: UseWidgetDragOptions): WidgetDragHandlers
     active = true;
 
     const startPos = options.getPosition();
+    const startClientX = event.clientX;
+    const startClientY = event.clientY;
     const offsetX = event.clientX - startPos.x;
     const offsetY = event.clientY - startPos.y;
+    const pointerId = event.pointerId;
 
+    let dragging = false;
     let lastX = startPos.x;
     let lastY = startPos.y;
 
-    try {
-      target.setPointerCapture(event.pointerId);
-    } catch {}
-
-    options.onStart?.();
-
-    const onMove = (move: PointerEvent): void => {
+    const updatePosition = (move: PointerEvent): void => {
       const size = options.getSize();
       const host = options.getHostSize();
       const rawX = move.clientX - offsetX;
@@ -85,14 +86,47 @@ export function useWidgetDrag(options: UseWidgetDragOptions): WidgetDragHandlers
       options.onMove(lastX, lastY);
     };
 
-    const cleanup = (): void => {
-      target.removeEventListener("pointermove", onMove);
-      target.removeEventListener("pointerup", cleanup);
-      target.removeEventListener("pointercancel", cleanup);
+    const startDrag = (): void => {
+      dragging = true;
 
       try {
-        target.releasePointerCapture(event.pointerId);
+        target.setPointerCapture(pointerId);
       } catch {}
+
+      options.onStart?.();
+    };
+
+    const onMove = (move: PointerEvent): void => {
+      if (move.pointerId !== pointerId) {
+        return;
+      }
+
+      if (!dragging) {
+        const deltaX = move.clientX - startClientX;
+        const deltaY = move.clientY - startClientY;
+        if (deltaX * deltaX + deltaY * deltaY < DRAG_START_THRESHOLD_SQ) {
+          return;
+        }
+        startDrag();
+      }
+
+      updatePosition(move);
+      move.preventDefault();
+    };
+
+    const cleanup = (): void => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
+
+      try {
+        target.releasePointerCapture(pointerId);
+      } catch {}
+
+      if (!dragging) {
+        active = false;
+        return;
+      }
 
       const snappedX = snapToGrid(lastX);
       const snappedY = snapToGrid(lastY);
@@ -102,15 +136,29 @@ export function useWidgetDrag(options: UseWidgetDragOptions): WidgetDragHandlers
 
       options.onEnd?.();
 
-      // Release the re-entrant guard last — `onDrop` and `onEnd` may
       active = false;
     };
 
-    target.addEventListener("pointermove", onMove);
-    target.addEventListener("pointerup", cleanup);
-    target.addEventListener("pointercancel", cleanup);
+    const onPointerUp = (up: PointerEvent): void => {
+      if (up.pointerId !== pointerId) {
+        return;
+      }
+      if (dragging) {
+        up.preventDefault();
+      }
+      cleanup();
+    };
 
-    event.preventDefault();
+    const onPointerCancel = (cancel: PointerEvent): void => {
+      if (cancel.pointerId !== pointerId) {
+        return;
+      }
+      cleanup();
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
   }
 
   return { onPointerDown };
