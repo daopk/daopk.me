@@ -11,7 +11,6 @@ import {
   setWidgetVisible,
   widgetMatchesSurface,
   type WidgetCatalogItem,
-  type WidgetCatalogProviderKind,
 } from "~/core/widgets/catalog";
 import { Check, Plus, Search, X } from "~/icons/lucide";
 import { SettingsWidgetsIcon as WidgetsIcon } from "~/icons/fluentColor";
@@ -23,17 +22,10 @@ import { useWidgetGalleryDesktopDrag } from "./useWidgetGalleryDesktopDrag";
 import { useWidgetGalleryPanelDrag } from "./useWidgetGalleryPanelDrag";
 
 type ConcreteSurface = Exclude<WidgetSurface, "any">;
-type SourceFilter = "all" | Extract<WidgetCatalogProviderKind, "system" | "app">;
 
 const SURFACE_TABS: ReadonlyArray<{ id: ConcreteSurface; label: string }> = [
   { id: "desktop:wallpaper", label: "Desktop" },
   { id: "desktop:menubar", label: "Menubar" },
-];
-
-const SOURCE_FILTERS: ReadonlyArray<{ id: SourceFilter; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "system", label: "System" },
-  { id: "app", label: "Apps" },
 ];
 
 const kernel = useKernel();
@@ -43,7 +35,6 @@ const { enabled: enabledMap, isEnabled, setEnabled } = useWidgetEnabled("desktop
 const open = ref(false);
 const query = ref("");
 const activeSurface = ref<ConcreteSurface>("desktop:wallpaper");
-const sourceFilter = ref<SourceFilter>("all");
 const widgets = shallowRef<readonly WidgetManifest[]>(kernel.widgets.list());
 const apps = shallowRef<readonly AppManifest[]>(kernel.apps.list());
 const panelRef = ref<HTMLElement | null>(null);
@@ -120,7 +111,6 @@ const catalogItems = computed(() => {
 const filteredItems = computed(() =>
   catalogItems.value.filter((item) => {
     if (!widgetMatchesSurface(item.manifest, activeSurface.value)) return false;
-    if (sourceFilter.value !== "all" && item.provider.kind !== sourceFilter.value) return false;
     return matchesWidgetCatalogQuery(item, query.value);
   }),
 );
@@ -176,18 +166,6 @@ function desktopStageRect(): DOMRect | null {
       <Search class="desktop-widget-gallery__search-icon" aria-hidden="true" />
       <input v-model="query" type="search" placeholder="Search widgets" />
     </label>
-
-    <div class="desktop-widget-gallery__segments" aria-label="Widget source">
-      <button
-        v-for="filter in SOURCE_FILTERS"
-        :key="filter.id"
-        type="button"
-        :aria-pressed="sourceFilter === filter.id"
-        @click="sourceFilter = filter.id"
-      >
-        {{ filter.label }}
-      </button>
-    </div>
 
     <div class="desktop-widget-gallery__tabs" role="tablist" aria-label="Widget surface">
       <button
@@ -385,7 +363,6 @@ function desktopStageRect(): DOMRect | null {
   inline-size: 14px;
 }
 
-.desktop-widget-gallery__segments,
 .desktop-widget-gallery__tabs {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -395,15 +372,10 @@ function desktopStageRect(): DOMRect | null {
   padding: 2px;
 }
 
-.desktop-widget-gallery__segments {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .desktop-widget-gallery__tabs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.desktop-widget-gallery__segments button,
 .desktop-widget-gallery__tabs button {
   background: transparent;
   border: 0;
@@ -413,7 +385,6 @@ function desktopStageRect(): DOMRect | null {
   font-size: 12px;
   min-block-size: 28px;
 
-  &[aria-pressed="true"],
   &[aria-selected="true"] {
     background: var(--color-bg-elevated);
     color: var(--color-fg);

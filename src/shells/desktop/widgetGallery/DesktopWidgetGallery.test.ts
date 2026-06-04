@@ -116,7 +116,7 @@ describe("DesktopWidgetGallery", () => {
     localStorage.clear();
   });
 
-  it("opens from the widget gallery event and filters app widgets", async () => {
+  it("opens from the widget gallery event and shows desktop widgets without source filters", async () => {
     registerAppWidget();
     kernel.widgets.register({
       id: "desktop:system-clock",
@@ -131,15 +131,9 @@ describe("DesktopWidgetGallery", () => {
     await nextTick();
 
     expect(wrapper.find(".desktop-widget-gallery").exists()).toBe(true);
+    expect(wrapper.find(".desktop-widget-gallery__segments").exists()).toBe(false);
     expect(wrapper.text()).toContain("System Clock");
     expect(wrapper.text()).toContain("Lunar Date");
-
-    const appFilter = wrapper.findAll(".desktop-widget-gallery__segments button")[2];
-    await appFilter.trigger("click");
-    await nextTick();
-
-    expect(wrapper.text()).toContain("Lunar Date");
-    expect(wrapper.text()).not.toContain("System Clock");
 
     wrapper.unmount();
   });
