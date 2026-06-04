@@ -13,9 +13,7 @@ describe("youtubeOEmbed utils", () => {
     expect(url).not.toBeNull();
     const parsed = new URL(url!);
     expect(parsed.origin + parsed.pathname).toBe("https://www.youtube.com/oembed");
-    expect(parsed.searchParams.get("url")).toBe(
-      "https://www.youtube.com/watch?v=fY6h5FBTZM8",
-    );
+    expect(parsed.searchParams.get("url")).toBe("https://www.youtube.com/watch?v=fY6h5FBTZM8");
     expect(parsed.searchParams.get("format")).toBe("json");
     expect(youtubeOEmbedUrl("not-a-video-id")).toBeNull();
   });

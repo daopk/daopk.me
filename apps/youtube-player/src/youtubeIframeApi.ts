@@ -44,7 +44,7 @@ export interface YouTubePlayer {
 export interface YouTubePlayerOptions {
   readonly height?: string | number;
   readonly width?: string | number;
-  readonly videoId: string;
+  readonly videoId?: string;
   readonly playerVars?: Readonly<Record<string, string | number>>;
   readonly events?: {
     readonly onAutoplayBlocked?: (event: YouTubePlayerEvent) => void;

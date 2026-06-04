@@ -23,7 +23,7 @@ const POLL_INTERVAL_MS = 500;
 
 export interface UseYouTubePlayerOptions {
   readonly videoId: Readonly<Ref<string | null>>;
-  readonly playerHost: Ref<HTMLElement | null>;
+  readonly playerHost: Ref<HTMLIFrameElement | null>;
 }
 
 export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
@@ -137,14 +137,6 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
       }
 
       player = new api.Player(host, {
-        height: "100%",
-        width: "100%",
-        videoId: nextVideoId,
-        playerVars: {
-          controls: 0,
-          origin: typeof window === "undefined" ? "" : window.location.origin,
-          playsinline: 1,
-        },
         events: {
           onAutoplayBlocked,
           onError,

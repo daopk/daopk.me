@@ -1,16 +1,33 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 
-defineProps<{
+const props = defineProps<{
   hasVideo: boolean;
   videoId: string | null;
 }>();
 
 const emit = defineEmits<{
-  "host-change": [host: HTMLElement | null];
+  "host-change": [host: HTMLIFrameElement | null];
 }>();
 
-const host = ref<HTMLElement | null>(null);
+const host = ref<HTMLIFrameElement | null>(null);
+const embedSrc = computed(() => {
+  if (props.videoId === null) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams({
+    controls: "0",
+    enablejsapi: "1",
+    playsinline: "1",
+  });
+
+  if (typeof window !== "undefined") {
+    params.set("origin", window.location.origin);
+  }
+
+  return `https://www.youtube.com/embed/${encodeURIComponent(props.videoId)}?${params.toString()}`;
+});
 
 watch(host, (nextHost) => emit("host-change", nextHost), {
   immediate: true,
@@ -24,29 +41,30 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="hasVideo" class="youtube-player__embed-shell">
-    <div :key="videoId ?? 'empty'" ref="host" class="youtube-player__embed" />
+    <iframe
+      :key="videoId ?? 'empty'"
+      ref="host"
+      class="youtube-player__embed"
+      credentialless="credentialless"
+      :src="embedSrc"
+      allow="autoplay; encrypted-media; picture-in-picture"
+      allowfullscreen
+      referrerpolicy="strict-origin-when-cross-origin"
+      title="YouTube video player"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
-.youtube-player__embed-shell,
-.youtube-player__embed {
+.youtube-player__embed-shell {
   block-size: 100%;
   inline-size: 100%;
   min-block-size: 0;
-}
-
-.youtube-player__embed-shell {
   overflow: hidden;
   position: relative;
 }
 
 .youtube-player__embed {
-  inset: 0;
-  position: absolute;
-}
-
-.youtube-player__embed-shell :deep(iframe) {
   block-size: 200%;
   border: 0;
   display: block;

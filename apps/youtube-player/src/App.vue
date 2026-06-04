@@ -23,7 +23,7 @@ const appContext = inject(AppContextInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
 const playerViewport = ref<HTMLElement | null>(null);
 const playerShell = ref<HTMLElement | null>(null);
-const playerHost = ref<HTMLElement | null>(null);
+const playerHost = ref<HTMLIFrameElement | null>(null);
 const videoAspectRatio = ref<number | null>(null);
 const videoAspectRatioSource = ref<"metadata" | "poster" | null>(null);
 const videoId = ref<string | null>(videoIdFromLaunchArgs(appContext?.args));
@@ -84,36 +84,40 @@ onUnmounted(() => {
   stopOpenRequests?.();
 });
 
-watch(videoId, (nextVideoId) => {
-  videoAspectRatio.value = null;
-  videoAspectRatioSource.value = null;
-  videoAspectRatioRequest?.abort();
-  videoAspectRatioRequest = null;
+watch(
+  videoId,
+  (nextVideoId) => {
+    videoAspectRatio.value = null;
+    videoAspectRatioSource.value = null;
+    videoAspectRatioRequest?.abort();
+    videoAspectRatioRequest = null;
 
-  if (nextVideoId === null) {
-    return;
-  }
+    if (nextVideoId === null) {
+      return;
+    }
 
-  const request = new AbortController();
-  videoAspectRatioRequest = request;
-  void fetchYouTubeVideoAspectRatio(nextVideoId, { signal: request.signal })
-    .then((nextAspectRatio) => {
-      if (request.signal.aborted || nextAspectRatio === null) {
-        return;
-      }
+    const request = new AbortController();
+    videoAspectRatioRequest = request;
+    void fetchYouTubeVideoAspectRatio(nextVideoId, { signal: request.signal })
+      .then((nextAspectRatio) => {
+        if (request.signal.aborted || nextAspectRatio === null) {
+          return;
+        }
 
-      setVideoAspectRatio(nextAspectRatio, "metadata");
-    })
-    .catch(() => {
-      // Poster dimensions are still available as a no-network fallback.
-    });
-}, { immediate: true });
+        setVideoAspectRatio(nextAspectRatio, "metadata");
+      })
+      .catch(() => {
+        // Poster dimensions are still available as a no-network fallback.
+      });
+  },
+  { immediate: true },
+);
 
 watch(videoId, () => {
   chrome.setContentSize(null);
 });
 
-function setPlayerHost(host: HTMLElement | null): void {
+function setPlayerHost(host: HTMLIFrameElement | null): void {
   playerHost.value = host;
 }
 
@@ -131,10 +135,7 @@ function setVideoAspectRatio(
 }
 
 function requestAspectRatioWindowSize(nextAspectRatio: number): void {
-  const fittedBox = fitAspectRatioBox(
-    PREFERRED_PLAYER_CONTENT_SIZE,
-    nextAspectRatio,
-  );
+  const fittedBox = fitAspectRatioBox(PREFERRED_PLAYER_CONTENT_SIZE, nextAspectRatio);
   if (fittedBox === null) {
     return;
   }

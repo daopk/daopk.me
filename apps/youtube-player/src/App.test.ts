@@ -187,6 +187,48 @@ function volumeSlider(wrapper: ReturnType<typeof mountYoutubePlayer>) {
   return wrapper.findComponent(".youtube-player__volume");
 }
 
+function expectPlayerIframe(
+  wrapper: ReturnType<typeof mountYoutubePlayer>,
+  player: InstanceType<typeof youtubeApi.MockPlayer>,
+  videoId: string,
+): URL {
+  const frame = wrapper.get("iframe");
+
+  expect(player.element).toBe(frame.element);
+  expect(frame.attributes("credentialless")).toBe("credentialless");
+  expect(frame.attributes("allow")?.replace(/\s+/g, " ").replace(/;\s*$/, "").trim()).toBe(
+    "autoplay; encrypted-media; picture-in-picture",
+  );
+  expect(frame.attributes("allowfullscreen")).toBe("");
+  expect(frame.attributes("referrerpolicy")).toBe("strict-origin-when-cross-origin");
+  expect(frame.attributes("title")).toBe("YouTube video player");
+
+  const src = frame.attributes("src");
+  expect(src).toBeDefined();
+
+  const url = new URL(src!);
+  expect(url.origin).toBe("https://www.youtube.com");
+  expect(url.pathname).toBe(`/embed/${videoId}`);
+  expect(url.searchParams.get("controls")).toBe("0");
+  expect(url.searchParams.get("enablejsapi")).toBe("1");
+  expect(url.searchParams.get("origin")).toBe(window.location.origin);
+  expect(url.searchParams.get("playsinline")).toBe("1");
+
+  return url;
+}
+
+function expectPlayerVideoId(
+  player: InstanceType<typeof youtubeApi.MockPlayer> | undefined,
+  videoId: string,
+): void {
+  if (player === undefined) {
+    throw new Error("Expected a YouTube player to be constructed.");
+  }
+
+  expect(player.element).toBeInstanceOf(HTMLIFrameElement);
+  expect(new URL((player.element as HTMLIFrameElement).src).pathname).toBe(`/embed/${videoId}`);
+}
+
 function mockOEmbedResponse(payload: Record<string, unknown>): void {
   vi.mocked(fetch).mockResolvedValueOnce({
     ok: true,
@@ -248,19 +290,16 @@ describe("YouTube Player App", () => {
     wrapper.unmount();
   });
 
-  it("constructs YT.Player from launch args.videoId", async () => {
+  it("constructs YT.Player from a credentialless iframe for launch args.videoId", async () => {
     const wrapper = mountYoutubePlayer(makeContext({ videoId: "IQsLEaj89bg" }));
     const player = await waitForPlayer();
 
     expect(youtubeApi.loadYouTubeIframeApi).toHaveBeenCalledTimes(1);
-    expect(player.options.videoId).toBe("IQsLEaj89bg");
-    expect(player.options.height).toBe("100%");
-    expect(player.options.width).toBe("100%");
-    expect(player.options.playerVars).toEqual({
-      controls: 0,
-      origin: window.location.origin,
-      playsinline: 1,
-    });
+    expect(player.options.videoId).toBeUndefined();
+    expect(player.options.height).toBeUndefined();
+    expect(player.options.width).toBeUndefined();
+    expect(player.options.playerVars).toBeUndefined();
+    expectPlayerIframe(wrapper, player, "IQsLEaj89bg");
 
     wrapper.unmount();
   });
@@ -296,7 +335,7 @@ describe("YouTube Player App", () => {
     const wrapper = mountYoutubePlayer(makeContext({ url }));
     const player = await waitForPlayer();
 
-    expect(player.options.videoId).toBe("IQsLEaj89bg");
+    expectPlayerIframe(wrapper, player, "IQsLEaj89bg");
 
     wrapper.unmount();
   });
@@ -310,7 +349,7 @@ describe("YouTube Player App", () => {
     );
     const player = await waitForPlayer();
 
-    expect(player.options.videoId).toBe("abcdefghijk");
+    expectPlayerIframe(wrapper, player, "abcdefghijk");
 
     wrapper.unmount();
   });
@@ -339,7 +378,7 @@ describe("YouTube Player App", () => {
     });
 
     expect(player.destroy).toHaveBeenCalledTimes(1);
-    expect(youtubeApi.createdPlayers[1]?.options.videoId).toBe("dQw4w9WgXcQ");
+    expectPlayerVideoId(youtubeApi.createdPlayers[1], "dQw4w9WgXcQ");
 
     wrapper.unmount();
   });
@@ -376,7 +415,7 @@ describe("YouTube Player App", () => {
     });
 
     expect(player.destroy).toHaveBeenCalledTimes(1);
-    expect(youtubeApi.createdPlayers[1]?.options.videoId).toBe("u8vJjTH9Igg");
+    expectPlayerVideoId(youtubeApi.createdPlayers[1], "u8vJjTH9Igg");
 
     wrapper.unmount();
   });
