@@ -137,6 +137,18 @@ export type {
   AppPermission,
 } from "~/types/app";
 export type { Kernel } from "~/types/kernel";
+export type {
+  AppPreviewComponentProps,
+  AppPreviewInput,
+  AppPreviewListFilter,
+  AppPreviewMatch,
+  AppPreviewProvider,
+  AppPreviewResolution,
+  AppPreviewSurface,
+  AppPreviewUrlInput,
+  AppPreviewVfsFileInput,
+  KernelPreviewsFacade,
+} from "~/types/preview";
 export type { VfsDirEntry, VfsInode, VfsNodeKind, VfsReadResult, VfsStat } from "~/core/vfs/nodes";
 export type { VfsPath } from "~/core/vfs/path";
 export type { VfsFileTypeInput, VfsRenderableFileType } from "~/core/vfs/fileTypes";

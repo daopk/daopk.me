@@ -9,6 +9,7 @@ import {
   type AppChromeBackAction,
   type AppChromeController,
   type AppContext,
+  type AppPreviewProvider,
   type Kernel,
 } from "@daopk/sdk";
 
@@ -163,6 +164,13 @@ function makeKernel() {
       }),
       once: vi.fn(() => vi.fn()),
       off: vi.fn(),
+    },
+    previews: {
+      register: vi.fn(),
+      unregister: vi.fn(),
+      list: vi.fn(() => []),
+      get: vi.fn(),
+      resolve: vi.fn(() => null),
     },
   } as unknown as Kernel;
 }
@@ -433,6 +441,47 @@ Event body`,
       source: "deeplink",
       args: { url: youtubeUrl },
     });
+  });
+
+  it("renders explicit preview directives through app preview providers", async () => {
+    const youtubeUrl = "https://www.youtube.com/watch?v=M7lc1UVf-VE";
+    stubBlogFetch({
+      posts: {
+        "field-notes": `Before\n\n::preview{url="${youtubeUrl}"}\n\nAfter`,
+      },
+    });
+    const kernel = makeKernel();
+    const PreviewProbe = defineComponent({
+      props: ["args", "input", "surface"],
+      template: '<div class="preview-probe">{{ surface }}:{{ args.url }}:{{ input.kind }}</div>',
+    });
+    const provider: AppPreviewProvider = {
+      id: "youtube-player:video-preview",
+      manifestId: "youtube-player",
+      surfaces: ["blog.embed"],
+      component: () => Promise.resolve({ default: PreviewProbe }),
+      match: () => ({ args: { url: youtubeUrl } }),
+    };
+    (kernel.previews.resolve as ReturnType<typeof vi.fn>).mockReturnValue({
+      provider,
+      args: { url: youtubeUrl },
+    });
+    const wrapper = mount(wrap(kernel));
+
+    await waitForContent(wrapper, 5000);
+    await vi.waitFor(() => {
+      if (!wrapper.find(".preview-probe").exists()) {
+        throw new Error("preview not yet rendered");
+      }
+    });
+
+    expect(wrapper.find(".blog__content").text()).toContain("Before");
+    expect(wrapper.find(".blog__content").text()).toContain("After");
+    expect(wrapper.find(".preview-probe").text()).toBe(`blog.embed:${youtubeUrl}:url`);
+    expect(kernel.previews.resolve).toHaveBeenCalledWith(
+      { kind: "url", url: youtubeUrl },
+      { surface: "blog.embed" },
+    );
   });
 
   it("does not hijack modified clicks on regular YouTube video links", async () => {

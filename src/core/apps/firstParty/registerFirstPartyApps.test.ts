@@ -33,6 +33,15 @@ vi.mock("./registry", async () => {
             exportName: "RecentNotesWidget",
           },
         ],
+        previews: [
+          {
+            id: "notes:preview",
+            title: "Note Preview",
+            surfaces: ["finder.panel"],
+            exportName: "NotePreview",
+            match: () => ({ args: { path: "/home/notes/a.md" } }),
+          },
+        ],
       },
     ],
   };
@@ -51,6 +60,10 @@ vi.mock("./devEntries", async () => {
           RecentNotesWidget: dc({
             name: "RecentNotesWidget",
             template: '<div class="widget-stub">widget content</div>',
+          }),
+          NotePreview: dc({
+            name: "NotePreview",
+            template: '<div class="preview-stub">preview content</div>',
           }),
         }),
     },
@@ -123,6 +136,17 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(await renderViaAsyncComponent(widget!.component)).toContain("widget-stub");
   });
 
+  it("builds a preview loader from the named export without changing the catalog shape", async () => {
+    const preview = registered.find((entry) => entry.id === "notes")?.previews?.[0];
+    expect(preview).toBeDefined();
+    expect(preview?.manifestId).toBe("notes");
+
+    const resolved = await preview!.component();
+    expect((resolved as { __esModule?: boolean }).__esModule).toBe(true);
+
+    expect(await renderViaAsyncComponent(preview!.component)).toContain("preview-stub");
+  });
+
   it("reuses the manifest builder with ESM-wrapped app and widget loaders", async () => {
     const descriptor: FirstPartyAppDescriptor = {
       id: "probe",
@@ -140,6 +164,15 @@ describe("registerFirstPartyApps (dev lane)", () => {
           exportName: "ProbeWidget",
         },
       ],
+      previews: [
+        {
+          id: "probe:preview",
+          title: "Probe Preview",
+          surfaces: ["blog.embed"],
+          exportName: "ProbePreview",
+          match: () => ({ args: { url: "https://example.com" } }),
+        },
+      ],
     };
     const manifest = firstPartyDescriptorToAppManifest(
       descriptor,
@@ -151,6 +184,10 @@ describe("registerFirstPartyApps (dev lane)", () => {
         ProbeWidget: defineComponent({
           name: "ProbeWidget",
           template: '<div class="probe-widget">probe widget</div>',
+        }),
+        ProbePreview: defineComponent({
+          name: "ProbePreview",
+          template: '<div class="probe-preview">probe preview</div>',
         }),
       }),
       "1.2.3",
@@ -169,6 +206,12 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(widget).toBeDefined();
     expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(widget!.component)).toContain("probe-widget");
+
+    const preview = manifest.previews?.[0];
+    expect(preview).toBeDefined();
+    expect(preview?.manifestId).toBe("probe");
+    expect(((await preview!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(preview!.component)).toContain("probe-preview");
   });
 
   it("carries catalog build metadata into the runtime manifest", () => {

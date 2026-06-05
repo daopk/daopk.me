@@ -16,4 +16,7 @@ export { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
 export { renderMarkdownToHtml } from "~/core/markdown/MarkdownPipeline";
 
 export type { MarkdownRenderer } from "~/core/markdown/MarkdownRenderer";
-export type { MarkdownRenderResult } from "~/core/markdown/MarkdownPipeline";
+export type {
+  MarkdownPreviewRequest,
+  MarkdownRenderResult,
+} from "~/core/markdown/MarkdownPipeline";

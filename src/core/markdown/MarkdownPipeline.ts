@@ -1,5 +1,6 @@
 import rehypeSanitize, { type Options as SanitizeSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import remarkDirective from "remark-directive";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
@@ -7,6 +8,12 @@ import { unified, type PluggableList } from "unified";
 
 export interface MarkdownRenderResult {
   html: string;
+  previews?: readonly MarkdownPreviewRequest[];
+}
+
+export interface MarkdownPreviewRequest {
+  readonly id: string;
+  readonly url: string;
 }
 
 type MarkdownUrlTarget = "link" | "image";
@@ -18,6 +25,15 @@ interface HastNode {
   children?: HastNode[];
 }
 
+interface MdastNode {
+  type?: string;
+  name?: string;
+  attributes?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+  children?: MdastNode[];
+  value?: string;
+}
+
 interface MarkdownProcessorOptions {
   /**
    * Plugins inserted after URL policy + sanitize, before stringify.
@@ -26,6 +42,7 @@ interface MarkdownProcessorOptions {
    */
   afterSanitize?: PluggableList;
   normalizeCodeLanguage?: boolean;
+  previews?: MarkdownPreviewRequest[];
 }
 
 const SCHEME_PATTERN = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
@@ -71,6 +88,10 @@ export const markdownSanitizeSchema: SanitizeSchema = {
     "*": [],
     a: ["href", "title"],
     code: [["className", /^language-[A-Za-z0-9_+-]+$/]],
+    div: [
+      ["className", "markdown-preview-slot"],
+      ["dataPreviewId", /^preview-[0-9]+$/],
+    ],
     img: ["src", "alt", "title"],
     input: [
       ["type", "checkbox"],
@@ -102,6 +123,7 @@ export const markdownSanitizeSchema: SanitizeSchema = {
     "br",
     "code",
     "del",
+    "div",
     "em",
     "h1",
     "h2",
@@ -200,21 +222,55 @@ export function rehypeNormalizeCodeLang() {
   };
 }
 
+export function remarkPreviewDirectives(previews: MarkdownPreviewRequest[]) {
+  return (tree: unknown): void => {
+    visitMdast(tree as MdastNode, (node) => {
+      if (node.type !== "leafDirective" || node.name !== "preview") {
+        return;
+      }
+
+      const rawUrl = node.attributes?.url;
+      const url = typeof rawUrl === "string" ? sanitizeMarkdownUrl(rawUrl) : "#";
+      if (url === "#") {
+        node.type = "text";
+        node.value = "";
+        node.children = undefined;
+        return;
+      }
+
+      const id = `preview-${previews.length + 1}`;
+      previews.push({ id, url });
+      node.children = [];
+      node.data = {
+        ...node.data,
+        hName: "div",
+        hProperties: {
+          className: ["markdown-preview-slot"],
+          dataPreviewId: id,
+        },
+      };
+    });
+  };
+}
+
 export async function renderMarkdownToHtml(source: string): Promise<MarkdownRenderResult> {
+  const previews: MarkdownPreviewRequest[] = [];
   if (hasFencedCode(source)) {
     const { renderMarkdownWithShiki } = await import("~/core/markdown/ShikiHighlighter");
 
-    return renderMarkdownWithShiki(source);
+    return renderResultWithPreviews(await renderMarkdownWithShiki(source, { previews }), previews);
   }
 
-  const file = await createMarkdownProcessor().process(source);
+  const file = await createMarkdownProcessor({ previews }).process(source);
 
-  return { html: String(file) };
+  return renderResultWithPreviews({ html: String(file) }, previews);
 }
 
 export function createMarkdownProcessor(options: MarkdownProcessorOptions = {}) {
   const processor = unified()
     .use(remarkParse)
+    .use(remarkDirective)
+    .use(remarkPreviewDirectives, options.previews ?? [])
     .use(remarkGfm)
     .use(remarkRehype, { allowDangerousHtml: false })
     .use(rehypeSafeUrls)
@@ -229,6 +285,13 @@ export function createMarkdownProcessor(options: MarkdownProcessorOptions = {}) 
   }
 
   return processor.use(rehypeStringify);
+}
+
+function renderResultWithPreviews(
+  result: MarkdownRenderResult,
+  previews: readonly MarkdownPreviewRequest[],
+): MarkdownRenderResult {
+  return previews.length === 0 ? result : { ...result, previews: Object.freeze([...previews]) };
 }
 
 function setSafeUrl(node: HastNode, property: "href" | "src", target: MarkdownUrlTarget): void {
@@ -279,5 +342,13 @@ function visitElements(node: HastNode, visitor: (node: HastNode) => void): void 
 
   for (const child of node.children ?? []) {
     visitElements(child, visitor);
+  }
+}
+
+function visitMdast(node: MdastNode, visitor: (node: MdastNode) => void): void {
+  visitor(node);
+
+  for (const child of node.children ?? []) {
+    visitMdast(child, visitor);
   }
 }

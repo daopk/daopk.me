@@ -1,4 +1,5 @@
 import type { AppManifest } from "~/types/app";
+import type { AppPreviewProvider, KernelPreviewsFacade } from "~/types/preview";
 import type { KernelWallpapersFacade } from "~/types/wallpaper";
 import type { KernelWidgetsFacade, WidgetManifest } from "~/types/widget";
 import type { Wallpaper } from "~/core/theme/wallpapers";
@@ -56,6 +57,65 @@ export function registerAppWidgets({
       defaultVisible: widget.defaultVisible ?? false,
     };
     nextDisposers.push(widgets.register(appWidget));
+  }
+
+  if (nextDisposers.length > 0) {
+    disposers.set(manifest.id, nextDisposers);
+  }
+}
+
+export function disposeAppPreviews(
+  disposers: Map<string, Array<() => void>>,
+  manifestId: string,
+  onError?: (error: unknown) => void,
+): void {
+  const disposersForApp = disposers.get(manifestId);
+  if (!disposersForApp) {
+    return;
+  }
+  disposers.delete(manifestId);
+  for (const dispose of disposersForApp) {
+    try {
+      dispose();
+    } catch (error) {
+      onError?.(error);
+    }
+  }
+}
+
+export function registerAppPreviews({
+  disposers,
+  manifest,
+  onDisposeError,
+  onInvalidNamespace,
+  previews,
+}: {
+  readonly disposers: Map<string, Array<() => void>>;
+  readonly onDisposeError?: (error: unknown) => void;
+  readonly onInvalidNamespace?: (previewId: string) => void;
+  readonly manifest: AppManifest;
+  readonly previews: KernelPreviewsFacade;
+}): void {
+  disposeAppPreviews(disposers, manifest.id, onDisposeError);
+
+  const appPreviews = manifest.previews ?? [];
+  if (appPreviews.length === 0) {
+    return;
+  }
+
+  const namespace = `${manifest.id}:`;
+  const nextDisposers: Array<() => void> = [];
+  for (const preview of appPreviews) {
+    if (!preview.id.startsWith(namespace)) {
+      onInvalidNamespace?.(preview.id);
+      continue;
+    }
+
+    const appPreview: AppPreviewProvider = {
+      ...preview,
+      manifestId: manifest.id,
+    };
+    nextDisposers.push(previews.register(appPreview));
   }
 
   if (nextDisposers.length > 0) {

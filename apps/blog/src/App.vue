@@ -69,7 +69,7 @@ const blogApp = useBlogAppController({
       <BlogPostReader
         v-else
         :cover="blogApp.currentPostCover.value"
-        :html="blogPost.html.value"
+        :content-blocks="blogPost.contentBlocks.value"
         :load-failed="blogPost.loadFailed.value"
         :not-found="blogPost.notFound.value"
         :not-found-description="blogApp.notFoundDescription.value"

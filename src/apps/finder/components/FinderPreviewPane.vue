@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import type { VfsDirEntry } from "@daopk/sdk";
+import { computed } from "vue";
+
+import { PreviewHost } from "@daopk/kit";
+import type { AppPreviewInput, VfsDirEntry } from "@daopk/sdk";
 
 import { FinderFileIcon } from "~/icons/fluentColor";
 
 import type { FinderPreviewKind } from "../composables/useFinderPreview";
 import { entryIcon, entryKindLabel, formatBytes, formatModified } from "../utils/display";
 
-defineProps<{
+const props = defineProps<{
   readonly html: string;
   readonly imageUrl: string;
   readonly kind: FinderPreviewKind;
@@ -17,6 +20,10 @@ defineProps<{
   readonly text: string;
   readonly title: string;
 }>();
+
+const selectedFilePreviewInput = computed<AppPreviewInput | null>(() =>
+  props.selectedEntry?.kind === "file" ? { kind: "vfs-file", entry: props.selectedEntry } : null,
+);
 </script>
 
 <template>
@@ -64,6 +71,13 @@ defineProps<{
         class="finder__preview-image"
         :src="imageUrl"
         :alt="title"
+      />
+      <PreviewHost
+        v-else-if="kind === 'pdf' && selectedFilePreviewInput !== null"
+        :input="selectedFilePreviewInput"
+        surface="finder.panel"
+        fallback-title="Preview unavailable"
+        fallback-description="No app can preview this PDF yet."
       />
       <div v-else class="finder__preview-message">{{ message }}</div>
     </div>

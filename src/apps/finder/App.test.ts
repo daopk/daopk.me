@@ -1,11 +1,12 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick } from "vue";
 
 import { basename, dirname, normalizeVfsPath } from "~/core/vfs/path";
 import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
+import type { AppPreviewInput, AppPreviewProvider, AppPreviewSurface } from "~/types/preview";
 
 import App from "./App.vue";
 
@@ -71,6 +72,20 @@ function makeKernel(
       listener(payload);
     }
   }
+
+  const pdfPreviewProvider: AppPreviewProvider = {
+    id: "pdf-viewer:file-preview",
+    manifestId: "pdf-viewer",
+    surfaces: ["finder.panel"],
+    component: () =>
+      Promise.resolve({
+        default: defineComponent({
+          name: "PdfPreviewStub",
+          template: '<div class="pdf-preview-stub">PDF preview</div>',
+        }),
+      }),
+    match: () => ({ args: {} }),
+  };
 
   function upsertListingItem(parent: string, item: VfsDirEntry): void {
     const listing = mutableListings.get(parent) ?? [];
@@ -201,6 +216,20 @@ function makeKernel(
       restore: vi.fn(async () => true),
       remove: vi.fn(async () => true),
       empty: vi.fn(async () => true),
+    },
+    previews: {
+      register: vi.fn(),
+      unregister: vi.fn(),
+      list: vi.fn(() => [pdfPreviewProvider]),
+      get: vi.fn((id: string) => (id === pdfPreviewProvider.id ? pdfPreviewProvider : undefined)),
+      resolve: vi.fn((input: AppPreviewInput, filter: { readonly surface: AppPreviewSurface }) =>
+        filter.surface === "finder.panel" &&
+        input.kind === "vfs-file" &&
+        input.entry.kind === "file" &&
+        input.entry.mimeType === "application/pdf"
+          ? { provider: pdfPreviewProvider, args: { path: input.entry.path } }
+          : null,
+      ),
     },
   } as unknown as Kernel;
 }
@@ -529,7 +558,10 @@ describe("Finder App.vue", () => {
       source: "api",
       path: "/manual.pdf",
     });
-    expect(wrapper.text()).toContain("Open this document in PDF Viewer.");
+    await vi.waitFor(() => {
+      expect(wrapper.find(".pdf-preview-stub").exists()).toBe(true);
+    });
+    expect(wrapper.text()).toContain("PDF preview");
 
     wrapper.unmount();
   });

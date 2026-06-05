@@ -6,3 +6,4 @@
  * pdfjs-dist + its worker are bundled into this app's own chunks.
  */
 export { default } from "./App.vue";
+export { default as PdfFilePreview } from "./components/PdfFilePreview.vue";

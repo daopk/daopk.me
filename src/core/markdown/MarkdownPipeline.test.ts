@@ -85,6 +85,29 @@ describe("MarkdownPipeline", () => {
     expect(html).toContain('href="youtube-player://video/M7lc1UVf-VE"');
   });
 
+  it("turns explicit preview directives into sanitized placeholders and preview requests", async () => {
+    const result = await renderMarkdownToHtml(
+      'Before\n\n::preview{url="https://www.youtube.com/watch?v=M7lc1UVf-VE"}\n\nAfter',
+    );
+
+    expect(result.previews).toEqual([
+      {
+        id: "preview-1",
+        url: "https://www.youtube.com/watch?v=M7lc1UVf-VE",
+      },
+    ]);
+    expect(result.html).toContain('<div class="markdown-preview-slot" data-preview-id="preview-1"');
+    expect(result.html).toContain("<p>Before</p>");
+    expect(result.html).toContain("<p>After</p>");
+  });
+
+  it("drops preview directives with unsafe URLs", async () => {
+    const result = await renderMarkdownToHtml('::preview{url="javascript:alert(1)"}');
+
+    expect(result.previews).toBeUndefined();
+    expect(result.html).not.toMatch(/javascript:|data-preview-id/i);
+  });
+
   it("preserves allowed uppercase URL schemes after sanitizer runs", async () => {
     const { html } = await renderMarkdownToHtml(
       "[site](HTTPS://example.com)\n\n[email](MAILTO:a@b.c)\n\n![logo](HTTPS://example.com/logo.png)",

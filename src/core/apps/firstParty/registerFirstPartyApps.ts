@@ -2,6 +2,7 @@ import { debugWarn } from "~/core/debug";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
+import type { AppPreviewProvider } from "~/types/preview";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
 
@@ -10,6 +11,7 @@ import { FIRST_PARTY_APPS } from "./registry";
 import type {
   FirstPartyAppDescriptor,
   FirstPartyCatalogEntry,
+  FirstPartyPreviewDescriptor,
   FirstPartyWidgetDescriptor,
 } from "./types";
 
@@ -41,6 +43,20 @@ function toWidgetManifest(
   const { exportName, ...rest } = descriptor;
   return {
     ...rest,
+    component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
+  };
+}
+
+/** Build a preview provider's runtime component loader from a named app export. */
+function toPreviewProvider(
+  manifestId: string,
+  descriptor: FirstPartyPreviewDescriptor,
+  load: FirstPartyModuleLoader,
+): AppPreviewProvider {
+  const { exportName, ...rest } = descriptor;
+  return {
+    ...rest,
+    manifestId,
     component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
   };
 }
@@ -77,6 +93,11 @@ export function firstPartyDescriptorToAppManifest(
   if (descriptor.settings !== undefined) manifest.settings = descriptor.settings;
   if (descriptor.widgets !== undefined) {
     manifest.widgets = descriptor.widgets.map((widget) => toWidgetManifest(widget, load));
+  }
+  if (descriptor.previews !== undefined) {
+    manifest.previews = descriptor.previews.map((preview) =>
+      toPreviewProvider(descriptor.id, preview, load),
+    );
   }
 
   return manifest;

@@ -1,7 +1,11 @@
 import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } from "vue";
 
 import { debugWarn } from "@daopk/sdk";
-import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
+import {
+  createMarkdownRenderer,
+  type MarkdownPreviewRequest,
+  type MarkdownRenderer,
+} from "@daopk/markdown";
 import {
   formatBlogDate,
   isBlogPostSlug,
@@ -34,7 +38,12 @@ export interface ParsedBlogPost {
   readonly metadata: BlogPostMetadata;
 }
 
+export type BlogPostContentBlock =
+  | { readonly kind: "html"; readonly html: string }
+  | { readonly kind: "preview"; readonly request: MarkdownPreviewRequest };
+
 export interface BlogPostBindings {
+  readonly contentBlocks: Ref<readonly BlogPostContentBlock[]>;
   readonly dispose: () => void;
   readonly html: Ref<string>;
   readonly loadFailed: ComputedRef<boolean>;
@@ -48,6 +57,7 @@ export interface BlogPostBindings {
 }
 
 const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+const PREVIEW_SLOT_PATTERN = /<div\s+[^>]*data-preview-id="([^"]+)"[^>]*>\s*<\/div>/gi;
 const EMPTY_METADATA: BlogPostMetadata = Object.freeze({
   date: null,
   description: null,
@@ -152,12 +162,52 @@ function decoratePostHtml(html: string, metadata: BlogPostMetadata): string {
   return `${html.slice(0, insertIndex)}${dateHtml}${html.slice(insertIndex)}`;
 }
 
+export function splitPostContentBlocks(
+  html: string,
+  previews: readonly MarkdownPreviewRequest[] = [],
+): readonly BlogPostContentBlock[] {
+  if (html.length === 0) {
+    return [];
+  }
+
+  const previewsById = new Map(previews.map((preview) => [preview.id, preview]));
+  const blocks: BlogPostContentBlock[] = [];
+  let cursor = 0;
+
+  for (const match of html.matchAll(PREVIEW_SLOT_PATTERN)) {
+    const fullMatch = match[0];
+    const id = match[1];
+    const index = match.index ?? 0;
+    const request = id === undefined ? undefined : previewsById.get(id);
+
+    if (request === undefined) {
+      continue;
+    }
+
+    const leadingHtml = html.slice(cursor, index);
+    if (leadingHtml.length > 0) {
+      blocks.push({ kind: "html", html: leadingHtml });
+    }
+
+    blocks.push({ kind: "preview", request });
+    cursor = index + fullMatch.length;
+  }
+
+  const trailingHtml = html.slice(cursor);
+  if (trailingHtml.length > 0) {
+    blocks.push({ kind: "html", html: trailingHtml });
+  }
+
+  return blocks.length === 0 ? [{ kind: "html", html }] : blocks;
+}
+
 export function useBlogPost({
   args,
   createRenderer = createMarkdownRenderer,
   source: contentSource,
 }: BlogPostOptions): BlogPostBindings {
   const html = ref("");
+  const contentBlocks = ref<readonly BlogPostContentBlock[]>([]);
   const metadata = ref<BlogPostMetadata>(EMPTY_METADATA);
   const status = ref<BlogPostStatus>("idle");
   const source = ref("");
@@ -201,12 +251,14 @@ export function useBlogPost({
     source.value = markdown;
     metadata.value = parsed.metadata;
     html.value = decoratePostHtml(result.html, parsed.metadata);
+    contentBlocks.value = splitPostContentBlocks(html.value, result.previews);
     status.value = "ready";
   }
 
   async function refresh(): Promise<void> {
     const run = ++refreshRun;
     html.value = "";
+    contentBlocks.value = [];
     metadata.value = EMPTY_METADATA;
     source.value = "";
 
@@ -288,6 +340,7 @@ export function useBlogPost({
   });
 
   return {
+    contentBlocks,
     dispose,
     html,
     loadFailed,

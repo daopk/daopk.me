@@ -6,7 +6,12 @@ import { debugWarn } from "@daopk/sdk";
 import { renderMarkdownToHtml, type MarkdownRenderer } from "@daopk/markdown";
 import { BlogNetworkError, type BlogContentSource } from "@daopk/content";
 
-import { parseBlogPostSource, useBlogPost, type BlogPostOptions } from "./useBlogPost";
+import {
+  parseBlogPostSource,
+  splitPostContentBlocks,
+  useBlogPost,
+  type BlogPostOptions,
+} from "./useBlogPost";
 
 vi.mock("@daopk/sdk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@daopk/sdk")>()),
@@ -95,6 +100,23 @@ describe("useBlogPost", () => {
     expect(source.fetchPost).toHaveBeenCalledWith("field-notes");
     expect(state.html.value).toContain("<h1");
     expect(state.html.value).toContain("Field Notes");
+    expect(state.contentBlocks.value).toEqual([{ kind: "html", html: state.html.value }]);
+  });
+
+  it("splits markdown preview placeholders into preview content blocks", () => {
+    const blocks = splitPostContentBlocks(
+      '<p>Before</p><div class="markdown-preview-slot" data-preview-id="preview-1"></div><p>After</p>',
+      [{ id: "preview-1", url: "https://www.youtube.com/watch?v=M7lc1UVf-VE" }],
+    );
+
+    expect(blocks).toEqual([
+      { kind: "html", html: "<p>Before</p>" },
+      {
+        kind: "preview",
+        request: { id: "preview-1", url: "https://www.youtube.com/watch?v=M7lc1UVf-VE" },
+      },
+      { kind: "html", html: "<p>After</p>" },
+    ]);
   });
 
   it("renders frontmatter title and date without exposing frontmatter", async () => {

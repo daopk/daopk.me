@@ -4,3 +4,4 @@
  * versioned URL (see the host's first-party app loader).
  */
 export { default } from "./App.vue";
+export { default as YouTubeVideoPreview } from "./components/YouTubeVideoPreview.vue";

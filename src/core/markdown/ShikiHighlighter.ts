@@ -6,6 +6,7 @@ import type { PluggableList } from "unified";
 import {
   createMarkdownProcessor,
   readFencedCodeLanguages,
+  type MarkdownPreviewRequest,
   type MarkdownRenderResult,
 } from "~/core/markdown/MarkdownPipeline";
 
@@ -28,7 +29,10 @@ type CodeLanguage = keyof typeof LANGUAGE_LOADERS;
 let highlighterPromise: ReturnType<typeof createHighlighterCore> | undefined;
 const languageLoadPromises = new Map<string, Promise<void>>();
 
-export async function renderMarkdownWithShiki(source: string): Promise<MarkdownRenderResult> {
+export async function renderMarkdownWithShiki(
+  source: string,
+  options: { readonly previews?: MarkdownPreviewRequest[] } = {},
+): Promise<MarkdownRenderResult> {
   const highlighter = await getHighlighter();
 
   await loadLanguagesForSource(highlighter, source);
@@ -51,6 +55,7 @@ export async function renderMarkdownWithShiki(source: string): Promise<MarkdownR
   const file = await createMarkdownProcessor({
     afterSanitize: highlightPlugins,
     normalizeCodeLanguage: true,
+    previews: options.previews,
   }).process(source);
 
   return { html: String(file) };

@@ -4,6 +4,7 @@ import type {
   AppSettingsManifest,
   WindowDefaults,
 } from "~/types/app";
+import type { AppPreviewProvider } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
@@ -19,6 +20,20 @@ import type { Component } from "vue";
  */
 export interface FirstPartyWidgetDescriptor extends Omit<WidgetManifest, "component"> {
   /** Named export in the app entry module that is this widget's component. */
+  readonly exportName: string;
+}
+
+/**
+ * A preview provider a first-party app contributes. Identical to
+ * {@link AppPreviewProvider} except the component is referenced by `exportName`,
+ * mirroring widgets: the code lives in the independently-published app module,
+ * while the trusted host owns matching policy and identity.
+ */
+export interface FirstPartyPreviewDescriptor extends Omit<
+  AppPreviewProvider,
+  "component" | "manifestId"
+> {
+  /** Named export in the app entry module that is this preview component. */
   readonly exportName: string;
 }
 
@@ -54,6 +69,7 @@ export interface FirstPartyAppDescriptor {
    * registration time and carries them through to the built `AppManifest`.
    */
   readonly widgets?: readonly FirstPartyWidgetDescriptor[];
+  readonly previews?: readonly FirstPartyPreviewDescriptor[];
 }
 
 /** One published app in the catalog: which immutable URL serves which release. */

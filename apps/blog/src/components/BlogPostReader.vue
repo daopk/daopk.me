@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { EmptyState, StatusBanner } from "@daopk/kit";
+import { PreviewHost } from "@daopk/kit";
+import type { AppPreviewInput } from "@daopk/sdk";
 
 import type { BlogIndexPost } from "../composables/useBlogIndex";
-import type { BlogPostStatus } from "../composables/useBlogPost";
+import type { BlogPostContentBlock, BlogPostStatus } from "../composables/useBlogPost";
 
 type BlogPostCover = NonNullable<BlogIndexPost["thumbnail"]>;
 
 defineProps<{
   readonly cover: BlogPostCover | null;
-  readonly html: string;
+  readonly contentBlocks: readonly BlogPostContentBlock[];
   readonly loadFailed: boolean;
   readonly notFound: boolean;
   readonly notFoundDescription: string;
@@ -18,6 +20,10 @@ defineProps<{
 defineEmits<{
   "content-click": [event: MouseEvent];
 }>();
+
+function previewInput(url: string): AppPreviewInput {
+  return { kind: "url", url };
+}
 </script>
 
 <template>
@@ -33,11 +39,21 @@ defineEmits<{
       />
     </div>
     <div
-      v-if="html"
+      v-if="contentBlocks.length > 0"
       class="blog__content"
       @click.capture="$emit('content-click', $event)"
-      v-html="html"
-    />
+    >
+      <template v-for="(block, index) in contentBlocks" :key="index">
+        <div v-if="block.kind === 'html'" class="blog__content-html" v-html="block.html" />
+        <PreviewHost
+          v-else
+          :input="previewInput(block.request.url)"
+          surface="blog.embed"
+          fallback-title="Preview unavailable"
+          fallback-description="No app can preview this link yet."
+        />
+      </template>
+    </div>
     <StatusBanner v-else-if="status === 'loading'" class="blog__status" aria-live="polite">
       Loading post...
     </StatusBanner>

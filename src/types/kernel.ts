@@ -10,6 +10,7 @@ import type {
   PermissionRequestSource,
   PermissionResponseInput,
 } from "~/types/permissions";
+import type { KernelPreviewsFacade } from "~/types/preview";
 import type { ActiveProfileSession, ProfileSessionSnapshot } from "~/types/profile";
 import type { KernelSearchFacade } from "~/types/search";
 import type { SettingsSectionId, SettingsState } from "~/types/settings";
@@ -142,6 +143,8 @@ declare global {
     };
     "widget.registered": { id: string };
     "widget.unregistered": { id: string };
+    "preview.registered": { id: string };
+    "preview.unregistered": { id: string };
     "widget.gallery.open.requested": {
       source: CommandSource;
     };
@@ -385,6 +388,7 @@ export interface Kernel {
   readonly permissions: KernelPermissionsFacade;
   readonly search: KernelSearchFacade;
   readonly widgets: KernelWidgetsFacade;
+  readonly previews: KernelPreviewsFacade;
   readonly wallpapers: KernelWallpapersFacade;
 }
 

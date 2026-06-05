@@ -1,5 +1,6 @@
 import type { Component } from "vue";
 
+import type { AppPreviewProvider } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 
@@ -75,6 +76,7 @@ export interface AppManifest {
   autorun?: boolean;
   keywords?: string[];
   settings?: AppSettingsManifest;
+  previews?: readonly AppPreviewProvider[];
 }
 
 export interface AppContext {

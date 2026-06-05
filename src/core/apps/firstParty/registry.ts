@@ -13,7 +13,37 @@ import {
   YoutubePlayerAppIcon,
 } from "~/icons/fluentColor";
 
+import { parseAppProtocolIntent, parseYouTubePlayerUrlIntent } from "~/core/routing/appUrlIntents";
+import { detectVfsFileType } from "~/core/vfs/fileTypes";
+
 import type { FirstPartyAppDescriptor } from "./types";
+import type { AppPreviewInput, AppPreviewMatch } from "~/types/preview";
+
+function youtubePreviewMatch(input: AppPreviewInput): AppPreviewMatch | null {
+  if (input.kind !== "url") {
+    return null;
+  }
+
+  const protocolIntent = parseAppProtocolIntent(input.url);
+  if (protocolIntent.kind === "app" && protocolIntent.manifestId === "youtube-player") {
+    return { args: protocolIntent.args ?? {} };
+  }
+
+  const urlIntent = parseYouTubePlayerUrlIntent(input.url);
+  if (urlIntent.kind === "app") {
+    return { args: urlIntent.args ?? {} };
+  }
+
+  return null;
+}
+
+function pdfPreviewMatch(input: AppPreviewInput): AppPreviewMatch | null {
+  if (input.kind !== "vfs-file" || input.entry.kind !== "file") {
+    return null;
+  }
+
+  return detectVfsFileType(input.entry) === "pdf" ? { args: { path: input.entry.path } } : null;
+}
 
 /**
  * The shell's roster of first-party apps that are built + published
@@ -80,6 +110,16 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     singleton: false,
     defaultWindow: { width: 960, height: 540, centered: true },
     keywords: ["youtube", "video", "player", "media", "embed"],
+    previews: [
+      {
+        id: "youtube-player:video-preview",
+        title: "YouTube video",
+        surfaces: ["blog.embed"],
+        priority: 100,
+        exportName: "YouTubeVideoPreview",
+        match: youtubePreviewMatch,
+      },
+    ],
   },
   {
     id: "editor",
@@ -127,6 +167,16 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
     permissions: ["vfs.read"],
     defaultWindow: { width: 1040, height: 720, centered: true },
     keywords: ["pdf", "document", "reader", "viewer", "vfs"],
+    previews: [
+      {
+        id: "pdf-viewer:file-preview",
+        title: "PDF preview",
+        surfaces: ["finder.panel"],
+        priority: 100,
+        exportName: "PdfFilePreview",
+        match: pdfPreviewMatch,
+      },
+    ],
   },
   {
     id: "photos",

@@ -15,6 +15,7 @@ import { registerBuiltinCommands } from "~/core/kernel/builtinCommands";
 import { EventBus } from "~/core/kernel/EventBus";
 import { Lifecycle } from "~/core/kernel/Lifecycle";
 import { PermissionLedger } from "~/core/kernel/PermissionLedger";
+import { PreviewRegistry } from "~/core/kernel/PreviewRegistry";
 import { ProcessTable } from "~/core/kernel/ProcessTable";
 import { WallpaperRegistry } from "~/core/kernel/WallpaperRegistry";
 import { WidgetRegistry } from "~/core/kernel/WidgetRegistry";
@@ -25,7 +26,9 @@ import {
   createVfsAccessController,
 } from "~/core/kernel/kernelVfs";
 import {
+  disposeAppPreviews,
   disposeAppWidgets,
+  registerAppPreviews,
   registerAppWidgets,
   seedBuiltinWallpapers,
 } from "~/core/kernel/registryHelpers";
@@ -62,7 +65,9 @@ const bus = new EventBus();
 const commandsCatalog = new CommandRegistry();
 const wallpapersCatalog = new WallpaperRegistry();
 const widgetsCatalog = new WidgetRegistry();
+const previewsCatalog = new PreviewRegistry();
 const appWidgetDisposers = new Map<string, Array<() => void>>();
+const appPreviewDisposers = new Map<string, Array<() => void>>();
 const lifecycleInternal = new Lifecycle();
 const processesInternal = new ProcessTable();
 const pendingProcessKills = new Map<string, Promise<void>>();
@@ -351,7 +356,9 @@ function buildKernel(): Kernel {
       // teardown story.
       wallpapersCatalog.__resetForTests();
       widgetsCatalog.__resetForTests();
+      previewsCatalog.__resetForTests();
       appWidgetDisposers.clear();
+      appPreviewDisposers.clear();
 
       stopBuiltinCommands?.();
 
@@ -526,6 +533,22 @@ function buildKernel(): Kernel {
     apps: {
       register(manifest) {
         registryCatalog.upsertManifest(manifest);
+        registerAppPreviews({
+          disposers: appPreviewDisposers,
+          manifest,
+          onDisposeError: (error) => {
+            debugWarn("[kernel]", "app preview disposer failed", manifest.id, error);
+          },
+          onInvalidNamespace: (previewId) => {
+            debugWarn(
+              "[kernel]",
+              "skipping app preview with invalid namespace",
+              manifest.id,
+              previewId,
+            );
+          },
+          previews: kernel.previews,
+        });
         registerAppWidgets({
           disposers: appWidgetDisposers,
           manifest,
@@ -609,6 +632,9 @@ function buildKernel(): Kernel {
 
       unregister(manifestId: string): void {
         const hadEntry = registryCatalog.manifests.has(manifestId);
+        disposeAppPreviews(appPreviewDisposers, manifestId, (error) => {
+          debugWarn("[kernel]", "app preview disposer failed", manifestId, error);
+        });
         disposeAppWidgets(appWidgetDisposers, manifestId, (error) => {
           debugWarn("[kernel]", "app widget disposer failed", manifestId, error);
         });
@@ -921,6 +947,41 @@ function buildKernel(): Kernel {
 
       get(id) {
         return widgetsCatalog.get(id);
+      },
+    },
+
+    previews: {
+      register(provider) {
+        const dispose = previewsCatalog.register(provider);
+
+        bus.emit("preview.registered", { id: provider.id });
+
+        return (): void => {
+          const current = previewsCatalog.get(provider.id);
+          if (current === provider) {
+            dispose();
+            bus.emit("preview.unregistered", { id: provider.id });
+          }
+        };
+      },
+
+      unregister(id) {
+        const removed = previewsCatalog.unregister(id);
+        if (removed) {
+          bus.emit("preview.unregistered", { id });
+        }
+      },
+
+      list(filter) {
+        return previewsCatalog.list(filter);
+      },
+
+      get(id) {
+        return previewsCatalog.get(id);
+      },
+
+      resolve(input, filter) {
+        return previewsCatalog.resolve(input, filter);
       },
     },
 
