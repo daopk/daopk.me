@@ -7,6 +7,7 @@ interface SliderProps {
   min?: number;
   max?: number;
   step?: number;
+  thumbAlignment?: "contain" | "overflow";
   disabled?: boolean;
   ariaLabel?: string;
   ariaLabelledby?: string;
@@ -17,6 +18,7 @@ const props = withDefaults(defineProps<SliderProps>(), {
   min: 0,
   max: 100,
   step: 1,
+  thumbAlignment: "overflow",
   disabled: false,
   ariaLabel: undefined,
   ariaLabelledby: undefined,
@@ -44,38 +46,44 @@ function onCommit(next: number[]): void {
 </script>
 
 <template>
-  <SliderRoot
-    v-model="internalValue"
-    :min="min"
-    :max="max"
-    :step="step"
-    :disabled="disabled"
-    class="ds-slider"
-    @value-commit="onCommit"
-  >
-    <SliderTrack class="ds-slider__track">
-      <SliderRange class="ds-slider__range" />
-    </SliderTrack>
-    <!-- ARIA forwarding lives on SliderThumb, not SliderRoot. reka-ui's
-         SliderThumbImpl computes aria-valuenow/min/max + aria-orientation
-         on the thumb element but does NOT bubble extra aria-* down from
-         SliderRoot. Anything we want screen readers to read off the
-         slider role (labelledby, valuetext) must be bound here. -->
-    <SliderThumb
-      class="ds-slider__thumb"
-      :aria-label="ariaLabel ?? 'Slider thumb'"
-      :aria-labelledby="ariaLabelledby"
-      :aria-valuetext="ariaValuetext"
-    />
-  </SliderRoot>
+  <div class="ds-slider" :data-disabled="disabled ? '' : undefined">
+    <SliderRoot
+      v-model="internalValue"
+      :min="min"
+      :max="max"
+      :step="step"
+      :thumb-alignment="thumbAlignment"
+      :disabled="disabled"
+      class="ds-slider__root"
+      @value-commit="onCommit"
+    >
+      <SliderTrack class="ds-slider__track">
+        <SliderRange class="ds-slider__range" />
+      </SliderTrack>
+      <!-- ARIA forwarding lives on SliderThumb, not SliderRoot. reka-ui's
+           SliderThumbImpl computes aria-valuenow/min/max + aria-orientation
+           on the thumb element but does NOT bubble extra aria-* down from
+           SliderRoot. Anything we want screen readers to read off the
+           slider role (labelledby, valuetext) must be bound here. -->
+      <SliderThumb
+        class="ds-slider__thumb"
+        :aria-label="ariaLabel ?? 'Slider thumb'"
+        :aria-labelledby="ariaLabelledby"
+        :aria-valuetext="ariaValuetext"
+      />
+    </SliderRoot>
+  </div>
 </template>
 
 <style scoped lang="scss">
 .ds-slider {
   align-items: center;
   block-size: 20px;
+  box-sizing: border-box;
   display: flex;
   inline-size: 100%;
+  min-inline-size: 0;
+  padding-inline: calc(var(--ds-slider-thumb-size, 16px) / 2);
   position: relative;
   touch-action: none;
   user-select: none;
@@ -83,6 +91,15 @@ function onCommit(next: number[]): void {
   &[data-disabled] {
     opacity: 0.6;
   }
+}
+
+.ds-slider__root {
+  align-items: center;
+  block-size: 100%;
+  display: flex;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  position: relative;
 }
 
 .ds-slider__track {
@@ -102,11 +119,11 @@ function onCommit(next: number[]): void {
 
 .ds-slider__thumb {
   background-color: var(--color-accent);
-  block-size: 16px;
+  block-size: var(--ds-slider-thumb-size, 16px);
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-sm);
   display: block;
-  inline-size: 16px;
+  inline-size: var(--ds-slider-thumb-size, 16px);
   transition: box-shadow var(--duration-fast) var(--ease);
 
   &:hover {

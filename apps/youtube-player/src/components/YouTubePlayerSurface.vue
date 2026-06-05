@@ -43,12 +43,14 @@ const activeAutoplayRevision = computed(() => props.autoplayRevision);
 let videoAspectRatioRequest: AbortController | null = null;
 
 const {
+  beginSeekPreview,
+  cancelSeekPreview,
   commitSeek,
   controlsDisabled,
   currentTime,
   duration,
   hasVideo,
-  loadedPercent,
+  loadedFraction,
   mutedOrSilent,
   notice,
   playerErrorCode,
@@ -193,7 +195,7 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
           :current-time="currentTime"
           :duration="duration"
           :fullscreen="fullscreen"
-          :loaded-percent="loadedPercent"
+          :loaded-fraction="loadedFraction"
           :muted-or-silent="mutedOrSilent"
           :playing="playing"
           :seek-position="seekPosition"
@@ -202,6 +204,8 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
           :visible="controlsVisible"
           :volume="volume"
           :volume-value-text="volumeValueText"
+          @begin-seek="beginSeekPreview"
+          @cancel-seek="cancelSeekPreview"
           @commit-seek="commitSeek"
           @focus-change="setControlsFocused"
           @interaction="showControls"

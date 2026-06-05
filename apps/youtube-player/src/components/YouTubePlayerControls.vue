@@ -7,12 +7,14 @@ import { Maximize2, Pause, Play, Volume2, VolumeX } from "@daopk/icons";
 
 import { formatTime } from "../utils/playerValues";
 
+const SEEK_THUMB_SIZE_PX = 16;
+
 const props = defineProps<{
   controlsDisabled: boolean;
   currentTime: number;
   duration: number;
   fullscreen: boolean;
-  loadedPercent: string;
+  loadedFraction: number;
   mutedOrSilent: boolean;
   playing: boolean;
   seekPosition: number;
@@ -24,6 +26,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  "begin-seek": [];
+  "cancel-seek": [];
   "commit-seek": [value: number];
   "focus-change": [focused: boolean];
   interaction: [];
@@ -40,12 +44,107 @@ const muteIcon = computed(() => (props.mutedOrSilent ? VolumeX : Volume2));
 const muteLabel = computed(() => (props.mutedOrSilent ? "Unmute" : "Mute"));
 const fullscreenLabel = computed(() => (props.fullscreen ? "Exit fullscreen" : "Enter fullscreen"));
 const controlsRoot = ref<HTMLElement | null>(null);
+const progressRoot = ref<HTMLElement | null>(null);
+const seekPointerActive = ref(false);
+const seekPointerPreview = ref<{ seconds: number; leftPx: number } | null>(null);
+const seekPointerPreviewText = computed(() =>
+  seekPointerPreview.value === null ? "" : formatTime(seekPointerPreview.value.seconds),
+);
+const progressStyle = computed<Record<string, string>>(() => ({
+  "--youtube-player-loaded": String(props.loadedFraction),
+  "--youtube-player-preview-left": `${seekPointerPreview.value?.leftPx ?? SEEK_THUMB_SIZE_PX / 2}px`,
+  "--youtube-player-slider-thumb-size": `${SEEK_THUMB_SIZE_PX}px`,
+}));
 
 function onFocusOut(event: FocusEvent): void {
   const nextTarget = event.relatedTarget;
   if (!(nextTarget instanceof Node) || !controlsRoot.value?.contains(nextTarget)) {
     emit("focus-change", false);
   }
+}
+
+function onSeekKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    emit("cancel-seek");
+    return;
+  }
+
+  if (
+    event.key === "ArrowLeft" ||
+    event.key === "ArrowRight" ||
+    event.key === "ArrowUp" ||
+    event.key === "ArrowDown" ||
+    event.key === "Home" ||
+    event.key === "End" ||
+    event.key === "PageUp" ||
+    event.key === "PageDown"
+  ) {
+    emit("begin-seek");
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function pointerPreviewFromEvent(event: PointerEvent): { seconds: number; leftPx: number } | null {
+  if (props.controlsDisabled || props.duration <= 0) {
+    return null;
+  }
+
+  const root = progressRoot.value;
+  if (root === null) {
+    return null;
+  }
+
+  const rect = root.getBoundingClientRect();
+  if (rect.width <= SEEK_THUMB_SIZE_PX) {
+    return null;
+  }
+
+  const trackStartPx = SEEK_THUMB_SIZE_PX / 2;
+  const trackWidthPx = rect.width - SEEK_THUMB_SIZE_PX;
+  const trackEndPx = trackStartPx + trackWidthPx;
+  const pointerX = clamp(event.clientX - rect.left, trackStartPx, trackEndPx);
+  const fraction = (pointerX - trackStartPx) / trackWidthPx;
+  const seconds = Math.round(clamp(fraction, 0, 1) * props.duration);
+
+  return { seconds, leftPx: pointerX };
+}
+
+function updateSeekPointerPreview(event: PointerEvent): void {
+  seekPointerPreview.value = pointerPreviewFromEvent(event);
+}
+
+function clearSeekPointerPreview(): void {
+  seekPointerPreview.value = null;
+}
+
+function onSeekPointerDown(event: PointerEvent): void {
+  seekPointerActive.value = true;
+  emit("begin-seek");
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerMove(event: PointerEvent): void {
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerLeave(): void {
+  if (!seekPointerActive.value) {
+    clearSeekPointerPreview();
+  }
+}
+
+function onSeekPointerUp(event: PointerEvent): void {
+  seekPointerActive.value = false;
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerCancel(): void {
+  seekPointerActive.value = false;
+  clearSeekPointerPreview();
+  emit("cancel-seek");
 }
 </script>
 
@@ -71,7 +170,16 @@ function onFocusOut(event: FocusEvent): void {
       @click="emit('toggle-playback')"
     />
     <span class="youtube-player__time">{{ formatTime(currentTime) }}</span>
-    <div class="youtube-player__progress" :style="{ '--youtube-player-loaded': loadedPercent }">
+    <div
+      ref="progressRoot"
+      class="youtube-player__progress"
+      :style="progressStyle"
+      @pointerdown="onSeekPointerDown"
+      @pointermove="onSeekPointerMove"
+      @pointerup="onSeekPointerUp"
+      @pointercancel="onSeekPointerCancel"
+      @pointerleave="onSeekPointerLeave"
+    >
       <Slider
         class="youtube-player__seek"
         :model-value="seekPosition"
@@ -81,9 +189,14 @@ function onFocusOut(event: FocusEvent): void {
         :disabled="controlsDisabled || duration <= 0"
         aria-label="Seek"
         :aria-valuetext="seekValueText"
+        @focusout="emit('cancel-seek')"
+        @keydown="onSeekKeydown"
         @update:model-value="emit('preview-seek', $event)"
         @commit="emit('commit-seek', $event)"
       />
+      <span v-if="seekPointerPreview" class="youtube-player__seek-preview" aria-hidden="true">
+        {{ seekPointerPreviewText }}
+      </span>
     </div>
     <span class="youtube-player__time">{{ formatTime(duration) }}</span>
     <IconButton
@@ -160,6 +273,8 @@ function onFocusOut(event: FocusEvent): void {
 }
 
 .youtube-player__progress {
+  --youtube-player-slider-thumb-size: 16px;
+
   min-inline-size: 0;
   position: relative;
 }
@@ -169,11 +284,13 @@ function onFocusOut(event: FocusEvent): void {
   block-size: 3px;
   border-radius: var(--radius-full);
   content: "";
-  inline-size: var(--youtube-player-loaded, 0%);
+  inline-size: calc(100% - var(--youtube-player-slider-thumb-size));
   inset-block-start: calc(50% - 1.5px);
-  inset-inline-start: 0;
+  inset-inline-start: calc(var(--youtube-player-slider-thumb-size) / 2);
   pointer-events: none;
   position: absolute;
+  transform: scaleX(var(--youtube-player-loaded, 0));
+  transform-origin: left center;
   z-index: 0;
 }
 
@@ -181,6 +298,26 @@ function onFocusOut(event: FocusEvent): void {
 .youtube-player__volume {
   position: relative;
   z-index: 1;
+}
+
+.youtube-player__seek-preview {
+  background: color-mix(in srgb, var(--color-bg-elevated) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  inset-block-end: calc(100% + var(--space-xs));
+  inset-inline-start: var(--youtube-player-preview-left);
+  min-inline-size: 4.5ch;
+  padding: 2px var(--space-xs);
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 3;
 }
 
 @media (max-width: 560px) {

@@ -20,6 +20,7 @@ import {
 import type { PlayerNotice } from "../utils/playerStatus";
 
 const POLL_INTERVAL_MS = 500;
+const SEEK_SETTLE_TOLERANCE_SECONDS = 1;
 
 export interface UseYouTubePlayerOptions {
   readonly autoplayRevision?: Readonly<Ref<number>>;
@@ -33,7 +34,8 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
   const currentTime = ref(0);
   const duration = ref(0);
   const loadedFraction = ref(0);
-  const seekPosition = ref(0);
+  const previewSeekPosition = ref<number | null>(null);
+  const pendingSeekPosition = ref<number | null>(null);
   const volume = ref(100);
   const muted = ref(false);
   const notice = ref<PlayerNotice | null>(null);
@@ -55,7 +57,9 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
   const controlsDisabled = computed(() => !ready.value);
   const mutedOrSilent = computed(() => muted.value || volume.value <= 0);
   const sliderMax = computed(() => Math.max(1, Math.ceil(duration.value)));
-  const loadedPercent = computed(() => `${Math.round(loadedFraction.value * 100)}%`);
+  const seekPosition = computed(
+    () => previewSeekPosition.value ?? pendingSeekPosition.value ?? currentTime.value,
+  );
   const seekValueText = computed(
     () => `${formatTime(seekPosition.value)} of ${formatTime(duration.value)}`,
   );
@@ -99,7 +103,8 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     currentTime.value = 0;
     duration.value = 0;
     loadedFraction.value = 0;
-    seekPosition.value = 0;
+    previewSeekPosition.value = null;
+    pendingSeekPosition.value = null;
     volume.value = 100;
     muted.value = false;
     notice.value = null;
@@ -209,6 +214,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
 
     syncVideoTitle();
 
+    const previousCurrentTime = currentTime.value;
     const nextCurrentTime = safeNumber(player.getCurrentTime());
     const nextDuration = safeNumber(player.getDuration());
     currentTime.value = Math.min(nextCurrentTime, nextDuration || nextCurrentTime);
@@ -216,7 +222,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     loadedFraction.value = clampFraction(player.getVideoLoadedFraction());
     volume.value = clampVolume(player.getVolume());
     muted.value = player.isMuted();
-    seekPosition.value = currentTime.value;
+    settlePendingSeek(previousCurrentTime, currentTime.value);
   }
 
   function syncVideoTitle(): void {
@@ -258,20 +264,46 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     syncSnapshot();
   }
 
+  function clampSeekSeconds(next: number): number {
+    return clampNumber(safeNumber(next), 0, duration.value > 0 ? duration.value : sliderMax.value);
+  }
+
+  function beginSeekPreview(): void {
+    previewSeekPosition.value = clampSeekSeconds(seekPosition.value);
+  }
+
   function previewSeek(next: number): void {
-    seekPosition.value = clampNumber(next, 0, sliderMax.value);
+    previewSeekPosition.value = clampSeekSeconds(next);
+  }
+
+  function cancelSeekPreview(): void {
+    previewSeekPosition.value = null;
   }
 
   function commitSeek(next: number): void {
     if (player === null || !ready.value || duration.value <= 0) {
+      cancelSeekPreview();
       return;
     }
 
     const seconds = clampNumber(next, 0, duration.value);
-    seekPosition.value = seconds;
-    currentTime.value = seconds;
+    previewSeekPosition.value = null;
+    pendingSeekPosition.value = seconds;
     player.seekTo(seconds, true);
-    syncSnapshot();
+  }
+
+  function settlePendingSeek(previousCurrentTime: number, nextCurrentTime: number): void {
+    const target = pendingSeekPosition.value;
+    if (target === null) {
+      return;
+    }
+
+    const closeEnough = Math.abs(nextCurrentTime - target) <= SEEK_SETTLE_TOLERANCE_SECONDS;
+    const crossedForward = previousCurrentTime < target && nextCurrentTime >= target;
+    const crossedBackward = previousCurrentTime > target && nextCurrentTime <= target;
+    if (closeEnough || crossedForward || crossedBackward) {
+      pendingSeekPosition.value = null;
+    }
   }
 
   function setPlayerVolume(next: number): void {
@@ -315,7 +347,6 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     duration,
     hasVideo,
     loadedFraction,
-    loadedPercent,
     muted,
     mutedOrSilent,
     notice,
@@ -331,6 +362,8 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     videoTitle,
     volume,
     volumeValueText,
+    beginSeekPreview,
+    cancelSeekPreview,
     previewSeek,
     commitSeek,
   };

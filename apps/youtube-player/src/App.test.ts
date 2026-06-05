@@ -187,6 +187,32 @@ function volumeSlider(wrapper: ReturnType<typeof mountYoutubePlayer>) {
   return wrapper.findComponent(".youtube-player__volume");
 }
 
+function progressBar(wrapper: ReturnType<typeof mountYoutubePlayer>) {
+  return wrapper.get(".youtube-player__progress");
+}
+
+function stubElementRect(
+  element: Element,
+  rect: { left: number; top: number; width: number; height: number },
+): void {
+  const domRect = {
+    x: rect.left,
+    y: rect.top,
+    width: rect.width,
+    height: rect.height,
+    top: rect.top,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    left: rect.left,
+    toJSON: () => ({}),
+  } as DOMRect;
+
+  Object.defineProperty(element, "getBoundingClientRect", {
+    configurable: true,
+    value: () => domRect,
+  });
+}
+
 function expectPlayerIframe(
   wrapper: ReturnType<typeof mountYoutubePlayer>,
   player: InstanceType<typeof youtubeApi.MockPlayer>,
@@ -648,11 +674,92 @@ describe("YouTube Player App", () => {
   it("seeks only on slider commit", async () => {
     const { player, wrapper } = await mountReadyPlayer();
 
+    expect(seekSlider(wrapper).props("thumbAlignment")).toBe("overflow");
+
     seekSlider(wrapper).vm.$emit("update:modelValue", 42);
     expect(player.seekTo).not.toHaveBeenCalled();
 
     seekSlider(wrapper).vm.$emit("commit", 42);
     expect(player.seekTo).toHaveBeenCalledWith(42, true);
+
+    wrapper.unmount();
+  });
+
+  it("keeps seek preview stable while player polling reports the actual time", async () => {
+    vi.useFakeTimers();
+    const { player, wrapper } = await mountReadyPlayer();
+
+    seekSlider(wrapper).vm.$emit("update:modelValue", 42);
+    await nextTick();
+
+    player.currentTime = 7;
+    await vi.advanceTimersByTimeAsync(500);
+    await nextTick();
+
+    expect(seekSlider(wrapper).props("modelValue")).toBe(42);
+    expect(wrapper.text()).toContain("0:07");
+
+    wrapper.unmount();
+  });
+
+  it("keeps a committed seek target until the player snapshot reaches it", async () => {
+    vi.useFakeTimers();
+    const { player, wrapper } = await mountReadyPlayer();
+
+    player.currentTime = 10;
+    await vi.advanceTimersByTimeAsync(500);
+    await nextTick();
+
+    player.seekTo.mockImplementationOnce(() => undefined);
+    seekSlider(wrapper).vm.$emit("update:modelValue", 42);
+    seekSlider(wrapper).vm.$emit("commit", 42);
+    await nextTick();
+
+    player.currentTime = 11;
+    await vi.advanceTimersByTimeAsync(500);
+    await nextTick();
+
+    expect(seekSlider(wrapper).props("modelValue")).toBe(42);
+
+    player.currentTime = 43;
+    await vi.advanceTimersByTimeAsync(500);
+    await nextTick();
+
+    expect(seekSlider(wrapper).props("modelValue")).toBe(43);
+
+    wrapper.unmount();
+  });
+
+  it("shows the seek time preview while hovering and dragging the progress bar", async () => {
+    const { wrapper } = await mountReadyPlayer();
+    const progress = progressBar(wrapper);
+    stubElementRect(progress.element, { left: 100, top: 0, width: 200, height: 20 });
+
+    await progress.trigger("pointermove", { clientX: 200, clientY: 10 });
+
+    expect(wrapper.get(".youtube-player__seek-preview").text()).toBe("1:00");
+    expect(progress.attributes("style")).toContain("--youtube-player-preview-left: 100px");
+
+    await progress.trigger("pointerdown", { clientX: 100, clientY: 10 });
+
+    expect(wrapper.get(".youtube-player__seek-preview").text()).toBe("0:00");
+    expect(progress.attributes("style")).toContain("--youtube-player-preview-left: 8px");
+    expect(progress.attributes("style")).not.toContain("--youtube-player-preview-shift");
+
+    await progress.trigger("pointerleave");
+
+    expect(wrapper.find(".youtube-player__seek-preview").exists()).toBe(true);
+
+    await progress.trigger("pointermove", { clientX: 300, clientY: 10 });
+
+    expect(wrapper.get(".youtube-player__seek-preview").text()).toBe("2:00");
+    expect(progress.attributes("style")).toContain("--youtube-player-preview-left: 192px");
+    expect(progress.attributes("style")).not.toContain("--youtube-player-preview-shift");
+
+    await progress.trigger("pointerup", { clientX: 100, clientY: 10 });
+    await progress.trigger("pointerleave");
+
+    expect(wrapper.find(".youtube-player__seek-preview").exists()).toBe(false);
 
     wrapper.unmount();
   });

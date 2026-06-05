@@ -25,6 +25,11 @@ describe("Slider (M2b Phase 3 / Commit I — reka-ui wrap)", () => {
     expect(wrapper.find("[role='slider']").exists()).toBe(true);
   });
 
+  it("uses overflow thumb alignment by default", () => {
+    const wrapper = mount(Slider, { props: { modelValue: 50 } });
+    expect(wrapper.findComponent({ name: "SliderRoot" }).props("thumbAlignment")).toBe("overflow");
+  });
+
   it("emits update:modelValue with a scalar number when reka-ui fires update:modelValue", () => {
     const wrapper = mount(Slider, { props: { modelValue: 0.2, min: 0, max: 1, step: 0.05 } });
     wrapper.findComponent({ name: "SliderRoot" }).vm.$emit("update:modelValue", [0.45]);
