@@ -6,6 +6,8 @@ import { fileURLToPath, URL } from "node:url";
 
 import type { Connect, PluginOption } from "vite";
 
+import { requestUpstreamUrl, type UpstreamHttpResponse } from "./upstreamHttpClient";
+
 /**
  * In production the Worker serves `/_worker/blog/*` from R2. Vite has neither,
  * so this plugin serves the same paths from the local `blog/` folder during
@@ -99,12 +101,15 @@ function forwardedHeaders(req: IncomingMessage): Headers {
   return headers;
 }
 
-function copyResponseHeaders(upstream: Response, res: ServerResponse): void {
-  upstream.headers.forEach((value, name) => {
+function copyResponseHeaders(upstream: UpstreamHttpResponse, res: ServerResponse): void {
+  for (const [name, value] of Object.entries(upstream.headers)) {
+    if (value === undefined) {
+      continue;
+    }
     if (!OMITTED_RESPONSE_HEADERS.has(name.toLowerCase())) {
       res.setHeader(name, value);
     }
-  });
+  }
 }
 
 function imageContentType(extension: string): string {
@@ -178,29 +183,22 @@ async function readJsonArrayIfExists(file: string): Promise<readonly unknown[]> 
 }
 
 async function fetchPublishedBlogIndex(): Promise<readonly unknown[]> {
-  if (typeof fetch !== "function") {
-    return [];
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 1500);
-
   try {
-    const response = await fetch(new URL("/_worker/blog/index.json", BLOG_ORIGIN), {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
-    if (!response.ok) {
+    const response = await requestUpstreamUrl(
+      new URL("/_worker/blog/index.json", BLOG_ORIGIN).toString(),
+      {
+        family: 4,
+        headers: { Accept: "application/json" },
+        timeoutMs: 1500,
+      },
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       return [];
     }
-    const parsed = await response.json();
+    const parsed: unknown = JSON.parse(response.body.toString("utf8"));
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -219,23 +217,23 @@ async function proxyBlogThumbnailRequest(
   targetUrl: string,
 ): Promise<void> {
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await requestUpstreamUrl(targetUrl, {
+      family: 4,
       headers: forwardedHeaders(req),
       method: req.method === "HEAD" ? "HEAD" : "GET",
     });
 
-    res.statusCode = upstream.status;
-    res.statusMessage = upstream.statusText;
+    res.statusCode = upstream.statusCode;
+    res.statusMessage = upstream.statusMessage;
     copyResponseHeaders(upstream, res);
 
-    if (req.method === "HEAD" || upstream.status === 304) {
+    if (req.method === "HEAD" || upstream.statusCode === 304) {
       res.end();
       return;
     }
 
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader("Content-Length", String(bytes.byteLength));
-    res.end(bytes);
+    res.setHeader("Content-Length", String(upstream.body.byteLength));
+    res.end(upstream.body);
   } catch (error) {
     res.statusCode = 502;
     res.end(error instanceof Error ? error.message : String(error));

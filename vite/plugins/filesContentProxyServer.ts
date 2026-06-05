@@ -2,6 +2,8 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import type { Connect, PluginOption } from "vite";
 
+import { requestUpstreamUrl, type UpstreamHttpResponse } from "./upstreamHttpClient";
+
 const FILES_ORIGIN = "https://daopk.me";
 
 const FORWARDED_REQUEST_HEADERS = [
@@ -48,12 +50,15 @@ function forwardedHeaders(req: IncomingMessage): Headers {
   return headers;
 }
 
-function copyResponseHeaders(upstream: Response, res: ServerResponse): void {
-  upstream.headers.forEach((value, name) => {
+function copyResponseHeaders(upstream: UpstreamHttpResponse, res: ServerResponse): void {
+  for (const [name, value] of Object.entries(upstream.headers)) {
+    if (value === undefined) {
+      continue;
+    }
     if (!OMITTED_RESPONSE_HEADERS.has(name.toLowerCase())) {
       res.setHeader(name, value);
     }
-  });
+  }
 }
 
 export function filesProxyTargetUrl(
@@ -83,23 +88,23 @@ async function proxyFilesRequest(
   targetUrl: string,
 ): Promise<void> {
   try {
-    const upstream = await fetch(targetUrl, {
+    const upstream = await requestUpstreamUrl(targetUrl, {
+      family: 4,
       headers: forwardedHeaders(req),
       method: req.method === "HEAD" ? "HEAD" : "GET",
     });
 
-    res.statusCode = upstream.status;
-    res.statusMessage = upstream.statusText;
+    res.statusCode = upstream.statusCode;
+    res.statusMessage = upstream.statusMessage;
     copyResponseHeaders(upstream, res);
 
-    if (req.method === "HEAD" || upstream.status === 304) {
+    if (req.method === "HEAD" || upstream.statusCode === 304) {
       res.end();
       return;
     }
 
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    res.setHeader("Content-Length", String(bytes.byteLength));
-    res.end(bytes);
+    res.setHeader("Content-Length", String(upstream.body.byteLength));
+    res.end(upstream.body);
   } catch (error) {
     res.statusCode = 502;
     res.end(error instanceof Error ? error.message : String(error));
