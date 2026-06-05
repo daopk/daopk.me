@@ -6,9 +6,8 @@ import type { PluggableList } from "unified";
 import {
   createMarkdownProcessor,
   readFencedCodeLanguages,
-  type MarkdownPreviewRequest,
-  type MarkdownRenderResult,
-} from "~/core/markdown/MarkdownPipeline";
+} from "~/core/markdown/MarkdownProcessor";
+import type { MarkdownPreviewRequest, MarkdownRenderResult } from "~/core/markdown/MarkdownTypes";
 
 const LANGUAGE_LOADERS = {
   bash: () => import("@shikijs/langs/bash"),

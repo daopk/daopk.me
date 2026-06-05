@@ -11,9 +11,10 @@ copies of an injection-key symbol, silently break injection.
 
 ## How sharing works
 
-- `sdk.ts` is the single definition site for `KernelInjectionKey`,
-  `AppContextInjectionKey`, `AppChromeInjectionKey`, `useKernel`, and `useVfs`.
-  The host imports these directly or through `~/types/*` re-exports.
+- `injectionKeys.ts` is the single symbol definition site for
+  `KernelInjectionKey`, `AppContextInjectionKey`, and `AppChromeInjectionKey`.
+  `sdk.ts` exposes those keys plus `useKernel` and `useVfs` as the public
+  `@daopk/sdk` facade.
 - At build time Vite emits dedicated runtime chunks such as
   `daopk-vue-runtime-*.js`, `daopk-sdk-runtime-*.js`, and
   `daopk-kit-runtime-*.js`.

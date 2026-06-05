@@ -2,13 +2,13 @@
  * Host SDK for independently-published first-party apps — the public
  * `@daopk/sdk` surface.
  *
- * This module is the SINGLE definition site for the kernel injection keys and
- * `useKernel`. The host imports these symbols (directly or via the `~/types/*`
- * re-exports) and published first-party apps import them at runtime via the
- * import map the host injects into `index.html`. Because both resolve to THIS
- * one module, the host and every published first-party app share ONE set of
- * injection-key symbols and ONE Vue instance (the import map also maps the bare
- * `vue` specifier to the
+ * This module is the public SDK facade for the kernel injection keys and
+ * `useKernel`. The key symbols are defined in `src/runtime/injectionKeys.ts`,
+ * and this entry re-exports those same instances for published first-party apps
+ * via the import map the host injects into `index.html`. Because both resolve
+ * to the same runtime symbol module, the host and every published first-party
+ * app share ONE set of injection-key symbols and ONE Vue instance (the import
+ * map also maps the bare `vue` specifier to the
  * host's Vue chunk). Without that, `inject()` / `useKernel()` silently fail
  * across the boundary.
  *
@@ -25,17 +25,22 @@
  */
 import { inject, type InjectionKey } from "vue";
 
+import {
+  AppChromeInjectionKey as rawAppChromeInjectionKey,
+  AppContextInjectionKey as rawAppContextInjectionKey,
+  KernelInjectionKey as rawKernelInjectionKey,
+} from "~/runtime/injectionKeys";
 import type { AppChromeController, AppContext } from "~/types/app";
 import type { Kernel, KernelVfsDirectoryOptions, KernelVfsWriteOptions } from "~/types/kernel";
 
 /** Provided at the app root in `main.ts`; resolved by `useKernel`. */
-export const KernelInjectionKey: InjectionKey<Kernel> = Symbol("daopk.kernel");
+export const KernelInjectionKey = rawKernelInjectionKey as InjectionKey<Kernel>;
 
 /** Provided per window/frame by the shell's app mount. */
-export const AppContextInjectionKey: InjectionKey<AppContext> = Symbol("AppContext");
+export const AppContextInjectionKey = rawAppContextInjectionKey as InjectionKey<AppContext>;
 
 /** Provided by shells that surface app chrome (e.g. the mobile AppView header). */
-export const AppChromeInjectionKey: InjectionKey<AppChromeController> = Symbol("AppChrome");
+export const AppChromeInjectionKey = rawAppChromeInjectionKey as InjectionKey<AppChromeController>;
 
 /** Resolve the running kernel. Throws if called before the kernel is provided. */
 export function useKernel(): Kernel {

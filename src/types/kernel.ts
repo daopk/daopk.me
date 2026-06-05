@@ -1,7 +1,8 @@
-import type { Ref, ShallowRef } from "vue";
+import type { InjectionKey, Ref, ShallowRef } from "vue";
 
 import type { LifecyclePhase } from "~/core/kernel/Lifecycle";
 import type { VfsDirEntry, VfsNodeKind, VfsStat } from "~/core/vfs";
+import { KernelInjectionKey as rawKernelInjectionKey } from "~/runtime/injectionKeys";
 import type { AppHandle, AppManifest, AppPermission } from "~/types/app";
 import type { CommandSource, KernelCommandsFacade } from "~/types/command";
 import type {
@@ -393,6 +394,6 @@ export interface Kernel {
   readonly wallpapers: KernelWallpapersFacade;
 }
 
-// Defined once in the SDK module so the host and published first-party apps
-// share the same symbol instance (single source — see src/runtime/sdk.ts).
-export { KernelInjectionKey } from "~/runtime/sdk";
+// Defined once in the runtime symbol module so the host and published
+// first-party apps share the same symbol instance.
+export const KernelInjectionKey = rawKernelInjectionKey as InjectionKey<Kernel>;

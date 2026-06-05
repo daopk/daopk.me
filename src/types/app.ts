@@ -1,5 +1,9 @@
-import type { Component } from "vue";
+import type { Component, InjectionKey } from "vue";
 
+import {
+  AppChromeInjectionKey as rawAppChromeInjectionKey,
+  AppContextInjectionKey as rawAppContextInjectionKey,
+} from "~/runtime/injectionKeys";
 import type { AppPreviewProvider } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
@@ -86,8 +90,8 @@ export interface AppContext {
   // TODO: inject AbortSignal tied to window unmount + process kill.
 }
 
-// Defined once in the SDK module (single source — see src/runtime/sdk.ts).
-export { AppContextInjectionKey } from "~/runtime/sdk";
+// Defined once in the runtime symbol module; re-typed here for host internals.
+export const AppContextInjectionKey = rawAppContextInjectionKey as InjectionKey<AppContext>;
 
 export interface AppChromeBackAction {
   readonly ariaLabel: string;
@@ -114,10 +118,10 @@ export interface AppChromeController {
   close?(): void;
 }
 
-// Defined once in the SDK module (single source — see src/runtime/sdk.ts).
-export { AppChromeInjectionKey } from "~/runtime/sdk";
-
 export type AppLifecycleEvent = "close" | "blur" | "focus";
+
+// Defined once in the runtime symbol module; re-typed here for host internals.
+export const AppChromeInjectionKey = rawAppChromeInjectionKey as InjectionKey<AppChromeController>;
 
 export interface AppHandle {
   readonly id: string;
