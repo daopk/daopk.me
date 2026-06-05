@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } from "vue";
 
 import { debugWarn } from "@daopk/sdk";
 import {
@@ -24,6 +24,16 @@ export interface BlogIndexPost {
 
 export interface BlogIndexOptions {
   readonly source: Pick<BlogContentSource, "readIndexCache" | "fetchIndex">;
+}
+
+export interface BlogIndexBindings {
+  readonly dispose: () => void;
+  readonly empty: ComputedRef<boolean>;
+  readonly loadFailed: ComputedRef<boolean>;
+  readonly loading: ComputedRef<boolean>;
+  readonly posts: Ref<readonly BlogIndexPost[]>;
+  readonly refresh: () => Promise<void>;
+  readonly status: Ref<BlogIndexStatus>;
 }
 
 function titleFromSlug(slug: string): string {
@@ -65,7 +75,7 @@ function postsFromEntries(entries: readonly BlogIndexEntry[]): readonly BlogInde
   return entries.map(blogIndexPostFromEntry).sort(comparePosts);
 }
 
-export function useBlogIndex({ source }: BlogIndexOptions) {
+export function useBlogIndex({ source }: BlogIndexOptions): BlogIndexBindings {
   const posts = ref<readonly BlogIndexPost[]>([]);
   const status = ref<BlogIndexStatus>("idle");
 

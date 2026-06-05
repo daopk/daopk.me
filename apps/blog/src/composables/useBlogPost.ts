@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } from "vue";
 
 import { debugWarn } from "@daopk/sdk";
 import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
@@ -29,9 +29,22 @@ export interface BlogPostMetadata {
   readonly title: string | null;
 }
 
-interface ParsedBlogPost {
+export interface ParsedBlogPost {
   readonly body: string;
   readonly metadata: BlogPostMetadata;
+}
+
+export interface BlogPostBindings {
+  readonly dispose: () => void;
+  readonly html: Ref<string>;
+  readonly loadFailed: ComputedRef<boolean>;
+  readonly metadata: Ref<BlogPostMetadata>;
+  readonly notFound: ComputedRef<boolean>;
+  readonly open: (nextArgs: BlogLaunchArgs | undefined) => void;
+  readonly refresh: () => Promise<void>;
+  readonly slug: Ref<string | null>;
+  readonly source: Ref<string>;
+  readonly status: Ref<BlogPostStatus>;
 }
 
 const FRONTMATTER_PATTERN = /^---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -143,7 +156,7 @@ export function useBlogPost({
   args,
   createRenderer = createMarkdownRenderer,
   source: contentSource,
-}: BlogPostOptions) {
+}: BlogPostOptions): BlogPostBindings {
   const html = ref("");
   const metadata = ref<BlogPostMetadata>(EMPTY_METADATA);
   const status = ref<BlogPostStatus>("idle");
