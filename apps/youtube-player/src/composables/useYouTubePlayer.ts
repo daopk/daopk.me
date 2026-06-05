@@ -22,6 +22,7 @@ import type { PlayerNotice } from "../utils/playerStatus";
 const POLL_INTERVAL_MS = 500;
 
 export interface UseYouTubePlayerOptions {
+  readonly autoplayRevision?: Readonly<Ref<number>>;
   readonly videoId: Readonly<Ref<string | null>>;
   readonly playerHost: Ref<HTMLIFrameElement | null>;
 }
@@ -42,7 +43,9 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
   let player: YouTubePlayer | null = null;
   let pollInterval: number | undefined;
   let initRun = 0;
+  let lastAutoplayRevision = 0;
 
+  const autoplayRevision = computed(() => options.autoplayRevision?.value ?? 0);
   const hasVideo = computed(() => options.videoId.value !== null);
   const playing = computed(
     () =>
@@ -75,9 +78,18 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     { immediate: true, flush: "post" },
   );
 
+  const stopAutoplayWatch = watch(
+    [ready, autoplayRevision],
+    () => {
+      maybeAutoplay();
+    },
+    { immediate: true, flush: "post" },
+  );
+
   onBeforeUnmount(() => {
     initRun += 1;
     stopPlayerWatch();
+    stopAutoplayWatch();
     destroyPlayer();
   });
 
@@ -158,6 +170,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     syncVideoTitle();
     syncSnapshot();
     startPolling();
+    maybeAutoplay();
   }
 
   function onStateChange(event: YouTubePlayerStateChangeEvent): void {
@@ -226,6 +239,22 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
       player.playVideo();
     }
 
+    syncSnapshot();
+  }
+
+  function maybeAutoplay(): void {
+    if (player === null || !ready.value) {
+      return;
+    }
+
+    const revision = autoplayRevision.value;
+    if (revision <= 0 || revision === lastAutoplayRevision) {
+      return;
+    }
+
+    lastAutoplayRevision = revision;
+    notice.value = null;
+    player.playVideo();
     syncSnapshot();
   }
 

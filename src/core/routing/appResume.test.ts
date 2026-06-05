@@ -182,6 +182,27 @@ describe("resolveAppResume", () => {
     });
   });
 
+  it("preserves autoplay requests for YouTube Player resumes", () => {
+    const emission = resolveAppResume(
+      context({
+        manifestId: "youtube-player",
+        args: { videoId: "M7lc1UVf-VE", autoplay: true },
+        source: "deeplink",
+        resolveHandleId: () => "handle-youtube-player",
+      }),
+    );
+
+    expect(emission).toEqual({
+      event: "youtube-player.open.requested",
+      payload: {
+        autoplay: true,
+        handleId: "handle-youtube-player",
+        source: "deeplink",
+        videoId: "M7lc1UVf-VE",
+      },
+    });
+  });
+
   it("returns null for YouTube Player resumes without video args", () => {
     expect(resolveAppResume(context({ manifestId: "youtube-player", args: {} }))).toBeNull();
   });

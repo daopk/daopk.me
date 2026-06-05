@@ -387,7 +387,7 @@ Event body`,
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "youtube-player",
       source: "deeplink",
-      args: { videoId: "M7lc1UVf-VE" },
+      args: { videoId: "M7lc1UVf-VE", autoplay: true },
     });
   });
 
@@ -413,7 +413,7 @@ Event body`,
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "youtube-player",
       source: "deeplink",
-      args: { url: youtubeUrl },
+      args: { url: youtubeUrl, autoplay: true },
     });
   });
 
@@ -439,7 +439,7 @@ Event body`,
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "youtube-player",
       source: "deeplink",
-      args: { url: youtubeUrl },
+      args: { url: youtubeUrl, autoplay: true },
     });
   });
 
@@ -532,7 +532,7 @@ Event body`,
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "youtube-player",
       source: "deeplink",
-      args: { videoId: "M7lc1UVf-VE" },
+      args: { videoId: "M7lc1UVf-VE", autoplay: true },
     });
   });
 

@@ -354,6 +354,18 @@ describe("YouTube Player App", () => {
     wrapper.unmount();
   });
 
+  it("autoplays when launch args request it", async () => {
+    const { player, wrapper } = await mountReadyPlayer({
+      videoId: "IQsLEaj89bg",
+      autoplay: true,
+    });
+
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+    expect(wrapper.find(".youtube-player__poster").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("switches videos when the running player receives a matching deeplink resume event", async () => {
     const kernel = makeKernelEvents();
     const { player, wrapper } = await mountReadyPlayer({ videoId: "IQsLEaj89bg" }, { kernel });
@@ -396,6 +408,25 @@ describe("YouTube Player App", () => {
 
     expect(youtubeApi.createdPlayers).toHaveLength(1);
     expect(player.destroy).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("plays the current video when a same-video resume event requests autoplay", async () => {
+    const kernel = makeKernelEvents();
+    const { player, wrapper } = await mountReadyPlayer({ videoId: "fY6h5FBTZM8" }, { kernel });
+
+    kernel.events.emit("youtube-player.open.requested", {
+      handleId: "youtube-player-handle",
+      source: "deeplink",
+      videoId: "fY6h5FBTZM8",
+      autoplay: true,
+    });
+    await nextTick();
+
+    expect(youtubeApi.createdPlayers).toHaveLength(1);
+    expect(player.destroy).not.toHaveBeenCalled();
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });

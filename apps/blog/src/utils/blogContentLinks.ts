@@ -14,6 +14,20 @@ export type BlogContentLinkAction =
   | { readonly kind: "ignore" }
   | { readonly kind: "launch"; readonly intent: BlogLaunchIntent };
 
+function withAutoplayIntent(intent: BlogLaunchIntent): BlogLaunchIntent {
+  if (intent.manifestId !== "youtube-player") {
+    return intent;
+  }
+
+  return {
+    ...intent,
+    args: {
+      ...intent.args,
+      autoplay: true,
+    },
+  };
+}
+
 export function anchorFromClick(event: MouseEvent): HTMLAnchorElement | null {
   if (!(event.target instanceof Element)) {
     return null;
@@ -33,7 +47,7 @@ export function blogContentLinkActionFromHref(
 ): BlogContentLinkAction {
   const protocolIntent = parseAppProtocolIntent(href);
   if (protocolIntent.kind === "app") {
-    return { kind: "launch", intent: protocolIntent };
+    return { kind: "launch", intent: withAutoplayIntent(protocolIntent) };
   }
 
   if (isFirstPartyAppProtocolUrl(href)) {
@@ -44,7 +58,7 @@ export function blogContentLinkActionFromHref(
     return { kind: "ignore" };
   }
 
-  const youtubeIntent = parseYouTubePlayerUrlIntent(href);
+  const youtubeIntent = parseYouTubePlayerUrlIntent(href, { autoplay: true });
   if (youtubeIntent.kind !== "app") {
     return { kind: "ignore" };
   }

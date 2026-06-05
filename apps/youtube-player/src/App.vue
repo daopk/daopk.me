@@ -5,11 +5,12 @@ import { AppFrame, useAppChrome } from "@daopk/kit";
 import { AppContextInjectionKey, KernelInjectionKey, type AppChromeContentSize } from "@daopk/sdk";
 
 import YouTubePlayerSurface from "./components/YouTubePlayerSurface.vue";
-import { videoIdFromLaunchArgs } from "./utils/youtubeVideo";
+import { autoplayFromLaunchArgs, videoIdFromLaunchArgs } from "./utils/youtubeVideo";
 
 const appContext = inject(AppContextInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
 const videoId = ref<string | null>(videoIdFromLaunchArgs(appContext?.args));
+const autoplayRevision = ref(autoplayFromLaunchArgs(appContext?.args) ? 1 : 0);
 const playerTitle = ref("YouTube Player");
 
 const chrome = useAppChrome({ title: playerTitle });
@@ -22,6 +23,10 @@ const stopOpenRequests = kernel?.events.on("youtube-player.open.requested", (pay
   const nextVideoId = videoIdFromLaunchArgs(payload);
   if (nextVideoId === null) {
     return;
+  }
+
+  if (autoplayFromLaunchArgs(payload)) {
+    autoplayRevision.value += 1;
   }
 
   if (nextVideoId === videoId.value) {
@@ -53,6 +58,7 @@ function setContentSize(size: AppChromeContentSize | null): void {
     aria-label="YouTube Player"
   >
     <YouTubePlayerSurface
+      :autoplay-revision="autoplayRevision"
       :video-id="videoId"
       resize-to-aspect-ratio
       @content-size-change="setContentSize"

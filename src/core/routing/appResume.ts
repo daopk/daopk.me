@@ -134,6 +134,10 @@ const resumeYouTubePlayerOpen: AppResumeHandler = ({
 
   const videoId = typeof args?.videoId === "string" ? args.videoId : undefined;
   const url = typeof args?.url === "string" ? args.url : undefined;
+  const autoplay =
+    args?.autoplay === true || args?.autoplay === "1" || args?.autoplay === "true"
+      ? true
+      : undefined;
   if (videoId === undefined && url === undefined) {
     return null;
   }
@@ -143,6 +147,7 @@ const resumeYouTubePlayerOpen: AppResumeHandler = ({
     event: "youtube-player.open.requested",
     payload: {
       source,
+      ...(autoplay === undefined ? {} : { autoplay }),
       ...(handleId === undefined ? {} : { handleId }),
       ...(videoId === undefined ? {} : { videoId }),
       ...(url === undefined ? {} : { url }),

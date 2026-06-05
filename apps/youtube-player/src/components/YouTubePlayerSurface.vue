@@ -18,10 +18,12 @@ const PREFERRED_PLAYER_CONTENT_SIZE = { width: 960, height: 540 };
 
 const props = withDefaults(
   defineProps<{
+    readonly autoplayRevision?: number;
     readonly resizeToAspectRatio?: boolean;
     readonly videoId: string | null;
   }>(),
   {
+    autoplayRevision: 0,
     resizeToAspectRatio: false,
   },
 );
@@ -37,6 +39,7 @@ const playerHost = ref<HTMLIFrameElement | null>(null);
 const videoAspectRatio = ref<number | null>(null);
 const videoAspectRatioSource = ref<"metadata" | "poster" | null>(null);
 const activeVideoId = computed(() => props.videoId);
+const activeAutoplayRevision = computed(() => props.autoplayRevision);
 let videoAspectRatioRequest: AbortController | null = null;
 
 const {
@@ -60,7 +63,11 @@ const {
   videoTitle,
   volume,
   volumeValueText,
-} = useYouTubePlayer({ videoId: activeVideoId, playerHost });
+} = useYouTubePlayer({
+  autoplayRevision: activeAutoplayRevision,
+  videoId: activeVideoId,
+  playerHost,
+});
 const { fullscreen, toggleFullscreen } = usePlayerFullscreen(playerShell);
 const { style: playerStageStyle } = useAspectFitBox(playerViewport, videoAspectRatio);
 const { controlsHidden, controlsVisible, setControlsFocused, showControls } = useAutoHideControls({

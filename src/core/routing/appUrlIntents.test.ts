@@ -160,6 +160,12 @@ describe("app URL intents", () => {
       manifestId: "youtube-player",
       args: { url: "https://www.youtube.com/watch?v=IQsLEaj89bg" },
     });
+
+    expect(parseAppUrlIntent("/apps/youtube-player?videoId=IQsLEaj89bg&autoplay=1")).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { videoId: "IQsLEaj89bg", autoplay: true },
+    });
   });
 
   it.each([
@@ -175,6 +181,16 @@ describe("app URL intents", () => {
       kind: "app",
       manifestId: "youtube-player",
       args: { url },
+    });
+  });
+
+  it("can mark YouTube Player URL intents as autoplay requests", () => {
+    const url = "https://www.youtube.com/watch?v=IQsLEaj89bg";
+
+    expect(parseYouTubePlayerUrlIntent(url, { autoplay: true })).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { url, autoplay: true },
     });
   });
 
@@ -199,6 +215,12 @@ describe("app URL intents", () => {
       manifestId: "youtube-player",
       args: { videoId: "M7lc1UVf-VE" },
     });
+
+    expect(parseAppProtocolIntent("youtube-player://video/M7lc1UVf-VE?autoplay=1")).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { videoId: "M7lc1UVf-VE", autoplay: true },
+    });
   });
 
   it("parses whitelisted YouTube Player protocol URL links", () => {
@@ -210,6 +232,16 @@ describe("app URL intents", () => {
       kind: "app",
       manifestId: "youtube-player",
       args: { url: youtubeUrl },
+    });
+
+    expect(
+      parseAppProtocolIntent(
+        `youtube-player://url?url=${encodeURIComponent(youtubeUrl)}&autoplay=true`,
+      ),
+    ).toEqual({
+      kind: "app",
+      manifestId: "youtube-player",
+      args: { url: youtubeUrl, autoplay: true },
     });
   });
 

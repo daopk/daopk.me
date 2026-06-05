@@ -22,6 +22,10 @@ export interface AppUrlLaunchIntent {
 
 export type AppUrlIntent = AppUrlLaunchIntent | { kind: "none" };
 
+export interface YouTubePlayerUrlIntentOptions {
+  readonly autoplay?: boolean;
+}
+
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 const FIRST_PARTY_APP_PROTOCOLS = new Map([["youtube-player", "youtube-player"]]);
 const YOUTUBE_URL_PROTOCOLS = new Set(["http:", "https:"]);
@@ -95,6 +99,11 @@ function nonEmptySearchParam(searchParams: URLSearchParams, key: string): string
   }
 
   return value;
+}
+
+function booleanSearchParam(searchParams: URLSearchParams, key: string): boolean {
+  const value = searchParams.get(key);
+  return value === "1" || value === "true";
 }
 
 function normalizedYouTubeVideoId(input: string | null | undefined): string | null {
@@ -193,6 +202,9 @@ function argsForApp(
     if (url !== null) {
       args.url = url;
     }
+    if (booleanSearchParam(searchParams, "autoplay")) {
+      args.autoplay = true;
+    }
   }
 
   return Object.keys(args).length === 0 ? undefined : args;
@@ -204,7 +216,12 @@ function youtubePlayerProtocolArgs(url: URL): Readonly<Record<string, unknown>> 
 
   if (action === "video" && pathSegments.length === 1) {
     const videoId = normalizedYouTubeVideoId(decodePathSegment(pathSegments[0]!) ?? null);
-    return videoId === null ? undefined : { videoId };
+    return videoId === null
+      ? undefined
+      : {
+          videoId,
+          ...(booleanSearchParam(url.searchParams, "autoplay") ? { autoplay: true } : {}),
+        };
   }
 
   if (action === "url" && pathSegments.length === 0) {
@@ -213,7 +230,10 @@ function youtubePlayerProtocolArgs(url: URL): Readonly<Record<string, unknown>> 
       return undefined;
     }
 
-    return { url: youtubeUrl };
+    return {
+      url: youtubeUrl,
+      ...(booleanSearchParam(url.searchParams, "autoplay") ? { autoplay: true } : {}),
+    };
   }
 
   return undefined;
@@ -292,7 +312,10 @@ export function parseAppProtocolIntent(input: string | URL): AppUrlIntent {
   };
 }
 
-export function parseYouTubePlayerUrlIntent(input: string | URL): AppUrlIntent {
+export function parseYouTubePlayerUrlIntent(
+  input: string | URL,
+  options: YouTubePlayerUrlIntentOptions = {},
+): AppUrlIntent {
   const url = absoluteUrlFrom(input);
   if (url === null || youTubeVideoIdFromUrl(url) === null) {
     return { kind: "none" };
@@ -303,6 +326,7 @@ export function parseYouTubePlayerUrlIntent(input: string | URL): AppUrlIntent {
     manifestId: "youtube-player",
     args: {
       url: url.href,
+      ...(options.autoplay === true ? { autoplay: true } : {}),
     },
   };
 }

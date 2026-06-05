@@ -62,6 +62,13 @@ export function videoIdFromLaunchArgs(
   return normalizedVideoId(args?.videoId) ?? videoIdFromUrl(args?.url);
 }
 
+export function autoplayFromLaunchArgs(
+  args: Readonly<Record<string, unknown>> | null | undefined,
+): boolean {
+  const value = args?.autoplay;
+  return value === true || value === "1" || value === "true";
+}
+
 export function youtubeThumbnailUrls(videoId: unknown): string[] {
   const normalized = normalizedVideoId(videoId);
   if (normalized === null) {

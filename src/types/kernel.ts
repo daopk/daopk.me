@@ -65,6 +65,7 @@ declare global {
     };
     "youtube-player.open.requested": {
       source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api" | "deeplink";
+      autoplay?: boolean;
       handleId?: string;
       videoId?: string;
       url?: string;
