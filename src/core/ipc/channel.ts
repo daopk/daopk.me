@@ -1,6 +1,6 @@
 import type { Endpoint } from "comlink";
 
-export type MessagingPort = Endpoint;
+export type MessagingPort = Endpoint & Pick<MessagePort, "close">;
 
 export function createDetachedPortPair(): readonly [MessagingPort, MessagingPort] | [] {
   if (typeof MessageChannel === "undefined") {

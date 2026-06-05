@@ -2,6 +2,7 @@ import type { Kernel } from "~/types/kernel";
 import type { SearchAdapter } from "~/core/search/SearchAdapter";
 import { debugWarn } from "~/core/debug";
 import type { VfsSearchIndexer } from "~/core/search/VfsSearchIndexer";
+import type { SearchHit, SearchQueryOptions } from "~/types/search";
 
 import {
   appToSearchDoc,
@@ -22,10 +23,16 @@ export interface MiniSearchAdapterOptions {
   readonly vfsIndexer?: VfsSearchIndexer;
 }
 
+export interface MiniSearchAdapter extends SearchAdapter {
+  query(text: string, options?: SearchQueryOptions): SearchHit[];
+  startVfsIndexing(): void;
+  readonly vfsReady?: Promise<void>;
+}
+
 export function createMiniSearchAdapter(
   kernel: Kernel,
   options: MiniSearchAdapterOptions = {},
-): SearchAdapter {
+): MiniSearchAdapter {
   const index = new MiniSearchIndex();
   const disposers: Array<() => void> = [];
   let disposed = false;

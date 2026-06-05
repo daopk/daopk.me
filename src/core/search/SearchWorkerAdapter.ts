@@ -43,6 +43,9 @@ export interface SearchWorkerAdapterOptions {
 
 export interface ReadySearchAdapter extends SearchAdapter {
   readonly ready: Promise<void>;
+  readonly vfsReady?: Promise<void>;
+  startVfsIndexing(): void;
+  query(text: string, options?: SearchQueryOptions): Promise<SearchHit[]>;
 }
 
 const DEFAULT_SEARCH_WORKER_READY_TIMEOUT_MS = 1_000;

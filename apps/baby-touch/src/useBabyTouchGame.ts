@@ -13,15 +13,17 @@ import type {
 interface BabyTouchGameOptions {
   readonly settings: Readonly<Ref<BabyTouchSettings>>;
   readonly random?: () => number;
-  readonly setTimeout?: typeof window.setTimeout;
-  readonly clearTimeout?: typeof window.clearTimeout;
+  readonly setTimeout?: (handler: TimerHandler, timeout?: number) => number;
+  readonly clearTimeout?: (handle?: number) => void;
   readonly prefersReducedMotion?: () => boolean;
 }
 
 export function useBabyTouchGame(options: BabyTouchGameOptions) {
   const random = options.random ?? Math.random;
-  const setTimer = options.setTimeout ?? window.setTimeout.bind(window);
-  const clearTimer = options.clearTimeout ?? window.clearTimeout.bind(window);
+  const setTimer =
+    options.setTimeout ??
+    ((handler: TimerHandler, timeout?: number) => window.setTimeout(handler, timeout));
+  const clearTimer = options.clearTimeout ?? ((handle?: number) => window.clearTimeout(handle));
   const prefersReducedMotion = options.prefersReducedMotion ?? defaultPrefersReducedMotion;
 
   const stickers = ref<BabyTouchSticker[]>([]);

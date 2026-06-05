@@ -5,8 +5,8 @@ import type { BabyTouchPoint } from "./babyTouchTypes";
 
 interface BabyTouchParentHoldOptions {
   readonly onComplete: () => void;
-  readonly setTimeout?: typeof window.setTimeout;
-  readonly clearTimeout?: typeof window.clearTimeout;
+  readonly setTimeout?: (handler: TimerHandler, timeout?: number) => number;
+  readonly clearTimeout?: (handle?: number) => void;
 }
 
 function cornerForPoint(point: BabyTouchPoint): "left" | "right" | null {
@@ -23,8 +23,10 @@ function cornerForPoint(point: BabyTouchPoint): "left" | "right" | null {
 }
 
 export function useBabyTouchParentHold(options: BabyTouchParentHoldOptions) {
-  const setTimer = options.setTimeout ?? window.setTimeout.bind(window);
-  const clearTimer = options.clearTimeout ?? window.clearTimeout.bind(window);
+  const setTimer =
+    options.setTimeout ??
+    ((handler: TimerHandler, timeout?: number) => window.setTimeout(handler, timeout));
+  const clearTimer = options.clearTimeout ?? ((handle?: number) => window.clearTimeout(handle));
 
   let parentHoldTimer: ReturnType<typeof setTimer> | null = null;
   const cornerPointers = new Map<number, "left" | "right">();
