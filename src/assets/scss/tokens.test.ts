@@ -4,7 +4,9 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const tokensPath = resolve(process.cwd(), "src/assets/scss/_tokens.scss");
+const basePath = resolve(process.cwd(), "src/assets/scss/base.scss");
 const tokens = readFileSync(tokensPath, "utf8");
+const base = readFileSync(basePath, "utf8");
 
 describe("design tokens", () => {
   it("defines the typography scale anchored on --font-size-base", () => {
@@ -59,5 +61,11 @@ describe("design tokens", () => {
     expect(tokens).toContain("--home-screen-icon-press-bg:");
     expect(tokens).toContain("--home-screen-icon-shadow: none;");
     expect(tokens).toContain("--home-screen-icon-glyph-shadow:");
+  });
+
+  it("applies Shiki dark theme variables from the active theme", () => {
+    expect(base).toContain('[data-theme="dark"] .shiki');
+    expect(base).toContain("background-color: var(--shiki-dark-bg) !important;");
+    expect(base).toContain("color: var(--shiki-dark) !important;");
   });
 });
