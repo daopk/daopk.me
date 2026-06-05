@@ -1,24 +1,21 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
-
-import { KernelInjectionKey, type Kernel } from "@daopk/sdk";
+import { defineComponent } from "vue";
+import { describe, expect, it } from "vitest";
 
 import YouTubeVideoPreview from "./YouTubeVideoPreview.vue";
 
-function makeKernel(): Kernel {
-  return {
-    events: {
-      emit: vi.fn(),
-      on: vi.fn(() => () => undefined),
-      once: vi.fn(() => () => undefined),
-      off: vi.fn(),
+const YouTubePlayerSurfaceStub = defineComponent({
+  props: {
+    videoId: {
+      required: true,
+      type: String,
     },
-  } as unknown as Kernel;
-}
+  },
+  template: '<div class="shared-youtube-player" :data-video-id="videoId" />',
+});
 
 describe("YouTubeVideoPreview", () => {
-  it("renders a thumbnail button and launches YouTube Player", async () => {
-    const kernel = makeKernel();
+  it("renders the shared YouTube player surface for a video URL", () => {
     const wrapper = mount(YouTubeVideoPreview, {
       props: {
         input: { kind: "url", url: "https://www.youtube.com/watch?v=M7lc1UVf-VE" },
@@ -26,24 +23,34 @@ describe("YouTubeVideoPreview", () => {
         surface: "blog.embed",
       },
       global: {
-        provide: {
-          [KernelInjectionKey as symbol]: kernel,
+        stubs: {
+          YouTubePlayerSurface: YouTubePlayerSurfaceStub,
         },
       },
     });
 
-    expect(wrapper.find("img").attributes("src")).toContain("/M7lc1UVf-VE/");
-
-    await wrapper.find("button").trigger("click");
-
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "youtube-player",
-      source: "deeplink",
-      args: { url: "https://www.youtube.com/watch?v=M7lc1UVf-VE" },
-    });
+    expect(wrapper.find(".shared-youtube-player").attributes("data-video-id")).toBe("M7lc1UVf-VE");
+    expect(wrapper.find("button").exists()).toBe(false);
   });
 
-  it("disables itself when the input does not resolve to a video", () => {
+  it("prefers provider args over the preview input URL", () => {
+    const wrapper = mount(YouTubeVideoPreview, {
+      props: {
+        input: { kind: "url", url: "https://www.youtube.com/watch?v=M7lc1UVf-VE" },
+        args: { videoId: "dQw4w9WgXcQ" },
+        surface: "blog.embed",
+      },
+      global: {
+        stubs: {
+          YouTubePlayerSurface: YouTubePlayerSurfaceStub,
+        },
+      },
+    });
+
+    expect(wrapper.find(".shared-youtube-player").attributes("data-video-id")).toBe("dQw4w9WgXcQ");
+  });
+
+  it("renders an unavailable state when the input does not resolve to a video", () => {
     const wrapper = mount(YouTubeVideoPreview, {
       props: {
         input: { kind: "url", url: "https://example.com" },
@@ -51,12 +58,13 @@ describe("YouTubeVideoPreview", () => {
         surface: "blog.embed",
       },
       global: {
-        provide: {
-          [KernelInjectionKey as symbol]: makeKernel(),
+        stubs: {
+          YouTubePlayerSurface: YouTubePlayerSurfaceStub,
         },
       },
     });
 
-    expect(wrapper.find("button").attributes("disabled")).toBeDefined();
+    expect(wrapper.find(".shared-youtube-player").exists()).toBe(false);
+    expect(wrapper.find(".youtube-video-preview__state").text()).toBe("Video unavailable");
   });
 });
