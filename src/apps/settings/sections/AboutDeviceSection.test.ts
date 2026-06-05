@@ -24,7 +24,7 @@ describe("AboutDeviceSection (M2b.1bis)", () => {
           matches: false,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
     serviceWorkerUpdateController.resetForTests();
   });

@@ -114,8 +114,9 @@ function mountDock(
   });
 
   return {
-    firstButton: () => wrapper.element.querySelector<HTMLButtonElement>(".dock-item"),
-    buttons: () => Array.from(wrapper.element.querySelectorAll<HTMLButtonElement>(".dock-item")),
+    firstButton: () => (wrapper.element as Element).querySelector<HTMLButtonElement>(".dock-item"),
+    buttons: () =>
+      Array.from((wrapper.element as Element).querySelectorAll<HTMLButtonElement>(".dock-item")),
     dockElement: () => wrapper.get(".dock").element as HTMLElement,
     revealZone: () => wrapper.get(".dock-reveal-zone").element as HTMLElement,
     emitSpy,

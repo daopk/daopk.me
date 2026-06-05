@@ -51,7 +51,7 @@ describe("Wallpaper", () => {
 
     expect(root.exists()).toBe(true);
     expect(layer.exists()).toBe(true);
-    expect(root.element.style.backgroundImage).toBe("");
+    expect((root.element as HTMLElement).style.backgroundImage).toBe("");
     expect((layer.element as HTMLElement).style.backgroundImage).toContain("/wallpaper.jpg");
   });
 
@@ -68,7 +68,7 @@ describe("Wallpaper", () => {
 
     const root = wrapper.find(".wallpaper");
     const layer = wrapper.find(".wallpaper__layer");
-    expect(root.element.style.background).toBe("");
+    expect((root.element as HTMLElement).style.background).toBe("");
     expect((layer.element as HTMLElement).style.background).toContain("rgb");
   });
 

@@ -16,7 +16,7 @@ describe("systemPreference", () => {
           matches: true,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
 
     expect(getSystemPreference()).toBe("dark");
@@ -42,7 +42,7 @@ describe("systemPreference", () => {
               listeners.splice(i, 1);
             }
           },
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
 
     const dispose = subscribeSystemPreference(cb);

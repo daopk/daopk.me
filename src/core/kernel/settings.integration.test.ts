@@ -17,7 +17,7 @@ describe("kernel settings facade", () => {
           matches: false,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
 
     await kernel.init();

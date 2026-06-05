@@ -630,11 +630,11 @@ describe("Settings App.vue", () => {
   });
 
   it("uses AppView chrome for narrow section title and back navigation", async () => {
-    let backAction: AppChromeBackAction | null = null;
+    const backActions: Array<AppChromeBackAction | null> = [];
     const appChrome: AppChromeController = {
       setTitle: vi.fn(),
       setBackAction: vi.fn((action) => {
-        backAction = action;
+        backActions.push(action);
       }),
     };
     const wrapper = mountApp({ appChrome });
@@ -653,6 +653,7 @@ describe("Settings App.vue", () => {
     expect(wrapper.find(".settings__content-header").exists()).toBe(false);
     expect(wrapper.find(".appearance__header").exists()).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith("Appearance");
+    const backAction = backActions.at(-1);
     expect(backAction?.ariaLabel).toBe("Back to Settings");
 
     backAction?.handler();

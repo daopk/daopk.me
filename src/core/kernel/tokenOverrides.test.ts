@@ -18,7 +18,7 @@ describe("kernel token overrides — integration (M2b.1 Phase B)", () => {
           matches: false,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
 
     await kernel.init();
@@ -81,7 +81,7 @@ describe("kernel token overrides — integration (M2b.1 Phase B)", () => {
 
     stop();
 
-    expect(payloads[0]?.keys.sort()).toEqual(["--color-accent", "--radius-md"]);
+    expect([...(payloads[0]?.keys ?? [])].sort()).toEqual(["--color-accent", "--radius-md"]);
     expect(payloads[0]?.source).toBe("local");
 
     expect(payloads[1]?.keys).toEqual(["--color-accent"]);

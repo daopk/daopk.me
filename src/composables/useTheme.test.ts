@@ -21,7 +21,7 @@ describe("useTheme", () => {
           matches: false,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
   });
 
@@ -80,7 +80,7 @@ describe("useTheme", () => {
 
     const kernelStub = {
       theme: themeFacade,
-    } as Kernel;
+    } as unknown as Kernel;
 
     useSettingsStore(pinia).hydrate();
 

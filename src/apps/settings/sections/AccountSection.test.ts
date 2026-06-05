@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
@@ -30,9 +30,9 @@ function makeKernel(overrides: Partial<ReturnType<Kernel["profile"]["current"]>>
   return { kernel, lock, signOut, deleteCurrentAccount };
 }
 
-const mountedWrappers: Array<ReturnType<typeof mountSection>> = [];
+const mountedWrappers: VueWrapper[] = [];
 
-function mountSection(kernel: Kernel) {
+function mountSection(kernel: Kernel): VueWrapper {
   const wrapper = mount(AccountSection, {
     attachTo: document.body,
     global: { provide: { [KernelInjectionKey as symbol]: kernel } },
@@ -41,7 +41,7 @@ function mountSection(kernel: Kernel) {
   return wrapper;
 }
 
-function findButtonByText(wrapper: ReturnType<typeof mountSection>, text: string) {
+function findButtonByText(wrapper: VueWrapper, text: string) {
   const button = wrapper.findAll("button").find((candidate) => candidate.text() === text);
   expect(button).toBeDefined();
   return button!;

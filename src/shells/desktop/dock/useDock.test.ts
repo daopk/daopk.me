@@ -59,17 +59,17 @@ const mockKernel: Pick<Kernel, "apps" | "events" | "settings"> = {
   settings: {
     use<K extends keyof SettingsState>(key: K): Ref<SettingsState[K]> {
       if (key === "dockPinnedAppIds") {
-        return pinnedAppIds as Ref<SettingsState[K]>;
+        return pinnedAppIds as unknown as Ref<SettingsState[K]>;
       }
 
-      return ref(undefined) as Ref<SettingsState[K]>;
+      return ref(undefined) as unknown as Ref<SettingsState[K]>;
     },
     get<K extends keyof SettingsState>(key: K): SettingsState[K] {
       if (key === "dockPinnedAppIds") {
         return pinnedAppIds.value as SettingsState[K];
       }
 
-      return undefined as SettingsState[K];
+      return undefined as unknown as SettingsState[K];
     },
     set: mockSetSetting,
     reset: vi.fn(),

@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, type Component } from "vue";
 
@@ -105,9 +105,9 @@ function stubCatalog(payload: unknown, ok = true, status = 200): void {
   );
 }
 
-const mountedWrappers: Array<ReturnType<typeof mountStore>> = [];
+const mountedWrappers: VueWrapper[] = [];
 
-function mountStore(kernel: Kernel) {
+function mountStore(kernel: Kernel): VueWrapper {
   const wrapper = mount(AppStore, {
     attachTo: document.body,
     global: { provide: { [KernelInjectionKey as symbol]: kernel } },

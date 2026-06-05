@@ -109,7 +109,7 @@ describe("ComfortSection", () => {
           matches: false,
           addEventListener: (): void => {},
           removeEventListener: (): void => {},
-        }) as MediaQueryList,
+        }) as unknown as MediaQueryList,
     );
   });
 
