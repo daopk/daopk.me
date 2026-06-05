@@ -44,11 +44,20 @@ vi.mock("~/components/wallpaper/Wallpaper.vue", () => ({
 function makeKernel(
   manifests: AppManifest[],
 ): Pick<Kernel, "apps" | "processes" | "lifecycleCoordinator" | "events" | "widgets"> {
-  const listeners = new Map<string, Set<(payload: Record<string, unknown>) => void>>();
-  const emit = vi.fn((channel: string, payload: Record<string, unknown>) => {
+  type EventListener = (payload: unknown) => void;
+  const listeners = new Map<string, Set<EventListener>>();
+  const emit = vi.fn((channel: string, payload: unknown) => {
     for (const listener of listeners.get(channel) ?? []) {
       listener(payload);
     }
+  });
+  const on = vi.fn((channel: string, listener: EventListener) => {
+    const bucket = listeners.get(channel) ?? new Set<EventListener>();
+    bucket.add(listener);
+    listeners.set(channel, bucket);
+    return (): void => {
+      bucket.delete(listener);
+    };
   });
 
   return {
@@ -78,18 +87,12 @@ function makeKernel(
       register: vi.fn(),
       unregister: vi.fn(),
       emit: vi.fn(),
+      on: vi.fn(() => () => undefined),
     },
     events: {
-      on: vi.fn((channel: string, listener: (payload: Record<string, unknown>) => void) => {
-        const bucket =
-          listeners.get(channel) ?? new Set<(payload: Record<string, unknown>) => void>();
-        bucket.add(listener);
-        listeners.set(channel, bucket);
-        return (): void => {
-          bucket.delete(listener);
-        };
-      }),
-      emit,
+      on: on as unknown as Kernel["events"]["on"],
+      emit: emit as unknown as Kernel["events"]["emit"],
+      once: vi.fn(() => () => undefined) as unknown as Kernel["events"]["once"],
       off: vi.fn(),
     },
     widgets: {
@@ -693,7 +696,9 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
   });
 
   it("M1.3.6: HomeScreenIcon flips to aria-busy while the kernel launch is in flight, restores on resolve", async () => {
-    let resolveLaunch: ((handle: AppHandle) => void) | null = null;
+    let resolveLaunch: (handle: AppHandle) => void = () => {
+      throw new Error("launch resolver was not captured");
+    };
     const kernel = makeKernel([manifest({ id: "alpha" })]);
     let kernelLaunchCalls = 0;
     kernel.apps.launch = (manifestId: string): Promise<AppHandle> => {
@@ -725,7 +730,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await flushPromises();
       expect(kernelLaunchCalls).toBe(1);
 
-      resolveLaunch?.({
+      resolveLaunch({
         id: "h-1",
         manifestId: "alpha",
         on: () => () => undefined,
@@ -817,7 +822,9 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
   });
 
   it("M1.3.6: HomeScreenIcon spinner state clears on launch reject (user can retry)", async () => {
-    let rejectLaunch: ((reason: Error) => void) | null = null;
+    let rejectLaunch: (reason: Error) => void = () => {
+      throw new Error("launch rejecter was not captured");
+    };
     const kernel = makeKernel([manifest({ id: "alpha" })]);
     kernel.apps.launch = (manifestId: string): Promise<AppHandle> => {
       void manifestId;
@@ -836,7 +843,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await nextTick();
       expect(iconButton.attributes("aria-busy")).toBe("true");
 
-      rejectLaunch?.(new Error("kernel refused"));
+      rejectLaunch(new Error("kernel refused"));
       await flushPromises();
       await nextTick();
 

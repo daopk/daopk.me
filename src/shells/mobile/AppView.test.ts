@@ -49,6 +49,7 @@ function makeKernel(
       register: vi.fn(),
       unregister: vi.fn(),
       emit: lifecycleEmit,
+      on: vi.fn(() => () => undefined),
     },
   };
 }
@@ -154,6 +155,7 @@ describe("AppView", () => {
         register: vi.fn(),
         unregister: vi.fn(),
         emit: lifecycleEmit,
+        on: vi.fn(() => () => undefined),
       },
     } as Pick<Kernel, "apps" | "lifecycleCoordinator">;
 
@@ -229,6 +231,7 @@ describe("AppView", () => {
         register: vi.fn(),
         unregister: vi.fn(),
         emit: lifecycleEmit,
+        on: vi.fn(() => () => undefined),
       },
     } as Pick<Kernel, "apps" | "lifecycleCoordinator">;
 
@@ -285,7 +288,7 @@ describe("AppView", () => {
         const chrome = inject(AppChromeInjectionKey, null);
 
         onMounted(() => {
-          chrome?.setTitlebar("hidden");
+          chrome?.setTitlebar?.("hidden");
         });
 
         return () => h("div", { class: "probe" });
@@ -332,8 +335,8 @@ describe("AppView", () => {
         const chrome = inject(AppChromeInjectionKey, null);
 
         onMounted(() => {
-          chrome?.hide();
-          chrome?.close();
+          chrome?.hide?.();
+          chrome?.close?.();
         });
 
         return () => h("div", { class: "probe" });
