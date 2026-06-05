@@ -738,7 +738,10 @@ describe("Photo thumbnails — on-the-fly resize cached in R2", () => {
     // A cache miss probes the derived key, then transforms the original.
     expect(photosGet).toHaveBeenCalledWith("thumbnails/400/ocean.png");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [input, init] = fetchMock.mock.calls[0] as [URL, { cf?: { image?: { width?: number } } }];
+    const [input, init] = fetchMock.mock.calls[0] as unknown as [
+      URL,
+      { cf?: { image?: { width?: number } } },
+    ];
     expect(String(input)).toContain("/_worker/photos/ocean.png");
     expect(String(input)).not.toContain("w=400");
     expect(init?.cf?.image?.width).toBe(400);
