@@ -18,6 +18,6 @@ pnpm build      # vue-tsc -b && vite production build → dist/
 pnpm typecheck  # vue-tsc --noEmit against tsconfig.app.json
 pnpm lint       # oxlint
 pnpm lint:fix   # oxlint --fix
-pnpm fmt        # oxfmt
-pnpm fmt:check  # oxfmt --check
+pnpm format        # oxfmt
+pnpm format:check  # oxfmt --check
 ```
