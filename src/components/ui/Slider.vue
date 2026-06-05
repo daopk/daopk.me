@@ -124,7 +124,10 @@ function onCommit(next: number[]): void {
   box-shadow: var(--shadow-sm);
   display: block;
   inline-size: var(--ds-slider-thumb-size, 16px);
-  transition: box-shadow var(--duration-fast) var(--ease);
+  opacity: var(--ds-slider-thumb-opacity, 1);
+  transition:
+    box-shadow var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease);
 
   &:hover {
     box-shadow: var(--shadow-md);

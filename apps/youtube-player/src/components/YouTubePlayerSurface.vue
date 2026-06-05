@@ -166,15 +166,17 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
       >
         <YouTubeEmbed :has-video="hasVideo" :video-id="videoId" @host-change="setPlayerHost" />
 
-        <YouTubePosterOverlay
-          v-if="posterVisible"
-          :disabled="controlsDisabled"
-          :title="videoTitle"
-          :video-id="videoId"
-          @aspect-ratio-change="setVideoAspectRatio"
-          @interaction="showControls"
-          @play="togglePlayback"
-        />
+        <Transition name="youtube-player__poster-fade">
+          <YouTubePosterOverlay
+            v-if="posterVisible"
+            :disabled="controlsDisabled"
+            :title="videoTitle"
+            :video-id="videoId"
+            @aspect-ratio-change="setVideoAspectRatio"
+            @interaction="showControls"
+            @play="togglePlayback"
+          />
+        </Transition>
 
         <div
           v-if="hasVideo && controlsHidden"
@@ -260,6 +262,25 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
   z-index: 1;
 }
 
+:deep(.youtube-player__poster-fade-enter-active),
+:deep(.youtube-player__poster-fade-leave-active) {
+  transition:
+    opacity 180ms var(--ease),
+    transform 240ms var(--ease);
+}
+
+:deep(.youtube-player__poster-fade-enter-from),
+:deep(.youtube-player__poster-fade-leave-to) {
+  opacity: 0;
+  transform: scale(1.012);
+}
+
+:deep(.youtube-player__poster-fade-enter-to),
+:deep(.youtube-player__poster-fade-leave-from) {
+  opacity: 1;
+  transform: scale(1);
+}
+
 .youtube-player__status {
   background: color-mix(in srgb, var(--color-bg-elevated) 86%, transparent);
   border: 1px solid var(--color-border);
@@ -273,5 +294,12 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
   position: absolute;
   text-align: center;
   z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :deep(.youtube-player__poster-fade-enter-active),
+  :deep(.youtube-player__poster-fade-leave-active) {
+    transition: none;
+  }
 }
 </style>

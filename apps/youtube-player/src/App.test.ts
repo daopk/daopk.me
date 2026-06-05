@@ -498,12 +498,25 @@ describe("YouTube Player App", () => {
     expect(wrapper.get(".youtube-player__poster-image").attributes("src")).toBe(
       "https://img.youtube.com/vi/IQsLEaj89bg/maxresdefault.jpg",
     );
+    expect(wrapper.get(".youtube-player__poster-image").classes()).not.toContain(
+      "youtube-player__poster-image--loaded",
+    );
 
     await wrapper.get(".youtube-player__poster-image").trigger("error");
     await nextTick();
 
     expect(wrapper.get(".youtube-player__poster-image").attributes("src")).toBe(
       "https://img.youtube.com/vi/IQsLEaj89bg/sddefault.jpg",
+    );
+    expect(wrapper.get(".youtube-player__poster-image").classes()).not.toContain(
+      "youtube-player__poster-image--loaded",
+    );
+
+    await wrapper.get(".youtube-player__poster-image").trigger("load");
+    await nextTick();
+
+    expect(wrapper.get(".youtube-player__poster-image").classes()).toContain(
+      "youtube-player__poster-image--loaded",
     );
 
     await wrapper.get(".youtube-player__poster").trigger("click");

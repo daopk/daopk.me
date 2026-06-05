@@ -17,6 +17,7 @@ const emit = defineEmits<{
   play: [];
 }>();
 
+const imageLoaded = ref(false);
 const thumbnailIndex = ref(0);
 const thumbnailUrls = computed(() => youtubeThumbnailUrls(props.videoId));
 const thumbnailUrl = computed(() => thumbnailUrls.value[thumbnailIndex.value] ?? null);
@@ -29,12 +30,17 @@ watch(
   },
 );
 
+watch(thumbnailUrl, () => {
+  imageLoaded.value = false;
+});
+
 function tryNextThumbnail(): void {
   thumbnailIndex.value += 1;
 }
 
 function syncThumbnailAspectRatio(event: Event): void {
   const image = event.currentTarget;
+  imageLoaded.value = true;
 
   if (!(image instanceof HTMLImageElement) || image.naturalHeight <= 0) {
     return;
@@ -58,6 +64,7 @@ function syncThumbnailAspectRatio(event: Event): void {
     <img
       v-if="thumbnailUrl !== null"
       class="youtube-player__poster-image"
+      :class="{ 'youtube-player__poster-image--loaded': imageLoaded }"
       :src="thumbnailUrl"
       alt=""
       draggable="false"
@@ -113,7 +120,18 @@ function syncThumbnailAspectRatio(event: Event): void {
   inset: 0;
   inline-size: 100%;
   object-fit: contain;
+  opacity: 0;
   position: absolute;
+  transform: scale(1.012);
+  transition:
+    opacity 220ms var(--ease),
+    transform 360ms var(--ease);
+  will-change: opacity, transform;
+}
+
+.youtube-player__poster-image--loaded {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .youtube-player__poster-play {
@@ -162,6 +180,11 @@ function syncThumbnailAspectRatio(event: Event): void {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .youtube-player__poster-image {
+    transform: none;
+    transition: none;
+  }
+
   .youtube-player__poster-play {
     transition: none;
   }
