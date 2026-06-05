@@ -6,7 +6,7 @@ import type { SearchAdapter } from "~/core/search/SearchAdapter";
 const searchMock = vi.hoisted(() => {
   const state = {
     promise: Promise.resolve({} as SearchAdapter),
-    resolve: (_adapter: SearchAdapter) => undefined,
+    resolve: (_adapter: SearchAdapter): void => undefined,
   };
 
   function reset(): void {
@@ -46,7 +46,9 @@ describe("kernel init/dispose race", () => {
 
   it("disposes a search adapter that resolves after kernel.dispose()", async () => {
     const adapter: SearchAdapter = {
-      query: vi.fn(async () => [{ kind: "command", id: "stale", title: "Stale", score: 1 }]),
+      query: vi.fn<SearchAdapter["query"]>(async () => [
+        { kind: "command", id: "stale", title: "Stale", score: 1 },
+      ]),
       dispose: vi.fn(),
     };
 

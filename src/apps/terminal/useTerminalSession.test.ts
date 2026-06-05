@@ -7,7 +7,9 @@ import { getInstanceAliases, resolveCommandId, useTerminalSession } from "./useT
 
 import { KernelInjectionKey } from "~/types/kernel";
 import type { Kernel } from "~/types/kernel";
+import type { CommandContext, CommandManifest } from "~/types/command";
 import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
+import { normalizeVfsPath } from "~/core/vfs/path";
 
 const TEST_HANDLE = "test-handle";
 
@@ -23,7 +25,7 @@ function makeFakeKernel(): FakeKernel {
     [
       "/",
       {
-        path: "/",
+        path: normalizeVfsPath("/"),
         kind: "directory",
         size: 0,
         createdAt: 0,
@@ -34,7 +36,7 @@ function makeFakeKernel(): FakeKernel {
     [
       "/home",
       {
-        path: "/home",
+        path: normalizeVfsPath("/home"),
         kind: "directory",
         size: 0,
         createdAt: 0,
@@ -45,7 +47,7 @@ function makeFakeKernel(): FakeKernel {
     [
       "/readme.txt",
       {
-        path: "/readme.txt",
+        path: normalizeVfsPath("/readme.txt"),
         kind: "file",
         size: 12,
         createdAt: 0,
@@ -58,7 +60,7 @@ function makeFakeKernel(): FakeKernel {
     value: [
       {
         name: "home",
-        path: "/home",
+        path: normalizeVfsPath("/home"),
         kind: "directory",
         size: 0,
         updatedAt: 0,
@@ -66,7 +68,7 @@ function makeFakeKernel(): FakeKernel {
       },
       {
         name: "readme.txt",
-        path: "/readme.txt",
+        path: normalizeVfsPath("/readme.txt"),
         kind: "file",
         size: 12,
         updatedAt: 0,
@@ -75,10 +77,7 @@ function makeFakeKernel(): FakeKernel {
     ],
   };
   const dispatchCalls: FakeKernel["dispatchCalls"] = [];
-  const registry = new Map<
-    string,
-    { id: string; title?: string; run: (ctx: unknown) => void | Promise<void> }
-  >();
+  const registry = new Map<string, CommandManifest>();
 
   const fake = {
     vfs: {
@@ -86,7 +85,7 @@ function makeFakeKernel(): FakeKernel {
       stat: vi.fn(async (path: string) => vfsStats.get(path) ?? null),
     },
     commands: {
-      register: vi.fn((manifest: { id: string; run: (ctx: unknown) => void | Promise<void> }) => {
+      register: vi.fn<Kernel["commands"]["register"]>((manifest) => {
         registry.set(manifest.id, manifest);
         return vi.fn(() => {
           registry.delete(manifest.id);
@@ -103,7 +102,14 @@ function makeFakeKernel(): FakeKernel {
           err.name = "CommandNotFoundError";
           throw err;
         }
-        await manifest.run({});
+        const context: CommandContext = {
+          activeHandle: null,
+          kernel: fake,
+          payload: {},
+          signal: new AbortController().signal,
+          source: "terminal",
+        };
+        await manifest.run(context);
       }),
       list: () => Array.from(registry.values()) as never,
     },
@@ -192,8 +198,10 @@ describe("useTerminalSession — scrollback + dispatch (M2a.3)", () => {
 
   it("registers the terminal-native commands at mount, scoped to the instance id", () => {
     const h = mountSession();
-    const registerMock = h.fake.kernel.commands.register as ReturnType<typeof vi.fn>;
-    const registeredIds = registerMock.mock.calls.map(([m]) => (m as { id: string }).id);
+    const registerMock = h.fake.kernel.commands.register as ReturnType<
+      typeof vi.fn<Kernel["commands"]["register"]>
+    >;
+    const registeredIds = registerMock.mock.calls.map(([manifest]) => manifest.id);
 
     expect(registeredIds).toEqual([
       `terminal:${TEST_HANDLE}:help`,
@@ -208,8 +216,10 @@ describe("useTerminalSession — scrollback + dispatch (M2a.3)", () => {
 
   it("unregisters terminal:* commands on scope dispose", () => {
     const h = mountSession();
-    const registerMock = h.fake.kernel.commands.register as ReturnType<typeof vi.fn>;
-    const disposers = registerMock.mock.results.map((r) => r.value as ReturnType<typeof vi.fn>);
+    const registerMock = h.fake.kernel.commands.register as ReturnType<
+      typeof vi.fn<Kernel["commands"]["register"]>
+    >;
+    const disposers = registerMock.mock.results.map((result) => result.value);
 
     h.unmount();
 
@@ -273,7 +283,9 @@ describe("useTerminalSession — scrollback + dispatch (M2a.3)", () => {
 
   it("terminal:help lists only commands from the current Terminal instance", async () => {
     const h = mountSession();
-    const registerMock = h.fake.kernel.commands.register as ReturnType<typeof vi.fn>;
+    const registerMock = h.fake.kernel.commands.register as ReturnType<
+      typeof vi.fn<Kernel["commands"]["register"]>
+    >;
 
     registerMock({
       id: "theme:toggle",

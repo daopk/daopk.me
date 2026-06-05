@@ -6,7 +6,7 @@ import "fake-indexeddb/auto";
 
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import { profileIdbName } from "~/core/profile/storageScope";
-import { basename } from "~/core/vfs/path";
+import { basename, normalizeVfsPath } from "~/core/vfs/path";
 import type { AppManifest } from "~/types/app";
 
 import { kernel } from "./index";
@@ -89,7 +89,7 @@ describe("kernel.trash", () => {
 
     expect(item).toEqual(
       expect.objectContaining({
-        name: basename(path),
+        name: basename(normalizeVfsPath(path)),
         originalPath: path,
         kind: "file",
         size: "hello trash".length,

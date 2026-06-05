@@ -17,9 +17,9 @@ vi.mock("~/core/debug", () => ({
 const RAW_BASE = "https://example.test/blog";
 
 interface FakeVfs extends BlogContentVfs {
-  readText: ReturnType<typeof vi.fn>;
-  writeText: ReturnType<typeof vi.fn>;
-  mkdir: ReturnType<typeof vi.fn>;
+  readText: ReturnType<typeof vi.fn<BlogContentVfs["readText"]>>;
+  writeText: ReturnType<typeof vi.fn<BlogContentVfs["writeText"]>>;
+  mkdir: ReturnType<typeof vi.fn<BlogContentVfs["mkdir"]>>;
   store: Map<string, string>;
 }
 
@@ -27,12 +27,12 @@ function makeVfs(initial: Record<string, string> = {}): FakeVfs {
   const store = new Map<string, string>(Object.entries(initial));
   return {
     store,
-    readText: vi.fn(async (path: string) => store.get(path) ?? null),
-    writeText: vi.fn(async (path: string, text: string) => {
+    readText: vi.fn<BlogContentVfs["readText"]>(async (path) => store.get(path) ?? null),
+    writeText: vi.fn<BlogContentVfs["writeText"]>(async (path, text) => {
       store.set(path, text);
       return null;
     }),
-    mkdir: vi.fn(async () => null),
+    mkdir: vi.fn<BlogContentVfs["mkdir"]>(async () => null),
   };
 }
 

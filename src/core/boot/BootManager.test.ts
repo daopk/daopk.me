@@ -30,6 +30,7 @@ function makeKernel(track = vi.fn()): Kernel {
 
 function phase(label: string, run: BootPhase["run"] = vi.fn()): BootPhase {
   return {
+    id: label.toLowerCase(),
     label,
     weight: 1,
     run,
