@@ -15,6 +15,7 @@ This repository implements an “OS-on-web” foundation: progressive boot → k
 ```bash
 pnpm dev        # dev server
 pnpm build      # vue-tsc -b && vite production build → dist/
+pnpm dead-code  # fallow dead-code audit
 pnpm typecheck  # vue-tsc --noEmit against tsconfig.app.json
 pnpm lint       # oxlint
 pnpm lint:fix   # oxlint --fix

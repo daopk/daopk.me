@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+
+  // Migrated from knip.jsonc. Fallow already auto-discovers pnpm workspaces,
+  // package.json app entrypoints, Vite, Vitest, TypeScript, and Wrangler.
+  "entry": [
+    // Runtime facades are loaded by the host import map, not by static imports.
+    "src/runtime/*.ts",
+    // Top-level scripts are invoked by package scripts and GitHub workflows.
+    "scripts/*.mjs",
+    // First-party app packages are independently buildable through Vite.
+    "apps/*/vite.config.ts",
+  ],
+
+  "ignorePatterns": [
+    // Generated and template surfaces are intentionally kept as source assets.
+    "src/apps/_template/**",
+    "src/types/vue-axe.d.ts",
+    // Shared app build helpers are imported by app Vite configs but are not a
+    // workspace package; this also silences Fallow's workspace diagnostic.
+    "apps/_shared",
+    // Loaded from src/assets/scss/base.scss via Sass meta.load-css("reset").
+    "src/assets/scss/_reset.scss",
+    // Preserve the old Knip behavior until app Sass tracing is re-verified.
+    "apps/*/src/styles/**/*.scss",
+  ],
+
+  "ignoreDependencies": [
+    // App packages keep these toolchain deps so each package can build on its own.
+    "@vitejs/plugin-vue",
+    "@vue/tsconfig",
+    // App tests run from the root Vitest setup and intentionally use root deps.
+    "@vue/test-utils",
+    "fake-indexeddb",
+    "pinia",
+  ],
+
+  "ignoreUnresolvedImports": [
+    // Fallow currently misreads this SCSS @import url + meta.load-css pair.
+    "\"https:*",
+    // Mentioned in an AppMount test comment as an example dynamic import shape.
+    "./App.vue",
+  ],
+}
