@@ -120,14 +120,14 @@ function syncThumbnailAspectRatio(event: Event): void {
   align-items: center;
   backdrop-filter: blur(12px);
   background: color-mix(in srgb, var(--color-fg) 14%, transparent);
-  block-size: 72px;
+  block-size: 56px;
   border: 1px solid color-mix(in srgb, white 34%, transparent);
   border-radius: var(--radius-full);
   box-shadow: 0 18px 42px color-mix(in srgb, black 42%, transparent);
   color: white;
   display: inline-flex;
   grid-area: 1 / 1;
-  inline-size: 72px;
+  inline-size: 56px;
   justify-content: center;
   position: relative;
   transition:
@@ -156,21 +156,9 @@ function syncThumbnailAspectRatio(event: Event): void {
 }
 
 .youtube-player__poster-icon {
-  block-size: 30px;
-  inline-size: 30px;
+  block-size: 24px;
+  inline-size: 24px;
   margin-inline-start: 3px;
-}
-
-@media (max-width: 560px) {
-  .youtube-player__poster-play {
-    block-size: 58px;
-    inline-size: 58px;
-  }
-
-  .youtube-player__poster-icon {
-    block-size: 24px;
-    inline-size: 24px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

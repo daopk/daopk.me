@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from "vue";
 
-export const AUTO_HIDE_CONTROLS_DELAY_MS = 2400;
+export const AUTO_HIDE_CONTROLS_DELAY_MS = 4000;
 
 export interface UseAutoHideControlsOptions {
   readonly playing: Readonly<Ref<boolean>>;
