@@ -1,7 +1,11 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppContextInjectionKey } from "@daopk/sdk";
+import {
+  AppChromeInjectionKey,
+  AppContextInjectionKey,
+  type AppChromeController,
+} from "@daopk/sdk";
 
 import type {
   MovieDetail,
@@ -419,6 +423,32 @@ describe("Movies app", () => {
     expect(backButton().attributes("disabled")).toBeUndefined();
     expect(forwardButton().attributes("disabled")).toBeDefined();
     expect(homeButton().attributes("disabled")).toBeUndefined();
+  });
+
+  it("shows a hosted mobile close control and dispatches chrome close", async () => {
+    const close = vi.fn();
+    const appChrome: AppChromeController = {
+      rendersAppChrome: true,
+      setBackAction: vi.fn(),
+      setContentSize: vi.fn(),
+      setTitle: vi.fn(),
+      setTitlebar: vi.fn(),
+      hide: vi.fn(),
+      close,
+    };
+
+    const wrapper = mount(App, {
+      global: {
+        provide: {
+          [AppChromeInjectionKey as symbol]: appChrome,
+        },
+      },
+    });
+    await settle();
+
+    await wrapper.get('button[aria-label="Close Movies"]').trigger("click");
+
+    expect(close).toHaveBeenCalledTimes(1);
   });
 
   it("shows toolbar Home for a direct route with no back history", async () => {

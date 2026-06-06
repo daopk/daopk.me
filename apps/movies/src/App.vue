@@ -78,7 +78,8 @@ const chromeBackAction = computed(() =>
   canGoBack.value ? { ariaLabel: "Back to Movies", handler: goBack } : null,
 );
 
-useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
+const appChrome = useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
+const showCloseButton = computed(() => appChrome.available);
 
 onMounted(() => {
   openInitialDeepLink();
@@ -141,6 +142,10 @@ function goForward(): void {
   history.value = [...history.value, view.value];
   view.value = next;
   replacePathForView(next);
+}
+
+function closeApp(): void {
+  appChrome.close();
 }
 
 function goHome(): void {
@@ -432,8 +437,10 @@ function openInitialDeepLink(): void {
       :can-go-back="canGoBack"
       :can-go-forward="canGoForward"
       :can-go-home="canGoHome"
+      :show-close="showCloseButton"
       :active-search="activeSearch"
       @back="goBack"
+      @close="closeApp"
       @forward="goForward"
       @home="goHome"
       @search="searchMovies"

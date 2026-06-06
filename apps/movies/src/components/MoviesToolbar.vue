@@ -3,7 +3,7 @@ import { ref, watch } from "vue";
 
 import { IconButton, TextInput } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ChevronLeft, ChevronRight, Home, Search } from "@daopk/icons";
+import { ChevronLeft, ChevronRight, Home, Search, X } from "@daopk/icons";
 
 import type { MoviesListQuery } from "../moviesApi";
 
@@ -13,6 +13,7 @@ interface MoviesToolbarProps {
   canGoBack?: boolean;
   canGoForward?: boolean;
   canGoHome?: boolean;
+  showClose?: boolean;
 }
 
 const props = withDefaults(defineProps<MoviesToolbarProps>(), {
@@ -20,10 +21,12 @@ const props = withDefaults(defineProps<MoviesToolbarProps>(), {
   canGoBack: false,
   canGoForward: false,
   canGoHome: false,
+  showClose: false,
 });
 
 const emit = defineEmits<{
   back: [];
+  close: [];
   forward: [];
   home: [];
   search: [keyword: string];
@@ -48,7 +51,10 @@ function submitSearch(): void {
 </script>
 
 <template>
-  <header class="movies-toolbar" :class="{ 'movies-toolbar--solid': solid }">
+  <header
+    class="movies-toolbar"
+    :class="{ 'movies-toolbar--solid': solid, 'movies-toolbar--has-close': showClose }"
+  >
     <nav class="movies-toolbar__history" aria-label="Movies navigation">
       <IconButton
         label="Back"
@@ -105,6 +111,16 @@ function submitSearch(): void {
         placeholder="Search..."
       />
     </form>
+
+    <IconButton
+      v-if="showClose"
+      class="movies-toolbar__close"
+      label="Close Movies"
+      size="sm"
+      :icon="X"
+      title="Close Movies"
+      @click="$emit('close')"
+    />
   </header>
 </template>
 
@@ -130,6 +146,10 @@ function submitSearch(): void {
     box-shadow var(--duration-base) var(--ease);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
   z-index: 2;
+}
+
+.movies-toolbar--has-close {
+  grid-template-columns: auto minmax(0, 1fr) minmax(180px, 320px) auto;
 }
 
 .movies-toolbar--solid {
@@ -249,6 +269,19 @@ function submitSearch(): void {
   outline: 0;
 }
 
+.movies-toolbar__close {
+  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
+  border-radius: var(--radius-full);
+  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  justify-self: end;
+}
+
+.movies-toolbar__close:hover,
+.movies-toolbar__close:focus-visible {
+  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
+  color: var(--color-fg);
+}
+
 @media (max-width: 760px) {
   .movies-toolbar {
     align-items: center;
@@ -263,6 +296,13 @@ function submitSearch(): void {
     padding-block-start: calc(var(--space-xs) + var(--mobile-shell-app-safe-area-top, 0px));
   }
 
+  .movies-toolbar--has-close {
+    grid-template-areas:
+      "history search close"
+      "nav nav nav";
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
   .movies-toolbar__history {
     grid-area: history;
     min-inline-size: 0;
@@ -275,14 +315,42 @@ function submitSearch(): void {
   }
 
   .movies-toolbar__search {
+    block-size: var(--control-height-md);
+    gap: var(--space-2xs);
     grid-area: search;
     min-inline-size: 0;
+    padding-inline: var(--space-xs);
+  }
+
+  .movies-toolbar__search-button {
+    margin-inline-start: 0;
+    min-block-size: 24px;
+    min-inline-size: 24px;
+  }
+
+  .movies-toolbar__search-icon {
+    block-size: 15px;
+    inline-size: 15px;
+  }
+
+  .movies-toolbar__search :deep(.ds-kit-text-input) {
+    block-size: 100%;
+    font-size: 15px;
+    min-block-size: 0;
+  }
+
+  .movies-toolbar__close {
+    grid-area: close;
   }
 }
 
 @media (max-width: 520px) {
   .movies-toolbar {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .movies-toolbar--has-close {
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button) {
