@@ -226,7 +226,7 @@ describe("Blog app", () => {
           title: "New Post",
           date: "2026-05-30",
           thumbnail: {
-            url: "/_worker/blog/thumbnails/new-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
+            url: "/public/blog/thumbnails/new-post/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png",
             width: 1024,
             height: 576,
             alt: "New Post thumbnail",
@@ -257,7 +257,7 @@ describe("Blog app", () => {
           title: "New Post",
           date: "2026-05-30",
           thumbnail: {
-            url: "/_worker/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
+            url: "/public/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
             width: 1024,
             height: 576,
             alt: "New Post thumbnail",
@@ -285,7 +285,7 @@ New body`,
     const cover = wrapper.find(".blog__post-cover");
     const coverImage = wrapper.find(".blog__post-cover-image");
     expect(coverImage.attributes("src")).toBe(
-      "/_worker/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
+      "/public/blog/thumbnails/new-post/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.webp",
     );
     expect(coverImage.attributes("alt")).toBe("New Post thumbnail");
     expect(coverImage.attributes("width")).toBe("1024");
@@ -582,7 +582,7 @@ Event body`,
           title: "Field Notes",
           date: "2026-05-30",
           thumbnail: {
-            url: "/_worker/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
+            url: "/public/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
             width: 1024,
             height: 576,
             alt: "Field Notes thumbnail",
@@ -602,7 +602,7 @@ Event body`,
     expect(coverImage.attributes()).toMatchObject({
       alt: "Field Notes thumbnail",
       height: "576",
-      src: "/_worker/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
+      src: "/public/blog/thumbnails/field-notes/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.png",
       width: "1024",
     });
     expect(wrapper.find(".blog__index-thumbnail").exists()).toBe(false);

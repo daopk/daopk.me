@@ -13,7 +13,13 @@ const FocusTrapStub = defineComponent({
 });
 
 function photo(key: string): Photo {
-  return { key, url: `/_worker/photos/${key}`, size: 0, uploaded: null, contentType: "image/jpeg" };
+  return {
+    key,
+    url: `/public/photos/${key}`,
+    size: 0,
+    uploaded: null,
+    contentType: "image/jpeg",
+  };
 }
 
 function mountLightbox(index: number) {
@@ -29,7 +35,7 @@ describe("PhotoLightbox", () => {
     const wrapper = mountLightbox(1);
 
     expect(wrapper.get(".photos__lightbox-image").attributes("src")).toBe(
-      "/_worker/photos/2026/sunset.jpg",
+      "/public/photos/2026/sunset.jpg",
     );
     expect(wrapper.get(".photos__lightbox-title").text()).toBe("sunset");
   });

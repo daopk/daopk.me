@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import { debugWarn } from "@daopk/sdk";
 
-import { photosIndexUrl } from "./photosContentConfig";
+import { PHOTOS_CONTENT_BASE, photosIndexUrl } from "./photosContentConfig";
 
 export type PhotosStatus = "idle" | "loading" | "ready" | "empty" | "error";
 
@@ -15,7 +15,7 @@ export interface Photo {
 }
 
 export interface UsePhotosOptions {
-  /** Override the index loader (defaults to fetching the Worker `/_worker/photos/index.json`). */
+  /** Override the index loader (defaults to fetching the public photos API index). */
   readonly fetchIndex?: () => Promise<readonly Photo[]>;
 }
 
@@ -38,14 +38,14 @@ export function photoFromEntry(entry: unknown): Photo | null {
 
   return {
     key,
-    url: asNonEmptyString(record.url) ?? `/_worker/photos/${key}`,
+    url: asNonEmptyString(record.url) ?? `${PHOTOS_CONTENT_BASE}/${key}`,
     size,
     uploaded: asNonEmptyString(record.uploaded),
     contentType: asNonEmptyString(record.contentType) ?? "application/octet-stream",
   };
 }
 
-/** Fetch + parse the gallery index served same-origin by the Worker. */
+/** Fetch + parse the gallery index served by the public API. */
 export async function fetchPhotosIndex(): Promise<readonly Photo[]> {
   const response = await fetch(photosIndexUrl(), { headers: { Accept: "application/json" } });
   if (!response.ok) {

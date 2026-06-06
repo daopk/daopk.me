@@ -14,7 +14,7 @@ vi.mock("@daopk/sdk", async (importOriginal) => ({
 
 function photo(overrides: Partial<Photo> & { key: string }): Photo {
   return {
-    url: `/_worker/photos/${overrides.key}`,
+    url: `/public/photos/${overrides.key}`,
     size: 0,
     uploaded: null,
     contentType: "image/jpeg",
@@ -49,14 +49,14 @@ describe("photoFromEntry", () => {
     expect(
       photoFromEntry({
         key: "ocean.png",
-        url: "/_worker/photos/ocean.png",
+        url: "/public/photos/ocean.png",
         size: 1234,
         uploaded: "2026-05-31T12:00:00.000Z",
         contentType: "image/png",
       }),
     ).toEqual({
       key: "ocean.png",
-      url: "/_worker/photos/ocean.png",
+      url: "/public/photos/ocean.png",
       size: 1234,
       uploaded: "2026-05-31T12:00:00.000Z",
       contentType: "image/png",
@@ -72,7 +72,7 @@ describe("photoFromEntry", () => {
   it("fills sensible defaults from a minimal entry", () => {
     expect(photoFromEntry({ key: "a.jpg" })).toEqual({
       key: "a.jpg",
-      url: "/_worker/photos/a.jpg",
+      url: "/public/photos/a.jpg",
       size: 0,
       uploaded: null,
       contentType: "application/octet-stream",

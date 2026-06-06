@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "blog:bundle": "node scripts/build-blog-bundle.mjs",
+    "media:seo": "node scripts/build-media-seo.mjs",
     "deploy": "wrangler deploy",
     "icons:generate": "node scripts/generate-fluent-color-icons.mjs",
     "dead-code": "fallow dead-code",

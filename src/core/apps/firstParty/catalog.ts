@@ -1,9 +1,10 @@
 import { debugWarn } from "~/core/debug";
+import { publicApiOrigin, publicApiUrl } from "~/core/publicApi";
 
 import type { FirstPartyCatalog, FirstPartyCatalogEntry } from "./types";
 
-/** Same-origin catalog of published first-party apps; served by the Worker from R2. */
-const FIRST_PARTY_CATALOG_URL = "/apps/index.json";
+/** Catalog of published first-party apps, served by the public API from R2. */
+const FIRST_PARTY_CATALOG_URL = publicApiUrl("/public/apps/index.json");
 
 const DEFAULT_TIMEOUT_MS = 4000;
 
@@ -12,12 +13,12 @@ export type FirstPartyCatalogFetchResult =
   | { ok: false; error: string };
 
 /**
- * Entries must be same-origin, release-pinned module paths. Restricting to
- * `/apps/<id>/<version+build>/<file>` is a security boundary: even though the catalog
- * is trusted (same-origin), first-party apps run in the trusted lane, so we
- * never let a catalog point that lane at an arbitrary cross-origin URL.
+ * Entries must be release-pinned module paths from the configured public API
+ * origin. First-party apps run in the trusted lane, so the catalog must never
+ * point that lane at an arbitrary cross-origin URL.
  */
-const ENTRY_PATTERN = /^\/apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
+const ENTRY_PATH_PATTERN =
+  /^\/public\/apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -50,7 +51,7 @@ function coerceEntry(input: unknown): FirstPartyCatalogEntry | null {
     debugWarn("[first-party]", `rejecting catalog entry for "${id}": bad build`, rawBuild);
     return null;
   }
-  if (!ENTRY_PATTERN.test(entry) || !entry.startsWith(`/apps/${id}/`)) {
+  if (!isTrustedEntryUrl(entry, id)) {
     debugWarn("[first-party]", `rejecting catalog entry for "${id}": bad entry URL`, entry);
     return null;
   }
@@ -61,6 +62,29 @@ function coerceEntry(input: unknown): FirstPartyCatalogEntry | null {
     ...(typeof revision === "string" && revision.length > 0 ? { revision } : {}),
     entry,
   };
+}
+
+function isTrustedEntryUrl(entry: string, id: string): boolean {
+  const configuredOrigin = publicApiOrigin();
+  const pathname = entry.startsWith("/") ? entry : absoluteEntryPathname(entry, configuredOrigin);
+  if (pathname === null) {
+    return false;
+  }
+
+  return ENTRY_PATH_PATTERN.test(pathname) && pathname.startsWith(`/public/apps/${id}/`);
+}
+
+function absoluteEntryPathname(entry: string, configuredOrigin: string): string | null {
+  if (configuredOrigin.length === 0) {
+    return null;
+  }
+
+  try {
+    const url = new URL(entry);
+    return url.origin === configuredOrigin ? url.pathname : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Validate + normalize an untrusted-shaped catalog document; drop bad entries. */

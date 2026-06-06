@@ -2,6 +2,7 @@ import type { PermissionLedger } from "~/core/kernel/PermissionLedger";
 import type { ProcessTable } from "~/core/kernel/ProcessTable";
 import type { EventBus } from "~/core/kernel/EventBus";
 import { profileIdbName } from "~/core/profile/storageScope";
+import { publicApiUrl } from "~/core/publicApi";
 import { TRASH_ROOT } from "~/core/trash/TrashManager";
 import {
   IDBAdapter,
@@ -17,7 +18,7 @@ import type { KernelVfsFacade } from "~/types/kernel";
 
 export type KernelVfs = ReturnType<typeof createMemoryVfsBootstrap>;
 
-const CLOUD_FILES_INDEX_URL = "/_worker/files/index.json";
+const CLOUD_FILES_INDEX_URL = publicApiUrl("/public/files/index.json");
 
 export function createKernelVfs(profile?: ActiveProfileSession): KernelVfs {
   const vfs = createMemoryVfsBootstrap();

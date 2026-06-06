@@ -15,7 +15,7 @@ describe("createKernelVfs", () => {
             {
               key: "docs/spec.pdf",
               kind: "file",
-              url: "/_worker/files/raw/docs/spec.pdf",
+              url: "/public/files/raw/docs/spec.pdf",
               size: 9,
               uploaded: "2026-06-01T00:00:00.000Z",
               contentType: "application/pdf",

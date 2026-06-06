@@ -220,7 +220,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
       version: "1.2.3",
       build: 42,
       revision: "abc1234",
-      entry: "/apps/notes/1.2.3+42/notes.js",
+      entry: "/public/apps/notes/1.2.3+42/notes.js",
     });
 
     expect(manifest).toEqual(

@@ -7,7 +7,7 @@ export const BLOG_INDEX_CACHE_PATH = `${BLOG_POSTS_ROOT}/index.json`;
 export const BLOG_POST_MIME_TYPE = "text/markdown;charset=utf-8";
 const BLOG_INDEX_MIME_TYPE = "application/json;charset=utf-8";
 const BLOG_THUMBNAIL_URL_PATTERN =
-  /^\/_worker\/blog\/thumbnails\/([a-z0-9-]+)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp)$/i;
+  /^\/public\/blog\/thumbnails\/([a-z0-9-]+)\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:jpe?g|png|webp)$/i;
 
 export interface BlogThumbnail {
   readonly url: string;
@@ -69,7 +69,7 @@ function isVfsNotFound(error: unknown): boolean {
   );
 }
 
-function parseIndexEntries(raw: string): readonly BlogIndexEntry[] {
+function parseIndexEntries(raw: string, rawBase: string): readonly BlogIndexEntry[] {
   let data: unknown;
   try {
     data = JSON.parse(raw);
@@ -101,14 +101,14 @@ function parseIndexEntries(raw: string): readonly BlogIndexEntry[] {
         typeof record.description === "string" && record.description.length > 0
           ? record.description
           : null,
-      thumbnail: parseIndexThumbnail(record.thumbnail, slug),
+      thumbnail: parseIndexThumbnail(record.thumbnail, slug, rawBase),
     });
   }
 
   return entries;
 }
 
-function parseIndexThumbnail(value: unknown, slug: string): BlogThumbnail | null {
+function parseIndexThumbnail(value: unknown, slug: string, rawBase: string): BlogThumbnail | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
   }
@@ -124,7 +124,7 @@ function parseIndexThumbnail(value: unknown, slug: string): BlogThumbnail | null
     return null;
   }
 
-  const match = BLOG_THUMBNAIL_URL_PATTERN.exec(record.url);
+  const match = BLOG_THUMBNAIL_URL_PATTERN.exec(thumbnailPathname(record.url, rawBase));
   if (match === null || match[1] !== slug) {
     return null;
   }
@@ -135,6 +135,26 @@ function parseIndexThumbnail(value: unknown, slug: string): BlogThumbnail | null
     height: record.height,
     alt: record.alt,
   };
+}
+
+function thumbnailPathname(url: string, rawBase: string): string {
+  if (url.startsWith("/")) {
+    return url.split(/[?#]/, 1)[0] ?? "";
+  }
+
+  try {
+    return new URL(url).pathname;
+  } catch {
+    if (!/^https?:\/\//i.test(rawBase)) {
+      return "";
+    }
+  }
+
+  try {
+    return new URL(url, rawBase).pathname;
+  } catch {
+    return "";
+  }
 }
 
 export function createBlogContentSource(options: BlogContentSourceOptions): BlogContentSource {
@@ -195,7 +215,7 @@ export function createBlogContentSource(options: BlogContentSourceOptions): Blog
   return {
     async readIndexCache(): Promise<readonly BlogIndexEntry[] | null> {
       const raw = await readCacheText(BLOG_INDEX_CACHE_PATH);
-      return raw === null ? null : parseIndexEntries(raw);
+      return raw === null ? null : parseIndexEntries(raw, rawBase);
     },
 
     async fetchIndex(): Promise<readonly BlogIndexEntry[]> {
@@ -205,7 +225,7 @@ export function createBlogContentSource(options: BlogContentSourceOptions): Blog
       }
 
       const raw = await response.text();
-      const entries = parseIndexEntries(raw);
+      const entries = parseIndexEntries(raw, rawBase);
       await writeCache(BLOG_INDEX_CACHE_PATH, raw, BLOG_INDEX_MIME_TYPE);
       return entries;
     },

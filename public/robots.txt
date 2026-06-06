@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://daopk.me/sitemap.xml
+Sitemap: https://daopk.me/sitemap-media.xml

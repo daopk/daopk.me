@@ -81,11 +81,11 @@ export interface FirstPartyCatalogEntry {
   readonly build: number;
   /** Optional short source revision for tracing the published bundle. */
   readonly revision?: string;
-  /** Same-origin, release-pinned module URL, e.g. `/apps/notes/1.0.0+123/notes.js`. */
+  /** Public API, release-pinned module URL, e.g. `/public/apps/notes/1.0.0+123/notes.js`. */
   readonly entry: string;
 }
 
-/** The `/apps/index.json` document: the dynamic id → entry-URL mapping. */
+/** The `/public/apps/index.json` document: the dynamic id → entry-URL mapping. */
 export interface FirstPartyCatalog {
   readonly apps: readonly FirstPartyCatalogEntry[];
 }

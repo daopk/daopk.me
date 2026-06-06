@@ -69,7 +69,7 @@ describe("blogIndexPostFromEntry", () => {
 
   it("keeps valid thumbnail metadata for rendering", () => {
     const thumbnail = {
-      url: "/_worker/blog/thumbnails/hello-world/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp",
+      url: "/public/blog/thumbnails/hello-world/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.webp",
       width: 1024,
       height: 576,
       alt: "Hello World thumbnail",

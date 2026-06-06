@@ -187,10 +187,18 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 7,
           revision: "abc1234",
-          entry: "/apps/notes/1.0.1+7/notes.js",
+          entry: "/public/apps/notes/1.0.1+7/notes.js",
         },
-        { id: "photos", version: "0.9.0", entry: "/apps/photos/0.9.0/photos.js" },
-        { id: "browser", version: "1.0.0", entry: "/apps/browser/1.0.0/browser.js" },
+        {
+          id: "photos",
+          version: "0.9.0",
+          entry: "/public/apps/photos/0.9.0/photos.js",
+        },
+        {
+          id: "browser",
+          version: "1.0.0",
+          entry: "/public/apps/browser/1.0.0/browser.js",
+        },
       ],
     });
     const { kernel } = makeKernel([
@@ -218,7 +226,7 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 124,
           revision: "def5678",
-          entry: "/apps/notes/1.0.1+124/notes.js",
+          entry: "/public/apps/notes/1.0.1+124/notes.js",
         },
       ],
     });
@@ -239,9 +247,21 @@ describe("App Store", () => {
   it("reports up to date when catalog versions are equal, older, or invalid", async () => {
     stubCatalog({
       apps: [
-        { id: "notes", version: "1.0.0", entry: "/apps/notes/1.0.0/notes.js" },
-        { id: "photos", version: "0.9.0", entry: "/apps/photos/0.9.0/photos.js" },
-        { id: "browser", version: "next", entry: "/apps/browser/next/browser.js" },
+        {
+          id: "notes",
+          version: "1.0.0",
+          entry: "/public/apps/notes/1.0.0/notes.js",
+        },
+        {
+          id: "photos",
+          version: "0.9.0",
+          entry: "/public/apps/photos/0.9.0/photos.js",
+        },
+        {
+          id: "browser",
+          version: "next",
+          entry: "/public/apps/browser/next/browser.js",
+        },
       ],
     });
     const { kernel } = makeKernel([
@@ -280,7 +300,7 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 42,
           revision: "abc1234",
-          entry: "/apps/notes/1.0.1+42/notes.js",
+          entry: "/public/apps/notes/1.0.1+42/notes.js",
         },
       ],
     });
