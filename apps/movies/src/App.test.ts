@@ -282,6 +282,10 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.find(".movies-toolbar__credit").exists()).toBe(false);
     expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
+
+    const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
+    expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
+    expect(dragEvent.defaultPrevented).toBe(true);
   });
 
   it("opens a keyword List Page from toolbar search and switches media tabs", async () => {
@@ -449,11 +453,25 @@ describe("Movies app", () => {
     expect(fetchMovieSeason).toHaveBeenCalledWith(1399, 1, expect.anything());
     expect(wrapper.text()).toContain("Episodes");
     expect(wrapper.text()).toContain("Pilot");
+    expect(wrapper.find('select[aria-label="Season"]').exists()).toBe(false);
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
 
-    await wrapper.get('select[aria-label="Season"]').setValue("2");
+    const seasonTwoButton = wrapper
+      .findAll(".movies-detail-seasons__button")
+      .find((button) => button.text().includes("Season 2"));
+    expect(seasonTwoButton).toBeDefined();
+    expect(seasonTwoButton!.attributes("aria-pressed")).toBe("false");
+
+    await seasonTwoButton!.trigger("click");
     await settle();
 
     expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
+    expect(seasonTwoButton!.attributes("aria-pressed")).toBe("true");
     expect(wrapper.text()).toContain("Second Premiere");
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
   });

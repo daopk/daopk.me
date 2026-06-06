@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
-
-import { Select } from "@daopk/kit";
-import type { SelectOption } from "@daopk/kit";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
 import {
   fetchMovieSeason,
@@ -35,16 +32,11 @@ defineEmits<{
 const selectedSeason = ref("");
 const seasonDetail = ref<MovieSeasonDetail | null>(null);
 const episodesState = ref<EpisodesState>("idle");
+const episodesSection = ref<HTMLElement | null>(null);
 let abortController: AbortController | null = null;
 
 const orderedSeasons = computed(() =>
   [...props.seasons].sort((left, right) => left.seasonNumber - right.seasonNumber),
-);
-const seasonOptions = computed<readonly SelectOption[]>(() =>
-  orderedSeasons.value.map((season) => ({
-    label: seasonLabel(season),
-    value: String(season.seasonNumber),
-  })),
 );
 const selectedSeasonNumber = computed(() => {
   const value = Number(selectedSeason.value);
@@ -89,8 +81,9 @@ onUnmounted(() => {
   abortController?.abort();
 });
 
-function changeSeason(value: string): void {
-  selectedSeason.value = value;
+function selectSeason(seasonNumber: number): void {
+  selectedSeason.value = String(seasonNumber);
+  void scrollEpisodesIntoView();
 }
 
 async function loadSeason(seasonNumber: number | null): Promise<void> {
@@ -118,6 +111,19 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
     episodesState.value = "error";
   }
 }
+
+async function scrollEpisodesIntoView(): Promise<void> {
+  await nextTick();
+
+  const behavior =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+
+  episodesSection.value?.scrollIntoView?.({ behavior, block: "start" });
+}
 </script>
 
 <template>
@@ -127,46 +133,44 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
         <h2>Seasons</h2>
         <p v-if="props.episodeTotal">{{ episodeTotalLabel(props.episodeTotal) }}</p>
       </span>
-      <Select
-        class="movies-detail-seasons__select"
-        :model-value="selectedSeason"
-        :options="seasonOptions"
-        aria-label="Season"
-        @update:model-value="changeSeason"
-      />
     </div>
 
     <ul class="movies-detail-seasons">
-      <li
-        v-for="season in orderedSeasons"
-        :key="season.id"
-        :class="{
-          'movies-detail-seasons__item--active': season.seasonNumber === selectedSeasonNumber,
-        }"
-      >
-        <img
-          v-if="season.posterUrl"
-          class="movies-detail-seasons__poster"
-          :src="season.posterUrl"
-          :alt="season.name"
-          loading="lazy"
-          decoding="async"
-        />
-        <span v-else class="movies-detail-seasons__poster" aria-hidden="true" />
-        <span class="movies-detail-seasons__copy">
-          <span class="movies-detail-section__label">{{ seasonLabel(season) }}</span>
-          <strong>{{ season.name }}</strong>
-          <span v-if="seasonMetaLabel(season)" class="movies-detail-section__muted">
-            {{ seasonMetaLabel(season) }}
+      <li v-for="season in orderedSeasons" :key="season.id">
+        <button
+          type="button"
+          class="movies-detail-seasons__button"
+          :class="{
+            'movies-detail-seasons__button--active': season.seasonNumber === selectedSeasonNumber,
+          }"
+          :aria-pressed="season.seasonNumber === selectedSeasonNumber"
+          aria-controls="movies-detail-episodes"
+          @click="selectSeason(season.seasonNumber)"
+        >
+          <img
+            v-if="season.posterUrl"
+            class="movies-detail-seasons__poster"
+            :src="season.posterUrl"
+            :alt="season.name"
+            loading="lazy"
+            decoding="async"
+          />
+          <span v-else class="movies-detail-seasons__poster" aria-hidden="true" />
+          <span class="movies-detail-seasons__copy">
+            <span class="movies-detail-section__label">{{ seasonLabel(season) }}</span>
+            <strong>{{ season.name }}</strong>
+            <span v-if="seasonMetaLabel(season)" class="movies-detail-section__muted">
+              {{ seasonMetaLabel(season) }}
+            </span>
+            <span v-if="season.overview" class="movies-detail-seasons__overview">
+              {{ season.overview }}
+            </span>
           </span>
-          <span v-if="season.overview" class="movies-detail-seasons__overview">
-            {{ season.overview }}
-          </span>
-        </span>
+        </button>
       </li>
     </ul>
 
-    <div class="movies-detail-episodes">
+    <div id="movies-detail-episodes" ref="episodesSection" class="movies-detail-episodes">
       <div class="movies-detail-episodes__heading">
         <span>
           <h3>Episodes</h3>
@@ -264,10 +268,6 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
   text-transform: uppercase;
 }
 
-.movies-detail-seasons__select {
-  inline-size: min(180px, 42vw);
-}
-
 .movies-detail-seasons {
   display: grid;
   gap: var(--space-sm);
@@ -277,16 +277,44 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
 }
 
 .movies-detail-seasons li {
+  min-inline-size: 0;
+}
+
+.movies-detail-seasons__button {
   align-items: start;
+  background: transparent;
   border-block-start: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
+  border-inline: 0;
+  border-block-end: 0;
+  color: inherit;
+  cursor: pointer;
   display: grid;
   gap: var(--space-md);
   grid-template-columns: 72px minmax(0, 1fr);
+  inline-size: 100%;
+  margin: 0;
   padding-block-start: var(--space-sm);
+  padding-inline: 0;
+  text-align: start;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
-.movies-detail-seasons__item--active {
+.movies-detail-seasons__button--active {
   border-block-start-color: color-mix(in srgb, var(--color-accent) 54%, transparent);
+}
+
+.movies-detail-seasons__button:hover strong,
+.movies-detail-seasons__button--active strong {
+  color: var(--color-accent);
+}
+
+.movies-detail-seasons__button:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
 .movies-detail-seasons__poster {
@@ -300,6 +328,7 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
 .movies-detail-seasons__copy {
   display: grid;
   gap: var(--space-2xs);
+  min-inline-size: 0;
 }
 
 .movies-detail-seasons__overview {
@@ -313,6 +342,14 @@ async function loadSeason(seasonNumber: number | null): Promise<void> {
   display: grid;
   gap: var(--space-md);
   padding-block-start: var(--space-md);
+  scroll-margin-block-start: max(
+    0px,
+    calc(
+      var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl))) - var(
+          --space-sm
+        )
+    )
+  );
 }
 
 .movies-detail-episodes__heading {

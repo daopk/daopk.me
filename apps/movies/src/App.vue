@@ -421,7 +421,13 @@ function openInitialDeepLink(): void {
 </script>
 
 <template>
-  <AppFrame class="movies-app" layout="grid" :safe-area="false" aria-label="Movies">
+  <AppFrame
+    class="movies-app"
+    layout="grid"
+    :safe-area="false"
+    aria-label="Movies"
+    @dragstart.prevent
+  >
     <MoviesToolbar
       :solid="toolbarSolid"
       :can-go-back="canGoBack"
@@ -480,6 +486,11 @@ function openInitialDeepLink(): void {
   min-block-size: 0;
   overflow: hidden;
   position: relative;
+}
+
+.movies-app :deep(img) {
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 @media (max-width: 760px) {
