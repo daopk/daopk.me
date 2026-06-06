@@ -80,13 +80,6 @@ function submitSearch(): void {
       <Button
         class="movies-toolbar__menu-button"
         size="sm"
-        @click="$emit('open-list', { kind: 'trending-movie' })"
-      >
-        Trending
-      </Button>
-      <Button
-        class="movies-toolbar__menu-button"
-        size="sm"
         @click="$emit('open-list', { kind: 'popular-movie' })"
       >
         Movies
@@ -97,13 +90,6 @@ function submitSearch(): void {
         @click="$emit('open-list', { kind: 'popular-tv' })"
       >
         TV
-      </Button>
-      <Button
-        class="movies-toolbar__menu-button"
-        size="sm"
-        @click="$emit('open-list', { kind: 'now-playing' })"
-      >
-        Now Playing
       </Button>
     </nav>
 

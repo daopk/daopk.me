@@ -282,6 +282,10 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.find(".movies-toolbar__credit").exists()).toBe(false);
     expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
+    expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
+      "Movies",
+      "TV",
+    ]);
 
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
