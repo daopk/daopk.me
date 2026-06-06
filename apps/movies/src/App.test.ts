@@ -288,6 +288,8 @@ describe("Movies app", () => {
     const wrapper = mount(App);
     await settle();
 
+    expect(wrapper.get(".movies-toolbar__search-button").attributes("tabindex")).toBe("-1");
+
     await wrapper.get('input[type="search"]').setValue("Fight");
     await wrapper.get('form[role="search"]').trigger("submit");
     await settle();
@@ -326,6 +328,77 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Edward Norton");
     expect(wrapper.text()).toContain("David Fincher");
     expect(wrapper.text()).not.toContain("No playback source yet");
+  });
+
+  it("replaces the toolbar title with history and Home navigation buttons", async () => {
+    const wrapper = mount(App);
+    await settle();
+
+    const toolbarHistory = wrapper.get(".movies-toolbar__history");
+    const backButton = () => toolbarHistory.get('button[aria-label="Back"]');
+    const forwardButton = () => toolbarHistory.get('button[aria-label="Forward"]');
+    const homeButton = () => toolbarHistory.get('button[aria-label="Home"]');
+
+    expect(toolbarHistory.text()).not.toContain("Movies");
+    expect(backButton().attributes("disabled")).toBeDefined();
+    expect(forwardButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeDefined();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    expect(backButton().attributes("disabled")).toBeUndefined();
+    expect(forwardButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeUndefined();
+
+    await backButton().trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+    expect(backButton().attributes("disabled")).toBeDefined();
+    expect(forwardButton().attributes("disabled")).toBeUndefined();
+    expect(homeButton().attributes("disabled")).toBeDefined();
+
+    await forwardButton().trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.text()).toContain("Fight Club");
+    expect(backButton().attributes("disabled")).toBeUndefined();
+    expect(forwardButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeUndefined();
+  });
+
+  it("shows toolbar Home for a direct route with no back history", async () => {
+    window.history.replaceState(null, "", "/movie/550-fight-club");
+    const wrapper = mount(App);
+    await settle();
+
+    const toolbarHistory = wrapper.get(".movies-toolbar__history");
+    const backButton = () => toolbarHistory.get('button[aria-label="Back"]');
+    const forwardButton = () => toolbarHistory.get('button[aria-label="Forward"]');
+    const homeButton = () => toolbarHistory.get('button[aria-label="Home"]');
+
+    expect(wrapper.text()).toContain("Fight Club");
+    expect(backButton().attributes("disabled")).toBeDefined();
+    expect(forwardButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeUndefined();
+
+    await homeButton().trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+    expect(backButton().attributes("disabled")).toBeUndefined();
+    expect(forwardButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeDefined();
+
+    await backButton().trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.text()).toContain("Fight Club");
   });
 
   it("opens actor information from Detail cast cards", async () => {

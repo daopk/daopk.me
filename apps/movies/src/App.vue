@@ -58,9 +58,13 @@ type MoviesDeepLink =
 const ctx = inject(AppContextInjectionKey, null);
 const view = ref<MoviesView>({ name: "home" });
 const history = ref<MoviesView[]>([]);
+const futureHistory = ref<MoviesView[]>([]);
 const homeToolbarSolid = ref(false);
 
 const toolbarSolid = computed(() => view.value.name !== "home" || homeToolbarSolid.value);
+const canGoBack = computed(() => history.value.length > 0);
+const canGoForward = computed(() => futureHistory.value.length > 0);
+const canGoHome = computed(() => view.value.name !== "home");
 const activeSearch = computed(() =>
   view.value.name === "list" ? (view.value.query.keyword ?? "") : "",
 );
@@ -71,7 +75,7 @@ const chromeTitle = computed(() => {
   return "Movies";
 });
 const chromeBackAction = computed(() =>
-  history.value.length > 0 ? { ariaLabel: "Back to Movies", handler: goBack } : null,
+  canGoBack.value ? { ariaLabel: "Back to Movies", handler: goBack } : null,
 );
 
 useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
@@ -101,35 +105,51 @@ function replacePathForView(next: MoviesView): void {
 
 function navigate(next: MoviesView, options: { replace?: boolean } = {}): void {
   if (options.replace) {
+    futureHistory.value = [];
     view.value = next;
     replacePathForView(next);
     return;
   }
+  history.value = [...history.value, view.value];
+  futureHistory.value = [];
+  view.value = next;
+  replacePathForView(next);
+}
+
+function goBack(): void {
+  const previous = history.value.at(-1);
+  if (previous === undefined) {
+    return;
+  }
+
+  history.value = history.value.slice(0, -1);
+  futureHistory.value = [...futureHistory.value, view.value];
+  view.value = previous;
+  if (previous.name === "home") {
+    homeToolbarSolid.value = false;
+  }
+  replacePathForView(previous);
+}
+
+function goForward(): void {
+  const next = futureHistory.value.at(-1);
+  if (next === undefined) {
+    return;
+  }
+
+  futureHistory.value = futureHistory.value.slice(0, -1);
   history.value = [...history.value, view.value];
   view.value = next;
   replacePathForView(next);
 }
 
 function goHome(): void {
-  history.value = [];
-  view.value = { name: "home" };
-  homeToolbarSolid.value = false;
-  replaceMoviesAppPath();
-}
-
-function goBack(): void {
-  const previous = history.value.at(-1);
-  if (previous === undefined) {
-    goHome();
+  if (view.value.name === "home") {
     return;
   }
 
-  history.value = history.value.slice(0, -1);
-  view.value = previous;
-  if (previous.name === "home") {
-    homeToolbarSolid.value = false;
-  }
-  replacePathForView(previous);
+  homeToolbarSolid.value = false;
+  navigate({ name: "home" });
 }
 
 function openList(query: MoviesListQuery, options: { replace?: boolean } = {}): void {
@@ -404,7 +424,12 @@ function openInitialDeepLink(): void {
   <AppFrame class="movies-app" layout="grid" :safe-area="false" aria-label="Movies">
     <MoviesToolbar
       :solid="toolbarSolid"
+      :can-go-back="canGoBack"
+      :can-go-forward="canGoForward"
+      :can-go-home="canGoHome"
       :active-search="activeSearch"
+      @back="goBack"
+      @forward="goForward"
       @home="goHome"
       @search="searchMovies"
       @open-list="openList"

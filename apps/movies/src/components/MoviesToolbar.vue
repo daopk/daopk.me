@@ -1,22 +1,30 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 
-import { TextInput } from "@daopk/kit";
+import { IconButton, TextInput } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { Search } from "@daopk/icons";
+import { ChevronLeft, ChevronRight, Home, Search } from "@daopk/icons";
 
 import type { MoviesListQuery } from "../moviesApi";
 
 interface MoviesToolbarProps {
   solid: boolean;
   activeSearch?: string;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  canGoHome?: boolean;
 }
 
 const props = withDefaults(defineProps<MoviesToolbarProps>(), {
   activeSearch: "",
+  canGoBack: false,
+  canGoForward: false,
+  canGoHome: false,
 });
 
 const emit = defineEmits<{
+  back: [];
+  forward: [];
   home: [];
   search: [keyword: string];
   "open-list": [query: MoviesListQuery];
@@ -41,9 +49,32 @@ function submitSearch(): void {
 
 <template>
   <header class="movies-toolbar" :class="{ 'movies-toolbar--solid': solid }">
-    <button type="button" class="movies-toolbar__brand" @click="$emit('home')">
-      <span>Movies</span>
-    </button>
+    <nav class="movies-toolbar__history" aria-label="Movies navigation">
+      <IconButton
+        label="Back"
+        size="sm"
+        :icon="ChevronLeft"
+        :disabled="!canGoBack"
+        title="Back"
+        @click="$emit('back')"
+      />
+      <IconButton
+        label="Forward"
+        size="sm"
+        :icon="ChevronRight"
+        :disabled="!canGoForward"
+        title="Forward"
+        @click="$emit('forward')"
+      />
+      <IconButton
+        label="Home"
+        size="sm"
+        :icon="Home"
+        :disabled="!canGoHome"
+        title="Home"
+        @click="$emit('home')"
+      />
+    </nav>
 
     <nav class="movies-toolbar__nav" aria-label="Movies sections">
       <Button
@@ -77,7 +108,7 @@ function submitSearch(): void {
     </nav>
 
     <form class="movies-toolbar__search" role="search" @submit.prevent="submitSearch">
-      <button type="submit" class="movies-toolbar__search-button" aria-label="Search">
+      <button type="submit" class="movies-toolbar__search-button" tabindex="-1" aria-label="Search">
         <Search class="movies-toolbar__search-icon" aria-hidden="true" />
       </button>
       <TextInput
@@ -121,23 +152,25 @@ function submitSearch(): void {
   box-shadow: var(--shadow-sm);
 }
 
-.movies-toolbar__brand {
+.movies-toolbar__history {
   align-items: center;
   background: color-mix(in srgb, var(--color-bg) 36%, transparent);
-  border: 0;
   border-radius: var(--radius-full);
-  color: var(--color-fg);
-  cursor: pointer;
   display: inline-flex;
-  font-weight: var(--font-weight-bold);
-  gap: var(--space-xs);
+  gap: var(--space-2xs);
   min-block-size: var(--control-height-md);
-  padding: 0 var(--space-sm);
+  padding: 0 var(--space-2xs);
 }
 
-.movies-toolbar__brand:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+.movies-toolbar__history :deep(.ds-kit-icon-button) {
+  border-radius: var(--radius-full);
+  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+}
+
+.movies-toolbar__history :deep(.ds-kit-icon-button:hover),
+.movies-toolbar__history :deep(.ds-kit-icon-button:focus-visible) {
+  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
+  color: var(--color-fg);
 }
 
 .movies-toolbar__nav {
@@ -164,8 +197,14 @@ function submitSearch(): void {
 
 .movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:hover),
 .movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:focus-visible) {
-  background: transparent;
   color: var(--color-fg);
+}
+
+.movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:focus-visible) {
+  background: color-mix(in srgb, var(--color-fg) 8%, transparent);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 18%, transparent);
+  outline: 0;
 }
 
 .movies-toolbar__search {
@@ -184,8 +223,10 @@ function submitSearch(): void {
 }
 
 .movies-toolbar__search:focus-within {
-  border-color: color-mix(in srgb, var(--color-fg) 46%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-fg) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 64%, var(--color-fg));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-accent) 34%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-fg) 14%, transparent);
 }
 
 .movies-toolbar__search-button {
@@ -204,8 +245,7 @@ function submitSearch(): void {
 }
 
 .movies-toolbar__search-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
+  outline: 0;
 }
 
 .movies-toolbar__search-icon {
@@ -230,24 +270,16 @@ function submitSearch(): void {
     border-block-end: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
     gap: var(--space-xs);
     grid-template-areas:
-      "brand search"
+      "history search"
       "nav nav";
     grid-template-columns: auto minmax(0, 1fr);
     padding-block-end: var(--space-xs);
     padding-block-start: calc(var(--space-xs) + var(--mobile-shell-app-safe-area-top, 0px));
   }
 
-  .movies-toolbar__brand {
-    grid-area: brand;
+  .movies-toolbar__history {
+    grid-area: history;
     min-inline-size: 0;
-    padding-inline: var(--space-xs);
-  }
-
-  .movies-toolbar__brand span {
-    max-inline-size: 8ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .movies-toolbar__nav {
