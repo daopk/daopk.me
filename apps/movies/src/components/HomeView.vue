@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { ScrollArea, StatusBanner } from "@daopk/kit";
+import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { ChevronRight } from "@daopk/icons";
 
@@ -9,12 +9,16 @@ import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import {
   fetchMoviesList,
-  HOME_DISCOVERY_ROWS,
+  HOME_DISCOVERY_GROUPS,
   type MovieSummary,
+  type MoviesListPeriod,
   type MoviesListQuery,
+  type MoviesRowConfig,
+  type MoviesRowGroupConfig,
 } from "../moviesApi";
 
 type LoadState = "loading" | "ready" | "error";
+type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "popular" | "trending">;
 
 const emit = defineEmits<{
   "toolbar-solid": [solid: boolean];
@@ -25,6 +29,10 @@ const emit = defineEmits<{
 const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
 const state = ref<LoadState>("loading");
+const selectedPeriods = ref<Record<PeriodGroupId, MoviesListPeriod>>({
+  popular: "week",
+  trending: "week",
+});
 
 let abortController: AbortController | null = null;
 
@@ -40,28 +48,35 @@ onUnmounted(() => {
 
 async function loadHome(): Promise<void> {
   abortController?.abort();
-  abortController = new AbortController();
+  const controller = new AbortController();
+  abortController = controller;
   state.value = "loading";
+  const rowRequests = HOME_DISCOVERY_GROUPS.flatMap((group) =>
+    group.rows.map((row) => ({ query: queryForRow(group, row), row })),
+  );
 
   try {
     const [heroResult, ...rowResults] = await Promise.all([
-      fetchMoviesList({ kind: "trending-movie", limit: 6 }, { signal: abortController.signal }),
-      ...HOME_DISCOVERY_ROWS.map((row) =>
-        fetchMoviesList({ ...row.query, limit: 12 }, { signal: abortController!.signal }),
+      fetchMoviesList(
+        { kind: "trending-movie", limit: 6, period: "week" },
+        { signal: controller.signal },
+      ),
+      ...rowRequests.map(({ query }) =>
+        fetchMoviesList({ ...query, limit: 12 }, { signal: controller.signal }),
       ),
     ]);
 
     featured.value = heroResult.items;
-    rows.value = HOME_DISCOVERY_ROWS.reduce<Record<string, readonly MovieSummary[]>>(
-      (acc, row, index) => {
-        acc[row.id] = rowResults[index]?.items ?? [];
+    rows.value = rowRequests.reduce<Record<string, readonly MovieSummary[]>>(
+      (acc, request, index) => {
+        acc[request.row.id] = rowResults[index]?.items ?? [];
         return acc;
       },
       {},
     );
     state.value = "ready";
   } catch (error) {
-    if (abortController.signal.aborted) {
+    if (controller.signal.aborted) {
       return;
     }
     state.value = "error";
@@ -71,6 +86,37 @@ async function loadHome(): Promise<void> {
 function onScroll(event: Event): void {
   const target = event.currentTarget as HTMLElement | null;
   emit("toolbar-solid", (target?.scrollTop ?? 0) > 32);
+}
+
+function groupPeriodValue(group: MoviesRowGroupConfig): string {
+  return group.id === "popular" || group.id === "trending" ? selectedPeriods.value[group.id] : "";
+}
+
+function isMoviesListPeriod(value: string): value is MoviesListPeriod {
+  return value === "day" || value === "month" || value === "week";
+}
+
+function setGroupPeriod(group: MoviesRowGroupConfig, next: string): void {
+  if ((group.id !== "popular" && group.id !== "trending") || !isMoviesListPeriod(next)) {
+    return;
+  }
+
+  if (selectedPeriods.value[group.id] === next) {
+    return;
+  }
+
+  selectedPeriods.value = { ...selectedPeriods.value, [group.id]: next };
+  void loadHome();
+}
+
+function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesListQuery {
+  const period =
+    group.id === "popular" || group.id === "trending" ? selectedPeriods.value[group.id] : undefined;
+  return period === undefined ? row.query : { ...row.query, period };
+}
+
+function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string {
+  return group.id === "current" ? row.title : `${group.title} ${row.title}`;
 }
 </script>
 
@@ -100,24 +146,45 @@ function onScroll(event: Event): void {
       </section>
 
       <section class="movies-home__rows" aria-label="Discover titles">
-        <section v-for="row in HOME_DISCOVERY_ROWS" :key="row.id" class="movies-home__row">
-          <div class="movies-home__row-header">
-            <h2>{{ row.title }}</h2>
-            <Button
-              class="movies-home__row-action"
+        <section v-for="group in HOME_DISCOVERY_GROUPS" :key="group.id" class="movies-home__group">
+          <div class="movies-home__group-header">
+            <h2>{{ group.title }}</h2>
+            <SegmentedControl
+              v-if="group.periodOptions"
+              class="movies-home__period-control"
+              :label="`${group.title} period`"
+              :model-value="groupPeriodValue(group)"
+              :options="group.periodOptions"
               size="sm"
-              variant="ghost"
-              :icon-start="ChevronRight"
-              :aria-label="`View all ${row.title}`"
-              @click="$emit('open-list', row.query)"
+              @change="setGroupPeriod(group, $event)"
             />
           </div>
 
-          <ul class="movies-home__rail">
-            <li v-for="movie in rows[row.id] ?? []" :key="movie.id" class="movies-home__rail-item">
-              <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
-            </li>
-          </ul>
+          <div class="movies-home__group-rows">
+            <section v-for="row in group.rows" :key="row.id" class="movies-home__row">
+              <div class="movies-home__row-header">
+                <h3>{{ row.title }}</h3>
+                <Button
+                  class="movies-home__row-action"
+                  size="sm"
+                  variant="ghost"
+                  :icon-start="ChevronRight"
+                  :aria-label="`View all ${rowListLabel(group, row)}`"
+                  @click="$emit('open-list', queryForRow(group, row))"
+                />
+              </div>
+
+              <ul class="movies-home__rail">
+                <li
+                  v-for="movie in rows[row.id] ?? []"
+                  :key="movie.id"
+                  class="movies-home__rail-item"
+                >
+                  <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
+                </li>
+              </ul>
+            </section>
+          </div>
         </section>
       </section>
     </template>
@@ -176,8 +243,30 @@ function onScroll(event: Event): void {
 
 .movies-home__rows {
   display: grid;
-  gap: var(--space-xl);
+  gap: clamp(var(--space-xl), 5vw, 64px);
   padding: var(--space-lg) clamp(var(--space-xl), 5vw, 64px) var(--space-xl);
+}
+
+.movies-home__group {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.movies-home__group-header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-md);
+  justify-content: flex-start;
+}
+
+.movies-home__group-header h2 {
+  font-size: var(--font-size-2xl);
+  margin: 0;
+}
+
+.movies-home__group-rows {
+  display: grid;
+  gap: var(--space-xl);
 }
 
 .movies-home__row {
@@ -191,7 +280,7 @@ function onScroll(event: Event): void {
   justify-content: space-between;
 }
 
-.movies-home__row-header h2 {
+.movies-home__row-header h3 {
   font-size: var(--font-size-xl);
   margin: 0;
 }
@@ -230,5 +319,12 @@ function onScroll(event: Event): void {
 
 .movies-home__rail-item {
   min-inline-size: 0;
+}
+
+@media (max-width: 640px) {
+  .movies-home__group-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>

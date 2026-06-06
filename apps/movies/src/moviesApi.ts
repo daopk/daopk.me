@@ -3,8 +3,7 @@ export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 export type MoviesViewName = "home" | "list" | "detail" | "episode" | "person";
 export type MovieMediaType = "movie" | "tv";
 export type MoviesSearchMedia = "all" | MovieMediaType;
-export type MoviesCountryCode = "CN" | "FR" | "GB" | "IN" | "JP" | "KR" | "TH" | "US" | "VN";
-export type MoviesCountryFilter = "all" | MoviesCountryCode;
+export type MoviesListPeriod = "day" | "week" | "month";
 export type MoviesListKind =
   | "trending-movie"
   | "trending-tv"
@@ -144,12 +143,12 @@ export interface MoviesListResult {
 }
 
 export interface MoviesListQuery {
-  readonly country?: MoviesCountryCode;
   readonly kind?: MoviesListKind;
   readonly keyword?: string;
+  readonly limit?: number;
   readonly media?: MoviesSearchMedia;
   readonly page?: number;
-  readonly limit?: number;
+  readonly period?: MoviesListPeriod;
 }
 
 export interface MoviesRowConfig {
@@ -158,13 +157,54 @@ export interface MoviesRowConfig {
   readonly query: MoviesListQuery;
 }
 
-export const HOME_DISCOVERY_ROWS: readonly MoviesRowConfig[] = [
-  { id: "trending-movies", title: "Trending Movies", query: { kind: "trending-movie" } },
-  { id: "trending-tv", title: "Trending TV", query: { kind: "trending-tv" } },
-  { id: "now-playing", title: "Now Playing", query: { kind: "now-playing" } },
-  { id: "popular-movies", title: "Popular Movies", query: { kind: "popular-movie" } },
-  { id: "popular-tv", title: "Popular TV", query: { kind: "popular-tv" } },
-  { id: "airing-today", title: "Airing Today", query: { kind: "airing-today" } },
+export interface MoviesPeriodOption {
+  readonly label: string;
+  readonly value: MoviesListPeriod;
+}
+
+export interface MoviesRowGroupConfig {
+  readonly defaultPeriod?: MoviesListPeriod;
+  readonly id: "current" | "popular" | "trending";
+  readonly periodOptions?: readonly MoviesPeriodOption[];
+  readonly rows: readonly MoviesRowConfig[];
+  readonly title: string;
+}
+
+export const HOME_DISCOVERY_GROUPS: readonly MoviesRowGroupConfig[] = [
+  {
+    defaultPeriod: "week",
+    id: "trending",
+    periodOptions: [
+      { label: "Day", value: "day" },
+      { label: "Week", value: "week" },
+    ],
+    rows: [
+      { id: "trending-movies", title: "Movies", query: { kind: "trending-movie" } },
+      { id: "trending-tv", title: "TV", query: { kind: "trending-tv" } },
+    ],
+    title: "Trending",
+  },
+  {
+    defaultPeriod: "week",
+    id: "popular",
+    periodOptions: [
+      { label: "Week", value: "week" },
+      { label: "Month", value: "month" },
+    ],
+    rows: [
+      { id: "popular-movies", title: "Movies", query: { kind: "popular-movie" } },
+      { id: "popular-tv", title: "TV", query: { kind: "popular-tv" } },
+    ],
+    title: "Popular",
+  },
+  {
+    id: "current",
+    rows: [
+      { id: "now-playing", title: "Now Playing", query: { kind: "now-playing" } },
+      { id: "airing-today", title: "Airing Today", query: { kind: "airing-today" } },
+    ],
+    title: "Current",
+  },
 ];
 
 export const LIST_KIND_LABELS: Record<MoviesListKind, string> = {
@@ -181,26 +221,6 @@ export const SEARCH_MEDIA_LABELS: Record<MoviesSearchMedia, string> = {
   movie: "Movies",
   tv: "TV",
 };
-
-export const COUNTRY_FILTER_LABELS: Record<MoviesCountryFilter, string> = {
-  all: "All countries",
-  CN: "China",
-  FR: "France",
-  GB: "United Kingdom",
-  IN: "India",
-  JP: "Japan",
-  KR: "Korea",
-  TH: "Thailand",
-  US: "United States",
-  VN: "Vietnam",
-};
-
-export const COUNTRY_FILTER_OPTIONS: ReadonlyArray<{
-  readonly label: string;
-  readonly value: MoviesCountryFilter;
-}> = (Object.entries(COUNTRY_FILTER_LABELS) as Array<[MoviesCountryFilter, string]>).map(
-  ([value, label]) => ({ label, value }),
-);
 
 const DEFAULT_PAGE = 1;
 export const DEFAULT_MOVIES_LIST_LIMIT = 32;
@@ -269,18 +289,6 @@ function yearFromDate(value: string): number | null {
 
 function mediaTypeFromValue(value: unknown): MovieMediaType | null {
   return value === "movie" || value === "tv" ? value : null;
-}
-
-export function countryCodeFromFilter(value: MoviesCountryFilter): MoviesCountryCode | undefined {
-  return value === "all" ? undefined : value;
-}
-
-export function countryFilterFromCode(value: MoviesCountryCode | undefined): MoviesCountryFilter {
-  return value ?? "all";
-}
-
-export function countryLabelForCode(value: MoviesCountryCode | undefined): string {
-  return value === undefined ? "" : COUNTRY_FILTER_LABELS[value];
 }
 
 function taxonomyFromEntry(entry: unknown): MovieTaxonomyItem | null {
@@ -626,17 +634,14 @@ export function buildMoviesListUrl(query: MoviesListQuery = {}): string {
     url.searchParams.set("query", keyword);
     url.searchParams.set("media", query.media ?? "all");
     url.searchParams.set("page", String(page));
-    if (query.country !== undefined) {
-      url.searchParams.set("country", query.country);
-    }
     return urlToFetchString(url);
   }
 
   const url = publicApiSearchUrl("/public/movies/list");
   url.searchParams.set("kind", query.kind ?? "trending-movie");
   url.searchParams.set("page", String(page));
-  if (query.country !== undefined) {
-    url.searchParams.set("country", query.country);
+  if (query.period !== undefined) {
+    url.searchParams.set("period", query.period);
   }
   return urlToFetchString(url);
 }
@@ -668,7 +673,7 @@ export async function fetchLatestMovies(
   options: { page?: number; limit?: number; signal?: AbortSignal } = {},
 ): Promise<MoviesListResult> {
   return fetchMoviesList(
-    { kind: "trending-movie", limit: options.limit, page: options.page },
+    { kind: "trending-movie", limit: options.limit, page: options.page, period: "week" },
     { signal: options.signal },
   );
 }
@@ -756,18 +761,31 @@ export async function fetchMovieEpisode(
 
 export function listTitleForQuery(query: MoviesListQuery): string {
   const keyword = query.keyword?.trim();
-  const country = countryLabelForCode(query.country);
-  const suffix = country.length > 0 ? ` · ${country}` : "";
   if (keyword !== undefined && keyword.length > 0) {
     const media = query.media ?? "all";
-    const title =
-      media === "all" ? `Search: ${keyword}` : `Search ${SEARCH_MEDIA_LABELS[media]}: ${keyword}`;
-    return `${title}${suffix}`;
+    return media === "all"
+      ? `Search: ${keyword}`
+      : `Search ${SEARCH_MEDIA_LABELS[media]}: ${keyword}`;
   }
   if (query.kind !== undefined) {
-    return `${LIST_KIND_LABELS[query.kind]}${suffix}`;
+    const period = periodLabelForQuery(query);
+    return period.length > 0
+      ? `${LIST_KIND_LABELS[query.kind]} · ${period}`
+      : LIST_KIND_LABELS[query.kind];
   }
-  return `Movies${suffix}`;
+  return "Movies";
+}
+
+function periodLabelForQuery(query: MoviesListQuery): string {
+  if (query.kind === "trending-movie" || query.kind === "trending-tv") {
+    return query.period === "day" ? "Day" : "Week";
+  }
+
+  if (query.kind === "popular-movie" || query.kind === "popular-tv") {
+    return query.period === "month" ? "Month" : "Week";
+  }
+
+  return "";
 }
 
 function publicApiSearchUrl(pathname: string): URL {

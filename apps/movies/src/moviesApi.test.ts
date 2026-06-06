@@ -27,23 +27,24 @@ describe("moviesApi", () => {
 
   it("builds public Movies API URLs for lists and search", () => {
     const listUrl = new URL(
-      buildMoviesListUrl({ country: "KR", kind: "popular-tv", page: 2, limit: 10 }),
+      buildMoviesListUrl({ kind: "popular-tv", page: 2, period: "month" }),
       "https://daopk.test",
     );
     expect(listUrl.pathname).toBe("/public/movies/list");
-    expect(listUrl.searchParams.get("country")).toBe("KR");
     expect(listUrl.searchParams.get("kind")).toBe("popular-tv");
     expect(listUrl.searchParams.get("page")).toBe("2");
+    expect(listUrl.searchParams.get("period")).toBe("month");
+    expect(listUrl.searchParams.has("country")).toBe(false);
 
     const searchUrl = new URL(
-      buildMoviesListUrl({ country: "JP", keyword: "Fight Club", media: "movie" }),
+      buildMoviesListUrl({ keyword: "Fight Club", media: "movie" }),
       "https://daopk.test",
     );
     expect(searchUrl.pathname).toBe("/public/movies/search");
-    expect(searchUrl.searchParams.get("country")).toBe("JP");
     expect(searchUrl.searchParams.get("query")).toBe("Fight Club");
     expect(searchUrl.searchParams.get("media")).toBe("movie");
     expect(searchUrl.searchParams.get("page")).toBe("1");
+    expect(searchUrl.searchParams.has("country")).toBe(false);
 
     const seasonUrl = new URL(buildMovieSeasonUrl(1399, 2), "https://daopk.test");
     expect(seasonUrl.pathname).toBe("/public/movies/season/1399/2");

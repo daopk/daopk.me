@@ -155,7 +155,6 @@ function goHome(): void {
 function openList(query: MoviesListQuery, options: { replace?: boolean } = {}): void {
   const nextQuery: MoviesListQuery = {
     ...query,
-    country: undefined,
     limit: query.limit ?? DEFAULT_MOVIES_LIST_LIMIT,
   };
   navigate({ name: "list", query: nextQuery }, options);

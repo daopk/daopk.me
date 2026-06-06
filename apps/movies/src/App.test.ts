@@ -268,28 +268,71 @@ describe("Movies app", () => {
     );
   });
 
-  it("renders Home with a cover hero and TMDB discovery rows", async () => {
+  it("renders Home with a cover hero and grouped TMDB discovery rows", async () => {
     const wrapper = mount(App);
     await settle();
 
     expect(wrapper.find(".movies-home__hero-backdrop").exists()).toBe(true);
     expect(wrapper.find(".movies-home__hero-edge").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Trending Movies");
-    expect(wrapper.text()).toContain("Trending TV");
+    expect(wrapper.text()).toContain("Trending");
+    expect(wrapper.text()).toContain("Popular");
+    expect(wrapper.text()).toContain("Current");
     expect(wrapper.text()).toContain("Now Playing");
-    expect(wrapper.text()).toContain("Popular Movies");
     expect(wrapper.text()).toContain("Airing Today");
     expect(wrapper.text()).toContain("Fight Club");
+    expect(wrapper.find('[aria-label="View all Trending Movies"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Trending TV"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Popular Movies"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Popular TV"]').exists()).toBe(true);
     expect(wrapper.find(".movies-toolbar__credit").exists()).toBe(false);
     expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
     expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
       "Movies",
       "TV",
     ]);
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "trending-movie", limit: 6, period: "week" }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "popular-tv", limit: 12, period: "week" }),
+      expect.anything(),
+    );
 
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("switches Home Trending and Popular periods", async () => {
+    const wrapper = mount(App);
+    await settle();
+
+    vi.mocked(fetchMoviesList).mockClear();
+    await wrapper.get('[aria-label="Trending period"] button[data-value="day"]').trigger("click");
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "trending-movie", limit: 12, period: "day" }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "trending-tv", limit: 12, period: "day" }),
+      expect.anything(),
+    );
+
+    vi.mocked(fetchMoviesList).mockClear();
+    await wrapper.get('[aria-label="Popular period"] button[data-value="month"]').trigger("click");
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "popular-movie", limit: 12, period: "month" }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "popular-tv", limit: 12, period: "month" }),
+      expect.anything(),
+    );
   });
 
   it("opens a keyword List Page from toolbar search and switches media tabs", async () => {
