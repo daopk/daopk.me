@@ -37,6 +37,7 @@ const selectedPeriods = ref<Record<PeriodGroupId, MoviesListPeriod>>({
 let abortController: AbortController | null = null;
 
 const activeHero = computed(() => featured.value[0] ?? null);
+const hasHomeContent = computed(() => activeHero.value !== null);
 
 onMounted(() => {
   void loadHome();
@@ -122,10 +123,10 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 
 <template>
   <ScrollArea class="movies-home" safe-area @scroll="onScroll">
-    <MoviesLoadingOverlay v-if="state === 'loading'" />
+    <MoviesLoadingOverlay v-if="state === 'loading' && !hasHomeContent" />
 
     <StatusBanner
-      v-else-if="state === 'error'"
+      v-else-if="state === 'error' && !hasHomeContent"
       class="movies-home__status"
       tone="error"
       role="alert"
@@ -133,7 +134,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
       Could not load Movies data. Try again later.
     </StatusBanner>
 
-    <template v-else-if="activeHero">
+    <template v-if="activeHero">
       <section class="movies-home__hero" aria-label="Featured titles">
         <img
           v-if="activeHero.thumbUrl"

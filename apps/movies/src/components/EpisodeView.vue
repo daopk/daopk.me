@@ -3,8 +3,9 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft } from "@daopk/icons";
+import { ArrowLeft, Play } from "@daopk/icons";
 
+import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
 import {
@@ -129,8 +130,15 @@ async function loadEpisode(): Promise<void> {
 
     <article v-else-if="detail && season && episode" class="movies-episode__content">
       <header class="movies-episode__hero">
+        <MovieHlsPlayer
+          v-if="episode.play !== null"
+          class="movies-episode__player"
+          :play="episode.play"
+          :poster-url="heroImageUrl"
+          :title="`${detail.name} - ${episode.name}`"
+        />
         <img
-          v-if="heroImageUrl"
+          v-else-if="heroImageUrl"
           class="movies-episode__still"
           :src="heroImageUrl"
           :alt="episode.name"
@@ -189,7 +197,14 @@ async function loadEpisode(): Promise<void> {
               />
               <span v-else class="movies-episode__item-still" aria-hidden="true" />
               <span class="movies-episode__item-copy">
-                <span class="movies-episode__label">{{ episodeLabel(seasonEpisode) }}</span>
+                <span class="movies-episode__label-row">
+                  <span class="movies-episode__label">{{ episodeLabel(seasonEpisode) }}</span>
+                  <Play
+                    v-if="seasonEpisode.play !== null"
+                    class="movies-episode__play-indicator"
+                    aria-hidden="true"
+                  />
+                </span>
                 <strong>{{ seasonEpisode.name }}</strong>
               </span>
             </button>
@@ -243,6 +258,11 @@ async function loadEpisode(): Promise<void> {
 .movies-episode__still {
   aspect-ratio: 16 / 9;
   border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  inline-size: 100%;
+}
+
+.movies-episode__player {
   box-shadow: var(--shadow-md);
   inline-size: 100%;
 }
@@ -376,6 +396,20 @@ async function loadEpisode(): Promise<void> {
   display: grid;
   gap: var(--space-2xs);
   min-inline-size: 0;
+}
+
+.movies-episode__label-row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+}
+
+.movies-episode__play-indicator {
+  block-size: 14px;
+  color: var(--color-accent);
+  flex: 0 0 auto;
+  inline-size: 14px;
 }
 
 @media (max-width: 820px) {

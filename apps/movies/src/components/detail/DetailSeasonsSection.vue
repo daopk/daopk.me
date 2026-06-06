@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
+import { Play } from "@daopk/icons";
+
 import {
   fetchMovieSeason,
   type MovieSeason,
@@ -208,7 +210,14 @@ async function scrollEpisodesIntoView(): Promise<void> {
             />
             <span v-else class="movies-detail-episodes__still" aria-hidden="true" />
             <span class="movies-detail-episodes__copy">
-              <span class="movies-detail-section__label">{{ episodeLabel(episode) }}</span>
+              <span class="movies-detail-episodes__label-row">
+                <span class="movies-detail-section__label">{{ episodeLabel(episode) }}</span>
+                <Play
+                  v-if="episode.play !== null"
+                  class="movies-detail-episodes__play-indicator"
+                  aria-hidden="true"
+                />
+              </span>
               <strong>{{ episode.name }}</strong>
               <span v-if="episodeMetaLabel(episode)" class="movies-detail-section__muted">
                 {{ episodeMetaLabel(episode) }}
@@ -407,6 +416,20 @@ async function scrollEpisodesIntoView(): Promise<void> {
   display: grid;
   gap: var(--space-2xs);
   min-inline-size: 0;
+}
+
+.movies-detail-episodes__label-row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+}
+
+.movies-detail-episodes__play-indicator {
+  block-size: 14px;
+  color: var(--color-accent);
+  flex: 0 0 auto;
+  inline-size: 14px;
 }
 
 .movies-detail-episodes__overview {

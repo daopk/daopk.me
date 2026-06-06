@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onUnmounted, ref, watch } from "vue";
+import { nextTick, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { ArrowLeft } from "@daopk/icons";
 
+import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailContent from "./detail/DetailContent.vue";
 import DetailHero from "./detail/DetailHero.vue";
@@ -36,6 +37,8 @@ const emit = defineEmits<{
 
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
+const playerSection = ref<HTMLElement | null>(null);
+const showPlayer = ref(false);
 let abortController: AbortController | null = null;
 
 watch(
@@ -55,6 +58,7 @@ async function loadDetail(): Promise<void> {
   abortController = new AbortController();
   state.value = "loading";
   detail.value = null;
+  showPlayer.value = false;
 
   try {
     detail.value = await fetchMovieDetail(props.mediaType, props.tmdbId, {
@@ -81,6 +85,20 @@ function openEpisode(episode: MovieSeasonEpisode): void {
     tmdbId: detail.value.tmdbId,
   });
 }
+
+async function startWatching(): Promise<void> {
+  showPlayer.value = true;
+  await nextTick();
+  playerSection.value?.scrollIntoView?.({
+    behavior:
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    block: "start",
+  });
+}
 </script>
 
 <template>
@@ -98,7 +116,19 @@ function openEpisode(episode: MovieSeasonEpisode): void {
     </EmptyState>
 
     <template v-else-if="detail">
-      <DetailHero :detail="detail" />
+      <DetailHero :detail="detail" @watch="startWatching" />
+      <section
+        v-if="showPlayer && detail.play !== null"
+        ref="playerSection"
+        class="movies-detail__player"
+        aria-label="Movie player"
+      >
+        <MovieHlsPlayer
+          :play="detail.play"
+          :poster-url="detail.backdropUrl || detail.posterUrl"
+          :title="detail.name"
+        />
+      </section>
       <DetailContent
         :detail="detail"
         @open-detail="$emit('open-detail', $event)"
@@ -119,5 +149,21 @@ function openEpisode(episode: MovieSeasonEpisode): void {
 .movies-detail__status {
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
     var(--space-md) 0;
+}
+
+.movies-detail__player {
+  margin: var(--space-xl) auto 0;
+  max-inline-size: 1100px;
+  padding-inline: var(--space-lg);
+  scroll-margin-block-start: var(
+    --movies-toolbar-content-offset,
+    calc(var(--control-height-md) + var(--space-xl))
+  );
+}
+
+@media (max-width: 700px) {
+  .movies-detail__player {
+    padding-inline: var(--space-md);
+  }
 }
 </style>

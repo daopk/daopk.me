@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { Play } from "@daopk/icons";
+import { Button } from "@daopk/ui";
+
 import type { MovieDetail } from "../../moviesApi";
 import { detailMetaLabel } from "./detailFormatters";
 
@@ -10,7 +13,12 @@ interface DetailHeroProps {
 
 const props = defineProps<DetailHeroProps>();
 
+defineEmits<{
+  watch: [];
+}>();
+
 const detailMeta = computed(() => detailMetaLabel(props.detail));
+const canWatch = computed(() => props.detail.mediaType === "movie" && props.detail.play !== null);
 </script>
 
 <template>
@@ -43,6 +51,9 @@ const detailMeta = computed(() => detailMetaLabel(props.detail));
           </p>
           <div v-if="detail.genres.length > 0" class="movies-detail-hero__chips">
             <span v-for="item in detail.genres" :key="item.slug">{{ item.name }}</span>
+          </div>
+          <div v-if="canWatch" class="movies-detail-hero__actions">
+            <Button variant="primary" :icon-start="Play" @click="$emit('watch')">Watch</Button>
           </div>
         </div>
       </div>
@@ -157,6 +168,13 @@ const detailMeta = computed(() => detailMetaLabel(props.detail));
   color: var(--color-fg);
   font-size: var(--font-size-xs);
   padding: var(--space-2xs) var(--space-xs);
+}
+
+.movies-detail-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding-block-start: var(--space-xs);
 }
 
 @media (max-width: 700px) {

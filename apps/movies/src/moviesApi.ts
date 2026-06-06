@@ -67,6 +67,20 @@ export interface MoviePersonDetail {
   readonly tmdbId: number;
 }
 
+export interface MoviePlaySource {
+  readonly embedUrl: string;
+  readonly filename: string;
+  readonly m3u8Url: string;
+  readonly name: string;
+  readonly serverName: string;
+  readonly slug: string;
+}
+
+export interface MoviePlayInfo {
+  readonly slug: string;
+  readonly sources: readonly MoviePlaySource[];
+}
+
 export interface MovieSeason {
   readonly airDate: string;
   readonly episodeCount: number | null;
@@ -84,6 +98,7 @@ export interface MovieSeasonEpisode {
   readonly id: string;
   readonly name: string;
   readonly overview: string;
+  readonly play: MoviePlayInfo | null;
   readonly rating: number | null;
   readonly runtime: number | null;
   readonly seasonNumber: number;
@@ -126,6 +141,7 @@ export interface MovieDetail extends MovieSummary {
   readonly status: string;
   readonly episodeTotal: string;
   readonly facts: readonly MovieFact[];
+  readonly play: MoviePlayInfo | null;
   readonly runtime: number | null;
   readonly seasons: readonly MovieSeason[];
 }
@@ -251,6 +267,20 @@ function asNonEmptyString(value: unknown): string | null {
   return text.length > 0 ? text : null;
 }
 
+function asHttpsUrl(value: unknown): string | null {
+  const text = asNonEmptyString(value);
+  if (text === null) {
+    return null;
+  }
+
+  try {
+    const url = new URL(text);
+    return url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -365,6 +395,46 @@ function movieSummaryList(value: unknown): readonly MovieSummary[] {
     : [];
 }
 
+function playSourceFromEntry(entry: unknown): MoviePlaySource | null {
+  if (!isRecord(entry)) {
+    return null;
+  }
+
+  const m3u8Url = asHttpsUrl(entry.m3u8Url);
+  if (m3u8Url === null) {
+    return null;
+  }
+
+  return {
+    embedUrl: asString(entry.embedUrl),
+    filename: asString(entry.filename),
+    m3u8Url,
+    name: asString(entry.name),
+    serverName: asString(entry.serverName),
+    slug: asString(entry.slug),
+  };
+}
+
+function playInfoFromPayload(payload: unknown): MoviePlayInfo | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const sources = Array.isArray(payload.sources)
+    ? payload.sources
+        .map(playSourceFromEntry)
+        .filter((entry): entry is MoviePlaySource => entry !== null)
+    : [];
+  if (sources.length === 0) {
+    return null;
+  }
+
+  return {
+    slug: asString(payload.slug),
+    sources,
+  };
+}
+
 function seasonFromEntry(entry: unknown): MovieSeason | null {
   if (!isRecord(entry)) {
     return null;
@@ -417,6 +487,7 @@ function seasonEpisodeFromEntry(entry: unknown): MovieSeasonEpisode | null {
       (tmdbId === null ? `season-${seasonNumber}-episode-${episodeNumber}` : `episode-${tmdbId}`),
     name,
     overview: asString(entry.overview),
+    play: playInfoFromPayload(entry.play),
     rating: asNumber(entry.rating),
     runtime: asNumber(entry.runtime),
     seasonNumber,
@@ -526,6 +597,7 @@ export function movieDetailFromPayload(payload: unknown): MovieDetail | null {
     crew: personCreditList(payload.crew),
     episodeTotal: asString(payload.episodeTotal),
     facts: factList(payload.facts),
+    play: playInfoFromPayload(payload.play),
     runtime: asNumber(payload.runtime),
     seasons: seasonList(payload.seasons),
     status: asString(payload.status),

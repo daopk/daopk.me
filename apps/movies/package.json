@@ -12,7 +12,9 @@
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
-  "dependencies": {},
+  "dependencies": {
+    "hls.js": "^1.6.16"
+  },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",

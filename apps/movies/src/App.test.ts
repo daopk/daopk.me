@@ -11,6 +11,7 @@ import type {
   MovieDetail,
   MovieEpisodeDetail,
   MoviePersonDetail,
+  MoviePlayInfo,
   MovieSeasonDetail,
   MovieSummary,
   MoviesListResult,
@@ -58,6 +59,23 @@ function movie(overrides: Partial<MovieSummary> = {}): MovieSummary {
   };
 }
 
+function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
+  return {
+    slug: "fight-club",
+    sources: [
+      {
+        embedUrl: "https://player.example.test/player/?url=fight-club",
+        filename: "fight-club.m3u8",
+        m3u8Url: "https://stream.example.test/fight-club/master.m3u8",
+        name: "Full",
+        serverName: "Server 1",
+        slug: "full",
+      },
+    ],
+    ...overrides,
+  };
+}
+
 function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
   return {
     ...movie(),
@@ -88,6 +106,7 @@ function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
       { label: "Release Date", value: "1999-10-15" },
       { label: "Runtime", value: "139 min" },
     ],
+    play: null,
     runtime: 139,
     seasons: [],
     status: "Released",
@@ -158,6 +177,7 @@ function seasonDetail(overrides: Partial<MovieSeasonDetail> = {}): MovieSeasonDe
               id: "episode-1",
               name: "Pilot",
               overview: "Pilot overview.",
+              play: null,
               rating: 7.8,
               runtime: 42,
               seasonNumber: 1,
@@ -170,6 +190,7 @@ function seasonDetail(overrides: Partial<MovieSeasonDetail> = {}): MovieSeasonDe
               id: "episode-2",
               name: "The Edit",
               overview: "",
+              play: null,
               rating: null,
               runtime: 42,
               seasonNumber: 1,
@@ -184,6 +205,7 @@ function seasonDetail(overrides: Partial<MovieSeasonDetail> = {}): MovieSeasonDe
               id: "episode-3",
               name: "Second Premiere",
               overview: "",
+              play: null,
               rating: null,
               runtime: 44,
               seasonNumber: 2,
@@ -339,6 +361,36 @@ describe("Movies app", () => {
     );
   });
 
+  it("keeps Home content mounted while a period refresh is loading", async () => {
+    const wrapper = mount(App);
+    await settle();
+
+    let resolveRefresh!: (result: MoviesListResult) => void;
+    const refreshResult = new Promise<MoviesListResult>((resolve) => {
+      resolveRefresh = resolve;
+    });
+    vi.mocked(fetchMoviesList).mockImplementation(() => refreshResult);
+
+    await wrapper.get('[aria-label="Trending period"] button[data-value="day"]').trigger("click");
+
+    expect(wrapper.find(".movies-home__hero-backdrop").exists()).toBe(true);
+    expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Fight Club");
+
+    resolveRefresh(
+      list([
+        movie({
+          id: "movie-551",
+          name: "Day Shift",
+          tmdbId: 551,
+        }),
+      ]),
+    );
+    await settle();
+
+    expect(wrapper.text()).toContain("Day Shift");
+  });
+
   it("opens a keyword List Page from toolbar search and switches media tabs", async () => {
     const wrapper = mount(App);
     await settle();
@@ -382,7 +434,32 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Details");
     expect(wrapper.text()).toContain("Edward Norton");
     expect(wrapper.text()).toContain("David Fincher");
-    expect(wrapper.text()).not.toContain("No playback source yet");
+    expect(wrapper.findAll("button").some((button) => button.text().trim() === "Watch")).toBe(
+      false,
+    );
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+  });
+
+  it("shows a movie player when Detail has a play source", async () => {
+    vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    const watchButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().trim() === "Watch");
+    expect(watchButton).toBeDefined();
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+
+    await watchButton!.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.find("video").exists()).toBe(true);
   });
 
   it("replaces the toolbar title with history and Home navigation buttons", async () => {
@@ -584,7 +661,27 @@ describe("Movies app", () => {
     expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 2, expect.anything());
     expect(wrapper.text()).toContain("The Edit");
     expect(wrapper.text()).toContain("Episode Details");
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+    expect(wrapper.find(".movies-episode__still").exists()).toBe(true);
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+  });
+
+  it("renders an HLS player for a direct episode route with a play source", async () => {
+    window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/1");
+    vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
+    const season = seasonDetail();
+    const episode = { ...season.episodes[0]!, play: playInfo({ slug: "planet-cinema" }) };
+    vi.mocked(fetchMovieEpisode).mockResolvedValue(
+      episodeDetail({ episode, season: { ...season, episodes: [episode, season.episodes[1]!] } }),
+    );
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 1, expect.anything());
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.find("video").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode__still").exists()).toBe(false);
   });
 
   it("ignores unsupported detail routes", async () => {

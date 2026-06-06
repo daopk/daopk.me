@@ -147,9 +147,75 @@ describe("moviesApi", () => {
         facts: [{ label: "Episodes", value: "12" }],
         mediaType: "tv",
         name: "Planet Cinema",
+        play: null,
         seasons: [expect.objectContaining({ episodeCount: 12, name: "Season 1" })],
       }),
     );
+  });
+
+  it("normalizes play sources on movie detail payloads", () => {
+    const detail = movieDetailFromPayload({
+      canonicalPath: "/movie/550-fight-club",
+      mediaType: "movie",
+      name: "Fight Club",
+      play: {
+        slug: "fight-club",
+        sources: [
+          {
+            embedUrl: "https://player.example.test/player/?url=fight-club",
+            filename: "fight-club.m3u8",
+            m3u8Url: "https://stream.example.test/fight-club/master.m3u8",
+            name: "Full",
+            serverName: "Server 1",
+            slug: "full",
+          },
+          {
+            m3u8Url: "http://stream.example.test/insecure.m3u8",
+            name: "Ignored",
+            serverName: "Server 2",
+          },
+          {
+            m3u8Url: "not a url",
+            name: "Ignored",
+            serverName: "Server 3",
+          },
+        ],
+      },
+      releaseDate: "1999-10-15",
+      slug: "fight-club",
+      tmdbId: 550,
+    });
+
+    expect(detail?.play).toEqual({
+      slug: "fight-club",
+      sources: [
+        {
+          embedUrl: "https://player.example.test/player/?url=fight-club",
+          filename: "fight-club.m3u8",
+          m3u8Url: "https://stream.example.test/fight-club/master.m3u8",
+          name: "Full",
+          serverName: "Server 1",
+          slug: "full",
+        },
+      ],
+    });
+  });
+
+  it("drops empty play payloads", () => {
+    expect(
+      movieDetailFromPayload({
+        canonicalPath: "/movie/550-fight-club",
+        mediaType: "movie",
+        name: "Fight Club",
+        play: {
+          slug: "fight-club",
+          sources: [{ m3u8Url: "http://stream.example.test/insecure.m3u8" }],
+        },
+        releaseDate: "1999-10-15",
+        slug: "fight-club",
+        tmdbId: 550,
+      })?.play,
+    ).toBeNull();
   });
 
   it("normalizes TMDB person detail payloads", () => {
@@ -227,6 +293,19 @@ describe("moviesApi", () => {
           id: "episode-1",
           name: "Pilot",
           overview: "Pilot overview.",
+          play: {
+            slug: "planet-cinema",
+            sources: [
+              {
+                embedUrl: "https://player.example.test/player/?url=planet-cinema",
+                filename: "tap-1.m3u8",
+                m3u8Url: "https://stream.example.test/planet-cinema/tap-1.m3u8",
+                name: "Episode 1",
+                serverName: "Server 1",
+                slug: "tap-1",
+              },
+            ],
+          },
           rating: 7.8,
           runtime: 42,
           seasonNumber: 1,
@@ -248,6 +327,13 @@ describe("moviesApi", () => {
           expect.objectContaining({
             episodeNumber: 1,
             name: "Pilot",
+            play: expect.objectContaining({
+              sources: [
+                expect.objectContaining({
+                  m3u8Url: "https://stream.example.test/planet-cinema/tap-1.m3u8",
+                }),
+              ],
+            }),
             rating: 7.8,
             runtime: 42,
             stillUrl: "https://image.tmdb.org/t/p/w300/episode.jpg",
