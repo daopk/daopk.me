@@ -93,6 +93,8 @@ jobs:
 
       - name: Build app
         run: pnpm --filter "@daopk-app/${{ matrix.app }}" build
+        env:
+          VITE_PUBLIC_API_ORIGIN: ${{ vars.VITE_PUBLIC_API_ORIGIN }}
 
       - name: Upload module(s) to R2 + emit catalog entry
         env:
