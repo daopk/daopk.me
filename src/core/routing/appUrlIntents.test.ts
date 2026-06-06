@@ -307,11 +307,49 @@ describe("app URL intents", () => {
     });
   });
 
+  it("parses public Movies detail routes as Movies app launch intents", () => {
+    expect(parseAppUrlIntent("/movie/550-fight-club")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+      args: { path: "/movie/550-fight-club" },
+    });
+
+    expect(parseAppUrlIntent("https://daopk.me/tv/76479-the-boys")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+      args: { path: "/tv/76479-the-boys" },
+    });
+
+    expect(parseAppUrlIntent("/person/819-edward-norton")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+      args: { path: "/person/819-edward-norton" },
+    });
+
+    expect(parseAppUrlIntent("/tv/76479-the-boys/season/1/episode/2")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+      args: { path: "/tv/76479-the-boys/season/1/episode/2" },
+    });
+  });
+
   it("ignores unclaimed and malformed routes", () => {
     expect(parseAppUrlIntent("/blogs/xin-chao")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/a/b")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/hello%2Fworld")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/%E0%A4%A")).toEqual({ kind: "none" });
+    expect(parseAppUrlIntent("/movie/0-bad")).toEqual({ kind: "none" });
+    expect(parseAppUrlIntent("/movie/550")).toEqual({ kind: "none" });
+    expect(parseAppUrlIntent("/movie/550-fight%2Fclub")).toEqual({ kind: "none" });
+    expect(parseAppUrlIntent("/movie/550-fight-club/season/1/episode/1")).toEqual({
+      kind: "none",
+    });
+    expect(parseAppUrlIntent("/tv/550-fight-club/season/01/episode/1")).toEqual({
+      kind: "none",
+    });
+    expect(parseAppUrlIntent("/tv/550-fight-club/season/1/episode/0")).toEqual({
+      kind: "none",
+    });
     expect(parseAppUrlIntent("/")).toEqual({ kind: "none" });
   });
 
@@ -377,6 +415,18 @@ describe("app URL intents", () => {
     });
   });
 
+  it("emits a Movies launch request for registered public media routes", () => {
+    const { kernel, eventsEmit } = makeKernel(["movies"]);
+
+    expect(consumeInitialAppUrlIntent(kernel, "/tv/76479-the-boys/season/1/episode/2")).toBe(true);
+
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "movies",
+      source: "deeplink",
+      args: { path: "/tv/76479-the-boys/season/1/episode/2" },
+    });
+  });
+
   it("fails softly for an unknown app deep link", () => {
     const { kernel, eventsEmit } = makeKernel(["about"]);
 
@@ -416,6 +466,9 @@ describe("app URL intents", () => {
     expect(hasAutoGuestLoginUrlIntent(kernel, "/blog")).toBe(true);
     expect(hasAutoGuestLoginUrlIntent(kernel, "/blog/field-notes")).toBe(true);
     expect(hasAutoGuestLoginUrlIntent(kernel, "/apps/calendar")).toBe(true);
+    expect(hasAutoGuestLoginUrlIntent(kernel, "/movie/550-fight-club")).toBe(true);
+    expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys")).toBe(true);
+    expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys/season/1/episode/2")).toBe(true);
 
     expect(eventsEmit).not.toHaveBeenCalled();
   });

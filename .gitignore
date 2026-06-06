@@ -13,6 +13,7 @@ dist-ssr
 blog-dist
 coverage
 *.local
+.env
 
 # Editor directories and files
 .vscode/*

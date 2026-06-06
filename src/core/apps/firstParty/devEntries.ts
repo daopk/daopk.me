@@ -18,6 +18,7 @@ export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
   "youtube-player": () => import("@daopk-app/youtube-player"),
   editor: () => import("@daopk-app/editor"),
   "html-in-canvas": () => import("@daopk-app/html-in-canvas"),
+  movies: () => import("@daopk-app/movies"),
   "pdf-viewer": () => import("@daopk-app/pdf-viewer"),
   photos: () => import("@daopk-app/photos"),
   blog: () => import("@daopk-app/blog"),

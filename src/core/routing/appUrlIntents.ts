@@ -1,8 +1,8 @@
 /**
  * Public URL → app launch intent bridge.
  *
- * This is intentionally smaller than a router: v1 only owns `/apps/:id`
- * deep links plus the canonical `/blog/:slug` content route.
+ * This is intentionally smaller than a router: v1 owns public URLs that launch
+ * apps, while the destination app remains responsible for its internal route.
  */
 
 import { debugWarn } from "~/core/debug";
@@ -27,6 +27,7 @@ export interface YouTubePlayerUrlIntentOptions {
 }
 
 const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
+const TMDB_ID_SLUG_PATTERN = /^([1-9]\d*)-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const FIRST_PARTY_APP_PROTOCOLS = new Map([["youtube-player", "youtube-player"]]);
 const YOUTUBE_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
@@ -278,6 +279,52 @@ function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
   };
 }
 
+function parseMoviesUrlIntent(url: URL, segments: readonly string[]): AppUrlIntent {
+  const section = segments[0];
+  if (segments.length === 2) {
+    if (section !== "movie" && section !== "tv" && section !== "person") {
+      return { kind: "none" };
+    }
+
+    const idSlug = decodePathSegment(segments[1]);
+    if (idSlug === null || TMDB_ID_SLUG_PATTERN.exec(idSlug) === null) {
+      return { kind: "none" };
+    }
+
+    return {
+      kind: "app",
+      manifestId: "movies",
+      args: { path: url.pathname },
+    };
+  }
+
+  if (segments.length !== 6 || section !== "tv") {
+    return { kind: "none" };
+  }
+
+  const idSlug = decodePathSegment(segments[1]);
+  const seasonNumber = decodePathSegment(segments[3] ?? "");
+  const episodeNumber = decodePathSegment(segments[5] ?? "");
+  if (
+    idSlug === null ||
+    TMDB_ID_SLUG_PATTERN.exec(idSlug) === null ||
+    segments[2] !== "season" ||
+    segments[4] !== "episode" ||
+    seasonNumber === null ||
+    episodeNumber === null ||
+    /^(?:0|[1-9]\d*)$/.exec(seasonNumber) === null ||
+    /^[1-9]\d*$/.exec(episodeNumber) === null
+  ) {
+    return { kind: "none" };
+  }
+
+  return {
+    kind: "app",
+    manifestId: "movies",
+    args: { path: url.pathname },
+  };
+}
+
 export function isFirstPartyAppProtocolUrl(input: string | URL): boolean {
   const url = absoluteUrlFrom(input);
   if (url === null) {
@@ -343,6 +390,11 @@ export function parseAppUrlIntent(input: string | URL): AppUrlIntent {
   const blogIntent = parseBlogUrlIntent(segments);
   if (blogIntent.kind !== "none") {
     return blogIntent;
+  }
+
+  const moviesIntent = parseMoviesUrlIntent(url, segments);
+  if (moviesIntent.kind !== "none") {
+    return moviesIntent;
   }
 
   if (segments.length !== 2 || segments[0] !== "apps") {

@@ -56,6 +56,7 @@
     "@daopk-app/clock": "workspace:*",
     "@daopk-app/editor": "workspace:*",
     "@daopk-app/html-in-canvas": "workspace:*",
+    "@daopk-app/movies": "workspace:*",
     "@daopk-app/notes": "workspace:*",
     "@daopk-app/pdf-viewer": "workspace:*",
     "@daopk-app/photos": "workspace:*",

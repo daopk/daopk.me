@@ -323,6 +323,31 @@ describe("AuthGate", () => {
     expect(wrapper.emitted("authenticated")).toHaveLength(1);
   });
 
+  it("auto-opens a sole guest account for a Movies public detail deep link", async () => {
+    const store = new ProfileStore();
+    store.add({
+      id: "guest",
+      displayName: "Guest",
+      createdAt: 1,
+      authMode: "guest",
+      encryption: "none",
+    });
+    store.markGlobalImported();
+    store.dispose();
+    mocks.registeredAppIds.splice(0, mocks.registeredAppIds.length, "about", "settings");
+    window.history.replaceState(null, "", "/tv/76479-the-boys");
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(mocks.registeredAppIds).not.toContain("movies");
+    expect(getActiveProfileSession()).toMatchObject({
+      profileId: "guest",
+      authMode: "guest",
+    });
+    expect(wrapper.emitted("authenticated")).toHaveLength(1);
+  });
+
   it("auto-opens a sole guest account for a first-party app deep link before registration", async () => {
     const store = new ProfileStore();
     store.add({

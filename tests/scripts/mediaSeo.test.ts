@@ -103,7 +103,7 @@ describe("media SEO renderer", () => {
       tmdbId: 1399,
     });
     expect(parseMediaSeoRoute("/movie/0-bad")).toBeNull();
-    expect(parseMediaSeoRoute("/vi/phim/550-fight-club")).toBeNull();
+    expect(parseMediaSeoRoute("/vi/legacy/550-fight-club")).toBeNull();
   });
 
   it("maps parsed routes to the exact R2 HTML key layout", () => {
