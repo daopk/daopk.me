@@ -30,6 +30,12 @@ describe("Slider (M2b Phase 3 / Commit I — reka-ui wrap)", () => {
     expect(wrapper.findComponent({ name: "SliderRoot" }).props("thumbAlignment")).toBe("overflow");
   });
 
+  it("forwards vertical orientation to reka-ui", () => {
+    const wrapper = mount(Slider, { props: { modelValue: 50, orientation: "vertical" } });
+    expect(wrapper.findComponent({ name: "SliderRoot" }).props("orientation")).toBe("vertical");
+    expect(wrapper.find(".ds-slider").attributes("data-orientation")).toBe("vertical");
+  });
+
   it("emits update:modelValue with a scalar number when reka-ui fires update:modelValue", () => {
     const wrapper = mount(Slider, { props: { modelValue: 0.2, min: 0, max: 1, step: 0.05 } });
     wrapper.findComponent({ name: "SliderRoot" }).vm.$emit("update:modelValue", [0.45]);

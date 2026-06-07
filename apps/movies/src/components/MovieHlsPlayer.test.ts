@@ -10,6 +10,15 @@ import type { MoviePlayInfo } from "../moviesApi";
 const fullscreenDescriptors = {
   documentExitFullscreen: Object.getOwnPropertyDescriptor(document, "exitFullscreen"),
   documentFullscreenElement: Object.getOwnPropertyDescriptor(document, "fullscreenElement"),
+  documentExitPictureInPicture: Object.getOwnPropertyDescriptor(document, "exitPictureInPicture"),
+  documentPictureInPictureElement: Object.getOwnPropertyDescriptor(
+    document,
+    "pictureInPictureElement",
+  ),
+  documentPictureInPictureEnabled: Object.getOwnPropertyDescriptor(
+    document,
+    "pictureInPictureEnabled",
+  ),
   documentWebkitExitFullscreen: Object.getOwnPropertyDescriptor(document, "webkitExitFullscreen"),
   documentWebkitFullscreenElement: Object.getOwnPropertyDescriptor(
     document,
@@ -34,6 +43,14 @@ const fullscreenDescriptors = {
   videoWebkitExitFullscreen: Object.getOwnPropertyDescriptor(
     HTMLVideoElement.prototype,
     "webkitExitFullscreen",
+  ),
+  videoDisablePictureInPicture: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "disablePictureInPicture",
+  ),
+  videoRequestPictureInPicture: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "requestPictureInPicture",
   ),
 };
 
@@ -117,12 +134,24 @@ async function settle(): Promise<void> {
   await nextTick();
 }
 
-function click(element: Element): void {
+function click(element: Element, options: { detail?: number } = {}): void {
   element.dispatchEvent(
     new MouseEvent("click", {
       bubbles: true,
       button: 0,
       cancelable: true,
+      detail: options.detail ?? 0,
+    }),
+  );
+}
+
+function doubleClick(element: Element): void {
+  element.dispatchEvent(
+    new MouseEvent("dblclick", {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+      detail: 2,
     }),
   );
 }
@@ -143,6 +172,21 @@ function restoreProperty(
 function restoreFullscreenProperties(): void {
   restoreProperty(document, "exitFullscreen", fullscreenDescriptors.documentExitFullscreen);
   restoreProperty(document, "fullscreenElement", fullscreenDescriptors.documentFullscreenElement);
+  restoreProperty(
+    document,
+    "exitPictureInPicture",
+    fullscreenDescriptors.documentExitPictureInPicture,
+  );
+  restoreProperty(
+    document,
+    "pictureInPictureElement",
+    fullscreenDescriptors.documentPictureInPictureElement,
+  );
+  restoreProperty(
+    document,
+    "pictureInPictureEnabled",
+    fullscreenDescriptors.documentPictureInPictureEnabled,
+  );
   restoreProperty(
     document,
     "webkitExitFullscreen",
@@ -177,6 +221,16 @@ function restoreFullscreenProperties(): void {
     HTMLVideoElement.prototype,
     "webkitExitFullscreen",
     fullscreenDescriptors.videoWebkitExitFullscreen,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "disablePictureInPicture",
+    fullscreenDescriptors.videoDisablePictureInPicture,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "requestPictureInPicture",
+    fullscreenDescriptors.videoRequestPictureInPicture,
   );
 }
 
@@ -399,27 +453,39 @@ describe("MovieHlsPlayer", () => {
     expect(instance.destroy).toHaveBeenCalledTimes(1);
   });
 
-  it("plays and pauses through custom controls", async () => {
+  it("uses only the center play button and toggles playback from the player surface", async () => {
+    vi.useFakeTimers();
     const wrapper = mountPlayer();
     await settle();
 
     const play = vi.mocked(HTMLMediaElement.prototype.play);
     const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+    const video = wrapper.get("video").element;
 
-    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Play"]').element);
+    expect(wrapper.find('.movies-hls-player__control-row button[aria-label="Play"]').exists()).toBe(
+      false,
+    );
+    expect(
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Pause"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('.movies-hls-player__center-play[aria-label="Play"]').exists()).toBe(true);
+
+    click(video);
+    vi.advanceTimersByTime(220);
     await settle();
 
     expect(play).toHaveBeenCalledTimes(1);
     expect(
       wrapper.find('.movies-hls-player__control-row button[aria-label="Pause"]').exists(),
-    ).toBe(true);
+    ).toBe(false);
 
-    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Pause"]').element);
+    click(video);
+    vi.advanceTimersByTime(220);
     await settle();
 
     expect(pause).toHaveBeenCalledTimes(1);
     expect(wrapper.find('.movies-hls-player__control-row button[aria-label="Play"]').exists()).toBe(
-      true,
+      false,
     );
   });
 
@@ -434,15 +500,22 @@ describe("MovieHlsPlayer", () => {
     await settle();
 
     expect(video.currentTime).toBe(45);
-    expect(wrapper.text()).toContain("0:45 / 2:00");
+    expect(
+      wrapper.get(".movies-hls-player__control-row .movies-hls-player__progress").exists(),
+    ).toBe(true);
+    expect(wrapper.get(".movies-hls-player__time").text()).toBe("0:45");
+    expect(wrapper.get(".movies-hls-player__duration").text()).toBe("2:00");
   });
 
   it("updates volume and mute state from custom controls", async () => {
     const wrapper = mountPlayer();
     await settle();
     const video = wrapper.get("video").element as HTMLVideoElement;
+    const volumeSlider = sliderRoots(wrapper)[1]!;
 
-    sliderRoots(wrapper)[1]!.vm.$emit("update:modelValue", [35]);
+    expect(volumeSlider.props("orientation")).toBe("vertical");
+
+    volumeSlider.vm.$emit("update:modelValue", [35]);
     await settle();
 
     expect(video.volume).toBe(0.35);
@@ -455,6 +528,70 @@ describe("MovieHlsPlayer", () => {
     await settle();
     expect(video.muted).toBe(false);
     expect(video.volume).toBe(0.35);
+  });
+
+  it("toggles picture-in-picture from the control row when supported", async () => {
+    let pictureInPictureElement: Element | null = null;
+    let playerVideo: HTMLVideoElement | null = null;
+    const requestPictureInPicture = vi.fn(() => {
+      pictureInPictureElement = playerVideo;
+      playerVideo?.dispatchEvent(new Event("enterpictureinpicture"));
+      return Promise.resolve({});
+    });
+    const exitPictureInPicture = vi.fn(() => {
+      const activeElement = pictureInPictureElement;
+      pictureInPictureElement = null;
+      activeElement?.dispatchEvent(new Event("leavepictureinpicture"));
+      return Promise.resolve();
+    });
+
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, "pictureInPictureElement", {
+      configurable: true,
+      get: () => pictureInPictureElement,
+    });
+    Object.defineProperty(document, "exitPictureInPicture", {
+      configurable: true,
+      value: exitPictureInPicture,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "requestPictureInPicture", {
+      configurable: true,
+      value: requestPictureInPicture,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+    playerVideo = wrapper.get("video").element as HTMLVideoElement;
+
+    expect(wrapper.get('.movies-hls-player__control-row button[aria-label="Mute"]').exists()).toBe(
+      true,
+    );
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter picture-in-picture"]')
+        .element,
+    );
+    await settle();
+
+    expect(requestPictureInPicture).toHaveBeenCalledTimes(1);
+    expect(pictureInPictureElement).toBe(playerVideo);
+    expect(
+      wrapper
+        .find('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
+        .exists(),
+    ).toBe(true);
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
+        .element,
+    );
+    await settle();
+
+    expect(exitPictureInPicture).toHaveBeenCalledTimes(1);
+    expect(pictureInPictureElement).toBeNull();
   });
 
   it("shows HLS quality options after manifest parsing and applies manual quality", async () => {
@@ -481,7 +618,8 @@ describe("MovieHlsPlayer", () => {
     const wrapper = mountPlayer();
     await settle();
 
-    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Play"]').element);
+    click(wrapper.get("video").element);
+    vi.advanceTimersByTime(220);
     await flushPromises();
 
     expect(wrapper.get(".movies-hls-player__controls").classes()).not.toContain(
@@ -496,10 +634,11 @@ describe("MovieHlsPlayer", () => {
     );
   });
 
-  it("requests fullscreen on the player shell through custom controls", async () => {
+  it("requests fullscreen on the player shell through the top-right fullscreen button", async () => {
     let fullscreenElement: Element | null = null;
-    const requestFullscreen = vi.fn(function requestFullscreen(this: HTMLElement) {
-      fullscreenElement = this;
+    let playerShell: Element | null = null;
+    const requestFullscreen = vi.fn(() => {
+      fullscreenElement = playerShell;
       document.dispatchEvent(new Event("fullscreenchange"));
       return Promise.resolve();
     });
@@ -524,25 +663,65 @@ describe("MovieHlsPlayer", () => {
 
     const wrapper = mountPlayer();
     await settle();
+    playerShell = wrapper.get(".movies-hls-player__stage").element;
+
+    expect(
+      wrapper
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(false);
 
     click(
-      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
     expect(requestFullscreen).toHaveBeenCalledTimes(1);
     expect(fullscreenElement).toBe(wrapper.get(".movies-hls-player__stage").element);
     expect(
-      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
 
     click(
-      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').element,
     );
     await settle();
 
     expect(exitFullscreen).toHaveBeenCalledTimes(1);
     expect(fullscreenElement).toBeNull();
+  });
+
+  it("enters fullscreen from a double click on the player surface without toggling playback", async () => {
+    let fullscreenElement: Element | null = null;
+    let playerShell: Element | null = null;
+    const requestFullscreen = vi.fn(() => {
+      fullscreenElement = playerShell;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    });
+
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => fullscreenElement,
+    });
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: requestFullscreen,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+    playerShell = wrapper.get(".movies-hls-player__stage").element;
+
+    const video = wrapper.get("video").element;
+    click(video, { detail: 1 });
+    click(video, { detail: 2 });
+    doubleClick(video);
+    await settle();
+
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(fullscreenElement).toBe(wrapper.get(".movies-hls-player__stage").element);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
   it("falls back to native iOS video fullscreen when shell fullscreen is unavailable", async () => {
@@ -569,13 +748,13 @@ describe("MovieHlsPlayer", () => {
     await settle();
 
     click(
-      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
     expect(enterFullscreen).toHaveBeenCalledTimes(1);
     expect(
-      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
   });
 
@@ -597,7 +776,7 @@ describe("MovieHlsPlayer", () => {
     await settle();
 
     click(
-      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
@@ -605,11 +784,11 @@ describe("MovieHlsPlayer", () => {
       "movies-hls-player__stage--fullscreen",
     );
     expect(
-      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
 
     click(
-      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').element,
     );
     await settle();
 

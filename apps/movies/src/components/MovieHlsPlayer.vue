@@ -18,7 +18,7 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
-  Pause,
+  PictureInPicture,
   Play,
   Volume2,
   VolumeX,
@@ -61,6 +61,7 @@ interface WebKitVideoElement extends HTMLVideoElement {
 }
 
 const AUTO_HIDE_CONTROLS_DELAY_MS = 3200;
+const SURFACE_CLICK_DELAY_MS = 220;
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const SEEK_STEP_SECONDS = 10;
 const VOLUME_STEP = 0.1;
@@ -71,6 +72,7 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
 });
 
 const playerShell = ref<HTMLElement | null>(null);
+const topControlsRoot = ref<HTMLElement | null>(null);
 const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
 const videoElement = ref<HTMLVideoElement | null>(null);
@@ -90,6 +92,8 @@ const waiting = ref(false);
 const metadataLoaded = ref(false);
 const fullscreen = ref(false);
 const fallbackFullscreen = ref(false);
+const pictureInPicture = ref(false);
+const pictureInPictureSupported = ref(false);
 const controlsVisible = ref(true);
 const controlsFocused = ref(false);
 const seeking = ref(false);
@@ -99,6 +103,7 @@ const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null)
 
 let hls: Hls | null = null;
 let hideControlsTimer: number | undefined;
+let surfaceClickTimer: number | undefined;
 
 const sourceOptions = computed(() =>
   props.play.sources.map((source, index) => ({
@@ -178,12 +183,13 @@ const seekValueText = computed(() =>
 );
 const volumeSliderValue = computed(() => Math.round(volume.value * 100));
 const mutedOrSilent = computed(() => muted.value || volume.value <= 0);
-const playPauseIcon = computed(() => (playing.value ? Pause : Play));
-const playPauseLabel = computed(() => (playing.value ? "Pause" : "Play"));
 const muteIcon = computed(() => (mutedOrSilent.value ? VolumeX : Volume2));
 const muteLabel = computed(() => (mutedOrSilent.value ? "Unmute" : "Mute"));
 const fullscreenIcon = computed(() => (fullscreen.value ? Minimize2 : Maximize2));
 const fullscreenLabel = computed(() => (fullscreen.value ? "Exit fullscreen" : "Enter fullscreen"));
+const pictureInPictureLabel = computed(() =>
+  pictureInPicture.value ? "Exit picture-in-picture" : "Enter picture-in-picture",
+);
 const posterVisible = computed(
   () => !playing.value && currentTime.value === 0 && props.posterUrl.length > 0,
 );
@@ -211,10 +217,13 @@ watch(
 
 onMounted(() => {
   syncFullscreenState();
+  syncPictureInPictureState();
   document.addEventListener("fullscreenchange", syncFullscreenState);
   document.addEventListener("webkitfullscreenchange", syncFullscreenState);
   videoElement.value?.addEventListener("webkitbeginfullscreen", syncFullscreenState);
   videoElement.value?.addEventListener("webkitendfullscreen", syncFullscreenState);
+  videoElement.value?.addEventListener("enterpictureinpicture", syncPictureInPictureState);
+  videoElement.value?.addEventListener("leavepictureinpicture", syncPictureInPictureState);
   void attachSource({ autoplay: props.autoplay });
 });
 
@@ -236,11 +245,14 @@ watch(
 
 onBeforeUnmount(() => {
   clearHideControlsTimer();
+  clearSurfaceClickTimer();
   destroyHls();
   document.removeEventListener("fullscreenchange", syncFullscreenState);
   document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
   videoElement.value?.removeEventListener("webkitbeginfullscreen", syncFullscreenState);
   videoElement.value?.removeEventListener("webkitendfullscreen", syncFullscreenState);
+  videoElement.value?.removeEventListener("enterpictureinpicture", syncPictureInPictureState);
+  videoElement.value?.removeEventListener("leavepictureinpicture", syncPictureInPictureState);
 });
 
 function destroyHls(): void {
@@ -382,6 +394,99 @@ function togglePlayback(): void {
   } else {
     void playVideo();
   }
+}
+
+function clearSurfaceClickTimer(): void {
+  if (surfaceClickTimer === undefined || typeof window === "undefined") {
+    return;
+  }
+
+  window.clearTimeout(surfaceClickTimer);
+  surfaceClickTimer = undefined;
+}
+
+function queueSurfacePlaybackToggle(): void {
+  clearSurfaceClickTimer();
+
+  if (typeof window === "undefined") {
+    togglePlayback();
+    return;
+  }
+
+  surfaceClickTimer = window.setTimeout(() => {
+    surfaceClickTimer = undefined;
+    togglePlayback();
+  }, SURFACE_CLICK_DELAY_MS);
+}
+
+function isPrimaryClick(event: MouseEvent): boolean {
+  return event.button === 0 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+}
+
+function isSurfaceClickTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) {
+    return false;
+  }
+
+  if (playerControlsContain(target)) {
+    return false;
+  }
+
+  return true;
+}
+
+function playerControlsContain(target: EventTarget | null): boolean {
+  return (
+    target instanceof Node &&
+    (controlsRoot.value?.contains(target) === true ||
+      topControlsRoot.value?.contains(target) === true)
+  );
+}
+
+function onPlayerSurfaceClick(event: MouseEvent): void {
+  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event.target)) {
+    return;
+  }
+
+  if (event.detail > 1) {
+    clearSurfaceClickTimer();
+    return;
+  }
+
+  queueSurfacePlaybackToggle();
+}
+
+function onPlayerSurfaceDoubleClick(event: MouseEvent): void {
+  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
+  clearSurfaceClickTimer();
+  showControls();
+  void toggleFullscreen();
+}
+
+function onCenterPlayClick(event: MouseEvent): void {
+  event.stopPropagation();
+  if (event.defaultPrevented || !isPrimaryClick(event)) {
+    return;
+  }
+
+  if (event.detail > 1) {
+    clearSurfaceClickTimer();
+    return;
+  }
+
+  queueSurfacePlaybackToggle();
+}
+
+function onCenterPlayDoubleClick(event: MouseEvent): void {
+  event.preventDefault();
+  event.stopPropagation();
+  clearSurfaceClickTimer();
+  showControls();
+  void toggleFullscreen();
 }
 
 function syncMediaState(): void {
@@ -620,7 +725,7 @@ function showControls(): void {
 
 function onControlsFocusOut(event: FocusEvent): void {
   const nextTarget = event.relatedTarget;
-  if (!(nextTarget instanceof Node) || !controlsRoot.value?.contains(nextTarget)) {
+  if (!playerControlsContain(nextTarget)) {
     controlsFocused.value = false;
     scheduleAutoHideControls();
   }
@@ -917,6 +1022,59 @@ function onStageKeydown(event: KeyboardEvent): void {
   }
 }
 
+function pictureInPictureDocument(): Document | null {
+  return typeof document === "undefined" ? null : document;
+}
+
+function pictureInPictureVideoElement(): HTMLVideoElement | null {
+  return videoElement.value;
+}
+
+function canUsePictureInPicture(
+  video: HTMLVideoElement | null = pictureInPictureVideoElement(),
+): boolean {
+  const currentDocument = pictureInPictureDocument();
+  return Boolean(
+    currentDocument?.pictureInPictureEnabled &&
+    typeof video?.requestPictureInPicture === "function" &&
+    !video.disablePictureInPicture,
+  );
+}
+
+function syncPictureInPictureState(): void {
+  const currentDocument = pictureInPictureDocument();
+  const video = pictureInPictureVideoElement();
+  pictureInPictureSupported.value = canUsePictureInPicture(video);
+  pictureInPicture.value = video !== null && currentDocument?.pictureInPictureElement === video;
+}
+
+async function togglePictureInPicture(): Promise<void> {
+  const currentDocument = pictureInPictureDocument();
+  const video = pictureInPictureVideoElement();
+  if (currentDocument === null || video === null || !canUsePictureInPicture(video)) {
+    syncPictureInPictureState();
+    return;
+  }
+
+  try {
+    if (currentDocument.pictureInPictureElement === video) {
+      await currentDocument.exitPictureInPicture?.();
+      syncPictureInPictureState();
+      return;
+    }
+
+    if (currentDocument.pictureInPictureElement != null) {
+      await currentDocument.exitPictureInPicture?.();
+    }
+
+    await video.requestPictureInPicture?.();
+    syncPictureInPictureState();
+    showControls();
+  } catch {
+    syncPictureInPictureState();
+  }
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLInputElement ||
@@ -976,6 +1134,8 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
       tabindex="0"
       :aria-label="`${title} player`"
       @keydown="onStageKeydown"
+      @click="onPlayerSurfaceClick"
+      @dblclick="onPlayerSurfaceDoubleClick"
       @pointerdown="showControls"
       @pointermove="showControls"
       @touchstart="showControls"
@@ -1002,15 +1162,9 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
       />
 
       <Transition name="movies-hls-player__poster-fade">
-        <button
-          v-if="posterVisible"
-          type="button"
-          class="movies-hls-player__poster"
-          aria-label="Play"
-          @click="togglePlayback"
-        >
-          <img :src="posterUrl" :alt="title" decoding="async" />
-        </button>
+        <div v-if="posterVisible" class="movies-hls-player__poster" aria-hidden="true">
+          <img :src="posterUrl" alt="" decoding="async" />
+        </div>
       </Transition>
 
       <div class="movies-hls-player__shade movies-hls-player__shade--top" aria-hidden="true" />
@@ -1021,7 +1175,8 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
         type="button"
         class="movies-hls-player__center-play"
         aria-label="Play"
-        @click="togglePlayback"
+        @click="onCenterPlayClick"
+        @dblclick="onCenterPlayDoubleClick"
       >
         <Play aria-hidden="true" />
       </button>
@@ -1046,6 +1201,31 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
       </div>
 
       <div
+        ref="topControlsRoot"
+        class="movies-hls-player__top-actions"
+        :class="{ 'movies-hls-player__top-actions--hidden': controlsHidden }"
+        @focusin="
+          controlsFocused = true;
+          showControls();
+        "
+        @focusout="onControlsFocusOut"
+        @click.stop
+        @dblclick.stop
+        @pointerdown="showControls"
+        @pointermove="showControls"
+        @touchstart="showControls"
+      >
+        <IconButton
+          class="movies-hls-player__button movies-hls-player__fullscreen-button"
+          :icon="fullscreenIcon"
+          :label="fullscreenLabel"
+          size="sm"
+          variant="subtle"
+          @click="toggleFullscreen"
+        />
+      </div>
+
+      <div
         ref="controlsRoot"
         class="movies-hls-player__controls"
         :class="{ 'movies-hls-player__controls--hidden': controlsHidden }"
@@ -1056,80 +1236,92 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
           showControls();
         "
         @focusout="onControlsFocusOut"
+        @click.stop
+        @dblclick.stop
         @pointerdown="showControls"
         @pointermove="showControls"
         @touchstart="showControls"
       >
         <div
-          ref="progressRoot"
-          class="movies-hls-player__progress"
-          @pointercancel="onSeekPointerCancel"
-          @pointerdown="onSeekPointerDown"
-          @pointerleave="onSeekPointerLeave"
-          @pointermove="onSeekPointerMove"
-          @pointerup="onSeekPointerUp"
+          class="movies-hls-player__control-row"
+          :class="{ 'movies-hls-player__control-row--has-settings': hasSettingsMenu }"
         >
-          <Slider
-            class="movies-hls-player__seek"
-            :model-value="seekPosition"
-            :min="0"
-            :max="seekMax"
-            :step="1"
-            :disabled="!hasDuration || playbackError.length > 0"
-            aria-label="Seek"
-            :aria-valuetext="seekValueText"
-            @focusout="cancelSeekPreview"
-            @keydown="onSeekKeydown"
-            @update:model-value="previewSeek"
-            @commit="commitSeek"
-          />
-          <span
-            v-if="seekPointerPreview"
-            class="movies-hls-player__seek-preview"
-            aria-hidden="true"
-          >
-            {{ seekPointerPreviewText }}
-          </span>
-        </div>
-
-        <div class="movies-hls-player__control-row">
-          <IconButton
-            class="movies-hls-player__button"
-            :icon="playPauseIcon"
-            :label="playPauseLabel"
-            size="sm"
-            variant="subtle"
-            :disabled="playbackError.length > 0"
-            @click="togglePlayback"
-          />
-
           <span class="movies-hls-player__time">
-            {{ formatTime(displayTime) }} / {{ hasDuration ? formatTime(duration) : "--:--" }}
+            {{ formatTime(displayTime) }}
           </span>
 
-          <div class="movies-hls-player__spacer" aria-hidden="true" />
+          <div
+            ref="progressRoot"
+            class="movies-hls-player__progress"
+            @pointercancel="onSeekPointerCancel"
+            @pointerdown="onSeekPointerDown"
+            @pointerleave="onSeekPointerLeave"
+            @pointermove="onSeekPointerMove"
+            @pointerup="onSeekPointerUp"
+          >
+            <Slider
+              class="movies-hls-player__seek"
+              :model-value="seekPosition"
+              :min="0"
+              :max="seekMax"
+              :step="1"
+              :disabled="!hasDuration || playbackError.length > 0"
+              aria-label="Seek"
+              :aria-valuetext="seekValueText"
+              @focusout="cancelSeekPreview"
+              @keydown="onSeekKeydown"
+              @update:model-value="previewSeek"
+              @commit="commitSeek"
+            />
+            <span
+              v-if="seekPointerPreview"
+              class="movies-hls-player__seek-preview"
+              aria-hidden="true"
+            >
+              {{ seekPointerPreviewText }}
+            </span>
+          </div>
+
+          <span class="movies-hls-player__duration">
+            {{ hasDuration ? formatTime(duration) : "--:--" }}
+          </span>
+
+          <div class="movies-hls-player__volume-control">
+            <IconButton
+              class="movies-hls-player__button"
+              :icon="muteIcon"
+              :label="muteLabel"
+              size="sm"
+              variant="subtle"
+              :disabled="playbackError.length > 0"
+              @click="toggleMute"
+            />
+
+            <div class="movies-hls-player__volume-popover">
+              <Slider
+                class="movies-hls-player__volume"
+                orientation="vertical"
+                :model-value="volumeSliderValue"
+                :min="0"
+                :max="100"
+                :step="1"
+                :disabled="playbackError.length > 0"
+                aria-label="Volume"
+                :aria-valuetext="`${volumeSliderValue}%`"
+                @update:model-value="setVolumeFromSlider"
+                @commit="setVolumeFromSlider"
+              />
+            </div>
+          </div>
 
           <IconButton
-            class="movies-hls-player__button"
-            :icon="muteIcon"
-            :label="muteLabel"
+            class="movies-hls-player__button movies-hls-player__pip-button"
+            :icon="PictureInPicture"
+            :label="pictureInPictureLabel"
             size="sm"
             variant="subtle"
-            :disabled="playbackError.length > 0"
-            @click="toggleMute"
-          />
-
-          <Slider
-            class="movies-hls-player__volume"
-            :model-value="volumeSliderValue"
-            :min="0"
-            :max="100"
-            :step="1"
-            :disabled="playbackError.length > 0"
-            aria-label="Volume"
-            :aria-valuetext="`${volumeSliderValue}%`"
-            @update:model-value="setVolumeFromSlider"
-            @commit="setVolumeFromSlider"
+            :disabled="!pictureInPictureSupported || playbackError.length > 0"
+            @click="togglePictureInPicture"
           />
 
           <DropdownMenu v-if="hasSettingsMenu" align="end">
@@ -1186,15 +1378,6 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
               </DropdownMenuRadioGroup>
             </template>
           </DropdownMenu>
-
-          <IconButton
-            class="movies-hls-player__button"
-            :icon="fullscreenIcon"
-            :label="fullscreenLabel"
-            size="sm"
-            variant="subtle"
-            @click="toggleFullscreen"
-          />
         </div>
       </div>
     </div>
@@ -1214,6 +1397,7 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   background: #08090d;
   border-radius: 8px;
   color: #f7f8fb;
+  cursor: pointer;
   inline-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
@@ -1252,9 +1436,9 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 .movies-hls-player__poster {
   background: #08090d;
   border: 0;
-  cursor: pointer;
   inset: 0;
   padding: 0;
+  pointer-events: none;
   position: absolute;
   z-index: 1;
 }
@@ -1380,7 +1564,8 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   display: flex;
   gap: var(--space-sm);
   inset-block-start: var(--space-md);
-  inset-inline: var(--space-md);
+  inset-inline-end: calc(var(--space-md) + 44px + var(--space-sm));
+  inset-inline-start: var(--space-md);
   min-inline-size: 0;
   opacity: 1;
   pointer-events: none;
@@ -1389,8 +1574,25 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   z-index: 2;
 }
 
-.movies-hls-player__topline--hidden {
+.movies-hls-player__top-actions {
+  inset-block-start: var(--space-md);
+  inset-inline-end: var(--space-md);
+  opacity: 1;
+  position: absolute;
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+  z-index: 4;
+}
+
+.movies-hls-player__topline--hidden,
+.movies-hls-player__top-actions--hidden {
   opacity: 0;
+}
+
+.movies-hls-player__top-actions--hidden {
+  pointer-events: none;
+  transform: translateY(calc(var(--space-xs) * -1));
 }
 
 .movies-hls-player__title {
@@ -1413,8 +1615,8 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 }
 
 .movies-hls-player__controls {
+  cursor: default;
   display: grid;
-  gap: var(--space-xs);
   inset-block-end: var(--space-md);
   inset-inline: var(--space-md);
   opacity: 1;
@@ -1497,39 +1699,95 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   border-radius: 8px;
   display: grid;
   gap: var(--space-sm);
-  grid-template-columns: auto auto minmax(20px, 1fr) auto minmax(72px, 116px) auto auto;
+  grid-template-columns: auto minmax(88px, 1fr) auto auto auto;
   min-inline-size: 0;
   padding: var(--space-sm);
+}
+
+.movies-hls-player__control-row--has-settings {
+  grid-template-columns: auto minmax(88px, 1fr) auto auto auto auto;
 }
 
 .movies-hls-player__button {
   color: #fff;
 }
 
-.movies-hls-player__time {
+.movies-hls-player__fullscreen-button {
+  backdrop-filter: blur(18px);
+  background: rgb(8 9 13 / 68%);
+  border: 1px solid rgb(255 255 255 / 14%);
+}
+
+.movies-hls-player__time,
+.movies-hls-player__duration {
   color: rgb(255 255 255 / 88%);
   font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
-  min-inline-size: 9.5ch;
+  min-inline-size: 5ch;
   white-space: nowrap;
 }
 
-.movies-hls-player__spacer {
-  min-inline-size: 0;
+.movies-hls-player__duration {
+  text-align: end;
+}
+
+.movies-hls-player__volume-control {
+  display: inline-grid;
+  position: relative;
+}
+
+.movies-hls-player__volume-control::before {
+  block-size: calc(var(--space-xs) + var(--space-sm));
+  content: "";
+  inline-size: 56px;
+  inset-block-end: calc(100% - 2px);
+  inset-inline-start: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  z-index: 5;
+}
+
+.movies-hls-player__volume-popover {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: rgb(8 9 13 / 78%);
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  block-size: 136px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  inline-size: 44px;
+  inset-block-end: calc(100% + var(--space-xs));
+  inset-inline-start: 50%;
+  justify-content: center;
+  opacity: 0;
+  padding: var(--space-sm) 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, var(--space-xs));
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease),
+    visibility var(--duration-fast) var(--ease);
+  visibility: hidden;
+  z-index: 6;
+}
+
+.movies-hls-player__volume-control:hover .movies-hls-player__volume-popover,
+.movies-hls-player__volume-control:focus-within .movies-hls-player__volume-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  visibility: visible;
 }
 
 .movies-hls-player__volume {
   --color-accent: #fff;
   --color-bg-subtle: rgb(255 255 255 / 22%);
-  --ds-slider-thumb-opacity: 0;
-
-  min-inline-size: 0;
-}
-
-.movies-hls-player__volume:hover,
-.movies-hls-player__volume:focus-within,
-.movies-hls-player__volume:active {
   --ds-slider-thumb-opacity: 1;
+
+  block-size: 104px;
+  inline-size: 20px;
 }
 
 .movies-hls-player__poster-fade-enter-active,
@@ -1556,13 +1814,23 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 
   .movies-hls-player__topline {
     inset-block-start: var(--space-sm);
-    inset-inline: var(--space-sm);
+    inset-inline-end: calc(var(--space-sm) + 44px + var(--space-xs));
+    inset-inline-start: var(--space-sm);
+  }
+
+  .movies-hls-player__top-actions {
+    inset-block-start: var(--space-sm);
+    inset-inline-end: var(--space-sm);
   }
 
   .movies-hls-player__control-row {
     gap: var(--space-xs);
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(48px, 1fr) auto auto auto;
     min-block-size: 44px;
+  }
+
+  .movies-hls-player__control-row--has-settings {
+    grid-template-columns: auto minmax(48px, 1fr) auto auto auto auto;
   }
 
   .movies-hls-player__button {
@@ -1570,15 +1838,15 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
     min-inline-size: 44px;
   }
 
-  .movies-hls-player__time {
+  .movies-hls-player__time,
+  .movies-hls-player__duration {
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .movies-hls-player__spacer,
-  .movies-hls-player__volume {
-    display: none;
+  .movies-hls-player__volume-popover {
+    block-size: 128px;
   }
 }
 
@@ -1593,7 +1861,9 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   .movies-hls-player__controls,
   .movies-hls-player__poster-fade-enter-active,
   .movies-hls-player__poster-fade-leave-active,
-  .movies-hls-player__topline {
+  .movies-hls-player__top-actions,
+  .movies-hls-player__topline,
+  .movies-hls-player__volume-popover {
     transition: none;
   }
 

@@ -7,6 +7,7 @@ interface SliderProps {
   min?: number;
   max?: number;
   step?: number;
+  orientation?: "horizontal" | "vertical";
   thumbAlignment?: "contain" | "overflow";
   disabled?: boolean;
   ariaLabel?: string;
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<SliderProps>(), {
   min: 0,
   max: 100,
   step: 1,
+  orientation: "horizontal",
   thumbAlignment: "overflow",
   disabled: false,
   ariaLabel: undefined,
@@ -46,12 +48,13 @@ function onCommit(next: number[]): void {
 </script>
 
 <template>
-  <div class="ds-slider" :data-disabled="disabled ? '' : undefined">
+  <div class="ds-slider" :data-disabled="disabled ? '' : undefined" :data-orientation="orientation">
     <SliderRoot
       v-model="internalValue"
       :min="min"
       :max="max"
       :step="step"
+      :orientation="orientation"
       :thumb-alignment="thumbAlignment"
       :disabled="disabled"
       class="ds-slider__root"
@@ -93,6 +96,15 @@ function onCommit(next: number[]): void {
   }
 }
 
+.ds-slider[data-orientation="vertical"] {
+  block-size: 100%;
+  inline-size: 20px;
+  min-block-size: 0;
+  min-inline-size: 20px;
+  padding-block: calc(var(--ds-slider-thumb-size, 16px) / 2);
+  padding-inline: 0;
+}
+
 .ds-slider__root {
   align-items: center;
   block-size: 100%;
@@ -100,6 +112,15 @@ function onCommit(next: number[]): void {
   flex: 1 1 auto;
   min-inline-size: 0;
   position: relative;
+}
+
+.ds-slider__root[data-orientation="vertical"] {
+  align-items: center;
+  block-size: 100%;
+  flex-direction: column;
+  inline-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
 }
 
 .ds-slider__track {
@@ -110,11 +131,21 @@ function onCommit(next: number[]): void {
   position: relative;
 }
 
+.ds-slider__track[data-orientation="vertical"] {
+  block-size: 100%;
+  flex-grow: 1;
+  inline-size: 3px;
+}
+
 .ds-slider__range {
   background-color: var(--color-accent);
   block-size: 100%;
   border-radius: var(--radius-full);
   position: absolute;
+}
+
+.ds-slider__range[data-orientation="vertical"] {
+  inline-size: 100%;
 }
 
 .ds-slider__thumb {
