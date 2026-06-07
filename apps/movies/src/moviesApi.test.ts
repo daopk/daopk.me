@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildMoviePersonUrl,
   buildMovieSeasonUrl,
   buildMoviesListUrl,
   DEFAULT_MOVIES_LIST_LIMIT,
+  fetchMoviesList,
   movieDetailFromPayload,
   movieEpisodeDetailFromParts,
   moviePersonFromPayload,
@@ -14,6 +15,10 @@ import {
 } from "./moviesApi";
 
 describe("moviesApi", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("normalizes TMDB image URLs", () => {
     expect(tmdbImageUrl("/poster.jpg")).toBe("https://image.tmdb.org/t/p/w500/poster.jpg");
     expect(tmdbImageUrl("/backdrop.jpg", "w1280")).toBe(
@@ -33,6 +38,7 @@ describe("moviesApi", () => {
     expect(listUrl.pathname).toBe("/public/movies/list");
     expect(listUrl.searchParams.get("kind")).toBe("popular-tv");
     expect(listUrl.searchParams.get("page")).toBe("2");
+    expect(listUrl.searchParams.get("limit")).toBe(String(DEFAULT_MOVIES_LIST_LIMIT));
     expect(listUrl.searchParams.get("period")).toBe("month");
     expect(listUrl.searchParams.has("country")).toBe(false);
 
@@ -44,7 +50,14 @@ describe("moviesApi", () => {
     expect(searchUrl.searchParams.get("query")).toBe("Fight Club");
     expect(searchUrl.searchParams.get("media")).toBe("movie");
     expect(searchUrl.searchParams.get("page")).toBe("1");
+    expect(searchUrl.searchParams.get("limit")).toBe(String(DEFAULT_MOVIES_LIST_LIMIT));
     expect(searchUrl.searchParams.has("country")).toBe(false);
+
+    const cappedUrl = new URL(
+      buildMoviesListUrl({ kind: "popular-movie", limit: 120 }),
+      "https://daopk.test",
+    );
+    expect(cappedUrl.searchParams.get("limit")).toBe("100");
 
     const seasonUrl = new URL(buildMovieSeasonUrl(1399, 2), "https://daopk.test");
     expect(seasonUrl.pathname).toBe("/public/movies/season/1399/2");
@@ -95,6 +108,32 @@ describe("moviesApi", () => {
       }),
     );
     expect(result.pagination.totalPages).toBe(1);
+  });
+
+  it("fetches Movies lists with limit and preserves API pagination", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "https://daopk.test");
+      expect(url.pathname).toBe("/public/movies/list");
+      expect(url.searchParams.get("limit")).toBe("24");
+      return new Response(
+        JSON.stringify({
+          items: [],
+          pagination: {
+            currentPage: 1,
+            totalItems: 7,
+            totalItemsPerPage: 7,
+            totalPages: 1,
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const result = await fetchMoviesList({ kind: "popular-movie" });
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(result.pagination.totalItemsPerPage).toBe(7);
   });
 
   it("normalizes detail payloads and keeps playback dormant", () => {

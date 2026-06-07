@@ -239,7 +239,8 @@ export const SEARCH_MEDIA_LABELS: Record<MoviesSearchMedia, string> = {
 };
 
 const DEFAULT_PAGE = 1;
-export const DEFAULT_MOVIES_LIST_LIMIT = 32;
+export const DEFAULT_MOVIES_LIST_LIMIT = 24;
+const MAX_MOVIES_LIST_LIMIT = 100;
 const DEFAULT_PAGINATION: MoviesPagination = {
   totalItems: 0,
   totalItemsPerPage: 0,
@@ -699,6 +700,10 @@ export function moviesListFromPayload(
 
 export function buildMoviesListUrl(query: MoviesListQuery = {}): string {
   const page = Math.max(1, query.page ?? DEFAULT_PAGE);
+  const limit = Math.max(
+    1,
+    Math.min(MAX_MOVIES_LIST_LIMIT, query.limit ?? DEFAULT_MOVIES_LIST_LIMIT),
+  );
   const keyword = query.keyword?.trim();
 
   if (keyword !== undefined && keyword.length > 0) {
@@ -706,12 +711,14 @@ export function buildMoviesListUrl(query: MoviesListQuery = {}): string {
     url.searchParams.set("query", keyword);
     url.searchParams.set("media", query.media ?? "all");
     url.searchParams.set("page", String(page));
+    url.searchParams.set("limit", String(limit));
     return urlToFetchString(url);
   }
 
   const url = publicApiSearchUrl("/public/movies/list");
   url.searchParams.set("kind", query.kind ?? "trending-movie");
   url.searchParams.set("page", String(page));
+  url.searchParams.set("limit", String(limit));
   if (query.period !== undefined) {
     url.searchParams.set("period", query.period);
   }
@@ -755,17 +762,17 @@ export async function fetchMoviesList(
   options: { signal?: AbortSignal } = {},
 ): Promise<MoviesListResult> {
   const page = Math.max(1, query.page ?? DEFAULT_PAGE);
-  const limit = Math.max(1, Math.min(64, query.limit ?? DEFAULT_MOVIES_LIST_LIMIT));
+  const limit = Math.max(
+    1,
+    Math.min(MAX_MOVIES_LIST_LIMIT, query.limit ?? DEFAULT_MOVIES_LIST_LIMIT),
+  );
   const payload = await fetchJson(buildMoviesListUrl({ ...query, page, limit }), {
     signal: options.signal,
   });
   const result = moviesListFromPayload(payload, { page, limit });
   return {
     items: result.items.slice(0, limit),
-    pagination: {
-      ...result.pagination,
-      totalItemsPerPage: limit,
-    },
+    pagination: result.pagination,
   };
 }
 

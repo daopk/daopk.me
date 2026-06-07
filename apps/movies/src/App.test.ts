@@ -31,6 +31,7 @@ vi.mock("./moviesApi", async (importOriginal) => {
 
 import App from "./App.vue";
 import {
+  DEFAULT_MOVIES_LIST_LIMIT,
   fetchMovieDetail,
   fetchMovieEpisode,
   fetchMoviePerson,
@@ -399,7 +400,7 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: "popular-tv", limit: 32, page: 1 }),
+      expect.objectContaining({ kind: "popular-tv", limit: DEFAULT_MOVIES_LIST_LIMIT, page: 1 }),
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Popular TV");
@@ -410,7 +411,11 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: "popular-movie", limit: 32, page: 1 }),
+      expect.objectContaining({
+        kind: "popular-movie",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        page: 1,
+      }),
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Popular Movies");
@@ -504,7 +509,12 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ keyword: "Fight", limit: 32, media: "all", page: 1 }),
+      expect.objectContaining({
+        keyword: "Fight",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "all",
+        page: 1,
+      }),
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Search: Fight");
@@ -518,7 +528,12 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ keyword: "Fight", limit: 32, media: "movie", page: 1 }),
+      expect.objectContaining({
+        keyword: "Fight",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "movie",
+        page: 1,
+      }),
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Search Movies: Fight");
