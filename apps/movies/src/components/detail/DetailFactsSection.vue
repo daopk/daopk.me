@@ -2,6 +2,7 @@
 import type { MovieFact } from "../../moviesApi";
 
 interface DetailFactsSectionProps {
+  description?: string;
   facts: readonly MovieFact[];
 }
 
@@ -9,9 +10,12 @@ defineProps<DetailFactsSectionProps>();
 </script>
 
 <template>
-  <section v-if="facts.length > 0" class="movies-detail-section">
+  <section v-if="facts.length > 0 || description" class="movies-detail-section">
     <h2>Details</h2>
-    <dl class="movies-detail-facts">
+    <p v-if="description" class="movies-detail-section__description">
+      {{ description }}
+    </p>
+    <dl v-if="facts.length > 0" class="movies-detail-facts">
       <div v-for="fact in facts" :key="fact.label">
         <dt>{{ fact.label }}</dt>
         <dd>{{ fact.value }}</dd>
@@ -30,6 +34,12 @@ defineProps<DetailFactsSectionProps>();
   font-size: var(--font-size-xl);
   line-height: var(--leading-tight);
   margin: 0;
+}
+
+.movies-detail-section__description {
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  max-inline-size: 72ch;
 }
 
 .movies-detail-facts {

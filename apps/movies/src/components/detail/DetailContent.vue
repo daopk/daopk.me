@@ -25,7 +25,7 @@ defineEmits<{
 
 <template>
   <section class="movies-detail-content" aria-label="TMDB title information">
-    <DetailFactsSection :facts="detail.facts" />
+    <DetailFactsSection :description="detail.content" :facts="detail.facts" />
 
     <DetailSeasonsSection
       v-if="detail.mediaType === 'tv'"

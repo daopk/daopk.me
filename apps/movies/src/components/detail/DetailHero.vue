@@ -23,13 +23,14 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
 
 <template>
   <section class="movies-detail-hero">
-    <img
-      v-if="detail.backdropUrl"
+    <picture
+      v-if="detail.backdropUrl || detail.posterUrl"
       class="movies-detail-hero__backdrop"
-      :src="detail.backdropUrl"
-      alt=""
       aria-hidden="true"
-    />
+    >
+      <source v-if="detail.posterUrl" media="(max-width: 700px)" :srcset="detail.posterUrl" />
+      <img :src="detail.backdropUrl || detail.posterUrl" alt="" />
+    </picture>
     <div class="movies-detail-hero__shade" />
     <div class="movies-detail-hero__content">
       <div class="movies-detail-hero__overview">
@@ -76,9 +77,14 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
   position: absolute;
 }
 
-.movies-detail-hero__backdrop {
+.movies-detail-hero__backdrop,
+.movies-detail-hero__backdrop img {
   block-size: 100%;
   inline-size: 100%;
+}
+
+.movies-detail-hero__backdrop img {
+  display: block;
   object-fit: cover;
 }
 
@@ -86,13 +92,15 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
   background:
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 20%, transparent),
-      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 94%, transparent)
+      transparent 0%,
+      transparent 34%,
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 56%, transparent) 72%,
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 94%, transparent) 100%
     ),
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 92%, transparent),
-      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 34%, transparent)
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 42%, transparent),
+      transparent 52%
     );
 }
 
@@ -178,13 +186,42 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
 }
 
 @media (max-width: 700px) {
+  .movies-detail-hero {
+    align-items: end;
+    display: grid;
+    min-block-size: min(680px, 76svh);
+  }
+
+  .movies-detail-hero__content {
+    inline-size: 100%;
+  }
+
+  .movies-detail-hero__shade {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 58%, transparent) 76%,
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 96%, transparent) 100%
+    );
+  }
+
   .movies-detail-hero__overview {
-    align-items: start;
+    align-items: end;
     grid-template-columns: 1fr;
   }
 
   .movies-detail-hero__poster {
-    max-inline-size: 180px;
+    display: none;
+  }
+
+  .movies-detail-hero__copy {
+    align-self: end;
+  }
+
+  .movies-detail-hero__description,
+  .movies-detail-hero__chips {
+    display: none;
   }
 }
 </style>

@@ -535,6 +535,16 @@ describe("Movies app", () => {
     expect(window.location.pathname).toBe("/movie/550-fight-club");
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.text()).toContain("Details");
+    expect(wrapper.get(".movies-detail-hero__backdrop img").attributes("src")).toBe(
+      "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+    );
+    expect(wrapper.get(".movies-detail-hero__backdrop source").attributes()).toMatchObject({
+      media: "(max-width: 700px)",
+      srcset: "https://image.tmdb.org/t/p/w500/poster.jpg",
+    });
+    expect(wrapper.get(".movies-detail-section__description").text()).toBe(
+      "An insomniac office worker meets a soap maker.",
+    );
     expect(wrapper.text()).toContain("Edward Norton");
     expect(wrapper.text()).toContain("David Fincher");
     expect(wrapper.findAll("button").some((button) => button.text().trim() === "Watch")).toBe(
