@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   DialogContent,
   DialogDescription,
@@ -29,6 +30,12 @@ const props = withDefaults(defineProps<DialogProps>(), {
   dismissible: true,
 });
 
+const contentA11yAttrs = computed(() =>
+  props.description === undefined || props.description.length === 0
+    ? { "aria-describedby": undefined }
+    : {},
+);
+
 const emit = defineEmits<{
   "update:open": [next: boolean];
   close: [];
@@ -55,6 +62,7 @@ function onEscapeKeyDown(event: Event): void {
       <DialogContent
         class="ds-dialog__content"
         :class="`ds-dialog__content--${variant}`"
+        v-bind="contentA11yAttrs"
         @interact-outside="onInteractOutside"
         @escape-key-down="onEscapeKeyDown"
       >

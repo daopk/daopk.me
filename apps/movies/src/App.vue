@@ -502,8 +502,7 @@ function openInitialDeepLink(): void {
 @media (max-width: 760px) {
   .movies-app {
     --movies-toolbar-content-offset: calc(
-      var(--mobile-shell-app-safe-area-top, 0px) + var(--control-height-md) +
-        var(--control-height-md) + var(--space-xl)
+      var(--mobile-shell-app-safe-area-top, 0px) + var(--control-height-md) + var(--space-xl)
     );
   }
 }

@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AppChromeInjectionKey,
@@ -272,6 +272,26 @@ async function settle(): Promise<void> {
   await flushPromises();
 }
 
+function click(element: Element): void {
+  element.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    }),
+  );
+}
+
+function menuItem(label: string): Element {
+  const item = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
+    (candidate) => candidate.textContent?.trim() === label,
+  );
+  if (item === undefined) {
+    throw new Error(`Menu item not found: ${label}`);
+  }
+  return item;
+}
+
 describe("Movies app", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -292,6 +312,10 @@ describe("Movies app", () => {
         return episodeDetail({ episode, season });
       },
     );
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
   });
 
   it("renders Home with a cover hero and grouped TMDB discovery rows", async () => {
@@ -328,6 +352,41 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("opens Movies and TV from the toolbar section menu", async () => {
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    vi.mocked(fetchMoviesList).mockClear();
+    click(wrapper.get('button[aria-label="Movies menu"]').element);
+    await settle();
+
+    expect(
+      Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(["Movies", "TV"]);
+
+    click(menuItem("TV"));
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: "popular-tv", limit: 32, page: 1 }),
+      expect.anything(),
+    );
+    expect(wrapper.text()).toContain("Popular TV");
+
+    click(wrapper.get('button[aria-label="Movies menu"]').element);
+    await settle();
+    click(menuItem("Movies"));
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: "popular-movie", limit: 32, page: 1 }),
+      expect.anything(),
+    );
+    expect(wrapper.text()).toContain("Popular Movies");
   });
 
   it("switches Home Trending and Popular periods", async () => {
@@ -392,13 +451,29 @@ describe("Movies app", () => {
   });
 
   it("opens a keyword List Page from toolbar search and switches media tabs", async () => {
-    const wrapper = mount(App);
+    const wrapper = mount(App, { attachTo: document.body });
     await settle();
 
-    expect(wrapper.get(".movies-toolbar__search-button").attributes("tabindex")).toBe("-1");
+    expect(wrapper.find('input[type="search"]').exists()).toBe(false);
 
-    await wrapper.get('input[type="search"]').setValue("Fight");
-    await wrapper.get('form[role="search"]').trigger("submit");
+    await wrapper.get(".movies-toolbar__search-button").trigger("click");
+    await settle();
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog).toBeInstanceOf(HTMLElement);
+    expect(dialog?.querySelector("h2")?.textContent).toBe("Search");
+    expect(dialog?.textContent).not.toContain("Movies and TV");
+
+    const searchInput = document.body.querySelector<HTMLInputElement>(
+      'input[type="search"][aria-label="Search movies"]',
+    );
+    expect(searchInput).toBeInstanceOf(HTMLInputElement);
+    searchInput!.value = "Fight";
+    searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const searchForm = document.body.querySelector<HTMLFormElement>('form[role="search"]');
+    expect(searchForm).toBeInstanceOf(HTMLFormElement);
+    searchForm!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
@@ -406,6 +481,7 @@ describe("Movies app", () => {
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Search: Fight");
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
 
     const moviesTab = wrapper
       .findAll(".movies-list__tabs button")
