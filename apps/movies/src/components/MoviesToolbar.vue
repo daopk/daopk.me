@@ -209,8 +209,9 @@ function openPopularTv(): void {
 <style scoped lang="scss">
 .movies-toolbar {
   align-items: center;
-  backdrop-filter: blur(18px) saturate(120%);
-  background: color-mix(in srgb, var(--color-bg) 24%, transparent);
+  backdrop-filter: none;
+  background: transparent;
+  border-block-end: 1px solid transparent;
   color: var(--color-fg);
   display: grid;
   gap: var(--space-sm);
@@ -225,8 +226,9 @@ function openPopularTv(): void {
   transition:
     backdrop-filter var(--duration-base) var(--ease),
     background-color var(--duration-base) var(--ease),
+    border-color var(--duration-base) var(--ease),
     box-shadow var(--duration-base) var(--ease);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: none;
   z-index: 2;
 }
 
@@ -235,9 +237,11 @@ function openPopularTv(): void {
 }
 
 .movies-toolbar--solid {
+  backdrop-filter: blur(18px) saturate(120%);
   background: color-mix(in srgb, var(--color-bg) 76%, transparent);
   border-block-end: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
   box-shadow: var(--shadow-sm);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
 }
 
 .movies-toolbar__section-menu {
@@ -347,8 +351,6 @@ function openPopularTv(): void {
 @media (max-width: 760px) {
   .movies-toolbar {
     align-items: center;
-    background: color-mix(in srgb, var(--color-bg) 82%, transparent);
-    border-block-end: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
     gap: var(--space-xs);
     grid-template-areas: "sections history search";
     grid-template-columns: auto auto minmax(0, 1fr);

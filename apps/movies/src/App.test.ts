@@ -354,6 +354,28 @@ describe("Movies app", () => {
     expect(dragEvent.defaultPrevented).toBe(true);
   });
 
+  it("shows the toolbar background only after the current view scrolls", async () => {
+    const wrapper = mount(App);
+    await settle();
+
+    const toolbar = wrapper.get(".movies-toolbar");
+    expect(toolbar.classes()).not.toContain("movies-toolbar--solid");
+
+    const home = wrapper.get(".movies-home");
+    home.element.scrollTop = 40;
+    await home.trigger("scroll");
+    expect(toolbar.classes()).toContain("movies-toolbar--solid");
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+    expect(wrapper.get(".movies-toolbar").classes()).not.toContain("movies-toolbar--solid");
+
+    const detailView = wrapper.get(".movies-detail");
+    detailView.element.scrollTop = 40;
+    await detailView.trigger("scroll");
+    expect(wrapper.get(".movies-toolbar").classes()).toContain("movies-toolbar--solid");
+  });
+
   it("opens Movies and TV from the toolbar section menu", async () => {
     const wrapper = mount(App, { attachTo: document.body });
     await settle();

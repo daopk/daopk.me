@@ -21,7 +21,6 @@ type LoadState = "loading" | "ready" | "error";
 type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "popular" | "trending">;
 
 const emit = defineEmits<{
-  "toolbar-solid": [solid: boolean];
   "open-detail": [movie: MovieSummary];
   "open-list": [query: MoviesListQuery];
 }>();
@@ -84,11 +83,6 @@ async function loadHome(): Promise<void> {
   }
 }
 
-function onScroll(event: Event): void {
-  const target = event.currentTarget as HTMLElement | null;
-  emit("toolbar-solid", (target?.scrollTop ?? 0) > 32);
-}
-
 function groupPeriodValue(group: MoviesRowGroupConfig): string {
   return group.id === "popular" || group.id === "trending" ? selectedPeriods.value[group.id] : "";
 }
@@ -122,7 +116,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 </script>
 
 <template>
-  <ScrollArea class="movies-home" safe-area @scroll="onScroll">
+  <ScrollArea class="movies-home" safe-area>
     <MoviesLoadingOverlay v-if="state === 'loading' && !hasHomeContent" />
 
     <StatusBanner

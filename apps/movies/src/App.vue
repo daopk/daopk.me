@@ -59,9 +59,8 @@ const ctx = inject(AppContextInjectionKey, null);
 const view = ref<MoviesView>({ name: "home" });
 const history = ref<MoviesView[]>([]);
 const futureHistory = ref<MoviesView[]>([]);
-const homeToolbarSolid = ref(false);
+const toolbarSolid = ref(false);
 
-const toolbarSolid = computed(() => view.value.name !== "home" || homeToolbarSolid.value);
 const canGoBack = computed(() => history.value.length > 0);
 const canGoForward = computed(() => futureHistory.value.length > 0);
 const canGoHome = computed(() => view.value.name !== "home");
@@ -104,7 +103,17 @@ function replacePathForView(next: MoviesView): void {
   replaceMoviesAppPath();
 }
 
+function resetToolbarSolid(): void {
+  toolbarSolid.value = false;
+}
+
+function updateToolbarSolid(event: Event): void {
+  const target = event.currentTarget as HTMLElement | null;
+  toolbarSolid.value = (target?.scrollTop ?? 0) > 32;
+}
+
 function navigate(next: MoviesView, options: { replace?: boolean } = {}): void {
+  resetToolbarSolid();
   if (options.replace) {
     futureHistory.value = [];
     view.value = next;
@@ -126,9 +135,7 @@ function goBack(): void {
   history.value = history.value.slice(0, -1);
   futureHistory.value = [...futureHistory.value, view.value];
   view.value = previous;
-  if (previous.name === "home") {
-    homeToolbarSolid.value = false;
-  }
+  resetToolbarSolid();
   replacePathForView(previous);
 }
 
@@ -141,6 +148,7 @@ function goForward(): void {
   futureHistory.value = futureHistory.value.slice(0, -1);
   history.value = [...history.value, view.value];
   view.value = next;
+  resetToolbarSolid();
   replacePathForView(next);
 }
 
@@ -153,7 +161,6 @@ function goHome(): void {
     return;
   }
 
-  homeToolbarSolid.value = false;
   navigate({ name: "home" });
 }
 
@@ -449,13 +456,14 @@ function openInitialDeepLink(): void {
 
     <HomeView
       v-if="view.name === 'home'"
-      @toolbar-solid="homeToolbarSolid = $event"
+      @scroll="updateToolbarSolid"
       @open-detail="openDetail"
       @open-list="openList"
     />
     <ListView
       v-else-if="view.name === 'list'"
       :query="view.query"
+      @scroll="updateToolbarSolid"
       @open-detail="openDetail"
       @open-list="openList($event, { replace: true })"
     />
@@ -463,6 +471,7 @@ function openInitialDeepLink(): void {
       v-else-if="view.name === 'detail'"
       :media-type="view.mediaType"
       :tmdb-id="view.tmdbId"
+      @scroll="updateToolbarSolid"
       @back="goBack"
       @open-detail="openDetail"
       @open-episode="openEpisode"
@@ -474,11 +483,18 @@ function openInitialDeepLink(): void {
       :season-number="view.seasonNumber"
       :slug="view.slug"
       :tmdb-id="view.tmdbId"
+      @scroll="updateToolbarSolid"
       @back="goBack"
       @open-episode="openEpisode($event, { replace: true })"
       @open-person="openPerson"
     />
-    <PersonView v-else :tmdb-id="view.tmdbId" @back="goBack" @open-detail="openDetail" />
+    <PersonView
+      v-else
+      :tmdb-id="view.tmdbId"
+      @scroll="updateToolbarSolid"
+      @back="goBack"
+      @open-detail="openDetail"
+    />
   </AppFrame>
 </template>
 
