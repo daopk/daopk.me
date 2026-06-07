@@ -136,7 +136,7 @@ async function loadPerson(): Promise<void> {
 <style scoped lang="scss">
 .movies-person {
   block-size: 100%;
-  background: var(--color-bg);
+  background: var(--movies-surface-bg, var(--color-bg));
   position: relative;
 }
 

@@ -500,9 +500,10 @@ function openInitialDeepLink(): void {
 
 <style scoped lang="scss">
 .movies-app {
+  --movies-surface-bg: color-mix(in srgb, var(--color-bg) 84%, var(--color-fg) 16%);
   --movies-toolbar-content-offset: calc(var(--control-height-md) + var(--space-xl));
 
-  background: color-mix(in srgb, var(--color-bg) 70%, var(--color-fg) 30%);
+  background: var(--movies-surface-bg);
   block-size: 100%;
   color: var(--color-fg);
   min-block-size: 0;

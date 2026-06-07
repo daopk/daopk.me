@@ -160,7 +160,7 @@ function mediaQuery(media: MoviesSearchMedia): MoviesListQuery {
 <style scoped lang="scss">
 .movies-list {
   block-size: 100%;
-  background: var(--color-bg);
+  background: var(--movies-surface-bg, var(--color-bg));
   display: grid;
   gap: var(--space-lg);
   padding: calc(

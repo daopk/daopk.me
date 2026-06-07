@@ -318,12 +318,17 @@ describe("Movies app", () => {
     document.body.innerHTML = "";
   });
 
-  it("renders Home with a cover hero and grouped TMDB discovery rows", async () => {
+  it("renders Home with a mobile hero slider and grouped TMDB discovery rows", async () => {
     const wrapper = mount(App);
     await settle();
 
     expect(wrapper.find(".movies-home__hero-backdrop").exists()).toBe(true);
     expect(wrapper.find(".movies-home__hero-edge").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-slider").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-slide--active").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-rating").text()).toBe("TMDB 8.4");
+    expect(wrapper.find(".movies-home__hero-actions").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-dots").exists()).toBe(false);
     expect(wrapper.text()).toContain("Trending");
     expect(wrapper.text()).toContain("Popular");
     expect(wrapper.text()).toContain("Current");

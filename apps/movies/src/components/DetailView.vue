@@ -142,7 +142,7 @@ async function startWatching(): Promise<void> {
 <style scoped lang="scss">
 .movies-detail {
   block-size: 100%;
-  background: var(--color-bg);
+  background: var(--movies-surface-bg, var(--color-bg));
   position: relative;
 }
 

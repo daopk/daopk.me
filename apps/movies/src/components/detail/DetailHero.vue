@@ -63,7 +63,7 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
 
 <style scoped lang="scss">
 .movies-detail-hero {
-  background: var(--color-bg);
+  background: var(--movies-surface-bg, var(--color-bg));
   min-block-size: 520px;
   overflow: hidden;
   padding: calc(var(--control-height-md) + var(--space-xl)) var(--space-lg) var(--space-xl);
@@ -86,13 +86,13 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
   background:
     linear-gradient(
       to bottom,
-      color-mix(in srgb, var(--color-bg) 20%, transparent),
-      color-mix(in srgb, var(--color-bg) 94%, transparent)
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 20%, transparent),
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 94%, transparent)
     ),
     linear-gradient(
       to right,
-      color-mix(in srgb, var(--color-bg) 92%, transparent),
-      color-mix(in srgb, var(--color-bg) 34%, transparent)
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 92%, transparent),
+      color-mix(in srgb, var(--movies-surface-bg, var(--color-bg)) 34%, transparent)
     );
 }
 
