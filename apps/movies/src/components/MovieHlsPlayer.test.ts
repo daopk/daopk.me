@@ -312,6 +312,36 @@ function setMediaMetrics(
   video.dispatchEvent(new Event("progress"));
 }
 
+function setProgressRect(element: Element, options: { left?: number; width?: number } = {}): void {
+  const left = options.left ?? 0;
+  const width = options.width ?? 216;
+  Object.defineProperty(element, "getBoundingClientRect", {
+    configurable: true,
+    value: () =>
+      ({
+        bottom: 36,
+        height: 36,
+        left,
+        right: left + width,
+        top: 0,
+        width,
+        x: left,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect,
+  });
+}
+
+function pointerEvent(type: string, element: Element, options: { clientX: number }): void {
+  element.dispatchEvent(
+    new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: options.clientX,
+    }),
+  );
+}
+
 function sliderRoots(wrapper: VueWrapper) {
   return wrapper.findAllComponents({ name: "SliderRoot" });
 }
@@ -507,6 +537,28 @@ describe("MovieHlsPlayer", () => {
     expect(wrapper.get(".movies-hls-player__duration").text()).toBe("2:00");
   });
 
+  it("seeks from the full progress hit area", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 15, duration: 120, bufferedEnd: 64 });
+    await settle();
+
+    const progress = wrapper.get(".movies-hls-player__progress").element;
+    setProgressRect(progress);
+
+    pointerEvent("pointerdown", progress, { clientX: 108 });
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player__seek-preview").text()).toBe("1:00");
+
+    pointerEvent("pointerup", progress, { clientX: 108 });
+    await settle();
+
+    expect(video.currentTime).toBe(60);
+    expect(wrapper.get(".movies-hls-player__time").text()).toBe("1:00");
+  });
+
   it("updates volume and mute state from custom controls", async () => {
     const wrapper = mountPlayer();
     await settle();
@@ -569,6 +621,11 @@ describe("MovieHlsPlayer", () => {
     expect(wrapper.get('.movies-hls-player__control-row button[aria-label="Mute"]').exists()).toBe(
       true,
     );
+    expect(
+      wrapper
+        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(true);
 
     click(
       wrapper.get('.movies-hls-player__control-row button[aria-label="Enter picture-in-picture"]')
@@ -583,6 +640,14 @@ describe("MovieHlsPlayer", () => {
         .find('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
         .exists(),
     ).toBe(true);
+    expect(wrapper.find(".movies-hls-player__pip-notice").text()).toBe(
+      "Playing in picture-in-picture",
+    );
+    expect(
+      wrapper
+        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(false);
 
     click(
       wrapper.get('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
@@ -592,6 +657,12 @@ describe("MovieHlsPlayer", () => {
 
     expect(exitPictureInPicture).toHaveBeenCalledTimes(1);
     expect(pictureInPictureElement).toBeNull();
+    expect(wrapper.find(".movies-hls-player__pip-notice").exists()).toBe(false);
+    expect(
+      wrapper
+        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(true);
   });
 
   it("shows HLS quality options after manifest parsing and applies manual quality", async () => {

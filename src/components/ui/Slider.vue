@@ -81,7 +81,7 @@ function onCommit(next: number[]): void {
 <style scoped lang="scss">
 .ds-slider {
   align-items: center;
-  block-size: 20px;
+  block-size: var(--ds-slider-hit-size, 20px);
   box-sizing: border-box;
   display: flex;
   inline-size: 100%;
@@ -98,9 +98,9 @@ function onCommit(next: number[]): void {
 
 .ds-slider[data-orientation="vertical"] {
   block-size: 100%;
-  inline-size: 20px;
+  inline-size: var(--ds-slider-hit-size, 20px);
   min-block-size: 0;
-  min-inline-size: 20px;
+  min-inline-size: var(--ds-slider-hit-size, 20px);
   padding-block: calc(var(--ds-slider-thumb-size, 16px) / 2);
   padding-inline: 0;
 }
@@ -145,6 +145,7 @@ function onCommit(next: number[]): void {
 }
 
 .ds-slider__range[data-orientation="vertical"] {
+  block-size: auto;
   inline-size: 100%;
 }
 

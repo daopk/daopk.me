@@ -19,6 +19,7 @@ import {
   Minimize2,
   MoreHorizontal,
   PictureInPicture,
+  PictureInPicture2,
   Play,
   Volume2,
   VolumeX,
@@ -187,6 +188,9 @@ const muteIcon = computed(() => (mutedOrSilent.value ? VolumeX : Volume2));
 const muteLabel = computed(() => (mutedOrSilent.value ? "Unmute" : "Mute"));
 const fullscreenIcon = computed(() => (fullscreen.value ? Minimize2 : Maximize2));
 const fullscreenLabel = computed(() => (fullscreen.value ? "Exit fullscreen" : "Enter fullscreen"));
+const pictureInPictureIcon = computed(() =>
+  pictureInPicture.value ? PictureInPicture : PictureInPicture2,
+);
 const pictureInPictureLabel = computed(() =>
   pictureInPicture.value ? "Exit picture-in-picture" : "Enter picture-in-picture",
 );
@@ -784,13 +788,26 @@ function clearSeekPointerPreview(): void {
   seekPointerPreview.value = null;
 }
 
+function previewSeekFromPointer(event: PointerEvent): void {
+  const preview = pointerPreviewFromEvent(event);
+  seekPointerPreview.value = preview;
+  if (preview !== null) {
+    previewSeek(preview.seconds);
+  }
+}
+
 function onSeekPointerDown(event: PointerEvent): void {
   seekPointerActive.value = true;
   beginSeekPreview();
-  updateSeekPointerPreview(event);
+  previewSeekFromPointer(event);
 }
 
 function onSeekPointerMove(event: PointerEvent): void {
+  if (seekPointerActive.value) {
+    previewSeekFromPointer(event);
+    return;
+  }
+
   updateSeekPointerPreview(event);
 }
 
@@ -801,8 +818,18 @@ function onSeekPointerLeave(): void {
 }
 
 function onSeekPointerUp(event: PointerEvent): void {
+  if (!seekPointerActive.value) {
+    return;
+  }
+
   seekPointerActive.value = false;
-  updateSeekPointerPreview(event);
+  const preview = pointerPreviewFromEvent(event);
+  if (preview === null) {
+    cancelSeekPreview();
+    return;
+  }
+
+  commitSeek(preview.seconds);
 }
 
 function onSeekPointerCancel(): void {
@@ -1190,6 +1217,11 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
         <span>{{ playbackError }}</span>
       </p>
 
+      <p v-if="pictureInPicture" class="movies-hls-player__pip-notice" role="status">
+        <PictureInPicture2 aria-hidden="true" />
+        <span>Playing in picture-in-picture</span>
+      </p>
+
       <div
         class="movies-hls-player__topline"
         :class="{ 'movies-hls-player__topline--hidden': controlsHidden }"
@@ -1201,6 +1233,7 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
       </div>
 
       <div
+        v-if="!pictureInPicture"
         ref="topControlsRoot"
         class="movies-hls-player__top-actions"
         :class="{ 'movies-hls-player__top-actions--hidden': controlsHidden }"
@@ -1316,7 +1349,7 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 
           <IconButton
             class="movies-hls-player__button movies-hls-player__pip-button"
-            :icon="PictureInPicture"
+            :icon="pictureInPictureIcon"
             :label="pictureInPictureLabel"
             size="sm"
             variant="subtle"
@@ -1559,6 +1592,32 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   inline-size: 16px;
 }
 
+.movies-hls-player__pip-notice {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: rgb(8 9 13 / 72%);
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 8px;
+  color: #fff;
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  gap: var(--space-sm);
+  inset-block-start: calc(var(--space-md) + 36px);
+  inset-inline-start: var(--space-md);
+  margin: 0;
+  max-inline-size: calc(100% - (var(--space-md) * 2));
+  padding: var(--space-sm) var(--space-md);
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+}
+
+.movies-hls-player__pip-notice svg {
+  block-size: 18px;
+  flex: 0 0 auto;
+  inline-size: 18px;
+}
+
 .movies-hls-player__topline {
   align-items: center;
   display: flex;
@@ -1659,6 +1718,7 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 .movies-hls-player__seek {
   --color-accent: #fff;
   --color-bg-subtle: rgb(255 255 255 / 22%);
+  --ds-slider-hit-size: 36px;
   --ds-slider-thumb-opacity: 0;
 
   position: relative;
@@ -1821,6 +1881,13 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   .movies-hls-player__top-actions {
     inset-block-start: var(--space-sm);
     inset-inline-end: var(--space-sm);
+  }
+
+  .movies-hls-player__pip-notice {
+    font-size: var(--font-size-xs);
+    inset-block-start: calc(var(--space-sm) + 36px);
+    inset-inline-start: var(--space-sm);
+    max-inline-size: calc(100% - (var(--space-sm) * 2));
   }
 
   .movies-hls-player__control-row {
