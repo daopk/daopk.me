@@ -149,7 +149,13 @@ function mediaQuery(media: MoviesSearchMedia): MoviesListQuery {
       </ul>
 
       <div class="movies-list__footer">
-        <Button v-if="canLoadMore" :loading="state === 'loading'" @click="loadMore">
+        <Button
+          v-if="canLoadMore"
+          class="movies-list__load-more"
+          size="sm"
+          :loading="state === 'loading'"
+          @click="loadMore"
+        >
           Load more
         </Button>
       </div>
@@ -206,5 +212,30 @@ function mediaQuery(media: MoviesSearchMedia): MoviesListQuery {
   display: flex;
   justify-content: center;
   min-block-size: var(--control-height-lg);
+  padding-block-start: var(--space-sm);
+}
+
+.movies-list__footer :deep(.movies-list__load-more.ds-button) {
+  background: color-mix(in srgb, var(--color-bg-elevated) 42%, transparent);
+  border-color: color-mix(in srgb, var(--color-fg) 12%, transparent);
+  border-radius: var(--radius-full);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent),
+    0 4px 10px -10px color-mix(in srgb, black 34%, transparent);
+  color: color-mix(in srgb, var(--color-fg) 76%, transparent);
+  font-weight: var(--font-weight-semibold);
+  min-inline-size: 132px;
+  padding-inline: var(--space-lg);
+}
+
+.movies-list__footer :deep(.movies-list__load-more.ds-button:hover),
+.movies-list__footer :deep(.movies-list__load-more.ds-button:focus-visible) {
+  background: color-mix(in srgb, var(--color-bg-elevated) 58%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 36%, var(--color-border));
+  color: var(--color-fg);
+}
+
+.movies-list__footer :deep(.movies-list__load-more.ds-button--loading) {
+  opacity: 0.68;
 }
 </style>

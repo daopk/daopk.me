@@ -293,8 +293,32 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 
 <style scoped lang="scss">
 .movies-home {
+  --movies-home-bg-base: #282b3a;
+  --movies-home-bg-bridge: #30313a;
+  --movies-home-bg-deep: color-mix(in srgb, var(--movies-home-bg-base) 82%, var(--color-bg));
+  --movies-home-bg-lift: color-mix(in srgb, var(--movies-home-bg-base) 94%, var(--color-fg));
+  --movies-home-bg-top: var(--movies-home-bg-bridge);
+  --movies-card-edge-base: var(--movies-home-bg-deep);
+
+  background:
+    radial-gradient(
+      120% 70% at 8% 0%,
+      color-mix(in srgb, var(--movies-home-bg-lift) 54%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      88% 52% at 100% 26%,
+      color-mix(in srgb, var(--color-accent) 14%, transparent) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      var(--movies-home-bg-top) 0%,
+      color-mix(in srgb, var(--movies-home-bg-top) 52%, var(--movies-home-bg-base)) 30%,
+      var(--movies-home-bg-base) 52%,
+      var(--movies-home-bg-deep) 100%
+    );
   block-size: 100%;
-  background: var(--movies-surface-bg, var(--color-bg));
   position: relative;
 }
 
@@ -304,11 +328,40 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 }
 
 .movies-home__hero {
-  background: var(--movies-surface-bg, var(--color-bg));
+  --movies-home-hero-fade-size: clamp(112px, 18vh, 220px);
+
+  background: var(--movies-home-bg-top, var(--movies-surface-bg, var(--color-bg)));
   block-size: min(560px, 76vh);
   min-block-size: 320px;
   overflow: hidden;
   position: relative;
+}
+
+.movies-home__hero::after {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    color-mix(
+        in srgb,
+        var(--movies-home-bg-top, var(--movies-surface-bg, var(--color-bg))) 18%,
+        transparent
+      )
+      34%,
+    color-mix(
+        in srgb,
+        var(--movies-home-bg-top, var(--movies-surface-bg, var(--color-bg))) 72%,
+        transparent
+      )
+      74%,
+    var(--movies-home-bg-top, var(--movies-surface-bg, var(--color-bg))) 100%
+  );
+  block-size: var(--movies-home-hero-fade-size);
+  content: "";
+  inset-block-end: -1px;
+  inset-inline: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
 }
 
 .movies-home__hero-backdrop {
@@ -318,6 +371,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
   inset: 0;
   object-fit: cover;
   position: absolute;
+  z-index: 0;
 }
 
 .movies-home__hero-edge {
@@ -339,6 +393,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
   inset: 0;
   pointer-events: none;
   position: absolute;
+  z-index: 1;
 }
 
 .movies-home__hero-mobile {
@@ -346,6 +401,24 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 }
 
 .movies-home__rows {
+  background:
+    radial-gradient(
+      100% 38% at 12% 18%,
+      color-mix(in srgb, var(--movies-home-bg-lift) 28%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      78% 42% at 100% 24%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent) 0%,
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      var(--movies-home-bg-top) 0%,
+      color-mix(in srgb, var(--movies-home-bg-top) 58%, var(--movies-home-bg-base)) 22%,
+      var(--movies-home-bg-base) 46%,
+      var(--movies-home-bg-deep) 100%
+    );
   display: grid;
   gap: clamp(var(--space-xl), 5vw, 64px);
   padding: var(--space-lg) clamp(var(--space-xl), 5vw, 64px) var(--space-xl);
@@ -418,7 +491,11 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
   margin: 0;
   overflow-x: auto;
   padding: var(--space-xs) 0 var(--space-sm);
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.movies-home__rail::-webkit-scrollbar {
+  display: none;
 }
 
 .movies-home__rail-item {
@@ -455,7 +532,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
     gap: var(--space-md);
     min-inline-size: 0;
     position: relative;
-    z-index: 1;
+    z-index: 2;
   }
 
   .movies-home__hero-slider {
