@@ -263,7 +263,6 @@ async function loadEpisode(): Promise<void> {
 }
 
 .movies-episode__player {
-  box-shadow: var(--shadow-md);
   inline-size: 100%;
 }
 

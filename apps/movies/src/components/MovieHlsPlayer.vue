@@ -1,23 +1,86 @@
 <script setup lang="ts">
-import Hls from "hls.js";
+import Hls, { type ErrorData, type ManifestParsedData } from "hls.js";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+
+import { IconButton } from "@daopk/kit";
+import {
+  DropdownMenu,
+  DropdownMenuItemIndicator,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  Slider,
+} from "@daopk/ui";
+import {
+  AlertCircle,
+  Check,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+} from "@daopk/icons";
 
 import type { MoviePlayInfo } from "../moviesApi";
 
 interface MovieHlsPlayerProps {
+  autoplay?: boolean;
   play: MoviePlayInfo;
   posterUrl?: string;
   title: string;
 }
 
+interface QualityOption {
+  readonly label: string;
+  readonly value: number;
+}
+
+interface HlsQualityLevel {
+  readonly bitrate: number;
+  readonly height: number;
+}
+
+const AUTO_HIDE_CONTROLS_DELAY_MS = 3200;
+const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
+const SEEK_STEP_SECONDS = 10;
+const VOLUME_STEP = 0.1;
+
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
+  autoplay: false,
   posterUrl: "",
 });
 
+const playerShell = ref<HTMLElement | null>(null);
+const controlsRoot = ref<HTMLElement | null>(null);
+const progressRoot = ref<HTMLElement | null>(null);
 const videoElement = ref<HTMLVideoElement | null>(null);
 const selectedSourceIndex = ref(0);
 const playbackError = ref("");
+const hlsLevels = ref<readonly HlsQualityLevel[]>([]);
+const selectedQualityLevel = ref(-1);
+const currentLevel = ref(-1);
+const currentTime = ref(0);
+const duration = ref(0);
+const bufferedEnd = ref(0);
+const volume = ref(1);
+const previousVolume = ref(1);
+const muted = ref(false);
+const playing = ref(false);
+const waiting = ref(false);
+const metadataLoaded = ref(false);
+const fullscreen = ref(false);
+const controlsVisible = ref(true);
+const controlsFocused = ref(false);
+const seeking = ref(false);
+const seekPosition = ref(0);
+const seekPointerActive = ref(false);
+const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null);
+
 let hls: Hls | null = null;
+let hideControlsTimer: number | undefined;
 
 const sourceOptions = computed(() =>
   props.play.sources.map((source, index) => ({
@@ -29,6 +92,93 @@ const sourceOptions = computed(() =>
 );
 const activeSource = computed(
   () => props.play.sources[selectedSourceIndex.value] ?? props.play.sources[0] ?? null,
+);
+const sourceSelectValue = computed({
+  get: () => String(selectedSourceIndex.value),
+  set: (nextValue: string) => {
+    const nextIndex = Number(nextValue);
+    if (Number.isInteger(nextIndex)) {
+      selectedSourceIndex.value = nextIndex;
+    }
+  },
+});
+const qualityOptions = computed<readonly QualityOption[]>(() => {
+  if (hlsLevels.value.length <= 1) {
+    return [];
+  }
+
+  return hlsLevels.value.map((level, index) => ({
+    label: qualityLabel(level, index),
+    value: index,
+  }));
+});
+const qualitySelectValue = computed({
+  get: () => String(selectedQualityLevel.value),
+  set: (nextValue: string) => {
+    setQualityLevel(Number(nextValue));
+  },
+});
+const hasQualityMenu = computed(() => qualityOptions.value.length > 0);
+const hasSettingsMenu = computed(() => sourceOptions.value.length > 1 || hasQualityMenu.value);
+const selectedSourceLabel = computed(
+  () =>
+    sourceOptions.value.find((source) => source.index === selectedSourceIndex.value)?.label ??
+    "Source",
+);
+const selectedQualityLabel = computed(() => {
+  if (!hasQualityMenu.value) {
+    return "";
+  }
+
+  if (selectedQualityLevel.value === -1) {
+    return currentLevel.value >= 0
+      ? `Auto (${qualityLabel(hlsLevels.value[currentLevel.value], currentLevel.value)})`
+      : "Auto";
+  }
+
+  return (
+    qualityOptions.value.find((option) => option.value === selectedQualityLevel.value)?.label ??
+    "Auto"
+  );
+});
+const sourceStatusText = computed(() => {
+  const parts = [selectedSourceLabel.value, selectedQualityLabel.value].filter(
+    (part) => part.length > 0,
+  );
+  return parts.join(" - ");
+});
+const hasDuration = computed(() => Number.isFinite(duration.value) && duration.value > 0);
+const loadedFraction = computed(() =>
+  hasDuration.value ? clamp(bufferedEnd.value / duration.value, 0, 1) : 0,
+);
+const seekMax = computed(() => Math.max(1, Math.round(duration.value)));
+const displayTime = computed(() => (seeking.value ? seekPosition.value : currentTime.value));
+const seekValueText = computed(() =>
+  hasDuration.value
+    ? `${formatTime(seekPosition.value)} of ${formatTime(duration.value)}`
+    : formatTime(seekPosition.value),
+);
+const volumeSliderValue = computed(() => Math.round(volume.value * 100));
+const mutedOrSilent = computed(() => muted.value || volume.value <= 0);
+const playPauseIcon = computed(() => (playing.value ? Pause : Play));
+const playPauseLabel = computed(() => (playing.value ? "Pause" : "Play"));
+const muteIcon = computed(() => (mutedOrSilent.value ? VolumeX : Volume2));
+const muteLabel = computed(() => (mutedOrSilent.value ? "Unmute" : "Mute"));
+const fullscreenIcon = computed(() => (fullscreen.value ? Minimize2 : Maximize2));
+const fullscreenLabel = computed(() => (fullscreen.value ? "Exit fullscreen" : "Enter fullscreen"));
+const posterVisible = computed(
+  () => !playing.value && currentTime.value === 0 && props.posterUrl.length > 0,
+);
+const showCenterPlay = computed(() => !playing.value && playbackError.value.length === 0);
+const showSpinner = computed(() => waiting.value && playbackError.value.length === 0);
+const controlsHidden = computed(() => !controlsVisible.value && !controlsFocused.value);
+const controlsStyle = computed<Record<string, string>>(() => ({
+  "--movies-player-loaded": String(loadedFraction.value),
+  "--movies-player-preview-left": `${seekPointerPreview.value?.leftPx ?? SEEK_PREVIEW_THUMB_SIZE_PX / 2}px`,
+  "--movies-player-slider-thumb-size": `${SEEK_PREVIEW_THUMB_SIZE_PX}px`,
+}));
+const seekPointerPreviewText = computed(() =>
+  seekPointerPreview.value === null ? "" : formatTime(seekPointerPreview.value.seconds),
 );
 
 watch(
@@ -42,23 +192,53 @@ watch(
 );
 
 onMounted(() => {
-  void attachSource();
+  syncFullscreenState();
+  document.addEventListener("fullscreenchange", syncFullscreenState);
+  void attachSource({ autoplay: props.autoplay });
 });
 
 watch(
   () => activeSource.value?.m3u8Url ?? "",
-  () => {
-    void attachSource();
+  (_next, previous) => {
+    void attachSource({ autoplay: props.autoplay && previous === undefined });
+  },
+);
+
+watch(
+  () => props.autoplay,
+  (autoplay) => {
+    if (autoplay && metadataLoaded.value && !playing.value && currentTime.value === 0) {
+      void playVideo();
+    }
   },
 );
 
 onBeforeUnmount(() => {
+  clearHideControlsTimer();
   destroyHls();
+  document.removeEventListener("fullscreenchange", syncFullscreenState);
 });
 
 function destroyHls(): void {
   hls?.destroy();
   hls = null;
+}
+
+function resetPlaybackState(): void {
+  playbackError.value = "";
+  hlsLevels.value = [];
+  selectedQualityLevel.value = -1;
+  currentLevel.value = -1;
+  currentTime.value = 0;
+  duration.value = 0;
+  bufferedEnd.value = 0;
+  playing.value = false;
+  waiting.value = false;
+  metadataLoaded.value = false;
+  seeking.value = false;
+  seekPosition.value = 0;
+  seekPointerPreview.value = null;
+  controlsVisible.value = true;
 }
 
 function canPlayNativeHls(video: HTMLVideoElement): boolean {
@@ -76,36 +256,42 @@ function loadVideo(video: HTMLVideoElement): void {
   }
 }
 
-async function attachSource(): Promise<void> {
+async function attachSource(options: { autoplay: boolean } = { autoplay: false }): Promise<void> {
   await nextTick();
 
   const video = videoElement.value;
   const source = activeSource.value;
   destroyHls();
-  playbackError.value = "";
+  resetPlaybackState();
 
   if (video === null || source === null) {
     return;
   }
 
   video.removeAttribute("src");
+  video.currentTime = 0;
 
   if (Hls.isSupported()) {
     const instance = new Hls();
     hls = instance;
-    instance.on(Hls.Events.ERROR, (_event, data) => {
-      if (data.fatal) {
-        playbackError.value = "Could not play this stream.";
-        destroyHls();
-      }
+    instance.on(Hls.Events.ERROR, onHlsError);
+    instance.on(Hls.Events.MANIFEST_PARSED, onHlsManifestParsed);
+    instance.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+      currentLevel.value = data.level;
     });
     instance.loadSource(source.m3u8Url);
     instance.attachMedia(video);
+    if (options.autoplay) {
+      video.addEventListener("loadedmetadata", requestAutoplayOnce, { once: true });
+    }
     return;
   }
 
   if (canPlayNativeHls(video)) {
     video.src = source.m3u8Url;
+    if (options.autoplay) {
+      video.addEventListener("loadedmetadata", requestAutoplayOnce, { once: true });
+    }
     loadVideo(video);
     return;
   }
@@ -113,37 +299,739 @@ async function attachSource(): Promise<void> {
   playbackError.value = "This browser cannot play this stream.";
 }
 
+function onHlsManifestParsed(_event: string, data: ManifestParsedData): void {
+  hlsLevels.value = data.levels.map((level) => ({
+    bitrate: level.bitrate,
+    height: level.height,
+  }));
+  currentLevel.value = hls?.currentLevel ?? -1;
+}
+
+function onHlsError(_event: string, data: ErrorData): void {
+  if (data.fatal) {
+    playbackError.value = "Could not play this stream.";
+    waiting.value = false;
+    destroyHls();
+    showControls();
+  }
+}
+
+function requestAutoplayOnce(): void {
+  void playVideo({ ignoreBlocked: true });
+}
+
+async function playVideo(options: { ignoreBlocked?: boolean } = {}): Promise<void> {
+  const video = videoElement.value;
+  if (video === null || playbackError.value.length > 0) {
+    return;
+  }
+
+  try {
+    await video.play();
+    playing.value = true;
+    scheduleAutoHideControls();
+  } catch {
+    if (!options.ignoreBlocked) {
+      playbackError.value = "Playback could not start.";
+    }
+    playing.value = false;
+    controlsVisible.value = true;
+  }
+}
+
+function pauseVideo(): void {
+  const video = videoElement.value;
+  if (video === null) {
+    return;
+  }
+
+  video.pause();
+  playing.value = false;
+  controlsVisible.value = true;
+  clearHideControlsTimer();
+}
+
+function togglePlayback(): void {
+  showControls();
+  if (playing.value) {
+    pauseVideo();
+  } else {
+    void playVideo();
+  }
+}
+
+function syncMediaState(): void {
+  const video = videoElement.value;
+  if (video === null) {
+    return;
+  }
+
+  currentTime.value = safeMediaNumber(video.currentTime);
+  duration.value = safeMediaNumber(video.duration);
+  muted.value = video.muted;
+  volume.value = clamp(video.volume, 0, 1);
+  updateBufferedEnd();
+
+  if (!seeking.value) {
+    seekPosition.value = Math.round(currentTime.value);
+  }
+}
+
+function updateBufferedEnd(): void {
+  const video = videoElement.value;
+  if (video === null) {
+    bufferedEnd.value = 0;
+    return;
+  }
+
+  const buffered = video.buffered;
+  if (buffered.length === 0) {
+    bufferedEnd.value = 0;
+    return;
+  }
+
+  bufferedEnd.value = safeMediaNumber(buffered.end(buffered.length - 1));
+}
+
+function onLoadedMetadata(): void {
+  metadataLoaded.value = true;
+  syncMediaState();
+}
+
+function onTimeUpdate(): void {
+  syncMediaState();
+}
+
+function onProgress(): void {
+  updateBufferedEnd();
+}
+
+function onVideoPlay(): void {
+  playing.value = true;
+  waiting.value = false;
+  scheduleAutoHideControls();
+}
+
+function onVideoPause(): void {
+  playing.value = false;
+  waiting.value = false;
+  controlsVisible.value = true;
+  clearHideControlsTimer();
+  syncMediaState();
+}
+
+function onVideoWaiting(): void {
+  waiting.value = true;
+  showControls();
+}
+
+function onVideoCanPlay(): void {
+  waiting.value = false;
+  syncMediaState();
+}
+
+function onVideoEnded(): void {
+  playing.value = false;
+  waiting.value = false;
+  controlsVisible.value = true;
+  clearHideControlsTimer();
+  syncMediaState();
+}
+
 function onVideoError(): void {
   playbackError.value = "Could not play this stream.";
+  waiting.value = false;
+  showControls();
+}
+
+function beginSeekPreview(): void {
+  if (!hasDuration.value) {
+    return;
+  }
+
+  seeking.value = true;
+  seekPosition.value = Math.round(currentTime.value);
+  showControls();
+}
+
+function previewSeek(nextValue: number): void {
+  if (!hasDuration.value) {
+    return;
+  }
+
+  seeking.value = true;
+  seekPosition.value = Math.round(clamp(nextValue, 0, duration.value));
+}
+
+function commitSeek(nextValue: number): void {
+  if (!hasDuration.value) {
+    seeking.value = false;
+    return;
+  }
+
+  const video = videoElement.value;
+  const nextTime = clamp(nextValue, 0, duration.value);
+  if (video !== null) {
+    video.currentTime = nextTime;
+  }
+
+  currentTime.value = nextTime;
+  seekPosition.value = Math.round(nextTime);
+  seeking.value = false;
+  clearSeekPointerPreview();
+  scheduleAutoHideControls();
+}
+
+function cancelSeekPreview(): void {
+  seeking.value = false;
+  seekPosition.value = Math.round(currentTime.value);
+  clearSeekPointerPreview();
+}
+
+function seekBy(deltaSeconds: number): void {
+  if (!hasDuration.value) {
+    return;
+  }
+
+  commitSeek(currentTime.value + deltaSeconds);
+}
+
+function setVolumeFromSlider(nextValue: number): void {
+  setVolume(nextValue / 100);
+}
+
+function setVolume(nextVolume: number): void {
+  const video = videoElement.value;
+  const normalized = clamp(nextVolume, 0, 1);
+  volume.value = normalized;
+  if (normalized > 0) {
+    previousVolume.value = normalized;
+    muted.value = false;
+  }
+  if (video !== null) {
+    video.volume = normalized;
+    video.muted = normalized === 0 ? true : muted.value;
+  }
+  if (normalized === 0) {
+    muted.value = true;
+  }
+  showControls();
+}
+
+function toggleMute(): void {
+  const video = videoElement.value;
+  const nextMuted = !mutedOrSilent.value;
+
+  if (nextMuted) {
+    previousVolume.value = volume.value > 0 ? volume.value : previousVolume.value;
+    muted.value = true;
+    if (video !== null) {
+      video.muted = true;
+    }
+  } else {
+    const restoredVolume = volume.value > 0 ? volume.value : previousVolume.value || 1;
+    muted.value = false;
+    volume.value = restoredVolume;
+    if (video !== null) {
+      video.muted = false;
+      video.volume = restoredVolume;
+    }
+  }
+
+  showControls();
+}
+
+function setQualityLevel(nextLevel: number): void {
+  if (nextLevel !== -1 && (nextLevel < 0 || nextLevel >= hlsLevels.value.length)) {
+    return;
+  }
+
+  selectedQualityLevel.value = nextLevel;
+  if (hls !== null) {
+    hls.currentLevel = nextLevel;
+    if (nextLevel === -1) {
+      hls.nextLevel = -1;
+    }
+  }
+  showControls();
+}
+
+function clearHideControlsTimer(): void {
+  if (hideControlsTimer === undefined || typeof window === "undefined") {
+    return;
+  }
+
+  window.clearTimeout(hideControlsTimer);
+  hideControlsTimer = undefined;
+}
+
+function canHideControls(): boolean {
+  return (
+    playing.value &&
+    playbackError.value.length === 0 &&
+    !controlsFocused.value &&
+    !seeking.value &&
+    !waiting.value
+  );
+}
+
+function scheduleAutoHideControls(): void {
+  clearHideControlsTimer();
+  if (!canHideControls() || typeof window === "undefined") {
+    controlsVisible.value = true;
+    return;
+  }
+
+  hideControlsTimer = window.setTimeout(() => {
+    if (canHideControls()) {
+      controlsVisible.value = false;
+    }
+  }, AUTO_HIDE_CONTROLS_DELAY_MS);
+}
+
+function showControls(): void {
+  controlsVisible.value = true;
+  scheduleAutoHideControls();
+}
+
+function onControlsFocusOut(event: FocusEvent): void {
+  const nextTarget = event.relatedTarget;
+  if (!(nextTarget instanceof Node) || !controlsRoot.value?.contains(nextTarget)) {
+    controlsFocused.value = false;
+    scheduleAutoHideControls();
+  }
+}
+
+function onSeekKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    cancelSeekPreview();
+    return;
+  }
+
+  if (
+    event.key === "ArrowLeft" ||
+    event.key === "ArrowRight" ||
+    event.key === "ArrowUp" ||
+    event.key === "ArrowDown" ||
+    event.key === "Home" ||
+    event.key === "End" ||
+    event.key === "PageUp" ||
+    event.key === "PageDown"
+  ) {
+    beginSeekPreview();
+  }
+}
+
+function pointerPreviewFromEvent(event: PointerEvent): { leftPx: number; seconds: number } | null {
+  if (!hasDuration.value) {
+    return null;
+  }
+
+  const root = progressRoot.value;
+  if (root === null) {
+    return null;
+  }
+
+  const rect = root.getBoundingClientRect();
+  if (rect.width <= SEEK_PREVIEW_THUMB_SIZE_PX) {
+    return null;
+  }
+
+  const trackStartPx = SEEK_PREVIEW_THUMB_SIZE_PX / 2;
+  const trackWidthPx = rect.width - SEEK_PREVIEW_THUMB_SIZE_PX;
+  const trackEndPx = trackStartPx + trackWidthPx;
+  const pointerX = clamp(event.clientX - rect.left, trackStartPx, trackEndPx);
+  const fraction = (pointerX - trackStartPx) / trackWidthPx;
+  const seconds = Math.round(clamp(fraction, 0, 1) * duration.value);
+
+  return { leftPx: pointerX, seconds };
+}
+
+function updateSeekPointerPreview(event: PointerEvent): void {
+  seekPointerPreview.value = pointerPreviewFromEvent(event);
+}
+
+function clearSeekPointerPreview(): void {
+  seekPointerPreview.value = null;
+}
+
+function onSeekPointerDown(event: PointerEvent): void {
+  seekPointerActive.value = true;
+  beginSeekPreview();
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerMove(event: PointerEvent): void {
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerLeave(): void {
+  if (!seekPointerActive.value) {
+    clearSeekPointerPreview();
+  }
+}
+
+function onSeekPointerUp(event: PointerEvent): void {
+  seekPointerActive.value = false;
+  updateSeekPointerPreview(event);
+}
+
+function onSeekPointerCancel(): void {
+  seekPointerActive.value = false;
+  cancelSeekPreview();
+}
+
+function syncFullscreenState(): void {
+  fullscreen.value =
+    typeof document !== "undefined" && document.fullscreenElement === playerShell.value;
+}
+
+function toggleFullscreen(): void {
+  const element = playerShell.value;
+  if (element === null || typeof document === "undefined") {
+    return;
+  }
+
+  if (document.fullscreenElement === element) {
+    void document.exitFullscreen?.();
+  } else {
+    void element.requestFullscreen?.();
+  }
+}
+
+function onStageKeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented || isTypingTarget(event.target)) {
+    return;
+  }
+
+  if (event.key === " " || event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    togglePlayback();
+    return;
+  }
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    seekBy(-SEEK_STEP_SECONDS);
+    return;
+  }
+
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    seekBy(SEEK_STEP_SECONDS);
+    return;
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    setVolume(volume.value + VOLUME_STEP);
+    return;
+  }
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    setVolume(volume.value - VOLUME_STEP);
+    return;
+  }
+
+  if (event.key.toLowerCase() === "m") {
+    event.preventDefault();
+    toggleMute();
+    return;
+  }
+
+  if (event.key.toLowerCase() === "f") {
+    event.preventDefault();
+    toggleFullscreen();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    cancelSeekPreview();
+  }
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function safeMediaNumber(value: number): number {
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function formatTime(totalSeconds: number): string {
+  const normalizedSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(normalizedSeconds / 3600);
+  const minutes = Math.floor((normalizedSeconds % 3600) / 60);
+  const seconds = normalizedSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function qualityLabel(level: HlsQualityLevel | undefined, index: number): string {
+  if (level === undefined) {
+    return `Quality ${index + 1}`;
+  }
+
+  if (level.height > 0) {
+    return `${level.height}p`;
+  }
+
+  if (level.bitrate > 0) {
+    return `${Math.round(level.bitrate / 1000)} kbps`;
+  }
+
+  return `Quality ${index + 1}`;
 }
 </script>
 
 <template>
   <div class="movies-hls-player">
-    <div class="movies-hls-player__stage">
+    <div
+      ref="playerShell"
+      class="movies-hls-player__stage"
+      :class="{
+        'movies-hls-player__stage--controls-hidden': controlsHidden,
+        'movies-hls-player__stage--fullscreen': fullscreen,
+      }"
+      tabindex="0"
+      :aria-label="`${title} player`"
+      @keydown="onStageKeydown"
+      @pointerdown="showControls"
+      @pointermove="showControls"
+      @touchstart="showControls"
+    >
       <video
         ref="videoElement"
         class="movies-hls-player__video"
-        controls
         playsinline
         preload="metadata"
         :poster="posterUrl || undefined"
         :title="title"
+        @canplay="onVideoCanPlay"
+        @durationchange="syncMediaState"
+        @ended="onVideoEnded"
         @error="onVideoError"
+        @loadedmetadata="onLoadedMetadata"
+        @pause="onVideoPause"
+        @play="onVideoPlay"
+        @playing="onVideoCanPlay"
+        @progress="onProgress"
+        @timeupdate="onTimeUpdate"
+        @volumechange="syncMediaState"
+        @waiting="onVideoWaiting"
       />
-      <p v-if="playbackError" class="movies-hls-player__error" role="alert">
-        {{ playbackError }}
-      </p>
-    </div>
 
-    <label v-if="sourceOptions.length > 1" class="movies-hls-player__source">
-      <span>Source</span>
-      <select v-model.number="selectedSourceIndex" aria-label="Playback source">
-        <option v-for="source in sourceOptions" :key="source.index" :value="source.index">
-          {{ source.label || `Source ${source.index + 1}` }}
-        </option>
-      </select>
-    </label>
+      <Transition name="movies-hls-player__poster-fade">
+        <button
+          v-if="posterVisible"
+          type="button"
+          class="movies-hls-player__poster"
+          aria-label="Play"
+          @click="togglePlayback"
+        >
+          <img :src="posterUrl" :alt="title" decoding="async" />
+        </button>
+      </Transition>
+
+      <div class="movies-hls-player__shade movies-hls-player__shade--top" aria-hidden="true" />
+      <div class="movies-hls-player__shade movies-hls-player__shade--bottom" aria-hidden="true" />
+
+      <button
+        v-if="showCenterPlay"
+        type="button"
+        class="movies-hls-player__center-play"
+        aria-label="Play"
+        @click="togglePlayback"
+      >
+        <Play aria-hidden="true" />
+      </button>
+
+      <div v-if="showSpinner" class="movies-hls-player__spinner" role="status" aria-live="polite">
+        <span>Loading video</span>
+      </div>
+
+      <p v-if="playbackError" class="movies-hls-player__error" role="alert">
+        <AlertCircle aria-hidden="true" />
+        <span>{{ playbackError }}</span>
+      </p>
+
+      <div
+        class="movies-hls-player__topline"
+        :class="{ 'movies-hls-player__topline--hidden': controlsHidden }"
+      >
+        <span class="movies-hls-player__title">{{ title }}</span>
+        <span v-if="sourceStatusText" class="movies-hls-player__source-status">
+          {{ sourceStatusText }}
+        </span>
+      </div>
+
+      <div
+        ref="controlsRoot"
+        class="movies-hls-player__controls"
+        :class="{ 'movies-hls-player__controls--hidden': controlsHidden }"
+        :style="controlsStyle"
+        aria-label="Playback controls"
+        @focusin="
+          controlsFocused = true;
+          showControls();
+        "
+        @focusout="onControlsFocusOut"
+        @pointerdown="showControls"
+        @pointermove="showControls"
+        @touchstart="showControls"
+      >
+        <div
+          ref="progressRoot"
+          class="movies-hls-player__progress"
+          @pointercancel="onSeekPointerCancel"
+          @pointerdown="onSeekPointerDown"
+          @pointerleave="onSeekPointerLeave"
+          @pointermove="onSeekPointerMove"
+          @pointerup="onSeekPointerUp"
+        >
+          <Slider
+            class="movies-hls-player__seek"
+            :model-value="seekPosition"
+            :min="0"
+            :max="seekMax"
+            :step="1"
+            :disabled="!hasDuration || playbackError.length > 0"
+            aria-label="Seek"
+            :aria-valuetext="seekValueText"
+            @focusout="cancelSeekPreview"
+            @keydown="onSeekKeydown"
+            @update:model-value="previewSeek"
+            @commit="commitSeek"
+          />
+          <span
+            v-if="seekPointerPreview"
+            class="movies-hls-player__seek-preview"
+            aria-hidden="true"
+          >
+            {{ seekPointerPreviewText }}
+          </span>
+        </div>
+
+        <div class="movies-hls-player__control-row">
+          <IconButton
+            class="movies-hls-player__button"
+            :icon="playPauseIcon"
+            :label="playPauseLabel"
+            size="sm"
+            variant="subtle"
+            :disabled="playbackError.length > 0"
+            @click="togglePlayback"
+          />
+
+          <span class="movies-hls-player__time">
+            {{ formatTime(displayTime) }} / {{ hasDuration ? formatTime(duration) : "--:--" }}
+          </span>
+
+          <div class="movies-hls-player__spacer" aria-hidden="true" />
+
+          <IconButton
+            class="movies-hls-player__button"
+            :icon="muteIcon"
+            :label="muteLabel"
+            size="sm"
+            variant="subtle"
+            :disabled="playbackError.length > 0"
+            @click="toggleMute"
+          />
+
+          <Slider
+            class="movies-hls-player__volume"
+            :model-value="volumeSliderValue"
+            :min="0"
+            :max="100"
+            :step="1"
+            :disabled="playbackError.length > 0"
+            aria-label="Volume"
+            :aria-valuetext="`${volumeSliderValue}%`"
+            @update:model-value="setVolumeFromSlider"
+            @commit="setVolumeFromSlider"
+          />
+
+          <DropdownMenu v-if="hasSettingsMenu" align="end">
+            <template #trigger>
+              <IconButton
+                class="movies-hls-player__button"
+                :icon="MoreHorizontal"
+                label="Playback settings"
+                size="sm"
+                variant="subtle"
+              />
+            </template>
+            <template #items>
+              <DropdownMenuLabel v-if="sourceOptions.length > 1" class="ds-dropdown-menu__label">
+                Source
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup v-if="sourceOptions.length > 1" v-model="sourceSelectValue">
+                <DropdownMenuRadioItem
+                  v-for="source in sourceOptions"
+                  :key="source.index"
+                  :value="String(source.index)"
+                  :text-value="source.label || `Source ${source.index + 1}`"
+                >
+                  <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
+                    <Check aria-hidden="true" />
+                  </DropdownMenuItemIndicator>
+                  {{ source.label || `Source ${source.index + 1}` }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+
+              <DropdownMenuSeparator v-if="sourceOptions.length > 1 && hasQualityMenu" />
+
+              <DropdownMenuLabel v-if="hasQualityMenu" class="ds-dropdown-menu__label">
+                Quality
+              </DropdownMenuLabel>
+              <DropdownMenuRadioGroup v-if="hasQualityMenu" v-model="qualitySelectValue">
+                <DropdownMenuRadioItem value="-1" text-value="Auto">
+                  <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
+                    <Check aria-hidden="true" />
+                  </DropdownMenuItemIndicator>
+                  Auto
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem
+                  v-for="quality in qualityOptions"
+                  :key="quality.value"
+                  :value="String(quality.value)"
+                  :text-value="quality.label"
+                >
+                  <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
+                    <Check aria-hidden="true" />
+                  </DropdownMenuItemIndicator>
+                  {{ quality.label }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </template>
+          </DropdownMenu>
+
+          <IconButton
+            class="movies-hls-player__button"
+            :icon="fullscreenIcon"
+            :label="fullscreenLabel"
+            size="sm"
+            variant="subtle"
+            @click="toggleFullscreen"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -151,82 +1039,394 @@ function onVideoError(): void {
 .movies-hls-player {
   color: var(--color-fg);
   display: grid;
-  gap: var(--space-sm);
   inline-size: 100%;
   min-inline-size: 0;
 }
 
 .movies-hls-player__stage {
   aspect-ratio: 16 / 9;
-  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-fg) 8%);
+  background: #08090d;
   border-radius: 8px;
+  color: #f7f8fb;
   inline-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
   overflow: hidden;
   position: relative;
 }
 
-.movies-hls-player__video {
-  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-fg) 8%);
+.movies-hls-player__stage:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.movies-hls-player__stage--fullscreen {
+  border-radius: 0;
+}
+
+.movies-hls-player__video,
+.movies-hls-player__poster,
+.movies-hls-player__poster img {
   block-size: 100%;
-  display: block;
   inline-size: 100%;
+}
+
+.movies-hls-player__video {
+  background: #08090d;
+  display: block;
   object-fit: contain;
 }
 
-.movies-hls-player__error {
-  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
-  border-radius: var(--radius-sm);
-  color: var(--color-fg);
+.movies-hls-player__poster {
+  background: #08090d;
+  border: 0;
+  cursor: pointer;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.movies-hls-player__poster img {
+  display: block;
+  object-fit: cover;
+}
+
+.movies-hls-player__shade {
+  inset-inline: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.movies-hls-player__shade--top {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 60%), transparent);
+  block-size: 32%;
+  inset-block-start: 0;
+}
+
+.movies-hls-player__shade--bottom {
+  background: linear-gradient(to top, rgb(0 0 0 / 74%), transparent);
+  block-size: 46%;
+  inset-block-end: 0;
+}
+
+.movies-hls-player__center-play {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: rgb(8 9 13 / 64%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 8px;
+  block-size: 64px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  inline-size: 64px;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+  z-index: 3;
+}
+
+.movies-hls-player__center-play:hover,
+.movies-hls-player__center-play:focus-visible {
+  background: rgb(20 22 30 / 78%);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+
+.movies-hls-player__center-play:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.movies-hls-player__center-play svg {
+  block-size: 30px;
+  inline-size: 30px;
+}
+
+.movies-hls-player__spinner {
+  align-items: center;
+  background: rgb(8 9 13 / 58%);
+  border-radius: 8px;
+  display: inline-flex;
+  gap: var(--space-sm);
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  padding: var(--space-sm) var(--space-md);
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+}
+
+.movies-hls-player__spinner::before {
+  animation: movies-hls-player-spin 780ms linear infinite;
+  border: 2px solid rgb(255 255 255 / 28%);
+  border-block-start-color: #fff;
+  border-radius: var(--radius-full);
+  block-size: 16px;
+  content: "";
+  inline-size: 16px;
+}
+
+.movies-hls-player__spinner span {
   font-size: var(--font-size-sm);
+}
+
+.movies-hls-player__error {
+  align-items: center;
+  background: rgb(18 20 28 / 86%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 8px;
+  color: #fff;
+  display: inline-flex;
+  font-size: var(--font-size-sm);
+  gap: var(--space-sm);
   inset-block-start: var(--space-md);
   inset-inline: var(--space-md);
+  justify-content: center;
   margin: 0;
   padding: var(--space-sm) var(--space-md);
   position: absolute;
   text-align: center;
+  z-index: 5;
 }
 
-.movies-hls-player__source {
+.movies-hls-player__error svg {
+  block-size: 16px;
+  flex: 0 0 auto;
+  inline-size: 16px;
+}
+
+.movies-hls-player__topline {
   align-items: center;
-  color: var(--color-fg-muted);
   display: flex;
   gap: var(--space-sm);
-  justify-content: flex-end;
+  inset-block-start: var(--space-md);
+  inset-inline: var(--space-md);
   min-inline-size: 0;
+  opacity: 1;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity var(--duration-fast) var(--ease);
+  z-index: 2;
 }
 
-.movies-hls-player__source span {
-  font-size: var(--font-size-xs);
+.movies-hls-player__topline--hidden {
+  opacity: 0;
+}
+
+.movies-hls-player__title {
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-}
-
-.movies-hls-player__source select {
-  background: color-mix(in srgb, var(--color-fg) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
-  border-radius: var(--radius-sm);
-  color: var(--color-fg);
-  font: inherit;
-  max-inline-size: min(100%, 320px);
   min-inline-size: 0;
-  padding: var(--space-xs) var(--space-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.movies-hls-player__source select:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+.movies-hls-player__source-status {
+  color: rgb(255 255 255 / 72%);
+  flex: 0 1 auto;
+  font-size: var(--font-size-xs);
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movies-hls-player__controls {
+  display: grid;
+  gap: var(--space-xs);
+  inset-block-end: var(--space-md);
+  inset-inline: var(--space-md);
+  opacity: 1;
+  position: absolute;
+  transform: translateY(0);
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+  z-index: 4;
+}
+
+.movies-hls-player__controls--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(var(--space-md));
+}
+
+.movies-hls-player__progress {
+  --movies-player-slider-thumb-size: 16px;
+
+  min-inline-size: 0;
+  position: relative;
+}
+
+.movies-hls-player__progress::before {
+  background: rgb(255 255 255 / 24%);
+  block-size: 3px;
+  border-radius: var(--radius-full);
+  content: "";
+  inline-size: calc(100% - var(--movies-player-slider-thumb-size));
+  inset-block-start: calc(50% - 1.5px);
+  inset-inline-start: calc(var(--movies-player-slider-thumb-size) / 2);
+  pointer-events: none;
+  position: absolute;
+  transform: scaleX(var(--movies-player-loaded, 0));
+  transform-origin: left center;
+  z-index: 0;
+}
+
+.movies-hls-player__seek {
+  --color-accent: #fff;
+  --color-bg-subtle: rgb(255 255 255 / 22%);
+  --ds-slider-thumb-opacity: 0;
+
+  position: relative;
+  z-index: 1;
+}
+
+.movies-hls-player__seek:hover,
+.movies-hls-player__seek:focus-within,
+.movies-hls-player__seek:active {
+  --ds-slider-thumb-opacity: 1;
+}
+
+.movies-hls-player__seek-preview {
+  background: rgb(18 20 28 / 90%);
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: #fff;
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  inset-block-end: calc(100% + var(--space-xs));
+  inset-inline-start: var(--movies-player-preview-left);
+  min-inline-size: 4.5ch;
+  padding: 2px var(--space-xs);
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.movies-hls-player__control-row {
+  align-items: center;
+  backdrop-filter: blur(18px);
+  background: rgb(8 9 13 / 68%);
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 8px;
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: auto auto minmax(20px, 1fr) auto minmax(72px, 116px) auto auto;
+  min-inline-size: 0;
+  padding: var(--space-sm);
+}
+
+.movies-hls-player__button {
+  color: #fff;
+}
+
+.movies-hls-player__time {
+  color: rgb(255 255 255 / 88%);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 9.5ch;
+  white-space: nowrap;
+}
+
+.movies-hls-player__spacer {
+  min-inline-size: 0;
+}
+
+.movies-hls-player__volume {
+  --color-accent: #fff;
+  --color-bg-subtle: rgb(255 255 255 / 22%);
+  --ds-slider-thumb-opacity: 0;
+
+  min-inline-size: 0;
+}
+
+.movies-hls-player__volume:hover,
+.movies-hls-player__volume:focus-within,
+.movies-hls-player__volume:active {
+  --ds-slider-thumb-opacity: 1;
+}
+
+.movies-hls-player__poster-fade-enter-active,
+.movies-hls-player__poster-fade-leave-active {
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.movies-hls-player__poster-fade-enter-from,
+.movies-hls-player__poster-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes movies-hls-player-spin {
+  to {
+    transform: rotate(1turn);
+  }
 }
 
 @media (max-width: 700px) {
-  .movies-hls-player__source {
-    align-items: stretch;
-    display: grid;
-    justify-content: stretch;
+  .movies-hls-player__controls {
+    inset-block-end: var(--space-sm);
+    inset-inline: var(--space-sm);
   }
 
-  .movies-hls-player__source select {
-    max-inline-size: none;
+  .movies-hls-player__topline {
+    inset-block-start: var(--space-sm);
+    inset-inline: var(--space-sm);
+  }
+
+  .movies-hls-player__control-row {
+    gap: var(--space-xs);
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    min-block-size: 44px;
+  }
+
+  .movies-hls-player__button {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .movies-hls-player__time {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .movies-hls-player__spacer,
+  .movies-hls-player__volume {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  .movies-hls-player__source-status {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movies-hls-player__center-play,
+  .movies-hls-player__controls,
+  .movies-hls-player__poster-fade-enter-active,
+  .movies-hls-player__poster-fade-leave-active,
+  .movies-hls-player__topline {
+    transition: none;
+  }
+
+  .movies-hls-player__spinner::before {
+    animation: none;
   }
 }
 </style>

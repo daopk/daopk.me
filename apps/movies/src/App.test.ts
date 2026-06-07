@@ -29,6 +29,27 @@ vi.mock("./moviesApi", async (importOriginal) => {
   };
 });
 
+vi.mock("./components/MovieHlsPlayer.vue", () => ({
+  default: {
+    name: "MovieHlsPlayer",
+    props: {
+      autoplay: { default: false, type: Boolean },
+      play: { required: true, type: Object },
+      posterUrl: { default: "", type: String },
+      title: { required: true, type: String },
+    },
+    template: `
+      <div
+        class="movies-hls-player"
+        :data-autoplay="autoplay ? 'true' : 'false'"
+        :data-title="title"
+      >
+        <video />
+      </div>
+    `,
+  },
+}));
+
 import App from "./App.vue";
 import {
   DEFAULT_MOVIES_LIST_LIMIT,
@@ -587,6 +608,7 @@ describe("Movies app", () => {
     await settle();
 
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.find("video").exists()).toBe(true);
   });
 
@@ -808,6 +830,7 @@ describe("Movies app", () => {
 
     expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 1, expect.anything());
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("false");
     expect(wrapper.find("video").exists()).toBe(true);
     expect(wrapper.find(".movies-episode__still").exists()).toBe(false);
   });
@@ -823,7 +846,7 @@ describe("Movies app", () => {
   });
 
   it("accepts TMDB launch args instead of movieSlug", async () => {
-    const wrapper = mount(App, {
+    mount(App, {
       global: {
         provide: {
           [AppContextInjectionKey as symbol]: Object.freeze({

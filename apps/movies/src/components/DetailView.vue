@@ -124,6 +124,7 @@ async function startWatching(): Promise<void> {
         aria-label="Movie player"
       >
         <MovieHlsPlayer
+          autoplay
           :play="detail.play"
           :poster-url="detail.backdropUrl || detail.posterUrl"
           :title="detail.name"

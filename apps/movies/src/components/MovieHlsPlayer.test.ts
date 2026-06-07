@@ -1,24 +1,31 @@
 // @vitest-environment happy-dom
 
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import type { MoviePlayInfo } from "../moviesApi";
 
 const hlsMock = vi.hoisted(() => {
-  type HlsHandler = (event: string, data: { fatal?: boolean }) => void;
+  type HlsHandler = (event: string, data: Record<string, unknown>) => void;
 
   const instances: MockHls[] = [];
 
   class MockHls {
-    static Events = { ERROR: "hlsError" };
+    static Events = {
+      ERROR: "hlsError",
+      LEVEL_SWITCHED: "hlsLevelSwitched",
+      MANIFEST_PARSED: "hlsManifestParsed",
+    };
     static isSupported = vi.fn(() => true);
 
     attachMedia = vi.fn();
+    currentLevel = -1;
     destroy = vi.fn();
     handlers = new Map<string, HlsHandler>();
     loadSource = vi.fn();
+    nextLevel = -1;
     on = vi.fn((event: string, handler: HlsHandler) => {
       this.handlers.set(event, handler);
     });
@@ -29,6 +36,24 @@ const hlsMock = vi.hoisted(() => {
 
     emitFatalError(): void {
       this.handlers.get(MockHls.Events.ERROR)?.(MockHls.Events.ERROR, { fatal: true });
+    }
+
+    emitLevelSwitched(level: number): void {
+      this.currentLevel = level;
+      this.handlers.get(MockHls.Events.LEVEL_SWITCHED)?.(MockHls.Events.LEVEL_SWITCHED, {
+        level,
+      });
+    }
+
+    emitManifestParsed(
+      levels: readonly { bitrate: number; height: number }[] = [
+        { bitrate: 2_500_000, height: 720 },
+        { bitrate: 5_000_000, height: 1080 },
+      ],
+    ): void {
+      this.handlers.get(MockHls.Events.MANIFEST_PARSED)?.(MockHls.Events.MANIFEST_PARSED, {
+        levels,
+      });
     }
   }
 
@@ -58,7 +83,18 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
 
 async function settle(): Promise<void> {
   await flushPromises();
-  await flushPromises();
+  await nextTick();
+  await nextTick();
+}
+
+function click(element: Element): void {
+  element.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    }),
+  );
 }
 
 function setMediaSupport(options: { nativeHls: boolean; hlsJs: boolean }): void {
@@ -75,7 +111,87 @@ function setMediaSupport(options: { nativeHls: boolean; hlsJs: boolean }): void 
     configurable: true,
     value: vi.fn(),
   });
+  Object.defineProperty(HTMLMediaElement.prototype, "play", {
+    configurable: true,
+    value: vi.fn(function play(this: HTMLMediaElement) {
+      this.dispatchEvent(new Event("play"));
+      return Promise.resolve();
+    }),
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, "pause", {
+    configurable: true,
+    value: vi.fn(function pause(this: HTMLMediaElement) {
+      this.dispatchEvent(new Event("pause"));
+    }),
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, "volume", {
+    configurable: true,
+    value: 1,
+    writable: true,
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, "muted", {
+    configurable: true,
+    value: false,
+    writable: true,
+  });
   hlsMock.MockHls.isSupported.mockReturnValue(options.hlsJs);
+}
+
+function mountPlayer(props: Partial<InstanceType<typeof MovieHlsPlayer>["$props"]> = {}) {
+  return mount(MovieHlsPlayer, {
+    attachTo: document.body,
+    props: {
+      play: playInfo(),
+      posterUrl: "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+      title: "Fight Club",
+      ...props,
+    },
+  });
+}
+
+function setMediaMetrics(
+  video: HTMLVideoElement,
+  options: { bufferedEnd?: number; currentTime?: number; duration?: number } = {},
+): void {
+  Object.defineProperty(video, "duration", {
+    configurable: true,
+    value: options.duration ?? 120,
+  });
+  Object.defineProperty(video, "currentTime", {
+    configurable: true,
+    value: options.currentTime ?? 0,
+    writable: true,
+  });
+  Object.defineProperty(video, "buffered", {
+    configurable: true,
+    value: {
+      end: vi.fn(() => options.bufferedEnd ?? 0),
+      length: options.bufferedEnd === undefined ? 0 : 1,
+      start: vi.fn(() => 0),
+    },
+  });
+  video.dispatchEvent(new Event("loadedmetadata"));
+  video.dispatchEvent(new Event("timeupdate"));
+  video.dispatchEvent(new Event("progress"));
+}
+
+function sliderRoots(wrapper: VueWrapper) {
+  return wrapper.findAllComponents({ name: "SliderRoot" });
+}
+
+async function openSettings(wrapper: VueWrapper): Promise<void> {
+  click(wrapper.get('button[aria-label="Playback settings"]').element);
+  await settle();
+}
+
+function menuRadioItem(label: string): Element {
+  const item = Array.from(document.body.querySelectorAll('[role="menuitemradio"]')).find(
+    (candidate) => candidate.textContent?.trim() === label,
+  );
+  if (item === undefined) {
+    throw new Error(`Menu item not found: ${label}`);
+  }
+  return item;
 }
 
 describe("MovieHlsPlayer", () => {
@@ -83,36 +199,37 @@ describe("MovieHlsPlayer", () => {
     hlsMock.instances.length = 0;
     hlsMock.MockHls.isSupported.mockReset();
     setMediaSupport({ hlsJs: true, nativeHls: false });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
   });
 
   afterEach(() => {
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
   it("uses native HLS when the browser can play m3u8", async () => {
     setMediaSupport({ hlsJs: false, nativeHls: true });
 
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        posterUrl: "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
     expect(video.src).toBe("https://stream.example.test/fight-club/master.m3u8");
+    expect(video.hasAttribute("controls")).toBe(false);
     expect(hlsMock.instances).toHaveLength(0);
   });
 
   it("attaches hls.js when native HLS is unavailable", async () => {
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
@@ -126,12 +243,7 @@ describe("MovieHlsPlayer", () => {
   it("prefers hls.js when both native HLS and MediaSource are reported", async () => {
     setMediaSupport({ hlsJs: true, nativeHls: true });
 
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
@@ -144,28 +256,26 @@ describe("MovieHlsPlayer", () => {
   });
 
   it("destroys the previous hls.js instance when switching sources", async () => {
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo({
-          sources: [
-            playInfo().sources[0]!,
-            {
-              embedUrl: "https://player.example.test/player/?url=fight-club-alt",
-              filename: "fight-club-alt.m3u8",
-              m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
-              name: "Alt",
-              serverName: "Server 2",
-              slug: "alt",
-            },
-          ],
-        }),
-        title: "Fight Club",
-      },
+    const wrapper = mountPlayer({
+      play: playInfo({
+        sources: [
+          playInfo().sources[0]!,
+          {
+            embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+            filename: "fight-club-alt.m3u8",
+            m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+            name: "Alt",
+            serverName: "Server 2",
+            slug: "alt",
+          },
+        ],
+      }),
     });
     await settle();
 
     const firstInstance = hlsMock.instances[0]!;
-    await wrapper.get("select").setValue("1");
+    await openSettings(wrapper);
+    click(menuRadioItem("Server 2 - Alt"));
     await settle();
 
     expect(firstInstance.destroy).toHaveBeenCalledTimes(1);
@@ -178,24 +288,14 @@ describe("MovieHlsPlayer", () => {
   it("shows an error when HLS is unsupported", async () => {
     setMediaSupport({ hlsJs: false, nativeHls: false });
 
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     expect(wrapper.text()).toContain("This browser cannot play this stream.");
   });
 
   it("shows an error for fatal hls.js failures", async () => {
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     hlsMock.instances[0]!.emitFatalError();
@@ -206,17 +306,109 @@ describe("MovieHlsPlayer", () => {
   });
 
   it("destroys hls.js on unmount", async () => {
-    const wrapper = mount(MovieHlsPlayer, {
-      props: {
-        play: playInfo(),
-        title: "Fight Club",
-      },
-    });
+    const wrapper = mountPlayer();
     await settle();
 
     const instance = hlsMock.instances[0]!;
     wrapper.unmount();
 
     expect(instance.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("plays and pauses through custom controls", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+
+    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Play"]').element);
+    await settle();
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Pause"]').exists(),
+    ).toBe(true);
+
+    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Pause"]').element);
+    await settle();
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('.movies-hls-player__control-row button[aria-label="Play"]').exists()).toBe(
+      true,
+    );
+  });
+
+  it("commits seek changes from the custom seek slider", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 15, duration: 120, bufferedEnd: 64 });
+    await settle();
+
+    sliderRoots(wrapper)[0]!.vm.$emit("valueCommit", [45]);
+    await settle();
+
+    expect(video.currentTime).toBe(45);
+    expect(wrapper.text()).toContain("0:45 / 2:00");
+  });
+
+  it("updates volume and mute state from custom controls", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    sliderRoots(wrapper)[1]!.vm.$emit("update:modelValue", [35]);
+    await settle();
+
+    expect(video.volume).toBe(0.35);
+
+    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Mute"]').element);
+    await settle();
+    expect(video.muted).toBe(true);
+
+    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Unmute"]').element);
+    await settle();
+    expect(video.muted).toBe(false);
+    expect(video.volume).toBe(0.35);
+  });
+
+  it("shows HLS quality options after manifest parsing and applies manual quality", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+
+    const instance = hlsMock.instances[0]!;
+    instance.emitManifestParsed();
+    await settle();
+
+    await openSettings(wrapper);
+    expect(document.body.textContent).toContain("Auto");
+    expect(document.body.textContent).toContain("720p");
+    expect(document.body.textContent).toContain("1080p");
+
+    click(menuRadioItem("720p"));
+    await settle();
+
+    expect(instance.currentLevel).toBe(0);
+  });
+
+  it("auto-hides controls while playback is active", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPlayer();
+    await settle();
+
+    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Play"]').element);
+    await flushPromises();
+
+    expect(wrapper.get(".movies-hls-player__controls").classes()).not.toContain(
+      "movies-hls-player__controls--hidden",
+    );
+
+    vi.advanceTimersByTime(3200);
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player__controls").classes()).toContain(
+      "movies-hls-player__controls--hidden",
+    );
   });
 });

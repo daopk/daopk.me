@@ -510,7 +510,7 @@ export function tmdbImageUrl(value: unknown, size = "w500"): string {
   if (path === null) {
     return "";
   }
-  if (/^https:\/\//.test(path)) {
+  if (path.startsWith("https://")) {
     return path;
   }
   if (!/^\/[A-Za-z0-9_.-]+$/.test(path)) {
