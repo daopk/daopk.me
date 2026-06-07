@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
+import { nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
 import { runAutorunManifests } from "~/core/boot/autorun";
@@ -17,8 +17,9 @@ const breakpoint = useBreakpoint();
 const hostRef = useTemplateRef<HTMLElement>("hostRef");
 
 const bootstrapSticky = peekShellStickyOverride();
-
-const picked = computed<PickedShell>(() => pickShell(breakpoint.profile.value, bootstrapSticky));
+// Shell selection is a boot-time snapshot. Resize/orientation profile updates
+// may change CSS metadata below, but must not swap the mounted shell.
+const picked: PickedShell = pickShell(breakpoint.profile.value, bootstrapSticky);
 
 // Mirror the active shell + pointer onto <html> so token-level rules
 // (control-height touch density in `_tokens.scss`) and app styles can react
@@ -26,7 +27,7 @@ const picked = computed<PickedShell>(() => pickShell(breakpoint.profile.value, b
 // that resolves which shell is live.
 watchEffect(() => {
   const root = document.documentElement;
-  root.dataset.shell = picked.value.shellId;
+  root.dataset.shell = picked.shellId;
 
   const pointer = breakpoint.profile.value.pointerCoarse;
   if (pointer) {
@@ -39,7 +40,7 @@ watchEffect(() => {
 let lastReadyShellId: PickedShell["shellId"] | null = null;
 
 function onShellReady(shellRoot: Element): void {
-  const shellId = picked.value.shellId;
+  const shellId = picked.shellId;
 
   if (lastReadyShellId === shellId) {
     return;

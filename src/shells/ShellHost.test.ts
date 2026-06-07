@@ -5,6 +5,26 @@ import ShellHost from "./ShellHost.vue";
 
 import { KernelInjectionKey } from "~/types/kernel";
 import type { Kernel } from "~/types/kernel";
+import type { DeviceProfile, ShellId } from "~/types/shell";
+
+const shellHostMocks = vi.hoisted(() => ({
+  breakpointProfile: null as unknown as { value: DeviceProfile },
+  pickShell: vi.fn(),
+}));
+
+function profileFor(formFactor: DeviceProfile["formFactor"]): DeviceProfile {
+  const isMobile = formFactor === "mobile";
+  return {
+    formFactor,
+    prefersReducedMotion: false,
+    prefersColorScheme: "light",
+    hasHover: !isMobile,
+    hasTouch: isMobile,
+    pointerCoarse: isMobile ? "coarse" : "fine",
+    viewportWidth: isMobile ? 390 : 1440,
+    viewportHeight: isMobile ? 844 : 900,
+  };
+}
 
 vi.mock("~/core/boot/autorun", () => ({
   runAutorunManifests: vi.fn(async () => undefined),
@@ -28,33 +48,41 @@ vi.mock("~/core/routing/appUrlIntents", () => ({
   resetInitialAppUrlIntentLatch: vi.fn(),
 }));
 
-vi.mock("~/composables/useBreakpoint", () => ({
-  useBreakpoint: () => ({
-    profile: {
-      value: {
-        shellPreference: "desktop",
-        pointer: "fine",
-        hover: "hover",
-        widthBucket: "wide",
-        heightBucket: "tall",
-        viewportWidth: 1440,
-        viewportHeight: 900,
-      },
-    },
-  }),
-}));
+vi.mock("~/composables/useBreakpoint", async () => {
+  const { ref } = await import("vue");
+  shellHostMocks.breakpointProfile = ref(profileFor("desktop"));
+
+  return {
+    useBreakpoint: () => ({
+      profile: shellHostMocks.breakpointProfile,
+    }),
+  };
+});
 
 vi.mock("~/shells/shellRegistry", async () => {
   const { defineComponent, h } = await import("vue");
+  const components = {
+    desktop: defineComponent({
+      name: "FakeDesktopShell",
+      setup: () => () => h("main", { class: "fake-shell fake-desktop-shell" }, "desktop shell"),
+    }),
+    mobile: defineComponent({
+      name: "FakeMobileShell",
+      setup: () => () => h("main", { class: "fake-shell fake-mobile-shell" }, "mobile shell"),
+    }),
+  };
+
+  shellHostMocks.pickShell.mockImplementation((profile: DeviceProfile, sticky?: ShellId) => {
+    const shellId = sticky ?? (profile.formFactor === "mobile" ? "mobile" : "desktop");
+    return {
+      shellId,
+      component: components[shellId],
+    };
+  });
+
   return {
     peekShellStickyOverride: () => undefined,
-    pickShell: () => ({
-      shellId: "desktop",
-      component: defineComponent({
-        name: "FakeDesktopShell",
-        setup: () => () => h("main", { class: "fake-shell" }, "shell"),
-      }),
-    }),
+    pickShell: shellHostMocks.pickShell,
   };
 });
 
@@ -82,10 +110,13 @@ function makeFakeKernel(): FakeKernelHandles {
 describe("ShellHost — shell-ready wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    shellHostMocks.breakpointProfile.value = profileFor("desktop");
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    delete document.documentElement.dataset.shell;
+    delete document.documentElement.dataset.pointer;
   });
 
   it("schedules URL intent + autorun when the shell first becomes ready", async () => {
@@ -125,6 +156,39 @@ describe("ShellHost — shell-ready wiring", () => {
     expect(scheduleIdle).toHaveBeenCalledTimes(1);
     expect(consumeInitialAppUrlIntent).toHaveBeenCalledTimes(1);
     expect(runAutorunManifests).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it("keeps the boot-selected shell when the viewport profile later changes", async () => {
+    const { kernel } = makeFakeKernel();
+
+    const wrapper = mount(ShellHost, {
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+        stubs: {
+          SessionLockOverlay: { template: "<div data-session-lock-overlay />" },
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    await Promise.resolve();
+
+    expect(shellHostMocks.pickShell).toHaveBeenCalledTimes(1);
+    expect(wrapper.find(".fake-desktop-shell").exists()).toBe(true);
+    expect(document.documentElement.dataset.shell).toBe("desktop");
+
+    shellHostMocks.breakpointProfile.value = profileFor("mobile");
+    await wrapper.vm.$nextTick();
+
+    expect(shellHostMocks.pickShell).toHaveBeenCalledTimes(1);
+    expect(wrapper.find(".fake-desktop-shell").exists()).toBe(true);
+    expect(wrapper.find(".fake-mobile-shell").exists()).toBe(false);
+    expect(document.documentElement.dataset.shell).toBe("desktop");
+    expect(document.documentElement.dataset.pointer).toBe("coarse");
 
     wrapper.unmount();
   });
