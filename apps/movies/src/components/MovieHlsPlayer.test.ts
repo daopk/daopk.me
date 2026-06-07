@@ -7,6 +7,36 @@ import { nextTick } from "vue";
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import type { MoviePlayInfo } from "../moviesApi";
 
+const fullscreenDescriptors = {
+  documentExitFullscreen: Object.getOwnPropertyDescriptor(document, "exitFullscreen"),
+  documentFullscreenElement: Object.getOwnPropertyDescriptor(document, "fullscreenElement"),
+  documentWebkitExitFullscreen: Object.getOwnPropertyDescriptor(document, "webkitExitFullscreen"),
+  documentWebkitFullscreenElement: Object.getOwnPropertyDescriptor(
+    document,
+    "webkitFullscreenElement",
+  ),
+  elementRequestFullscreen: Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "requestFullscreen",
+  ),
+  elementWebkitRequestFullscreen: Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    "webkitRequestFullscreen",
+  ),
+  videoWebkitDisplayingFullscreen: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitDisplayingFullscreen",
+  ),
+  videoWebkitEnterFullscreen: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitEnterFullscreen",
+  ),
+  videoWebkitExitFullscreen: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitExitFullscreen",
+  ),
+};
+
 const hlsMock = vi.hoisted(() => {
   type HlsHandler = (event: string, data: Record<string, unknown>) => void;
 
@@ -94,6 +124,59 @@ function click(element: Element): void {
       button: 0,
       cancelable: true,
     }),
+  );
+}
+
+function restoreProperty(
+  target: object,
+  property: PropertyKey,
+  descriptor: PropertyDescriptor | undefined,
+): void {
+  if (descriptor === undefined) {
+    Reflect.deleteProperty(target, property);
+    return;
+  }
+
+  Object.defineProperty(target, property, descriptor);
+}
+
+function restoreFullscreenProperties(): void {
+  restoreProperty(document, "exitFullscreen", fullscreenDescriptors.documentExitFullscreen);
+  restoreProperty(document, "fullscreenElement", fullscreenDescriptors.documentFullscreenElement);
+  restoreProperty(
+    document,
+    "webkitExitFullscreen",
+    fullscreenDescriptors.documentWebkitExitFullscreen,
+  );
+  restoreProperty(
+    document,
+    "webkitFullscreenElement",
+    fullscreenDescriptors.documentWebkitFullscreenElement,
+  );
+  restoreProperty(
+    HTMLElement.prototype,
+    "requestFullscreen",
+    fullscreenDescriptors.elementRequestFullscreen,
+  );
+  restoreProperty(
+    HTMLElement.prototype,
+    "webkitRequestFullscreen",
+    fullscreenDescriptors.elementWebkitRequestFullscreen,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitDisplayingFullscreen",
+    fullscreenDescriptors.videoWebkitDisplayingFullscreen,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitEnterFullscreen",
+    fullscreenDescriptors.videoWebkitEnterFullscreen,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitExitFullscreen",
+    fullscreenDescriptors.videoWebkitExitFullscreen,
   );
 }
 
@@ -214,6 +297,7 @@ describe("MovieHlsPlayer", () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    restoreFullscreenProperties();
   });
 
   it("uses native HLS when the browser can play m3u8", async () => {
@@ -409,6 +493,128 @@ describe("MovieHlsPlayer", () => {
 
     expect(wrapper.get(".movies-hls-player__controls").classes()).toContain(
       "movies-hls-player__controls--hidden",
+    );
+  });
+
+  it("requests fullscreen on the player shell through custom controls", async () => {
+    let fullscreenElement: Element | null = null;
+    const requestFullscreen = vi.fn(function requestFullscreen(this: HTMLElement) {
+      fullscreenElement = this;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    });
+    const exitFullscreen = vi.fn(() => {
+      fullscreenElement = null;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    });
+
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => fullscreenElement,
+    });
+    Object.defineProperty(document, "exitFullscreen", {
+      configurable: true,
+      value: exitFullscreen,
+    });
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: requestFullscreen,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+    );
+    await settle();
+
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(fullscreenElement).toBe(wrapper.get(".movies-hls-player__stage").element);
+    expect(
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+    ).toBe(true);
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
+    );
+    await settle();
+
+    expect(exitFullscreen).toHaveBeenCalledTimes(1);
+    expect(fullscreenElement).toBeNull();
+  });
+
+  it("falls back to native iOS video fullscreen when shell fullscreen is unavailable", async () => {
+    let displayingFullscreen = false;
+    const enterFullscreen = vi.fn(function enterFullscreen(this: HTMLVideoElement) {
+      displayingFullscreen = true;
+      this.dispatchEvent(new Event("webkitbeginfullscreen"));
+    });
+
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitDisplayingFullscreen", {
+      configurable: true,
+      get: () => displayingFullscreen,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitEnterFullscreen", {
+      configurable: true,
+      value: enterFullscreen,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+    );
+    await settle();
+
+    expect(enterFullscreen).toHaveBeenCalledTimes(1);
+    expect(
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+    ).toBe(true);
+  });
+
+  it("uses CSS fullscreen when no native fullscreen API is available", async () => {
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(HTMLElement.prototype, "webkitRequestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitEnterFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
+    );
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player__stage").classes()).toContain(
+      "movies-hls-player__stage--fullscreen",
+    );
+    expect(
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
+    ).toBe(true);
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
+    );
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player__stage").classes()).not.toContain(
+      "movies-hls-player__stage--fullscreen",
     );
   });
 });

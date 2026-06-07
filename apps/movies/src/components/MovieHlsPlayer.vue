@@ -43,6 +43,23 @@ interface HlsQualityLevel {
   readonly height: number;
 }
 
+type FullscreenMethod = () => Promise<void> | void;
+
+interface WebKitFullscreenDocument extends Document {
+  readonly webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: FullscreenMethod;
+}
+
+interface WebKitFullscreenElement extends HTMLElement {
+  webkitRequestFullscreen?: FullscreenMethod;
+}
+
+interface WebKitVideoElement extends HTMLVideoElement {
+  readonly webkitDisplayingFullscreen?: boolean;
+  webkitEnterFullscreen?: () => void;
+  webkitExitFullscreen?: () => void;
+}
+
 const AUTO_HIDE_CONTROLS_DELAY_MS = 3200;
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const SEEK_STEP_SECONDS = 10;
@@ -72,6 +89,7 @@ const playing = ref(false);
 const waiting = ref(false);
 const metadataLoaded = ref(false);
 const fullscreen = ref(false);
+const fallbackFullscreen = ref(false);
 const controlsVisible = ref(true);
 const controlsFocused = ref(false);
 const seeking = ref(false);
@@ -194,6 +212,9 @@ watch(
 onMounted(() => {
   syncFullscreenState();
   document.addEventListener("fullscreenchange", syncFullscreenState);
+  document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+  videoElement.value?.addEventListener("webkitbeginfullscreen", syncFullscreenState);
+  videoElement.value?.addEventListener("webkitendfullscreen", syncFullscreenState);
   void attachSource({ autoplay: props.autoplay });
 });
 
@@ -217,6 +238,9 @@ onBeforeUnmount(() => {
   clearHideControlsTimer();
   destroyHls();
   document.removeEventListener("fullscreenchange", syncFullscreenState);
+  document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
+  videoElement.value?.removeEventListener("webkitbeginfullscreen", syncFullscreenState);
+  videoElement.value?.removeEventListener("webkitendfullscreen", syncFullscreenState);
 });
 
 function destroyHls(): void {
@@ -681,22 +705,158 @@ function onSeekPointerCancel(): void {
   cancelSeekPreview();
 }
 
-function syncFullscreenState(): void {
-  fullscreen.value =
-    typeof document !== "undefined" && document.fullscreenElement === playerShell.value;
+function fullscreenDocument(): WebKitFullscreenDocument | null {
+  return typeof document === "undefined" ? null : (document as WebKitFullscreenDocument);
 }
 
-function toggleFullscreen(): void {
+function documentFullscreenElement(): Element | null {
+  const currentDocument = fullscreenDocument();
+  if (currentDocument === null) {
+    return null;
+  }
+
+  return currentDocument.fullscreenElement ?? currentDocument.webkitFullscreenElement ?? null;
+}
+
+function webKitVideoElement(): WebKitVideoElement | null {
+  return videoElement.value as WebKitVideoElement | null;
+}
+
+function isNativeVideoFullscreen(video: WebKitVideoElement | null = webKitVideoElement()): boolean {
+  return Boolean(video?.webkitDisplayingFullscreen);
+}
+
+function syncFullscreenState(): void {
+  const element = playerShell.value;
+
+  fullscreen.value =
+    element !== null &&
+    (fallbackFullscreen.value ||
+      documentFullscreenElement() === element ||
+      isNativeVideoFullscreen(webKitVideoElement()));
+}
+
+async function requestDocumentFullscreen(element: HTMLElement): Promise<boolean> {
+  const webKitElement = element as WebKitFullscreenElement;
+
+  if (typeof element.requestFullscreen === "function") {
+    try {
+      await element.requestFullscreen();
+      return true;
+    } catch {
+      // Fall through to Safari's prefixed API or native video fullscreen.
+    }
+  }
+
+  if (typeof webKitElement.webkitRequestFullscreen === "function") {
+    try {
+      await webKitElement.webkitRequestFullscreen();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+async function exitDocumentFullscreen(): Promise<boolean> {
+  const currentDocument = fullscreenDocument();
+  if (currentDocument === null) {
+    return false;
+  }
+
+  if (typeof currentDocument.exitFullscreen === "function") {
+    try {
+      await currentDocument.exitFullscreen();
+      return true;
+    } catch {
+      // Fall through to Safari's prefixed API.
+    }
+  }
+
+  if (typeof currentDocument.webkitExitFullscreen === "function") {
+    try {
+      await currentDocument.webkitExitFullscreen();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function enterNativeVideoFullscreen(video: WebKitVideoElement | null): boolean {
+  if (typeof video?.webkitEnterFullscreen !== "function") {
+    return false;
+  }
+
+  try {
+    video.webkitEnterFullscreen();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function exitNativeVideoFullscreen(video: WebKitVideoElement | null): boolean {
+  if (typeof video?.webkitExitFullscreen !== "function") {
+    return false;
+  }
+
+  try {
+    video.webkitExitFullscreen();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function enterFallbackFullscreen(): void {
+  fallbackFullscreen.value = true;
+  fullscreen.value = true;
+  showControls();
+}
+
+function exitFallbackFullscreen(): void {
+  fallbackFullscreen.value = false;
+  syncFullscreenState();
+}
+
+async function toggleFullscreen(): Promise<void> {
   const element = playerShell.value;
   if (element === null || typeof document === "undefined") {
     return;
   }
 
-  if (document.fullscreenElement === element) {
-    void document.exitFullscreen?.();
-  } else {
-    void element.requestFullscreen?.();
+  const video = webKitVideoElement();
+
+  if (fallbackFullscreen.value) {
+    exitFallbackFullscreen();
+    return;
   }
+
+  if (documentFullscreenElement() === element) {
+    await exitDocumentFullscreen();
+    syncFullscreenState();
+    return;
+  }
+
+  if (isNativeVideoFullscreen(video)) {
+    exitNativeVideoFullscreen(video);
+    syncFullscreenState();
+    return;
+  }
+
+  if (!(await requestDocumentFullscreen(element))) {
+    const enteredVideoFullscreen = enterNativeVideoFullscreen(video);
+    if (!enteredVideoFullscreen) {
+      enterFallbackFullscreen();
+      return;
+    }
+  }
+  syncFullscreenState();
 }
 
 function onStageKeydown(event: KeyboardEvent): void {
@@ -747,6 +907,12 @@ function onStageKeydown(event: KeyboardEvent): void {
   }
 
   if (event.key === "Escape") {
+    if (fallbackFullscreen.value) {
+      event.preventDefault();
+      exitFallbackFullscreen();
+      return;
+    }
+
     cancelSeekPreview();
   }
 }
@@ -1061,7 +1227,13 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 }
 
 .movies-hls-player__stage--fullscreen {
+  aspect-ratio: auto;
+  block-size: 100dvh;
   border-radius: 0;
+  inline-size: 100vw;
+  inset: 0;
+  position: fixed;
+  z-index: 10000;
 }
 
 .movies-hls-player__video,
