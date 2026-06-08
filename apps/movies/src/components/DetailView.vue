@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
@@ -18,6 +18,11 @@ import {
   type MovieSeasonEpisode,
   type MovieSummary,
 } from "../moviesApi";
+import {
+  createMoviesPlaybackProgressStore,
+  moviePlaybackProgressKey,
+  type MoviesPlaybackProgressEntry,
+} from "../moviesPlaybackProgress";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -38,8 +43,12 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
 const playerSection = ref<HTMLElement | null>(null);
+const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
 const showPlayer = ref(false);
+const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
+
+const progressKey = computed(() => moviePlaybackProgressKey(props.tmdbId));
 
 watch(
   () => [props.mediaType, props.tmdbId] as const,
@@ -51,6 +60,7 @@ watch(
 
 onUnmounted(() => {
   abortController?.abort();
+  playbackProgressStore.dispose();
 });
 
 async function loadDetail(): Promise<void> {
@@ -58,12 +68,15 @@ async function loadDetail(): Promise<void> {
   abortController = new AbortController();
   state.value = "loading";
   detail.value = null;
+  resumeProgress.value = null;
   showPlayer.value = false;
 
   try {
-    detail.value = await fetchMovieDetail(props.mediaType, props.tmdbId, {
+    const nextDetail = await fetchMovieDetail(props.mediaType, props.tmdbId, {
       signal: abortController.signal,
     });
+    detail.value = nextDetail;
+    refreshResumeProgress();
     state.value = "ready";
   } catch {
     if (abortController.signal.aborted) {
@@ -86,7 +99,16 @@ function openEpisode(episode: MovieSeasonEpisode): void {
   });
 }
 
+function refreshResumeProgress(): void {
+  const currentDetail = detail.value;
+  resumeProgress.value =
+    currentDetail?.mediaType === "movie" && currentDetail.play !== null
+      ? playbackProgressStore.get(progressKey.value)
+      : null;
+}
+
 async function startWatching(): Promise<void> {
+  refreshResumeProgress();
   showPlayer.value = true;
   await nextTick();
   playerSection.value?.scrollIntoView?.({
@@ -116,7 +138,7 @@ async function startWatching(): Promise<void> {
     </EmptyState>
 
     <template v-else-if="detail">
-      <DetailHero :detail="detail" @watch="startWatching" />
+      <DetailHero :detail="detail" :resume-progress="resumeProgress" @watch="startWatching" />
       <section
         v-if="showPlayer && detail.play !== null"
         ref="playerSection"
@@ -127,6 +149,7 @@ async function startWatching(): Promise<void> {
           autoplay
           :play="detail.play"
           :poster-url="detail.backdropUrl || detail.posterUrl"
+          :progress-key="progressKey"
           :title="detail.name"
         />
       </section>

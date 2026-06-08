@@ -6,6 +6,12 @@ import { nextTick } from "vue";
 
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import type { MoviePlayInfo } from "../moviesApi";
+import {
+  moviePlaybackProgressKey,
+  MOVIES_PLAYBACK_PROGRESS_KV_KEY,
+  type MoviesPlaybackProgressEntry,
+  type MoviesPlaybackProgressState,
+} from "../moviesPlaybackProgress";
 
 const fullscreenDescriptors = {
   documentExitFullscreen: Object.getOwnPropertyDescriptor(document, "exitFullscreen"),
@@ -126,6 +132,39 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
     ],
     ...overrides,
   };
+}
+
+const PLAYER_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
+const MOVIE_PROGRESS_KEY = moviePlaybackProgressKey(550);
+
+function persistPlayerProgress(
+  key: string,
+  entry: MoviesPlaybackProgressEntry = {
+    currentTime: 42,
+    duration: 120,
+    updatedAt: Date.now(),
+  },
+): void {
+  const state: MoviesPlaybackProgressState = {
+    entries: {
+      [key]: entry,
+    },
+  };
+  localStorage.setItem(
+    PLAYER_PROGRESS_STORAGE_KEY,
+    JSON.stringify({
+      __v: 1,
+      data: state,
+    }),
+  );
+}
+
+function readPlayerProgress(): MoviesPlaybackProgressState {
+  const raw = localStorage.getItem(PLAYER_PROGRESS_STORAGE_KEY);
+  if (raw === null) {
+    return { entries: {} };
+  }
+  return (JSON.parse(raw) as { data: MoviesPlaybackProgressState }).data;
 }
 
 async function settle(): Promise<void> {
@@ -368,6 +407,7 @@ function menuRadioItem(label: string): Element {
 
 describe("MovieHlsPlayer", () => {
   beforeEach(() => {
+    localStorage.clear();
     hlsMock.instances.length = 0;
     hlsMock.MockHls.isSupported.mockReset();
     setMediaSupport({ hlsJs: true, nativeHls: false });
@@ -383,6 +423,7 @@ describe("MovieHlsPlayer", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    localStorage.clear();
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -426,6 +467,92 @@ describe("MovieHlsPlayer", () => {
       "https://stream.example.test/fight-club/master.m3u8",
     );
     expect(hlsMock.instances[0]!.attachMedia).toHaveBeenCalledWith(video);
+  });
+
+  it("seeks to saved progress after metadata loads", async () => {
+    persistPlayerProgress(MOVIE_PROGRESS_KEY);
+
+    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 0, duration: 120 });
+    await settle();
+
+    expect(video.currentTime).toBe(42);
+    expect(wrapper.get(".movies-hls-player__time").text()).toBe("0:42");
+  });
+
+  it("saves playback progress from time updates", async () => {
+    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+      currentTime: 30,
+      duration: 120,
+    });
+  });
+
+  it("saves progress immediately after seek and pause", async () => {
+    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 15, duration: 120 });
+    await settle();
+
+    sliderRoots(wrapper)[0]!.vm.$emit("valueCommit", [45]);
+    await settle();
+
+    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+      currentTime: 45,
+      duration: 120,
+    });
+
+    video.currentTime = 61;
+    video.dispatchEvent(new Event("pause"));
+    await settle();
+
+    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+      currentTime: 61,
+      duration: 120,
+    });
+  });
+
+  it("clears saved progress when playback ends", async () => {
+    persistPlayerProgress(MOVIE_PROGRESS_KEY, {
+      currentTime: 30,
+      duration: 120,
+      updatedAt: Date.now(),
+    });
+
+    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    video.currentTime = 120;
+    video.dispatchEvent(new Event("ended"));
+    await settle();
+
+    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toBeUndefined();
+  });
+
+  it("does not persist playback progress without a progress key", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    expect(localStorage.getItem(PLAYER_PROGRESS_STORAGE_KEY)).toBeNull();
   });
 
   it("destroys the previous hls.js instance when switching sources", async () => {

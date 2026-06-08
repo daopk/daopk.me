@@ -16,6 +16,13 @@ import type {
   MovieSummary,
   MoviesListResult,
 } from "./moviesApi";
+import {
+  episodePlaybackProgressKey,
+  moviePlaybackProgressKey,
+  MOVIES_PLAYBACK_PROGRESS_KV_KEY,
+  type MoviesPlaybackProgressEntry,
+  type MoviesPlaybackProgressState,
+} from "./moviesPlaybackProgress";
 
 vi.mock("./moviesApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./moviesApi")>();
@@ -36,12 +43,14 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
       autoplay: { default: false, type: Boolean },
       play: { required: true, type: Object },
       posterUrl: { default: "", type: String },
+      progressKey: { default: "", type: String },
       title: { required: true, type: String },
     },
     template: `
       <div
         class="movies-hls-player"
         :data-autoplay="autoplay ? 'true' : 'false'"
+        :data-progress-key="progressKey"
         :data-title="title"
       >
         <video />
@@ -96,6 +105,30 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
     ],
     ...overrides,
   };
+}
+
+const APP_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
+
+function persistAppProgress(
+  key: string,
+  entry: MoviesPlaybackProgressEntry = {
+    currentTime: 42,
+    duration: 120,
+    updatedAt: Date.now(),
+  },
+): void {
+  const state: MoviesPlaybackProgressState = {
+    entries: {
+      [key]: entry,
+    },
+  };
+  localStorage.setItem(
+    APP_PROGRESS_STORAGE_KEY,
+    JSON.stringify({
+      __v: 1,
+      data: state,
+    }),
+  );
 }
 
 function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
@@ -317,6 +350,7 @@ function menuItem(label: string): Element {
 describe("Movies app", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     window.history.replaceState(null, "", "/apps/movies");
     vi.mocked(fetchMoviesList).mockResolvedValue(list([movie()]));
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail());
@@ -338,6 +372,7 @@ describe("Movies app", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    localStorage.clear();
   });
 
   it("renders Home with a mobile hero slider and grouped TMDB discovery rows", async () => {
@@ -610,7 +645,32 @@ describe("Movies app", () => {
 
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
     expect(wrapper.find("video").exists()).toBe(true);
+  });
+
+  it("shows Continue on movie detail when saved progress exists", async () => {
+    vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
+    persistAppProgress(moviePlaybackProgressKey(550));
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    const continueButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().trim() === "Continue");
+    expect(continueButton).toBeDefined();
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+
+    await continueButton!.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
   });
 
   it("replaces the toolbar title with history and Home navigation buttons", async () => {
@@ -836,6 +896,9 @@ describe("Movies app", () => {
     expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 1, expect.anything());
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("false");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
+      episodePlaybackProgressKey(1399, 1, 1),
+    );
     expect(wrapper.find("video").exists()).toBe(true);
     expect(wrapper.find(".movies-episode__still").exists()).toBe(false);
     expect(wrapper.find(".movies-episode-list__play-overlay").exists()).toBe(true);

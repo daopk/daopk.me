@@ -22,6 +22,7 @@ import {
   type MoviePersonCredit,
   type MovieSeasonEpisode,
 } from "../moviesApi";
+import { episodePlaybackProgressKey } from "../moviesPlaybackProgress";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -48,6 +49,9 @@ const detail = computed(() => episodeDetail.value?.series ?? null);
 const season = computed(() => episodeDetail.value?.season ?? null);
 const episode = computed<MovieSeasonEpisode | null>(() => episodeDetail.value?.episode ?? null);
 const heroImageUrl = computed(() => episode.value?.stillUrl || detail.value?.backdropUrl || "");
+const progressKey = computed(() =>
+  episodePlaybackProgressKey(props.tmdbId, props.seasonNumber, props.episodeNumber),
+);
 const seasonMeta = computed(() => (season.value === null ? "" : seasonMetaLabel(season.value)));
 const facts = computed(() => {
   const currentEpisode = episode.value;
@@ -136,6 +140,7 @@ async function loadEpisode(): Promise<void> {
           class="movies-episode__player"
           :play="episode.play"
           :poster-url="heroImageUrl"
+          :progress-key="progressKey"
           :title="`${detail.name} - ${episode.name}`"
         />
         <img

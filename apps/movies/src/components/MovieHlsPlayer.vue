@@ -25,12 +25,17 @@ import {
   VolumeX,
 } from "@daopk/icons";
 
+import {
+  createMoviesPlaybackProgressStore,
+  isResumableMoviePlaybackTime,
+} from "../moviesPlaybackProgress";
 import type { MoviePlayInfo } from "../moviesApi";
 
 interface MovieHlsPlayerProps {
   autoplay?: boolean;
   play: MoviePlayInfo;
   posterUrl?: string;
+  progressKey?: string;
   title: string;
 }
 
@@ -67,10 +72,12 @@ const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const SEEK_STEP_SECONDS = 10;
 const VOLUME_STEP = 0.1;
 const PLAYBACK_SPEED_OPTIONS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const PROGRESS_PERSIST_INTERVAL_MS = 5000;
 
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
   posterUrl: "",
+  progressKey: "",
 });
 
 const playerShell = ref<HTMLElement | null>(null);
@@ -107,6 +114,10 @@ const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null)
 let hls: Hls | null = null;
 let hideControlsTimer: number | undefined;
 let surfaceClickTimer: number | undefined;
+let lastProgressPersistedAtMs = 0;
+let resumeProgressApplied = false;
+
+const playbackProgressStore = createMoviesPlaybackProgressStore();
 
 const sourceOptions = computed(() =>
   props.play.sources.map((source, index) => ({
@@ -261,9 +272,11 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  persistPlaybackProgress({ force: true });
   clearHideControlsTimer();
   clearSurfaceClickTimer();
   destroyHls();
+  playbackProgressStore.dispose();
   document.removeEventListener("fullscreenchange", syncFullscreenState);
   document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
   videoElement.value?.removeEventListener("webkitbeginfullscreen", syncFullscreenState);
@@ -292,6 +305,8 @@ function resetPlaybackState(): void {
   seekPosition.value = 0;
   seekPointerPreview.value = null;
   controlsVisible.value = true;
+  lastProgressPersistedAtMs = 0;
+  resumeProgressApplied = false;
 }
 
 function canPlayNativeHls(video: HTMLVideoElement): boolean {
@@ -314,6 +329,7 @@ async function attachSource(options: { autoplay: boolean } = { autoplay: false }
 
   const video = videoElement.value;
   const source = activeSource.value;
+  persistPlaybackProgress({ force: true });
   destroyHls();
   resetPlaybackState();
 
@@ -525,6 +541,66 @@ function syncMediaState(): void {
   }
 }
 
+function normalizedProgressKey(): string | null {
+  const key = props.progressKey.trim();
+  return key.length === 0 ? null : key;
+}
+
+function applySavedPlaybackProgress(): void {
+  if (resumeProgressApplied) {
+    return;
+  }
+
+  resumeProgressApplied = true;
+
+  const key = normalizedProgressKey();
+  const video = videoElement.value;
+  if (key === null || video === null || !hasDuration.value) {
+    return;
+  }
+
+  const progress = playbackProgressStore.get(key);
+  if (progress === null) {
+    return;
+  }
+
+  if (!isResumableMoviePlaybackTime(progress.currentTime, duration.value)) {
+    playbackProgressStore.clear(key);
+    return;
+  }
+
+  video.currentTime = progress.currentTime;
+  currentTime.value = progress.currentTime;
+  seekPosition.value = Math.round(progress.currentTime);
+}
+
+function persistPlaybackProgress(options: { force?: boolean } = {}): void {
+  const key = normalizedProgressKey();
+  const video = videoElement.value;
+  if (key === null || video === null || !metadataLoaded.value) {
+    return;
+  }
+
+  const now = Date.now();
+  if (!options.force && now - lastProgressPersistedAtMs < PROGRESS_PERSIST_INTERVAL_MS) {
+    return;
+  }
+
+  syncMediaState();
+  playbackProgressStore.save(key, {
+    currentTime: currentTime.value,
+    duration: duration.value,
+  });
+  lastProgressPersistedAtMs = now;
+}
+
+function clearPlaybackProgress(): void {
+  const key = normalizedProgressKey();
+  if (key !== null) {
+    playbackProgressStore.clear(key);
+  }
+}
+
 function updateBufferedEnd(): void {
   const video = videoElement.value;
   if (video === null) {
@@ -544,10 +620,12 @@ function updateBufferedEnd(): void {
 function onLoadedMetadata(): void {
   metadataLoaded.value = true;
   syncMediaState();
+  applySavedPlaybackProgress();
 }
 
 function onTimeUpdate(): void {
   syncMediaState();
+  persistPlaybackProgress();
 }
 
 function onProgress(): void {
@@ -566,6 +644,7 @@ function onVideoPause(): void {
   controlsVisible.value = true;
   clearHideControlsTimer();
   syncMediaState();
+  persistPlaybackProgress({ force: true });
 }
 
 function onVideoWaiting(): void {
@@ -584,6 +663,7 @@ function onVideoEnded(): void {
   controlsVisible.value = true;
   clearHideControlsTimer();
   syncMediaState();
+  clearPlaybackProgress();
 }
 
 function onVideoError(): void {
@@ -627,6 +707,7 @@ function commitSeek(nextValue: number): void {
   seekPosition.value = Math.round(nextTime);
   seeking.value = false;
   clearSeekPointerPreview();
+  persistPlaybackProgress({ force: true });
   scheduleAutoHideControls();
 }
 

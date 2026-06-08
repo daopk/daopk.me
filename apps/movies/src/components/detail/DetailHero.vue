@@ -5,13 +5,17 @@ import { Play } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
 import type { MovieDetail } from "../../moviesApi";
+import type { MoviesPlaybackProgressEntry } from "../../moviesPlaybackProgress";
 import { detailMetaLabel } from "./detailFormatters";
 
 interface DetailHeroProps {
   detail: MovieDetail;
+  resumeProgress?: MoviesPlaybackProgressEntry | null;
 }
 
-const props = defineProps<DetailHeroProps>();
+const props = withDefaults(defineProps<DetailHeroProps>(), {
+  resumeProgress: null,
+});
 
 defineEmits<{
   watch: [];
@@ -19,6 +23,7 @@ defineEmits<{
 
 const detailMeta = computed(() => detailMetaLabel(props.detail));
 const canWatch = computed(() => props.detail.mediaType === "movie" && props.detail.play !== null);
+const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Continue"));
 </script>
 
 <template>
@@ -54,7 +59,9 @@ const canWatch = computed(() => props.detail.mediaType === "movie" && props.deta
             <span v-for="item in detail.genres" :key="item.slug">{{ item.name }}</span>
           </div>
           <div v-if="canWatch" class="movies-detail-hero__actions">
-            <Button variant="primary" :icon-start="Play" @click="$emit('watch')">Watch</Button>
+            <Button variant="primary" :icon-start="Play" @click="$emit('watch')">
+              {{ watchLabel }}
+            </Button>
           </div>
         </div>
       </div>
