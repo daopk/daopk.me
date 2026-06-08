@@ -1335,12 +1335,8 @@ function speedLabel(speed: number): string {
         <span>{{ playbackError }}</span>
       </p>
 
-      <p v-if="pictureInPicture" class="movies-hls-player__pip-notice" role="status">
-        <PictureInPicture2 aria-hidden="true" />
-        <span>Playing in picture-in-picture</span>
-      </p>
-
       <div
+        v-if="!pictureInPicture"
         class="movies-hls-player__topline"
         :class="{ 'movies-hls-player__topline--hidden': controlsHidden }"
       >
@@ -1732,32 +1728,6 @@ function speedLabel(speed: number): string {
   inline-size: 16px;
 }
 
-.movies-hls-player__pip-notice {
-  align-items: center;
-  backdrop-filter: blur(18px);
-  background: rgb(8 9 13 / 72%);
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 8px;
-  color: #fff;
-  display: inline-flex;
-  font-size: var(--font-size-sm);
-  gap: var(--space-sm);
-  inset-block-start: calc(var(--space-md) + 36px);
-  inset-inline-start: var(--space-md);
-  margin: 0;
-  max-inline-size: calc(100% - (var(--space-md) * 2));
-  padding: var(--space-sm) var(--space-md);
-  pointer-events: none;
-  position: absolute;
-  z-index: 3;
-}
-
-.movies-hls-player__pip-notice svg {
-  block-size: 18px;
-  flex: 0 0 auto;
-  inline-size: 18px;
-}
-
 .movies-hls-player__topline {
   align-items: center;
   display: flex;
@@ -2050,13 +2020,6 @@ function speedLabel(speed: number): string {
   .movies-hls-player__top-actions {
     inset-block-start: var(--space-sm);
     inset-inline-end: var(--space-sm);
-  }
-
-  .movies-hls-player__pip-notice {
-    font-size: var(--font-size-xs);
-    inset-block-start: calc(var(--space-sm) + 36px);
-    inset-inline-start: var(--space-sm);
-    max-inline-size: calc(100% - (var(--space-sm) * 2));
   }
 
   .movies-hls-player__control-row {

@@ -758,6 +758,7 @@ describe("MovieHlsPlayer", () => {
         .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
+    expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
 
     click(
       wrapper.get('.movies-hls-player__control-row button[aria-label="Enter picture-in-picture"]')
@@ -772,14 +773,12 @@ describe("MovieHlsPlayer", () => {
         .find('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
         .exists(),
     ).toBe(true);
-    expect(wrapper.find(".movies-hls-player__pip-notice").text()).toBe(
-      "Playing in picture-in-picture",
-    );
     expect(
       wrapper
         .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(false);
+    expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(false);
 
     click(
       wrapper.get('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
@@ -789,12 +788,12 @@ describe("MovieHlsPlayer", () => {
 
     expect(exitPictureInPicture).toHaveBeenCalledTimes(1);
     expect(pictureInPictureElement).toBeNull();
-    expect(wrapper.find(".movies-hls-player__pip-notice").exists()).toBe(false);
     expect(
       wrapper
         .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
+    expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
   });
 
   it("shows HLS quality options after manifest parsing and applies manual quality", async () => {
