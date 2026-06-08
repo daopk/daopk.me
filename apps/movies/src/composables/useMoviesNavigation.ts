@@ -1,7 +1,7 @@
 import { computed, onMounted, ref, type ComputedRef, type Ref } from "vue";
 
 import { useAppChrome } from "@daopk/kit";
-import type { AppChromeBackAction, AppContext } from "@daopk/sdk";
+import type { AppChromeBackAction, AppContext, Kernel } from "@daopk/sdk";
 
 import {
   listTitleForQuery,
@@ -20,6 +20,7 @@ import {
   moviePersonViewFromCredit,
   movieWatchViewFromSummary,
   moviesDeepLinkFromInitialState,
+  moviesPathForView,
   moviesViewFromDeepLink,
   type MoviesView,
 } from "../moviesRoutes";
@@ -27,6 +28,7 @@ import { replaceMoviesViewPath } from "../utils/moviesBrowserPath";
 
 export interface UseMoviesNavigationOptions {
   readonly appContext: AppContext | null;
+  readonly kernel?: Pick<Kernel, "events"> | null;
   readonly currentPathname?: () => string | null;
   readonly syncPath?: (view: MoviesView) => void;
 }
@@ -63,6 +65,7 @@ export interface UseMoviesNavigationBindings {
 
 export function useMoviesNavigation({
   appContext,
+  kernel = null,
   currentPathname = browserPathname,
   syncPath = replaceMoviesViewPath,
 }: UseMoviesNavigationOptions): UseMoviesNavigationBindings {
@@ -91,7 +94,9 @@ export function useMoviesNavigation({
   const showCloseButton = computed(() => appChrome.available);
 
   onMounted(() => {
-    openInitialDeepLink();
+    if (!openInitialDeepLink()) {
+      syncViewPath(view.value);
+    }
   });
 
   function resetToolbarSolid(): void {
@@ -108,14 +113,14 @@ export function useMoviesNavigation({
     if (options.replace) {
       futureHistory.value = [];
       view.value = next;
-      syncPath(next);
+      syncViewPath(next);
       return;
     }
 
     history.value = [...history.value, view.value];
     futureHistory.value = [];
     view.value = next;
-    syncPath(next);
+    syncViewPath(next);
   }
 
   function goBack(): void {
@@ -128,7 +133,7 @@ export function useMoviesNavigation({
     futureHistory.value = [...futureHistory.value, view.value];
     view.value = previous;
     resetToolbarSolid();
-    syncPath(previous);
+    syncViewPath(previous);
   }
 
   function goForward(): void {
@@ -141,7 +146,7 @@ export function useMoviesNavigation({
     history.value = [...history.value, view.value];
     view.value = next;
     resetToolbarSolid();
-    syncPath(next);
+    syncViewPath(next);
   }
 
   function closeApp(): void {
@@ -187,14 +192,33 @@ export function useMoviesNavigation({
     }
   }
 
-  function openInitialDeepLink(): void {
+  function openInitialDeepLink(): boolean {
     const intent = moviesDeepLinkFromInitialState(appContext?.args, currentPathname());
     if (intent === null) {
-      return;
+      return false;
     }
 
     history.value = [];
     navigate(moviesViewFromDeepLink(intent), { replace: true });
+    return true;
+  }
+
+  function syncViewPath(next: MoviesView): void {
+    const path = moviesPathForView(next);
+    syncPath(next);
+    emitBrowserPath(path);
+  }
+
+  function emitBrowserPath(path: string): void {
+    if (appContext === null || kernel === null) {
+      return;
+    }
+
+    kernel.events.emit("app.url.changed", {
+      manifestId: appContext.manifestId,
+      handleId: appContext.handleId,
+      path,
+    });
   }
 
   return {

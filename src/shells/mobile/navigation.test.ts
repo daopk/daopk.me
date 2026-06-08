@@ -111,6 +111,20 @@ describe("navigation orchestrator (v2 — internal stack, no browser history)", 
       expect(navigation.stack[0]!.documentPath).toBeNull();
     });
 
+    it("setBrowserPath tracks a live browser path by manifest and handle id", async () => {
+      const { kernel } = makeKernelMock();
+      navigation.init(kernel as unknown as Kernel);
+
+      const frame = await navigation.spawnNew("blog");
+
+      expect(navigation.setBrowserPath(frame.handleId, "blog", "/blog/a")).toBe(true);
+      expect(navigation.stack[0]!.browserPath).toBe("/blog/a");
+      expect(navigation.setBrowserPath(frame.handleId, "notes", "/notes/a")).toBe(false);
+      expect(navigation.stack[0]!.browserPath).toBe("/blog/a");
+      expect(navigation.setBrowserPath(frame.handleId, "blog", null)).toBe(true);
+      expect(navigation.stack[0]!.browserPath).toBeNull();
+    });
+
     it("launch without args leaves frame.args === undefined (no sentinel)", async () => {
       const { kernel } = makeKernelMock();
       navigation.init(kernel as unknown as Kernel);

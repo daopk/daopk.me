@@ -97,6 +97,11 @@ declare global {
       handleId: string;
       path: string | null;
     };
+    "app.url.changed": {
+      manifestId: string;
+      handleId: string;
+      path: string | null;
+    };
     "theme.changed": { theme: ResolvedTheme };
     "app.launch.requested": {
       manifestId: string;

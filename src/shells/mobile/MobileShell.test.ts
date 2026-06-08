@@ -162,6 +162,121 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
+  it("syncs the browser URL to the foreground mobile app fallback path", async () => {
+    currentKernel = makeKernel([manifest({ id: "alpha" }), manifest({ id: "beta", name: "Beta" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "beta",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/beta");
+
+    wrapper.unmount();
+  });
+
+  it("syncs the browser URL home when mobile goes home", async () => {
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    await wrapper.find(".app-view__hide").trigger("click");
+    await flushPromises();
+    await nextTick();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/");
+
+    wrapper.unmount();
+  });
+
+  it("stores custom mobile app URLs and restores them when the frame is foregrounded", async () => {
+    currentKernel = makeKernel([manifest({ id: "blog", name: "Blog" }), manifest({ id: "alpha" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/blog");
+
+    currentKernel.events.emit("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-1",
+      path: "/blog/moving-apps-out-of-the-shell",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+
+    wrapper.unmount();
+  });
+
+  it("falls back to the generic mobile app URL for invalid custom app URLs", async () => {
+    currentKernel = makeKernel([manifest({ id: "blog", name: "Blog" })]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    currentKernel.events.emit("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-1",
+      path: "https://example.test/blog/bad",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(window.location.pathname).toBe("/apps/blog");
+
+    wrapper.unmount();
+  });
+
   it("alerts for desktop-only apps without launching them", async () => {
     currentKernel = makeKernel([
       manifest({ id: "desktop-tool", name: "Desktop Tool", supportedShells: ["desktop"] }),

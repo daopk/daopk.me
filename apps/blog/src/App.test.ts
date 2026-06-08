@@ -412,6 +412,11 @@ Event body`,
       handleId: "h-blog-test",
       path: "/home/posts/field-notes.md",
     });
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/blog/field-notes",
+    });
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/posts/field-notes.md", {
       handleId: "h-blog-test",
     });
@@ -675,6 +680,11 @@ Event body`,
       handleId: "h-blog-test",
       path: null,
     });
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/blog",
+    });
 
     await waitForIndexItems(wrapper);
     await wrapper.find(".blog__index-item").trigger("click");
@@ -685,14 +695,24 @@ Event body`,
       handleId: "h-blog-test",
       path: "/home/posts/new-post.md",
     });
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/blog/new-post",
+    });
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
 
-    expect(kernel.events.emit).toHaveBeenLastCalledWith("app.document.changed", {
+    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
       manifestId: "blog",
       handleId: "h-blog-test",
       path: null,
+    });
+    expect(kernel.events.emit).toHaveBeenLastCalledWith("app.url.changed", {
+      manifestId: "blog",
+      handleId: "h-blog-test",
+      path: "/blog",
     });
   });
 

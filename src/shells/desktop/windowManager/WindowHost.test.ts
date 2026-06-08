@@ -191,6 +191,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   beforeEach(() => {
     debugWarnSpy.mockReset();
     __resetWindowManagerForTests();
+    window.history.replaceState(null, "", "/");
   });
 
   afterEach(() => {
@@ -317,6 +318,160 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     expect(record).toBeDefined();
     expect(record!.x).toBe(Math.floor((1000 - DEFAULT_W) / 2));
     expect(record!.y).toBe(Math.floor((700 - DEFAULT_H) / 2));
+
+    wrapper.unmount();
+  });
+
+  it("syncs the browser URL to the focused desktop app fallback path", async () => {
+    const { kernel, bus } = makeKernel([manifest("alpha", "Alpha"), manifest("beta", "Beta")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    bus.emit("app.launch.requested", {
+      manifestId: "beta",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/apps/beta");
+
+    wrapper.unmount();
+  });
+
+  it("syncs the browser URL home when no desktop window is focused", async () => {
+    const { kernel, bus } = makeKernel([manifest("alpha", "Alpha")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const record = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(record).toBeDefined();
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    manager.minimize(record!.id);
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/");
+
+    wrapper.unmount();
+  });
+
+  it("stores custom app URLs and restores them when the window is refocused", async () => {
+    const { kernel, bus } = makeKernel([manifest("blog", "Blog"), manifest("alpha", "Alpha")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const blog = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(blog).toBeDefined();
+    expect(window.location.pathname).toBe("/apps/blog");
+
+    bus.emit("app.url.changed", {
+      manifestId: "blog",
+      handleId: blog!.handleId,
+      path: "/blog/moving-apps-out-of-the-shell",
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+
+    bus.emit("app.launch.requested", {
+      manifestId: "alpha",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+
+    manager.focus(blog!.id);
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+
+    wrapper.unmount();
+  });
+
+  it("falls back to the generic app URL for invalid custom app URLs", async () => {
+    const { kernel, bus } = makeKernel([manifest("blog", "Blog")]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    bus.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "dock",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+
+    const manager = useWindowManager();
+    const blog = manager.windows.find((entry) => entry.manifestId === "blog");
+    expect(blog).toBeDefined();
+
+    bus.emit("app.url.changed", {
+      manifestId: "blog",
+      handleId: blog!.handleId,
+      path: "https://example.test/blog/bad",
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/apps/blog");
 
     wrapper.unmount();
   });

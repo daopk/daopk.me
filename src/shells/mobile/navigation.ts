@@ -9,6 +9,7 @@ export interface NavigationFrame {
   readonly manifestId: string;
   readonly args?: Readonly<Record<string, unknown>>;
   documentPath?: string | null;
+  browserPath?: string | null;
 }
 
 interface NavigationState {
@@ -300,6 +301,19 @@ function setDocumentPath(handleId: string, manifestId: string, path: string | nu
   return true;
 }
 
+function setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean {
+  const frame = state.stack.find(
+    (entry) => entry.handleId === handleId && entry.manifestId === manifestId,
+  );
+
+  if (frame === undefined) {
+    return false;
+  }
+
+  frame.browserPath = path;
+  return true;
+}
+
 export interface NavigationOrchestrator {
   readonly stack: DeepReadonly<NavigationFrame[]>;
   readonly foreground: Readonly<Ref<string | null>>;
@@ -312,6 +326,7 @@ export interface NavigationOrchestrator {
   dismissAll(): void;
   removeByHandleId(handleId: string): boolean;
   setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
+  setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean;
   spawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): Promise<NavigationFrame>;
 }
 
@@ -331,6 +346,7 @@ export const navigation: NavigationOrchestrator = {
   dismissAll,
   removeByHandleId,
   setDocumentPath,
+  setBrowserPath,
   spawnNew,
 };
 

@@ -8,6 +8,12 @@ import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
+import {
+  appFallbackBrowserPath,
+  HOME_BROWSER_PATH,
+  normalizeAppBrowserPath,
+  replaceBrowserPath,
+} from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
 import { normalizeVfsPath } from "~/core/vfs/path";
 import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
@@ -198,11 +204,32 @@ const disposeDocumentChangedListener = kernel.events.on("app.document.changed", 
   windowManager.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
 });
 
+const disposeUrlChangedListener = kernel.events.on("app.url.changed", (payload) => {
+  windowManager.setBrowserPath(
+    payload.handleId,
+    payload.manifestId,
+    payload.path === null ? null : normalizeAppBrowserPath(payload.path),
+  );
+});
+
 const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
   windowManager.removeByHandleId(handleId);
 });
 
 type DesktopWindowRecord = (typeof windowManager.windows)[number];
+
+const focusedBrowserPath = computed(() => {
+  const focusedWindow = windowManager.windows.find((record) => record.focused && !record.minimized);
+  if (focusedWindow === undefined) {
+    return HOME_BROWSER_PATH;
+  }
+
+  return focusedWindow.browserPath ?? appFallbackBrowserPath(focusedWindow.manifestId);
+});
+
+watch(focusedBrowserPath, (path) => {
+  replaceBrowserPath(path);
+});
 
 function shouldMaximizeLaunch(manifestId: string, source: AppLaunchSource): boolean {
   return manifestId === "blog" && source === "deeplink";
@@ -692,6 +719,7 @@ onBeforeUnmount(() => {
   disposeBlogPostOpenListener();
   disposePdfViewerOpenListener();
   disposeDocumentChangedListener();
+  disposeUrlChangedListener();
   disposeKilledListener();
   for (const dispose of disposeWindowCommands) {
     dispose();

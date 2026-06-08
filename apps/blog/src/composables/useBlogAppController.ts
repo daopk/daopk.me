@@ -6,7 +6,11 @@ import type { AppChromeBackAction, AppContext, Kernel } from "@daopk/sdk";
 
 import type { BlogIndexBindings, BlogIndexPost } from "./useBlogIndex";
 import type { BlogPostBindings } from "./useBlogPost";
-import { replaceBlogIndexPath, replaceBlogPostPath } from "../utils/blogBrowserPath";
+import {
+  blogPostBrowserPath,
+  replaceBlogIndexPath,
+  replaceBlogPostPath,
+} from "../utils/blogBrowserPath";
 import {
   anchorFromClick,
   blogContentLinkActionFromHref,
@@ -100,6 +104,7 @@ export function useBlogAppController({
   });
 
   emitDocumentPath(currentPostPath.value);
+  emitBrowserPath(initialSlug === null ? "/blog" : blogPostBrowserPath(initialSlug));
 
   onUnmounted(() => {
     stopOpenRequests();
@@ -110,6 +115,7 @@ export function useBlogAppController({
     view.value = "index";
     currentPostPath.value = null;
     emitDocumentPath(null);
+    emitBrowserPath("/blog");
     replaceBlogIndexPath();
   }
 
@@ -117,6 +123,7 @@ export function useBlogAppController({
     view.value = "post";
     currentPostPath.value = documentPathFromPostArgs(args);
     emitDocumentPath(currentPostPath.value);
+    emitBrowserPath(blogPostBrowserPath(args.slug));
     blogPost.open(args);
     replaceBlogPostPath(args.slug);
   }
@@ -127,6 +134,18 @@ export function useBlogAppController({
     }
 
     kernel.events.emit("app.document.changed", {
+      manifestId: appContext.manifestId,
+      handleId: appContext.handleId,
+      path,
+    });
+  }
+
+  function emitBrowserPath(path: string | null): void {
+    if (appContext === null) {
+      return;
+    }
+
+    kernel.events.emit("app.url.changed", {
       manifestId: appContext.manifestId,
       handleId: appContext.handleId,
       path,

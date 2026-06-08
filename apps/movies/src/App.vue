@@ -2,7 +2,7 @@
 import { getCurrentInstance, inject, onMounted, onUnmounted, ref } from "vue";
 
 import { AppFrame } from "@daopk/kit";
-import { AppContextInjectionKey } from "@daopk/sdk";
+import { AppContextInjectionKey, KernelInjectionKey } from "@daopk/sdk";
 
 import DetailView from "./components/DetailView.vue";
 import EpisodeView from "./components/EpisodeView.vue";
@@ -19,6 +19,7 @@ type WatchViewInstance = InstanceType<typeof WatchView> & {
 };
 
 const ctx = inject(AppContextInjectionKey, null);
+const kernel = inject(KernelInjectionKey, null);
 const appInstance = getCurrentInstance();
 const watchViewRef = ref<WatchViewInstance | null>(null);
 const {
@@ -41,7 +42,7 @@ const {
   toolbarSolid,
   updateToolbarSolid,
   view,
-} = useMoviesNavigation({ appContext: ctx });
+} = useMoviesNavigation({ appContext: ctx, kernel });
 
 function moviesAppRoot(): Element | null {
   const root = appInstance?.proxy?.$el;

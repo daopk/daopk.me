@@ -30,6 +30,7 @@ export interface WindowRecord {
   snap?: SnapEdge;
   args?: Readonly<Record<string, unknown>>;
   documentPath?: string | null;
+  browserPath?: string | null;
 }
 
 export interface OpenWindowInput {
@@ -69,6 +70,7 @@ export interface WindowManagerApi {
   setTitle(id: string, title: string): boolean;
   setArgs(id: string, args?: Readonly<Record<string, unknown>>): boolean;
   setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
+  setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean;
   restoreAllForManifest(manifestId: string): boolean;
   focusTopOfManifest(manifestId: string): boolean;
   hasWindowsForManifest(manifestId: string): boolean;
@@ -252,6 +254,17 @@ function setDocumentPath(handleId: string, manifestId: string, path: string | nu
   }
 
   target.documentPath = path;
+  return true;
+}
+
+function setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean {
+  const target = state.windows.find((w) => w.handleId === handleId && w.manifestId === manifestId);
+
+  if (!target) {
+    return false;
+  }
+
+  target.browserPath = path;
   return true;
 }
 
@@ -575,6 +588,7 @@ export function useWindowManager(deps?: WindowManagerDeps): WindowManagerApi {
     setTitle,
     setArgs,
     setDocumentPath,
+    setBrowserPath,
     restoreAllForManifest,
     focusTopOfManifest,
     hasWindowsForManifest,

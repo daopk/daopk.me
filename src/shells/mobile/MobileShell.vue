@@ -12,6 +12,12 @@ import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContra
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { debugWarn } from "~/core/debug";
+import {
+  appFallbackBrowserPath,
+  HOME_BROWSER_PATH,
+  normalizeAppBrowserPath,
+  replaceBrowserPath,
+} from "~/core/routing/appBrowserPaths";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
 import { normalizeVfsPath } from "~/core/vfs/path";
@@ -48,6 +54,14 @@ const disposeDocumentChangedListener = kernel.events.on("app.document.changed", 
   nav.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
 });
 
+const disposeUrlChangedListener = kernel.events.on("app.url.changed", (payload) => {
+  nav.setBrowserPath(
+    payload.handleId,
+    payload.manifestId,
+    payload.path === null ? null : normalizeAppBrowserPath(payload.path),
+  );
+});
+
 const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
   nav.removeByHandleId(handleId);
 });
@@ -57,6 +71,15 @@ const showSwitcher = ref(false);
 const switcherActive = computed(() => showSwitcher.value && nav.depth.value > 0);
 
 const isHome = computed(() => nav.foreground.value === null);
+
+const activeBrowserPath = computed(() => {
+  const frame = nav.currentFrame.value;
+  if (frame === null) {
+    return HOME_BROWSER_PATH;
+  }
+
+  return frame.browserPath ?? appFallbackBrowserPath(frame.manifestId);
+});
 
 type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
   scrollEl: HTMLElement | null;
@@ -94,6 +117,7 @@ onBeforeUnmount(() => {
   disposeBlogPostOpenListener();
   disposePdfViewerOpenListener();
   disposeDocumentChangedListener();
+  disposeUrlChangedListener();
   disposeKilledListener();
   if (typeof window === "undefined") {
     return;
@@ -120,6 +144,10 @@ watch(
     }
   },
 );
+
+watch(activeBrowserPath, (path) => {
+  replaceBrowserPath(path);
+});
 
 const lastLaunchedManifestId = ref<string | null>(null);
 

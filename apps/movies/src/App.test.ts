@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
+  KernelInjectionKey,
   type AppChromeController,
+  type AppContext,
+  type Kernel,
 } from "@daopk/sdk";
 
 import type {
@@ -476,6 +479,40 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("emits app URL changes for the initial home view and detail navigation", async () => {
+    const emit = vi.fn();
+    const kernel = { events: { emit } } as unknown as Kernel;
+    const appContext: AppContext = Object.freeze({
+      manifestId: "movies",
+      handleId: "h-movies-test",
+      args: Object.freeze({}),
+    });
+    const wrapper = mount(App, {
+      global: {
+        provide: {
+          [AppContextInjectionKey as symbol]: appContext,
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+
+    expect(emit).toHaveBeenCalledWith("app.url.changed", {
+      manifestId: "movies",
+      handleId: "h-movies-test",
+      path: "/apps/movies",
+    });
+
+    await wrapper.get(".movies-home__hero-title-button").trigger("click");
+    await settle();
+
+    expect(emit).toHaveBeenCalledWith("app.url.changed", {
+      manifestId: "movies",
+      handleId: "h-movies-test",
+      path: "/movie/550-fight-club",
+    });
   });
 
   it("activates clicked desktop featured cards in the hero slider", async () => {
@@ -1400,7 +1437,7 @@ describe("Movies app", () => {
 
     expect(fetchMovieDetail).not.toHaveBeenCalled();
     expect(wrapper.find(".movies-home").exists()).toBe(true);
-    expect(window.location.pathname).toBe("/legacy/kieu-so");
+    expect(window.location.pathname).toBe("/apps/movies");
   });
 
   it("shows home for invalid public media routes", async () => {
@@ -1411,7 +1448,7 @@ describe("Movies app", () => {
     expect(fetchMovieDetail).not.toHaveBeenCalled();
     expect(fetchMovieSeason).not.toHaveBeenCalled();
     expect(wrapper.find(".movies-home").exists()).toBe(true);
-    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/01");
+    expect(window.location.pathname).toBe("/apps/movies");
   });
 
   it("accepts TMDB launch args instead of movieSlug", async () => {

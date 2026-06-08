@@ -20,10 +20,15 @@ export function replaceBlogIndexPath(): void {
   replaceBrowserPath("/blog");
 }
 
+export function blogPostBrowserPath(slug: string): string | null {
+  return isBlogPostSlug(slug) ? `/blog/${slug}` : null;
+}
+
 export function replaceBlogPostPath(slug: string): void {
-  if (!isBlogPostSlug(slug)) {
+  const path = blogPostBrowserPath(slug);
+  if (path === null) {
     return;
   }
 
-  replaceBrowserPath(`/blog/${slug}`);
+  replaceBrowserPath(path);
 }

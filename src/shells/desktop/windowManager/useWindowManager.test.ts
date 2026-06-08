@@ -94,6 +94,19 @@ describe("useWindowManager", () => {
     expect(wm.windows[0]!.documentPath).toBeNull();
   });
 
+  it("tracks a live browser path by manifest and handle id", () => {
+    const wm = useWindowManager({ killProcess: vi.fn() });
+
+    wm.open({ manifestId: "blog", handleId: "h-blog", title: "Blog" });
+
+    expect(wm.setBrowserPath("h-blog", "blog", "/blog/a")).toBe(true);
+    expect(wm.windows[0]!.browserPath).toBe("/blog/a");
+    expect(wm.setBrowserPath("h-blog", "notes", "/notes/a")).toBe(false);
+    expect(wm.windows[0]!.browserPath).toBe("/blog/a");
+    expect(wm.setBrowserPath("h-blog", "blog", null)).toBe(true);
+    expect(wm.windows[0]!.browserPath).toBeNull();
+  });
+
   it("updates a window title by id and ignores unknown windows", () => {
     const wm = useWindowManager({ killProcess: vi.fn() });
 
