@@ -13,11 +13,13 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "embla-carousel-vue": "^8.6.0",
     "hls.js": "^1.6.16"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",
+    "embla-carousel": "^8.6.0",
     "sass-embedded": "^1.100.0",
     "typescript": "~6.0.3",
     "vite": "^8.0.16",

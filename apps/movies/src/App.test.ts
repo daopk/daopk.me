@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -377,6 +377,12 @@ function menuItem(label: string): Element {
   return item;
 }
 
+function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
+  return wrapper
+    .get(".movies-home__hero-loop .movies-home__hero-slide--active .movies-home__hero-card")
+    .attributes("aria-label");
+}
+
 describe("Movies app", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -405,16 +411,41 @@ describe("Movies app", () => {
     localStorage.clear();
   });
 
-  it("renders Home with a mobile hero slider and grouped TMDB discovery rows", async () => {
+  it("renders Home with desktop and mobile hero lists plus grouped TMDB discovery rows", async () => {
     const wrapper = mount(App);
     await settle();
 
     expect(wrapper.find(".movies-home__hero-backdrop").exists()).toBe(true);
     expect(wrapper.find(".movies-home__hero-edge").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-desktop").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-list").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-loop").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-loop .movies-home__hero-track").exists()).toBe(true);
     expect(wrapper.find(".movies-home__hero-slider").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-slider .movies-home__hero-track").exists()).toBe(true);
+    expect(wrapper.get(".movies-home__hero-loop").attributes()).toMatchObject({
+      "aria-roledescription": "carousel",
+      tabindex: "0",
+    });
+    expect(wrapper.get(".movies-home__hero-slider").attributes()).toMatchObject({
+      "aria-roledescription": "carousel",
+      tabindex: "0",
+    });
     expect(wrapper.find(".movies-home__hero-slide--active").exists()).toBe(true);
-    expect(wrapper.find(".movies-home__hero-rating").text()).toBe("TMDB 8.4");
-    expect(wrapper.find(".movies-home__hero-actions").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-featured-card").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-showcase").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-rating").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-chip").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-card-title").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__hero-stepper-count").exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Previous featured title"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Next featured title"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="Open Fight Club"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-title-button").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Trending this week");
+    expect(wrapper.find(".movies-home__hero-actions").exists()).toBe(true);
+    expect(wrapper.find(".movies-home__hero-details").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Details");
     expect(wrapper.find(".movies-home__hero-dots").exists()).toBe(false);
     expect(wrapper.find(".movies-home__continue").exists()).toBe(false);
     expect(wrapper.text()).toContain("Trending");
@@ -445,6 +476,199 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("activates clicked desktop featured cards in the hero slider", async () => {
+    const scrollTo = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+    const heroItems = Array.from({ length: 6 }, (_, index) =>
+      movie({
+        id: `movie-${index + 1}`,
+        name: `Hero ${index + 1}`,
+        tmdbId: 550 + index,
+      }),
+    );
+    vi.mocked(fetchMoviesList).mockImplementation(async (query) =>
+      list(query.kind === "trending-movie" && query.limit === 6 ? heroItems : [movie()]),
+    );
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+    expect(wrapper.find(".movies-home__hero-stepper-count").exists()).toBe(false);
+
+    await wrapper.get('[aria-label="Activate Hero 2"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 2");
+
+    await wrapper.get('[aria-label="Activate Hero 6"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 6");
+
+    requestAnimationFrame.mockRestore();
+  });
+
+  it("changes the active featured title with keyboard navigation", async () => {
+    const scrollTo = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+    const heroItems = Array.from({ length: 6 }, (_, index) =>
+      movie({
+        id: `movie-${index + 1}`,
+        name: `Hero ${index + 1}`,
+        tmdbId: 550 + index,
+      }),
+    );
+    vi.mocked(fetchMoviesList).mockImplementation(async (query) =>
+      list(query.kind === "trending-movie" && query.limit === 6 ? heroItems : [movie()]),
+    );
+
+    const wrapper = mount(App);
+    await settle();
+
+    const loop = wrapper.get(".movies-home__hero-loop");
+    const slider = wrapper.get(".movies-home__hero-slider");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    await loop.trigger("keydown", { key: "ArrowRight" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 2");
+
+    await loop.trigger("keydown", { key: "ArrowLeft" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    await loop.trigger("keydown", { key: "End" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 6");
+
+    await loop.trigger("keydown", { key: "Home" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    await loop.trigger("keydown", { key: "ArrowLeft" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 6");
+
+    await slider.trigger("keydown", { key: "ArrowRight" });
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    requestAnimationFrame.mockRestore();
+  });
+
+  it("opens Detail from the desktop featured title", async () => {
+    const scrollTo = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper.get(".movies-home__hero-title-button").trigger("click");
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+
+    requestAnimationFrame.mockRestore();
+  });
+
+  it("opens Detail when clicking the active desktop featured card", async () => {
+    const scrollTo = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+
+    const wrapper = mount(App);
+    await settle();
+
+    const activeCard = wrapper.get(
+      ".movies-home__hero-loop .movies-home__hero-slide--active button",
+    );
+    await activeCard.trigger("pointerdown", { clientX: 320, clientY: 100, pointerId: 1 });
+    await activeCard.trigger("pointerup", { clientX: 320, clientY: 100, pointerId: 1 });
+    await wrapper
+      .get(".movies-home__hero-loop .movies-home__hero-slide--active button")
+      .trigger("click");
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+
+    requestAnimationFrame.mockRestore();
+  });
+
+  it("supports wrapped activation on the desktop featured slider", async () => {
+    const scrollTo = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(0);
+        return 1;
+      });
+    Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+      configurable: true,
+      value: scrollTo,
+    });
+    const heroItems = Array.from({ length: 6 }, (_, index) =>
+      movie({
+        id: `movie-${index + 1}`,
+        name: `Hero ${index + 1}`,
+        tmdbId: 550 + index,
+      }),
+    );
+    vi.mocked(fetchMoviesList).mockImplementation(async (query) =>
+      list(query.kind === "trending-movie" && query.limit === 6 ? heroItems : [movie()]),
+    );
+
+    const wrapper = mount(App);
+    await settle();
+
+    const loop = wrapper.get(".movies-home__hero-loop");
+    expect(loop.findAll(".movies-home__hero-slide")).toHaveLength(6);
+    expect(loop.find(".movies-home__hero-track").exists()).toBe(true);
+
+    await wrapper.get('[aria-label="Activate Hero 6"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 6");
+
+    await wrapper.get('[aria-label="Activate Hero 1"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    await wrapper.get('[aria-label="Activate Hero 2"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 2");
+
+    await wrapper.get('[aria-label="Activate Hero 1"]').trigger("click");
+    expect(activeHeroLoopLabel(wrapper)).toBe("Open Hero 1");
+
+    requestAnimationFrame.mockRestore();
   });
 
   it("renders Continue Watching with one card per movie or TV series newest first", async () => {
