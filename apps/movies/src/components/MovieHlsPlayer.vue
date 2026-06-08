@@ -2058,10 +2058,6 @@ function speedLabel(speed: number): string {
 
 .movies-hls-player__control-row {
   align-items: center;
-  backdrop-filter: blur(18px);
-  background: rgb(8 9 13 / 52%);
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 8px;
   display: grid;
   gap: var(--space-xs);
   grid-auto-columns: auto;
