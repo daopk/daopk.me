@@ -1,12 +1,6 @@
 import type { Component } from "vue";
 
-import {
-  BlogAppIcon,
-  EditorAppIcon,
-  NotesAppIcon,
-  PdfViewerAppIcon,
-  SlidesAppIcon,
-} from "~/icons/fluentColor";
+import { BlogAppIcon, EditorAppIcon, NotesAppIcon, PdfViewerAppIcon } from "~/icons/fluentColor";
 
 import type { FinderOpenSuggestion } from "./openSuggestions";
 
@@ -20,7 +14,5 @@ export function openSuggestionIcon(suggestion: FinderOpenSuggestion): Component 
       return NotesAppIcon;
     case "pdf-viewer":
       return PdfViewerAppIcon;
-    case "slides":
-      return SlidesAppIcon;
   }
 }

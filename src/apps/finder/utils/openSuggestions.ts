@@ -10,9 +10,8 @@ import {
 } from "@daopk/sdk";
 
 import { BLOG_POSTS_ROOT, isBlogPostSlug } from "~/core/routing/blogPaths";
-import { isSlideDeckPath } from "~/core/routing/slidePaths";
 
-export type FinderOpenSuggestionId = "blog" | "editor" | "notes" | "pdf-viewer" | "slides";
+export type FinderOpenSuggestionId = "blog" | "editor" | "notes" | "pdf-viewer";
 
 export interface FinderOpenSuggestion {
   readonly id: FinderOpenSuggestionId;
@@ -27,17 +26,6 @@ export function openSuggestionsForEntry(entry: VfsDirEntry): readonly FinderOpen
   }
 
   const path = entry.path;
-
-  if (isSlideDeckPath(path)) {
-    return [
-      {
-        id: "slides",
-        label: "Open in Slides",
-        manifestId: "slides",
-        args: { path },
-      },
-    ];
-  }
 
   if (detectVfsFileType(entry) === "pdf") {
     return [

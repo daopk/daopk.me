@@ -28,7 +28,6 @@ export const HtmlInCanvasAppIcon = createFluentIcon("code-block-32", "FluentHtml
 export const NotesAppIcon = createFluentIcon("notebook-32", "FluentNotesAppIcon");
 export const PhotosAppIcon = createFluentIcon("image-24", "FluentPhotosAppIcon");
 export const PdfViewerAppIcon = createFluentIcon("document-32", "FluentPdfViewerAppIcon");
-export const SlidesAppIcon = createFluentIcon("document-32", "FluentSlidesAppIcon");
 export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminalAppIcon");
 export const SettingsAppIcon = createFluentIcon("settings-32", "FluentSettingsAppIcon");
 export const TemplateAppIcon = createFluentIcon("apps-32", "FluentTemplateAppIcon");
@@ -98,7 +97,6 @@ export const fluentColorIconComponents = {
   NotesAppIcon,
   PhotosAppIcon,
   PdfViewerAppIcon,
-  SlidesAppIcon,
   MoviesAppIcon,
   YoutubePlayerAppIcon,
   TerminalAppIcon,

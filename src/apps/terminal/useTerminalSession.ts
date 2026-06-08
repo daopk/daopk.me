@@ -35,7 +35,6 @@ const BLOCKED_TERMINAL_COMMAND_IDS = new Set([
   "finder:open",
   "notes:open",
   "pdf-viewer:open",
-  "slides:open",
 ]);
 
 function isBlockedTerminalCommand(id: string): boolean {

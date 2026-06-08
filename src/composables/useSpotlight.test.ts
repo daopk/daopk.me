@@ -434,43 +434,6 @@ describe("useSpotlight() composable", () => {
       unmount();
     });
 
-    it("opens Slidev deck VFS hits directly in Slides", async () => {
-      const fake = makeFakeKernel();
-      const { bindings, unmount } = harness(fake.kernel);
-
-      bindings.openSpotlight();
-      bindings.hits.value = [
-        {
-          kind: "vfs",
-          id: "/home/slides/demo/slides.md",
-          title: "slides.md",
-          hint: "/home/slides/demo/slides.md",
-          score: 1,
-          vfs: {
-            path: "/home/slides/demo/slides.md",
-            entryKind: "file",
-            mimeType: "text/markdown",
-          },
-        },
-      ];
-
-      await bindings.dispatch("vfs", "/home/slides/demo/slides.md");
-
-      expect(fake.emitSpy).toHaveBeenCalledWith("app.launch.requested", {
-        manifestId: "slides",
-        source: "spotlight",
-        args: { path: "/home/slides/demo/slides.md" },
-      });
-      expect(fake.emitSpy).toHaveBeenCalledWith("slides.open.requested", {
-        source: "spotlight",
-        path: "/home/slides/demo/slides.md",
-      });
-      expect(fake.emitSpy).not.toHaveBeenCalledWith("finder.reveal.requested", expect.anything());
-      expect(bindings.recents.value).toEqual([]);
-
-      unmount();
-    });
-
     it("dedupes recents: re-dispatching same (kind,id) promotes to head", async () => {
       const fake = makeFakeKernel();
       const { bindings, unmount } = harness(fake.kernel);

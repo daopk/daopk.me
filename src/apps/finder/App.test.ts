@@ -511,35 +511,6 @@ describe("Finder App.vue", () => {
     wrapper.unmount();
   });
 
-  it("opens a Slidev deck in Slides from its context menu", async () => {
-    const kernel = makeKernel({
-      "/home/slides/demo": [
-        entry("/home/slides/demo/slides.md", "file", { mimeType: "text/markdown" }),
-      ],
-    });
-    const wrapper = mountFinder(kernel, makeContext({ path: "/home/slides/demo" }));
-
-    await flushPromises();
-    dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
-    const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in Slides");
-    expect(openItem).toBeDefined();
-    openItem!.click();
-    await flushReka();
-
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "slides",
-      source: "api",
-      args: { path: "/home/slides/demo/slides.md" },
-    });
-    expect(kernel.events.emit).toHaveBeenCalledWith("slides.open.requested", {
-      source: "api",
-      path: "/home/slides/demo/slides.md",
-    });
-
-    wrapper.unmount();
-  });
-
   it("opens a PDF file in PDF Viewer from its context menu", async () => {
     const kernel = makeKernel({
       "/": [entry("/manual.pdf", "file", { mimeType: "application/pdf" })],
@@ -633,31 +604,6 @@ describe("Finder App.vue", () => {
         .mocked(kernel.events.emit)
         .mock.calls.filter(([channel]) => channel === "editor.open.requested"),
     ).toHaveLength(2);
-
-    wrapper.unmount();
-  });
-
-  it("opens Slidev decks from keyboard and double-click gestures", async () => {
-    const kernel = makeKernel({
-      "/home/slides/demo": [
-        entry("/home/slides/demo/slides.md", "file", { mimeType: "text/markdown" }),
-      ],
-    });
-    const wrapper = mountFinder(kernel, makeContext({ path: "/home/slides/demo" }));
-
-    await flushPromises();
-    await wrapper.find(".finder__entries").trigger("keydown", { key: "Enter" });
-    await wrapper.find(".finder__entry").trigger("dblclick");
-
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "slides",
-      source: "api",
-      args: { path: "/home/slides/demo/slides.md" },
-    });
-    expect(kernel.events.emit).toHaveBeenCalledWith("slides.open.requested", {
-      source: "api",
-      path: "/home/slides/demo/slides.md",
-    });
 
     wrapper.unmount();
   });

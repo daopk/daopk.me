@@ -149,15 +149,6 @@ export function buildBuiltinCommands(kernel: Kernel): readonly CommandManifest[]
       },
     },
     {
-      id: "slides:open",
-      title: "Open Slides",
-      scope: "global",
-      keywords: ["slides", "slidev", "deck", "presentation", "markdown", "vfs"],
-      run(ctx) {
-        kernel.events.emit("app.launch.requested", { manifestId: "slides", source: ctx.source });
-      },
-    },
-    {
       id: "pdf-viewer:open",
       title: "Open PDF Viewer",
       scope: "global",

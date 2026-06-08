@@ -10,7 +10,6 @@ import {
   NotesAppIcon,
   PdfViewerAppIcon,
   PhotosAppIcon,
-  SlidesAppIcon,
   YoutubePlayerAppIcon,
 } from "~/icons/fluentColor";
 
@@ -56,7 +55,7 @@ function pdfPreviewMatch(input: AppPreviewInput): AppPreviewMatch | null {
  *  - Wave 1 (done): `notes` — the pilot that proved the runtime contract, lib
  *    build, catalog, loader, R2/Worker path, per-app CI, and offline caching.
  *  - Wave 2 (incremental): the satellite apps (`blog`, `calendar`, `clock`,
- *    `editor`, `photos`, `pdf-viewer`, `slides`, `browser`). Each migrates the
+ *    `editor`, `photos`, `pdf-viewer`, `browser`). Each migrates the
  *    same mechanical way — move `src/apps/<id>` to an `apps/<id>` package
  *    (vite lib build, `@daopk/*` external), add a descriptor below, drop its
  *    `kernel.apps.register(...)` from `src/main.ts`, and let CI publish it.
@@ -285,21 +284,6 @@ export const FIRST_PARTY_APPS: readonly FirstPartyAppDescriptor[] = [
         exportName: "LunarDateWidget",
       },
     ],
-  },
-  {
-    id: "slides",
-    name: "Slides",
-    version: "1.0.0",
-    icon: SlidesAppIcon,
-    category: "productivity",
-    singleton: true,
-    // Desktop-only: the Slidev preview runs in a WebContainer, which needs a
-    // cross-origin-isolated context (SharedArrayBuffer) — unavailable in the
-    // mobile shell's embedded surfaces.
-    supportedShells: ["desktop"],
-    permissions: ["vfs.read", "vfs.write", "network.fetch"],
-    defaultWindow: { width: 1120, height: 720, centered: true },
-    keywords: ["slides", "slidev", "deck", "presentation", "markdown", "vfs"],
   },
 ];
 

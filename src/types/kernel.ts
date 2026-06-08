@@ -124,15 +124,6 @@ declare global {
       source: "dock" | "menu" | "shortcut" | "spotlight" | "terminal" | "api";
       args?: Readonly<Record<string, unknown>>;
     };
-    /**
-     * Requests that the singleton Slides app focus or switch to a deck without
-     * relying on relaunch args, which singleton launches intentionally drop.
-     */
-    "slides.open.requested": {
-      source: CommandSource;
-      path?: string;
-      slug?: string;
-    };
     "command.registered": { id: string };
     "command.unregistered": { id: string };
     "app.registered": { id: string };

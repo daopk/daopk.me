@@ -5,7 +5,6 @@
     "node_modules/**",
     "coverage/**",
     "pnpm-lock.yaml",
-    "apps/slides/src/runtime-pnpm-lock.yaml",
     "*.log",
     "\u0070\u006c\u0061\u006e\u0073\u002e\u006d\u0064",
     "\u0077\u006f\u0072\u006b\u0069\u006e\u0067\u002e\u006d\u0064",

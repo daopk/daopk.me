@@ -9,9 +9,7 @@ import {
   FinderImageFileIcon,
   FinderPdfFileIcon,
   FinderTextFileIcon,
-  SlidesAppIcon,
 } from "~/icons/fluentColor";
-import { isSlideDeckPath } from "~/core/routing/slidePaths";
 
 import { detectPreviewType } from "../composables/useFinderPreview";
 
@@ -28,10 +26,6 @@ export function entryIcon(entry: VfsDirEntry): Component {
   if (entry.kind === "directory") {
     return FinderFolderIcon;
   }
-  if (isSlideDeckEntry(entry)) {
-    return SlidesAppIcon;
-  }
-
   const previewType = detectPreviewType(entry);
   if (previewType === "markdown" || previewType === "text") {
     return FinderTextFileIcon;
@@ -53,10 +47,6 @@ export function entryKindLabel(entry: VfsDirEntry): string {
   if (entry.kind === "symlink") {
     return "Link";
   }
-  if (isSlideDeckEntry(entry)) {
-    return "Slidev Deck";
-  }
-
   const previewType = detectPreviewType(entry);
   if (previewType === "markdown") {
     return "Markdown";
@@ -70,8 +60,4 @@ export function entryKindLabel(entry: VfsDirEntry): string {
 
 export function formatModified(timestamp: number): string {
   return formatDateTime(timestamp);
-}
-
-function isSlideDeckEntry(entry: VfsDirEntry | null): entry is VfsDirEntry {
-  return entry?.kind === "file" && isSlideDeckPath(entry.path);
 }

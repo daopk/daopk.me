@@ -101,24 +101,14 @@ describe("useFinderOpenActions", () => {
     });
   });
 
-  it("opens PDFs and Slidev decks through their specialized events", () => {
+  it("opens PDFs through their specialized event", () => {
     const { actions, events } = makeActions();
 
     actions.openEntry(entry("/home/docs/report.pdf", "file", { mimeType: "application/pdf" }));
-    actions.openEntry(entry("/home/slides/demo/slides.md", "file", { mimeType: "text/markdown" }));
 
     expect(events.emit).toHaveBeenCalledWith("pdf-viewer.open.requested", {
       source: "api",
       path: "/home/docs/report.pdf",
-    });
-    expect(events.emit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "slides",
-      source: "api",
-      args: { path: "/home/slides/demo/slides.md" },
-    });
-    expect(events.emit).toHaveBeenCalledWith("slides.open.requested", {
-      source: "api",
-      path: "/home/slides/demo/slides.md",
     });
   });
 

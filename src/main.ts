@@ -30,8 +30,8 @@ const kernel = bootstrapKernel();
 
 kernel.apps.register(finderManifest);
 
-// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, `blog`, `clock`,
-// `calendar`, and `slides` are first-party apps published independently of the
+// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, `blog`, `clock`, and
+// `calendar` are first-party apps published independently of the
 // shell; they are registered by `firstPartyAppsPhase` (from the catalog in
 // prod, from their workspace packages in dev) rather than bundled here.
 

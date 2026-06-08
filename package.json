@@ -60,7 +60,6 @@
     "@daopk-app/notes": "workspace:*",
     "@daopk-app/pdf-viewer": "workspace:*",
     "@daopk-app/photos": "workspace:*",
-    "@daopk-app/slides": "workspace:*",
     "@daopk-app/youtube-player": "workspace:*",
     "@iconify-json/fluent-color": "^1.2.21",
     "@iconify/utils": "^3.1.3",

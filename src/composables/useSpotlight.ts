@@ -8,7 +8,6 @@ import {
 } from "~/core/spotlight/SpotlightRecentsStore";
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { dirname, normalizeVfsPath } from "~/core/vfs/path";
-import { isSlideDeckPath } from "~/core/routing/slidePaths";
 import type { SearchHit, SearchKind } from "~/types/search";
 
 const QUERY_DEBOUNCE_MS = 80;
@@ -135,19 +134,6 @@ export function useSpotlight(): UseSpotlightBindings {
 
   function dispatchVfs(id: string, metadata: SearchHit["vfs"]): void {
     const path = normalizeVfsPath(metadata?.path ?? id);
-    if (metadata?.entryKind === "file" && isSlideDeckPath(path)) {
-      kernel.events.emit("app.launch.requested", {
-        manifestId: "slides",
-        source: "spotlight",
-        args: { path },
-      });
-      kernel.events.emit("slides.open.requested", {
-        source: "spotlight",
-        path,
-      });
-      return;
-    }
-
     if (
       metadata?.entryKind === "file" &&
       detectVfsFileType(vfsFileTypeInputFromPath(path, metadata.mimeType)) === "pdf"

@@ -164,7 +164,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
   it("alerts for desktop-only apps without launching them", async () => {
     currentKernel = makeKernel([
-      manifest({ id: "slides", name: "Slides", supportedShells: ["desktop"] }),
+      manifest({ id: "desktop-tool", name: "Desktop Tool", supportedShells: ["desktop"] }),
     ]);
     const previousAlert = window.alert;
     const alertSpy = vi.fn();
@@ -182,7 +182,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
       expect(launchCount).toBe(0);
       expect(alertSpy).toHaveBeenCalledWith(
-        "Slides is not supported on mobile. Open it from the desktop shell.",
+        "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
       );
       expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
       expect(wrapper.find(".unsupported-app-view").exists()).toBe(false);

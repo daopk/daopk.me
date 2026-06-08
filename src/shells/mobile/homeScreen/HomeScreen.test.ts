@@ -203,7 +203,7 @@ describe("HomeScreen multi-page (M1.4)", () => {
 
   it("keeps desktop-only manifests launchable on the mobile home screen", async () => {
     currentKernel = makeKernel([
-      manifest({ id: "slides", name: "Slides", supportedShells: ["desktop"] }),
+      manifest({ id: "desktop-tool", name: "Desktop Tool", supportedShells: ["desktop"] }),
     ]);
 
     const wrapper = mount(HomeScreen, {
@@ -211,12 +211,12 @@ describe("HomeScreen multi-page (M1.4)", () => {
     });
 
     const icon = wrapper.findComponent(HomeScreenIcon);
-    expect(icon.props("manifest").id).toBe("slides");
+    expect(icon.props("manifest").id).toBe("desktop-tool");
     expect(wrapper.find("button.home-icon").attributes("disabled")).toBeUndefined();
 
     await wrapper.find("button.home-icon").trigger("click");
 
-    expect(wrapper.emitted("launch")?.[0]).toEqual(["slides"]);
+    expect(wrapper.emitted("launch")?.[0]).toEqual(["desktop-tool"]);
   });
 
   it("mounts MobileWidgetsPage on page 2 (M1.4 commit B)", () => {

@@ -18,7 +18,6 @@ export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
   "pdf-viewer",
   "photos",
   "settings",
-  "slides",
   "terminal",
   "trash",
   "youtube-player",

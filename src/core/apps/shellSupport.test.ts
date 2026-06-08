@@ -17,7 +17,7 @@ describe("app shell support", () => {
 
   it("describes a desktop-only app opened from mobile", () => {
     expect(
-      appUnsupportedShellMessage({ name: "Slides", supportedShells: ["desktop"] }, "mobile"),
-    ).toBe("Slides is not supported on mobile. Open it from the desktop shell.");
+      appUnsupportedShellMessage({ name: "Desktop Tool", supportedShells: ["desktop"] }, "mobile"),
+    ).toBe("Desktop Tool is not supported on mobile. Open it from the desktop shell.");
   });
 });

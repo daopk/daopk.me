@@ -1,7 +1,5 @@
 import { isEditableVfsTextFile, type Kernel, type VfsDirEntry } from "@daopk/sdk";
 
-import { isSlideDeckPath } from "~/core/routing/slidePaths";
-
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../utils/openSuggestions";
 import type { FinderBindings } from "./useFinder";
 
@@ -51,10 +49,6 @@ export function useFinderOpenActions({
     }
     if (suggestion.id === "pdf-viewer") {
       openPdf(entry);
-      return;
-    }
-    if (suggestion.id === "slides") {
-      openSlides(entry);
       return;
     }
     if (suggestion.id === "blog") {
@@ -117,22 +111,6 @@ export function useFinderOpenActions({
       source: "api",
       path: suggestion.args.path,
       slug: suggestion.args.slug,
-    });
-  }
-
-  function openSlides(entry: VfsDirEntry): void {
-    if (entry.kind !== "file" || !isSlideDeckPath(entry.path)) {
-      return;
-    }
-
-    events.emit("app.launch.requested", {
-      manifestId: "slides",
-      source: "api",
-      args: { path: entry.path },
-    });
-    events.emit("slides.open.requested", {
-      source: "api",
-      path: entry.path,
     });
   }
 

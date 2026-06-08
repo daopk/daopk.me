@@ -44,7 +44,6 @@ function makeFakeKernel(initialTheme: "light" | "dark" = "light"): FakeKernelHan
         { id: "finder" },
         { id: "notes" },
         { id: "pdf-viewer" },
-        { id: "slides" },
         { id: "settings" },
         { id: "terminal" },
       ],
@@ -102,7 +101,6 @@ describe("builtinCommands — manifest catalog (M2a.2)", () => {
       "browser:open",
       "editor:open",
       "notes:open",
-      "slides:open",
       "pdf-viewer:open",
       "theme:toggle",
       "theme:setLight",
@@ -297,18 +295,6 @@ describe("builtinCommands — run() behavior (M2a.2)", () => {
     });
   });
 
-  it("slides:open emits app.launch.requested for 'slides'", async () => {
-    const handles = makeFakeKernel();
-    const cmd = findCommand(handles.kernel, "slides:open");
-
-    await cmd.run(makeCtx(handles.kernel));
-
-    expect(handles.eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
-      manifestId: "slides",
-      source: "api",
-    });
-  });
-
   it("theme:toggle flips light → dark", async () => {
     const handles = makeFakeKernel("light");
     const cmd = findCommand(handles.kernel, "theme:toggle");
@@ -352,7 +338,7 @@ describe("registerBuiltinCommands — wiring (M2a.2)", () => {
 
     registerBuiltinCommands(handles.kernel);
 
-    expect(handles.commandsRegister).toHaveBeenCalledTimes(16);
+    expect(handles.commandsRegister).toHaveBeenCalledTimes(15);
     const registeredIds = handles.commandsRegister.mock.calls.map(
       ([manifest]) => (manifest as CommandManifest).id,
     );
@@ -368,7 +354,6 @@ describe("registerBuiltinCommands — wiring (M2a.2)", () => {
       "browser:open",
       "editor:open",
       "notes:open",
-      "slides:open",
       "pdf-viewer:open",
       "theme:toggle",
       "theme:setLight",
@@ -411,7 +396,6 @@ describe("kernel built-ins — integration via kernel.commands.list (M2a.2)", ()
     expect(listed).toContain("finder:open");
     expect(listed).toContain("browser:open");
     expect(listed).toContain("editor:open");
-    expect(listed).toContain("slides:open");
     expect(listed).toContain("pdf-viewer:open");
     expect(listed).toContain("theme:toggle");
     expect(listed).toContain("theme:setLight");
@@ -423,7 +407,6 @@ describe("kernel built-ins — integration via kernel.commands.list (M2a.2)", ()
     expect(afterDispose).not.toContain("finder:open");
     expect(afterDispose).not.toContain("browser:open");
     expect(afterDispose).not.toContain("editor:open");
-    expect(afterDispose).not.toContain("slides:open");
     expect(afterDispose).not.toContain("pdf-viewer:open");
     expect(afterDispose).not.toContain("widgets:openGallery");
     expect(afterDispose).not.toContain("system:lock");
