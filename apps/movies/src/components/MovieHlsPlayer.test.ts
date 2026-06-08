@@ -459,6 +459,93 @@ describe("MovieHlsPlayer", () => {
     expect(hlsMock.instances[0]!.attachMedia).toHaveBeenCalledWith(video);
   });
 
+  it("renders HLS ad markers on the seek track", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+
+    const markerPlaylist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXTINF:10,
+content-a.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:5,
+convertv8/overlay.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:10,
+content-b.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:10,
+/v8/18d007379882ef14b73445b93bf6168d/segment_0001.ts
+#EXTINF:10,
+/v8/18d007379882ef14b73445b93bf6168d/segment_0002.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:10,
+content-c.ts
+`;
+
+    type FakePlaylistCallbacks = {
+      readonly onSuccess: (
+        response: { readonly data: string; readonly url: string },
+        stats: object,
+        context: unknown,
+        networkDetails: unknown,
+      ) => void;
+    };
+
+    class FakePlaylistLoader {
+      context: unknown = null;
+      stats = {};
+      abort(): void {}
+      destroy(): void {}
+      load(context: unknown, _config: unknown, callbacks: FakePlaylistCallbacks): void {
+        this.context = context;
+        callbacks.onSuccess(
+          {
+            data: markerPlaylist,
+            url: "https://stream.example.test/level.m3u8",
+          },
+          this.stats,
+          context,
+          null,
+        );
+      }
+    }
+
+    const config = hlsMock.instances[0]!.config as {
+      pLoader: new (config: unknown) => {
+        load: (context: unknown, config: unknown, callbacks: FakePlaylistCallbacks) => void;
+      };
+    };
+    const loader = new config.pLoader({ loader: FakePlaylistLoader });
+    loader.load(
+      {
+        deliveryDirectives: null,
+        id: null,
+        level: 0,
+        levelOrTrack: null,
+        responseType: "text",
+        type: "level",
+        url: "https://stream.example.test/level.m3u8",
+      },
+      {},
+      {
+        onAbort: vi.fn(),
+        onError: vi.fn(),
+        onSuccess: vi.fn(),
+        onTimeout: vi.fn(),
+      },
+    );
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 0, duration: 35 });
+    await settle();
+
+    expect(wrapper.find(".movies-hls-player__ad-markers").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(
+      "--movies-player-ad-markers: linear-gradient",
+    );
+  });
+
   it("prefers hls.js when both native HLS and MediaSource are reported", async () => {
     setMediaSupport({ hlsJs: true, nativeHls: true });
 

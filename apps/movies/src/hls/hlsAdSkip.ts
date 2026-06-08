@@ -10,9 +10,11 @@ import type {
 
 export interface HlsPlaylistSegment {
   readonly durationSeconds: number;
+  readonly endSeconds: number;
   readonly index: number;
   readonly leadingDiscontinuityCount: number;
   readonly lines: readonly string[];
+  readonly startSeconds: number;
   readonly uri: string;
 }
 
@@ -32,17 +34,41 @@ export interface HlsAdReplacementRule {
   shouldSkipGroup?(group: HlsAdReplacementGroup, context: HlsAdSkipContext): boolean;
 }
 
+export type HlsPlaybackAdMarkerKind = "overlay" | "skipped-replacement";
+
+export interface HlsPlaybackAdMarker {
+  readonly durationSeconds: number;
+  readonly kind: HlsPlaybackAdMarkerKind;
+  readonly ruleId: string;
+  readonly segmentCount: number;
+  readonly skippedDurationSeconds?: number;
+  readonly startSeconds: number;
+}
+
+export interface HlsAdMarkerRule {
+  readonly id: string;
+  readonly kind: Exclude<HlsPlaybackAdMarkerKind, "skipped-replacement">;
+  readonly maxDurationSeconds?: number;
+  readonly minDurationSeconds?: number;
+  readonly minSegmentCount?: number;
+  matchesSegment(segment: HlsPlaylistSegment, context: HlsAdSkipContext): boolean;
+  shouldMarkGroup?(group: HlsAdReplacementGroup, context: HlsAdSkipContext): boolean;
+}
+
 export interface HlsAdSkipContext {
   readonly playlistUrl?: string;
 }
 
 export interface HlsAdSkipOptions {
   readonly enabled?: boolean;
+  readonly markerRules?: readonly HlsAdMarkerRule[];
+  readonly onAdMarkers?: (markers: readonly HlsPlaybackAdMarker[]) => void;
   readonly preserveBoundaryDiscontinuity?: boolean;
   readonly replacementRules?: readonly HlsAdReplacementRule[];
 }
 
 export interface HlsAdSkipResult {
+  readonly markers: readonly HlsPlaybackAdMarker[];
   readonly playlist: string;
   readonly removedGroups: readonly HlsAdReplacementGroup[];
 }
@@ -61,6 +87,7 @@ const DEFAULT_MIN_REPLACEMENT_AD_DURATION_SECONDS = 15;
 const DEFAULT_MAX_REPLACEMENT_AD_DURATION_SECONDS = 90;
 const DEFAULT_MIN_REPLACEMENT_AD_SEGMENTS = 2;
 const HASHED_SEGMENT_SEQUENCE_PATH_PATTERN = /^\/v\d+\/[a-f0-9]{16,}\/segment_\d+\.ts$/i;
+const CONVERTED_OVERLAY_SEGMENT_PATH_PATTERN = /(?:^|\/)convertv\d+\/[^/]+\.ts$/i;
 
 export const hashedSegmentSequenceReplacementRule: HlsAdReplacementRule = {
   id: "hashed-segment-sequence-replacement",
@@ -73,8 +100,29 @@ export const hashedSegmentSequenceReplacementRule: HlsAdReplacementRule = {
   minSegmentCount: DEFAULT_MIN_REPLACEMENT_AD_SEGMENTS,
 };
 
-const DEFAULT_HLS_AD_SKIP_OPTIONS: Required<HlsAdSkipOptions> = {
+export const convertedPathOverlayMarkerRule: HlsAdMarkerRule = {
+  id: "converted-path-overlay",
+  kind: "overlay",
+  matchesSegment: (segment, context) => {
+    const pathname = segmentUriPathname(segment.uri, context.playlistUrl);
+    return CONVERTED_OVERLAY_SEGMENT_PATH_PATTERN.test(pathname);
+  },
+  maxDurationSeconds: DEFAULT_MAX_REPLACEMENT_AD_DURATION_SECONDS,
+  minDurationSeconds: 1,
+  minSegmentCount: 1,
+};
+
+type ResolvedHlsAdSkipOptions = Required<
+  Pick<
+    HlsAdSkipOptions,
+    "enabled" | "markerRules" | "preserveBoundaryDiscontinuity" | "replacementRules"
+  >
+> &
+  Pick<HlsAdSkipOptions, "onAdMarkers">;
+
+const DEFAULT_HLS_AD_SKIP_OPTIONS: Omit<ResolvedHlsAdSkipOptions, "onAdMarkers"> = {
   enabled: true,
+  markerRules: [convertedPathOverlayMarkerRule],
   preserveBoundaryDiscontinuity: true,
   replacementRules: [hashedSegmentSequenceReplacementRule],
 };
@@ -85,13 +133,16 @@ export function rewriteHlsPlaylistForAdSkip(
   options: HlsAdSkipOptions = {},
 ): HlsAdSkipResult {
   const resolvedOptions = resolveOptions(options);
-  if (!resolvedOptions.enabled || resolvedOptions.replacementRules.length === 0) {
-    return { playlist, removedGroups: [] };
+  if (
+    !resolvedOptions.enabled ||
+    (resolvedOptions.replacementRules.length === 0 && resolvedOptions.markerRules.length === 0)
+  ) {
+    return { markers: [], playlist, removedGroups: [] };
   }
 
   const parsed = parseHlsPlaylist(playlist);
   if (parsed.segments.length === 0) {
-    return { playlist, removedGroups: [] };
+    return { markers: [], playlist, removedGroups: [] };
   }
 
   const removedGroups = findReplacementGroups(
@@ -100,7 +151,14 @@ export function rewriteHlsPlaylistForAdSkip(
     resolvedOptions.replacementRules,
   );
   if (removedGroups.length === 0) {
-    return { playlist, removedGroups };
+    return {
+      markers: playbackAdMarkers(
+        findMarkerGroups(parsed.segments, context, resolvedOptions.markerRules),
+        [],
+      ),
+      playlist,
+      removedGroups,
+    };
   }
 
   const removedSegmentIndexes = new Set<number>();
@@ -134,6 +192,15 @@ export function rewriteHlsPlaylistForAdSkip(
   }
 
   return {
+    markers: playbackAdMarkers(
+      findMarkerGroups(
+        parsed.segments,
+        context,
+        resolvedOptions.markerRules,
+        removedSegmentIndexes,
+      ),
+      removedGroups,
+    ),
     playlist: `${nextLines.join(parsed.newline)}${parsed.trailingNewline}`,
     removedGroups,
   };
@@ -184,12 +251,9 @@ export function createAdSkippingPlaylistLoader(
       this.loader.load(context, config, {
         ...callbacks,
         onSuccess: (response, stats, loadedContext, networkDetails) => {
-          callbacks.onSuccess(
-            rewritePlaylistLoaderResponse(response, loadedContext, options),
-            stats,
-            loadedContext,
-            networkDetails,
-          );
+          const rewritten = rewritePlaylistLoaderResponse(response, loadedContext, options);
+          options.onAdMarkers?.(rewritten.markers);
+          callbacks.onSuccess(rewritten.response, stats, loadedContext, networkDetails);
         },
       });
     }
@@ -202,9 +266,11 @@ export function createMoviesHlsConfig(options: HlsAdSkipOptions = {}): Partial<H
   };
 }
 
-function resolveOptions(options: HlsAdSkipOptions): Required<HlsAdSkipOptions> {
+function resolveOptions(options: HlsAdSkipOptions): ResolvedHlsAdSkipOptions {
   return {
     enabled: options.enabled ?? DEFAULT_HLS_AD_SKIP_OPTIONS.enabled,
+    markerRules: options.markerRules ?? DEFAULT_HLS_AD_SKIP_OPTIONS.markerRules,
+    onAdMarkers: options.onAdMarkers,
     preserveBoundaryDiscontinuity:
       options.preserveBoundaryDiscontinuity ??
       DEFAULT_HLS_AD_SKIP_OPTIONS.preserveBoundaryDiscontinuity,
@@ -216,9 +282,12 @@ function rewritePlaylistLoaderResponse(
   response: LoaderResponse,
   context: PlaylistLoaderContext,
   options: HlsAdSkipOptions,
-): LoaderResponse {
+): {
+  readonly markers: readonly HlsPlaybackAdMarker[];
+  readonly response: LoaderResponse;
+} {
   if (typeof response.data !== "string") {
-    return response;
+    return { markers: [], response };
   }
 
   const result = rewriteHlsPlaylistForAdSkip(
@@ -230,12 +299,15 @@ function rewritePlaylistLoaderResponse(
   );
 
   if (result.removedGroups.length === 0) {
-    return response;
+    return { markers: result.markers, response };
   }
 
   return {
-    ...response,
-    data: result.playlist,
+    markers: result.markers,
+    response: {
+      ...response,
+      data: result.playlist,
+    },
   };
 }
 
@@ -250,6 +322,7 @@ function parseHlsPlaylist(playlist: string): {
   const lines = playlist.replace(/\r?\n$/, "").split(/\r?\n/);
   const items: HlsPlaylistItem[] = [];
   const segments: HlsPlaylistSegment[] = [];
+  let elapsedSeconds = 0;
   let pendingScopedLines: string[] = [];
   let segmentLines: string[] | null = null;
 
@@ -257,9 +330,10 @@ function parseHlsPlaylist(playlist: string): {
     if (segmentLines !== null) {
       segmentLines.push(line);
       if (isUriLine(line)) {
-        const segment = createSegment(segmentLines, segments.length);
+        const segment = createSegment(segmentLines, segments.length, elapsedSeconds);
         items.push({ kind: "segment", segment });
         segments.push(segment);
+        elapsedSeconds = segment.endSeconds;
         segmentLines = null;
       }
       continue;
@@ -295,13 +369,20 @@ function parseHlsPlaylist(playlist: string): {
   return { items, newline, segments, trailingNewline };
 }
 
-function createSegment(lines: readonly string[], index: number): HlsPlaylistSegment {
+function createSegment(
+  lines: readonly string[],
+  index: number,
+  startSeconds: number,
+): HlsPlaylistSegment {
+  const durationSeconds = extInfDurationSeconds(lines);
   const uri = lines[lines.length - 1] ?? "";
   return {
-    durationSeconds: extInfDurationSeconds(lines),
+    durationSeconds,
+    endSeconds: startSeconds + durationSeconds,
     index,
     leadingDiscontinuityCount: leadingDiscontinuityCount(lines),
     lines,
+    startSeconds,
     uri,
   };
 }
@@ -372,6 +453,44 @@ function findReplacementGroups(
   return groups;
 }
 
+function findMarkerGroups(
+  segments: readonly HlsPlaylistSegment[],
+  context: HlsAdSkipContext,
+  rules: readonly HlsAdMarkerRule[],
+  excludedSegmentIndexes: ReadonlySet<number> = new Set<number>(),
+): readonly (HlsAdReplacementGroup & { readonly kind: HlsPlaybackAdMarkerKind })[] {
+  const groups: (HlsAdReplacementGroup & { readonly kind: HlsPlaybackAdMarkerKind })[] = [];
+  let index = 0;
+
+  while (index < segments.length) {
+    const segment = segments[index]!;
+    const rule = excludedSegmentIndexes.has(segment.index)
+      ? undefined
+      : rules.find((candidate) => candidate.matchesSegment(segment, context));
+    if (rule === undefined) {
+      index += 1;
+      continue;
+    }
+
+    const groupSegments: HlsPlaylistSegment[] = [];
+    while (
+      index < segments.length &&
+      !excludedSegmentIndexes.has(segments[index]!.index) &&
+      rule.matchesSegment(segments[index]!, context)
+    ) {
+      groupSegments.push(segments[index]!);
+      index += 1;
+    }
+
+    const group = createReplacementGroup(rule.id, groupSegments);
+    if (shouldMarkGroup(group, rule, context)) {
+      groups.push({ ...group, kind: rule.kind });
+    }
+  }
+
+  return groups;
+}
+
 function createReplacementGroup(
   ruleId: string,
   segments: readonly HlsPlaylistSegment[],
@@ -402,6 +521,99 @@ function shouldSkipGroup(
   }
 
   return rule.shouldSkipGroup?.(group, context) ?? true;
+}
+
+function shouldMarkGroup(
+  group: HlsAdReplacementGroup,
+  rule: HlsAdMarkerRule,
+  context: HlsAdSkipContext,
+): boolean {
+  const minSegmentCount = rule.minSegmentCount ?? 1;
+  const minDurationSeconds = rule.minDurationSeconds ?? 0;
+  const maxDurationSeconds = rule.maxDurationSeconds ?? Number.POSITIVE_INFINITY;
+
+  if (
+    group.segmentCount < minSegmentCount ||
+    group.durationSeconds < minDurationSeconds ||
+    group.durationSeconds > maxDurationSeconds
+  ) {
+    return false;
+  }
+
+  return rule.shouldMarkGroup?.(group, context) ?? true;
+}
+
+function playbackAdMarkers(
+  markerGroups: readonly (HlsAdReplacementGroup & {
+    readonly kind: HlsPlaybackAdMarkerKind;
+  })[],
+  removedGroups: readonly HlsAdReplacementGroup[],
+): readonly HlsPlaybackAdMarker[] {
+  const markers: HlsPlaybackAdMarker[] = [];
+  const removedGroupsByStartIndex = sortedGroupsByStartIndex(removedGroups);
+  const markerGroupsByStartIndex = sortedGroupsByStartIndex(markerGroups);
+  let removedDurationBefore = 0;
+  let removedGroupIndex = 0;
+
+  for (const group of markerGroupsByStartIndex) {
+    const firstSegment = group.segments[0];
+    if (firstSegment === undefined) {
+      continue;
+    }
+
+    while (
+      removedGroupIndex < removedGroupsByStartIndex.length &&
+      groupStartIndex(removedGroupsByStartIndex[removedGroupIndex]!) < firstSegment.index
+    ) {
+      removedDurationBefore += removedGroupsByStartIndex[removedGroupIndex]!.durationSeconds;
+      removedGroupIndex += 1;
+    }
+
+    markers.push({
+      durationSeconds: group.durationSeconds,
+      kind: group.kind,
+      ruleId: group.ruleId,
+      segmentCount: group.segmentCount,
+      startSeconds: firstSegment.startSeconds - removedDurationBefore,
+    });
+  }
+
+  markers.push(...skippedReplacementMarkers(removedGroupsByStartIndex));
+  return markers.sort((left, right) => left.startSeconds - right.startSeconds);
+}
+
+function skippedReplacementMarkers(
+  removedGroupsByStartIndex: readonly HlsAdReplacementGroup[],
+): readonly HlsPlaybackAdMarker[] {
+  const markers: HlsPlaybackAdMarker[] = [];
+  let removedDurationBefore = 0;
+
+  for (const group of removedGroupsByStartIndex) {
+    const firstSegment = group.segments[0];
+    if (firstSegment === undefined) {
+      continue;
+    }
+
+    markers.push({
+      durationSeconds: 0,
+      kind: "skipped-replacement",
+      ruleId: group.ruleId,
+      segmentCount: group.segmentCount,
+      skippedDurationSeconds: group.durationSeconds,
+      startSeconds: firstSegment.startSeconds - removedDurationBefore,
+    });
+    removedDurationBefore += group.durationSeconds;
+  }
+
+  return markers;
+}
+
+function sortedGroupsByStartIndex<T extends HlsAdReplacementGroup>(groups: readonly T[]): T[] {
+  return [...groups].sort((left, right) => groupStartIndex(left) - groupStartIndex(right));
+}
+
+function groupStartIndex(group: HlsAdReplacementGroup): number {
+  return group.segments[0]?.index ?? Number.MAX_SAFE_INTEGER;
 }
 
 function nextKeptSegmentsAfterRemovedGroups(

@@ -92,6 +92,22 @@ describe("hlsAdSkip", () => {
       ruleId: "hashed-segment-sequence-replacement",
       segmentCount: 6,
     });
+    expect(result.markers).toHaveLength(2);
+    expect(result.markers[0]).toMatchObject({
+      kind: "overlay",
+      ruleId: "converted-path-overlay",
+      segmentCount: 2,
+    });
+    expect(result.markers[0]?.durationSeconds).toBeCloseTo(7.96);
+    expect(result.markers[0]?.startSeconds).toBeCloseTo(5.04);
+    expect(result.markers[1]).toMatchObject({
+      durationSeconds: 0,
+      kind: "skipped-replacement",
+      ruleId: "hashed-segment-sequence-replacement",
+      segmentCount: 6,
+    });
+    expect(result.markers[1]?.skippedDurationSeconds).toBeCloseTo(19.88);
+    expect(result.markers[1]?.startSeconds).toBeCloseTo(20.44);
     expect(result.playlist).toContain("convertv8/EKArvCFM.ts");
     expect(result.playlist).toContain("convertv8/gYVhANwY.ts");
     expect(result.playlist).not.toContain("/v8/18d007379882ef14b73445b93bf6168d/");
@@ -109,6 +125,7 @@ Uhv6Dk26.ts`);
 `;
 
     expect(rewriteHlsPlaylistForAdSkip(playlist).playlist).toBe(playlist);
+    expect(rewriteHlsPlaylistForAdSkip(playlist).markers).toEqual([]);
   });
 
   it("allows replacement segment rules to be customized", () => {
@@ -138,6 +155,16 @@ content-b.ts
     expect(result.removedGroups[0]?.ruleId).toBe("custom-cdn");
     expect(result.playlist).not.toContain("ads/a.ts");
     expect(result.playlist).toContain("content-b.ts");
+    expect(result.markers).toEqual([
+      {
+        durationSeconds: 0,
+        kind: "skipped-replacement",
+        ruleId: "custom-cdn",
+        segmentCount: 2,
+        skippedDurationSeconds: 6,
+        startSeconds: 4,
+      },
+    ]);
   });
 
   it("rewrites playlist loader string responses", () => {
@@ -167,13 +194,15 @@ content-b.ts
       );
     }
 
-    const LoaderClass = createAdSkippingPlaylistLoader();
-    const loader = new LoaderClass({
-      loader: FakeLoader,
-    } as unknown as HlsConfig);
+    const onAdMarkers = vi.fn();
     const onSuccess = vi.fn();
 
-    loader.load(makePlaylistContext(), {} as LoaderConfiguration, {
+    const LoaderClassWithMarkers = createAdSkippingPlaylistLoader({ onAdMarkers });
+    const loaderWithMarkers = new LoaderClassWithMarkers({
+      loader: FakeLoader,
+    } as unknown as HlsConfig);
+
+    loaderWithMarkers.load(makePlaylistContext(), {} as LoaderConfiguration, {
       onAbort: vi.fn(),
       onError: vi.fn(),
       onSuccess,
@@ -183,5 +212,9 @@ content-b.ts
     const response = onSuccess.mock.calls[0]?.[0] as { data: string };
     expect(response.data).not.toContain("/v8/18d007379882ef14b73445b93bf6168d/");
     expect(response.data).toContain("convertv8/EKArvCFM.ts");
+    expect(onAdMarkers).toHaveBeenCalledWith([
+      expect.objectContaining({ kind: "overlay", startSeconds: 5.04 }),
+      expect.objectContaining({ kind: "skipped-replacement", startSeconds: 20.44 }),
+    ]);
   });
 });

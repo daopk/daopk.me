@@ -32,7 +32,7 @@ import {
   isResumableMoviePlaybackTime,
 } from "../moviesPlaybackProgress";
 import type { MoviePlayInfo } from "../moviesApi";
-import { createMoviesHlsConfig } from "../hls/hlsAdSkip";
+import { createMoviesHlsConfig, type HlsPlaybackAdMarker } from "../hls/hlsAdSkip";
 
 interface MovieHlsPlayerProps {
   autoplay?: boolean;
@@ -127,6 +127,7 @@ const seeking = ref(false);
 const seekPosition = ref(0);
 const seekPointerActive = ref(false);
 const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null);
+const playbackAdMarkers = ref<readonly HlsPlaybackAdMarker[]>([]);
 
 let hls: Hls | null = null;
 let hideControlsTimer: number | undefined;
@@ -245,10 +246,17 @@ const showCenterPlay = computed(() => !playing.value && playbackError.value.leng
 const showSpinner = computed(() => waiting.value && playbackError.value.length === 0);
 const controlsHidden = computed(() => !controlsVisible.value && !controlsFocused.value);
 const controlsStyle = computed<Record<string, string>>(() => ({
+  "--movies-player-ad-markers": adMarkersBackground.value,
   "--movies-player-loaded": String(loadedFraction.value),
   "--movies-player-preview-left": `${seekPointerPreview.value?.leftPx ?? SEEK_PREVIEW_THUMB_SIZE_PX / 2}px`,
   "--movies-player-slider-thumb-size": `${SEEK_PREVIEW_THUMB_SIZE_PX}px`,
 }));
+const hasPlaybackAdMarkers = computed(
+  () => hasDuration.value && playbackAdMarkers.value.length > 0,
+);
+const adMarkersBackground = computed(() =>
+  hasDuration.value ? adMarkerTrackBackground(playbackAdMarkers.value, duration.value) : "none",
+);
 const seekPointerPreviewText = computed(() =>
   seekPointerPreview.value === null ? "" : formatTime(seekPointerPreview.value.seconds),
 );
@@ -321,6 +329,7 @@ function resetPlaybackState(): void {
   playing.value = false;
   waiting.value = false;
   metadataLoaded.value = false;
+  playbackAdMarkers.value = [];
   seeking.value = false;
   seekPosition.value = 0;
   seekPointerPreview.value = null;
@@ -363,7 +372,17 @@ async function attachSource(options: { autoplay: boolean } = { autoplay: false }
   applyPlaybackSpeed(video);
 
   if (Hls.isSupported()) {
-    const instance = new Hls(createMoviesHlsConfig());
+    let nextHls: Hls | null = null;
+    const instance = new Hls(
+      createMoviesHlsConfig({
+        onAdMarkers: (markers) => {
+          if (hls === nextHls) {
+            playbackAdMarkers.value = markers;
+          }
+        },
+      }),
+    );
+    nextHls = instance;
     hls = instance;
     instance.on(Hls.Events.ERROR, onHlsError);
     instance.on(Hls.Events.MANIFEST_PARSED, onHlsManifestParsed);
@@ -722,11 +741,7 @@ function suppressControlsRevealForKeyboardSeek(): void {
 }
 
 function shouldSuppressControlsReveal(): boolean {
-  return (
-    playing.value &&
-    !controlsVisible.value &&
-    Date.now() < suppressControlsRevealUntilMs
-  );
+  return playing.value && !controlsVisible.value && Date.now() < suppressControlsRevealUntilMs;
 }
 
 function preserveHiddenControlsForKeyboardSeek(): boolean {
@@ -762,10 +777,7 @@ function previewSeek(nextValue: number): void {
   seekPosition.value = Math.round(clamp(nextValue, 0, duration.value));
 }
 
-function commitSeek(
-  nextValue: number,
-  options: { preserveHiddenControls?: boolean } = {},
-): void {
+function commitSeek(nextValue: number, options: { preserveHiddenControls?: boolean } = {}): void {
   if (!hasDuration.value) {
     seeking.value = false;
     return;
@@ -1398,6 +1410,35 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 function speedLabel(speed: number): string {
   return `${speed}x`;
 }
+
+function adMarkerTrackBackground(
+  markers: readonly HlsPlaybackAdMarker[],
+  totalDurationSeconds: number,
+): string {
+  if (!Number.isFinite(totalDurationSeconds) || totalDurationSeconds <= 0) {
+    return "none";
+  }
+
+  const layers = markers
+    .map((marker) => adMarkerGradientLayer(marker, totalDurationSeconds))
+    .filter((layer) => layer.length > 0);
+  return layers.length === 0 ? "none" : layers.join(", ");
+}
+
+function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds: number): string {
+  const startPercent = clamp((marker.startSeconds / totalDurationSeconds) * 100, 0, 100);
+  const rawDurationPercent = (marker.durationSeconds / totalDurationSeconds) * 100;
+  const markerWidthPercent =
+    marker.kind === "skipped-replacement" ? 0.42 : Math.max(rawDurationPercent, 0.42);
+  const endPercent = clamp(startPercent + markerWidthPercent, startPercent, 100);
+  if (endPercent <= startPercent) {
+    return "";
+  }
+
+  const color =
+    marker.kind === "skipped-replacement" ? "rgb(255 96 96 / 90%)" : "rgb(255 190 84 / 76%)";
+  return `linear-gradient(to right, transparent 0%, transparent ${startPercent.toFixed(3)}%, ${color} ${startPercent.toFixed(3)}%, ${color} ${endPercent.toFixed(3)}%, transparent ${endPercent.toFixed(3)}%, transparent 100%)`;
+}
 </script>
 
 <template>
@@ -1571,6 +1612,11 @@ function speedLabel(speed: number): string {
             @pointermove="onSeekPointerMove"
             @pointerup="onSeekPointerUp"
           >
+            <span
+              v-if="hasPlaybackAdMarkers"
+              class="movies-hls-player__ad-markers"
+              aria-hidden="true"
+            />
             <Slider
               class="movies-hls-player__seek"
               :model-value="seekPosition"
@@ -2017,6 +2063,18 @@ function speedLabel(speed: number): string {
   position: absolute;
   transform: scaleX(var(--movies-player-loaded, 0));
   transform-origin: left center;
+  z-index: 0;
+}
+
+.movies-hls-player__ad-markers {
+  background: var(--movies-player-ad-markers, none);
+  block-size: 3px;
+  border-radius: var(--radius-full);
+  inline-size: calc(100% - var(--movies-player-slider-thumb-size));
+  inset-block-start: calc(50% - 1.5px);
+  inset-inline-start: calc(var(--movies-player-slider-thumb-size) / 2);
+  pointer-events: none;
+  position: absolute;
   z-index: 0;
 }
 
