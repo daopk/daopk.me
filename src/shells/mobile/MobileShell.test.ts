@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from "pinia";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, inject, nextTick, type Component } from "vue";
+import { defineComponent, inject, nextTick, onMounted, type Component } from "vue";
 
 import { AppChromeInjectionKey, type AppHandle, type AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -259,6 +259,60 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
     expect(document.title).toBe("Blog - WebOS");
+
+    wrapper.unmount();
+  });
+
+  it("syncs the mobile browser title from hosted app chrome titles", async () => {
+    const Probe = defineComponent({
+      name: "MobileTitleProbe",
+      setup() {
+        const chrome = inject(AppChromeInjectionKey, null);
+        onMounted(() => {
+          chrome?.setTitle("Moving Apps Out of the Shell");
+        });
+      },
+      template: "<div />",
+    });
+    currentKernel = makeKernel([
+      manifest({
+        id: "blog",
+        name: "Blog",
+        component: () =>
+          Promise.resolve(
+            Object.assign(Object.create(null) as { default: Component }, {
+              default: Probe as Component,
+              __esModule: true,
+            }),
+          ),
+      }),
+    ]);
+    const wrapper = mount(MobileShell, { attachTo: document.body });
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(document.title).toBe("Moving Apps Out of the Shell - WebOS");
+
+    await wrapper.find(".app-view__hide").trigger("click");
+    await flushPromises();
+    await nextTick();
+    await nextTick();
+
+    expect(document.title).toBe("WebOS");
+
+    currentKernel.events.emit("app.launch.requested", {
+      manifestId: "blog",
+      source: "api",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(document.title).toBe("Moving Apps Out of the Shell - WebOS");
 
     wrapper.unmount();
   });

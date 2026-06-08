@@ -17,6 +17,7 @@ export interface UseMobileNavigation {
   removeByHandleId(handleId: string): boolean;
   setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean;
   setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean;
+  setTitle(handleId: string, manifestId: string, title: string | null): boolean;
   spawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): Promise<void>;
 }
 
@@ -72,6 +73,10 @@ export function useMobileNavigation(): UseMobileNavigation {
     return navigation.setBrowserPath(handleId, manifestId, path);
   }
 
+  function setTitle(handleId: string, manifestId: string, title: string | null): boolean {
+    return navigation.setTitle(handleId, manifestId, title);
+  }
+
   async function spawnNew(
     manifestId: string,
     args?: Readonly<Record<string, unknown>>,
@@ -92,6 +97,7 @@ export function useMobileNavigation(): UseMobileNavigation {
     removeByHandleId,
     setDocumentPath,
     setBrowserPath,
+    setTitle,
     spawnNew,
   };
 }

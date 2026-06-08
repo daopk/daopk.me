@@ -232,8 +232,13 @@ const focusedBrowserPath = computed(() => {
 
 function focusedWindowAppName(record: DesktopWindowRecord): string {
   const manifestName = kernel.apps.list().find((entry) => entry.id === record.manifestId)?.name;
-  const appName = manifestName ?? record.title;
-  return appName.trim().length > 0 ? appName : record.manifestId;
+  const recordTitle = record.title.trim();
+  if (recordTitle.length > 0) {
+    return recordTitle;
+  }
+
+  const fallbackName = manifestName?.trim() ?? "";
+  return fallbackName.length > 0 ? fallbackName : record.manifestId;
 }
 
 const focusedBrowserTitle = computed(() => {

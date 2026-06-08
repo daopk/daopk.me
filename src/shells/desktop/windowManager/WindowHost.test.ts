@@ -347,6 +347,14 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     expect(window.location.pathname).toBe("/apps/alpha");
     expect(document.title).toBe("Alpha - WebOS");
 
+    const manager = useWindowManager();
+    const alpha = manager.windows.find((entry) => entry.manifestId === "alpha");
+    expect(alpha).toBeDefined();
+    manager.setTitle(alpha!.id, "Alpha Document");
+    await wrapper.vm.$nextTick();
+
+    expect(document.title).toBe("Alpha Document - WebOS");
+
     bus.emit("app.launch.requested", {
       manifestId: "beta",
       source: "dock",

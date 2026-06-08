@@ -772,7 +772,12 @@ Event body`,
       setBackAction: vi.fn(),
     };
     stubBlogFetch({
-      posts: { "field-notes": "# Field Notes\n\nNetwork body" },
+      posts: {
+        "field-notes": `---
+title: "Field Notes"
+---
+Network body`,
+      },
     });
     const wrapper = mount(wrap(makeKernel(), blogContext, { appChrome }));
 
@@ -781,7 +786,7 @@ Event body`,
     expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
     expect(wrapper.find(".blog__back").exists()).toBe(true);
     expect(wrapper.find(".blog__share").exists()).toBe(true);
-    expect(appChrome.setTitle).toHaveBeenLastCalledWith("Blog");
+    expect(appChrome.setTitle).toHaveBeenLastCalledWith("Field Notes");
   });
 
   it("renders an in-app 404 for a missing post", async () => {

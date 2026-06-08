@@ -81,10 +81,7 @@ export function useMoviesNavigation({
     view.value.name === "list" ? (view.value.query.keyword ?? "") : "",
   );
   const chromeTitle = computed(() => {
-    if (view.value.name === "list") {
-      return listTitleForQuery(view.value.query);
-    }
-    return "Movies";
+    return chromeTitleForView(view.value);
   });
   const chromeBackAction = computed<AppChromeBackAction | null>(() =>
     canGoBack.value ? { ariaLabel: "Back to Movies", handler: goBack } : null,
@@ -246,4 +243,54 @@ export function useMoviesNavigation({
 
 function browserPathname(): string | null {
   return typeof window === "undefined" ? null : window.location.pathname;
+}
+
+function chromeTitleForView(view: MoviesView): string {
+  if (view.name === "list") {
+    return listTitleForQuery(view.query);
+  }
+
+  if (view.name === "detail") {
+    return view.title ?? titleFromSlug(view.slug);
+  }
+
+  if (view.name === "watch") {
+    if (view.target.kind === "movie") {
+      return view.target.title ?? titleFromSlug(view.target.slug);
+    }
+
+    return view.target.title ?? episodeTitleFromParts(view.target.slug, view.target.episodeNumber);
+  }
+
+  if (view.name === "person") {
+    return view.title ?? titleFromSlug(view.slug);
+  }
+
+  if (view.name === "season") {
+    return view.title ?? `${titleFromSlug(view.slug)}: Season ${view.seasonNumber.toString()}`;
+  }
+
+  if (view.name === "episode") {
+    return view.title ?? episodeTitleFromParts(view.slug, view.episodeNumber);
+  }
+
+  return "Movies";
+}
+
+function episodeTitleFromParts(slug: string, episodeNumber: number): string {
+  return `${titleFromSlug(slug)}: Episode ${episodeNumber.toString()}`;
+}
+
+function titleFromSlug(slug: string): string {
+  const title = slug
+    .split("-")
+    .filter((part) => part.length > 0)
+    .map((part) => (/^(?:tmdb|tv)$/i.test(part) ? part.toUpperCase() : capitalize(part)))
+    .join(" ");
+
+  return title.length > 0 ? title : "Movies";
+}
+
+function capitalize(value: string): string {
+  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

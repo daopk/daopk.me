@@ -249,6 +249,7 @@ describe("AppView", () => {
 
     expect(wrapper.find(".app-view__title").text()).toBe("Appearance");
     expect(wrapper.find(".app-view__back").attributes("aria-label")).toBe("Back to Settings");
+    expect(wrapper.emitted("title:frame")).toEqual([["h-settings", "settings", "Appearance"]]);
 
     await wrapper.find(".app-view__back").trigger("click");
 

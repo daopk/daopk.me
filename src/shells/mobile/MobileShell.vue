@@ -90,7 +90,7 @@ const activeBrowserTitle = computed(() => {
     return DEFAULT_BROWSER_TITLE;
   }
 
-  return appBrowserTitle(titleFor(frame.manifestId));
+  return appBrowserTitle(frame.title ?? titleFor(frame.manifestId));
 });
 
 type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
@@ -456,6 +456,10 @@ function onClose(frameId: string): void {
   nav.dismiss(frameId);
 }
 
+function onFrameTitle(handleId: string, manifestId: string, title: string | null): void {
+  nav.setTitle(handleId, manifestId, title);
+}
+
 function onSelect(frameId: string): void {
   nav.focusFrame(frameId);
   closeSwitcher();
@@ -519,6 +523,7 @@ watch(
           @close="onClose(frame.frameId)"
           @hide="onHide"
           @recents="openSwitcher"
+          @title:frame="onFrameTitle"
         />
       </div>
       <Transition name="app-switcher">

@@ -515,6 +515,34 @@ describe("Movies app", () => {
     });
   });
 
+  it("publishes content-aware chrome titles for movie navigation", async () => {
+    const setTitle = vi.fn();
+    const appChrome: AppChromeController = {
+      rendersAppChrome: true,
+      setBackAction: vi.fn(),
+      setContentSize: vi.fn(),
+      setTitle,
+      setTitlebar: vi.fn(),
+      hide: vi.fn(),
+      close: vi.fn(),
+    };
+    const wrapper = mount(App, {
+      global: {
+        provide: {
+          [AppChromeInjectionKey as symbol]: appChrome,
+        },
+      },
+    });
+    await settle();
+
+    expect(setTitle).toHaveBeenLastCalledWith("Movies");
+
+    await wrapper.get(".movies-home__hero-title-button").trigger("click");
+    await settle();
+
+    expect(setTitle).toHaveBeenLastCalledWith("Fight Club");
+  });
+
   it("activates clicked desktop featured cards in the hero slider", async () => {
     const scrollTo = vi.fn();
     const requestAnimationFrame = vi

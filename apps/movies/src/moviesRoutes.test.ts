@@ -190,6 +190,7 @@ describe("moviesRoutes", () => {
     expect(moviePersonViewFromCredit(person)).toEqual({
       name: "person",
       slug: "dao-dien",
+      title: "Đạo Diễn",
       tmdbId: 819,
     });
     expect(moviePersonViewFromCredit({ ...person, tmdbId: null })).toBeNull();

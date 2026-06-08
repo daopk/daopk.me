@@ -15,12 +15,14 @@ export type MoviesView =
       readonly mediaType: MovieMediaType;
       readonly name: "detail";
       readonly slug: string;
+      readonly title?: string;
       readonly tmdbId: number;
     }
   | {
       readonly name: "season";
       readonly seasonNumber: number;
       readonly slug: string;
+      readonly title?: string;
       readonly tmdbId: number;
     }
   | {
@@ -28,15 +30,22 @@ export type MoviesView =
       readonly name: "episode";
       readonly seasonNumber: number;
       readonly slug: string;
+      readonly title?: string;
       readonly tmdbId: number;
     }
-  | { readonly name: "person"; readonly slug: string; readonly tmdbId: number }
+  | {
+      readonly name: "person";
+      readonly slug: string;
+      readonly title?: string;
+      readonly tmdbId: number;
+    }
   | { readonly autoplay?: boolean; readonly name: "watch"; readonly target: MoviesWatchTarget };
 
 export type MoviesWatchTarget =
   | {
       readonly kind: "movie";
       readonly slug: string;
+      readonly title?: string;
       readonly tmdbId: number;
     }
   | {
@@ -44,6 +53,7 @@ export type MoviesWatchTarget =
       readonly kind: "episode";
       readonly seasonNumber: number;
       readonly slug: string;
+      readonly title?: string;
       readonly tmdbId: number;
     };
 
@@ -93,6 +103,7 @@ export function movieDetailViewFromSummary(movie: MovieSummary): MoviesView {
     mediaType: movie.mediaType,
     name: "detail",
     slug: movie.slug,
+    title: movie.name,
     tmdbId: movie.tmdbId,
   };
 }
@@ -117,6 +128,7 @@ export function movieWatchViewFromSummary(
     target: {
       kind: "movie",
       slug: movie.slug,
+      title: movie.name,
       tmdbId: movie.tmdbId,
     },
   };
@@ -147,6 +159,7 @@ export function moviePersonViewFromCredit(person: MoviePersonCredit): MoviesView
   return {
     name: "person",
     slug: movieSlugFromText(person.name, `person-${person.tmdbId}`),
+    title: person.name,
     tmdbId: person.tmdbId,
   };
 }

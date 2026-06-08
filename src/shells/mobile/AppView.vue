@@ -38,6 +38,7 @@ const emit = defineEmits<{
   (e: "close"): void;
   (e: "hide"): void;
   (e: "recents"): void;
+  (e: "title:frame", handleId: string, manifestId: string, title: string | null): void;
 }>();
 
 const kernel = useKernel();
@@ -68,7 +69,9 @@ const edgeSwipeSurface = ref<HTMLElement | null>(null);
 provide(AppChromeInjectionKey, {
   rendersAppChrome: true,
   setTitle(title) {
-    chromeTitle.value = title;
+    const nextTitle = normalizeFrameTitle(title);
+    chromeTitle.value = nextTitle;
+    emit("title:frame", props.frame.handleId, props.frame.manifestId, nextTitle);
   },
   setBackAction(action) {
     chromeBackAction.value = action;
@@ -83,6 +86,11 @@ provide(AppChromeInjectionKey, {
     emit("close");
   },
 });
+
+function normalizeFrameTitle(title: string | null): string | null {
+  const trimmed = title?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 const appContentSafeAreaStyle = computed<Record<string, string>>(() => ({
   "--mobile-shell-app-safe-area-top": showTitlebar.value
