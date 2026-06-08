@@ -55,6 +55,7 @@ interface HlsQualityLevel {
 }
 
 type FullscreenMethod = () => Promise<void> | void;
+type WebKitPresentationMode = "fullscreen" | "inline" | "picture-in-picture";
 type ShowControlsOptions = {
   readonly force?: boolean;
 };
@@ -70,8 +71,11 @@ interface WebKitFullscreenElement extends HTMLElement {
 
 interface WebKitVideoElement extends HTMLVideoElement {
   readonly webkitDisplayingFullscreen?: boolean;
+  readonly webkitPresentationMode?: WebKitPresentationMode;
   webkitEnterFullscreen?: () => void;
   webkitExitFullscreen?: () => void;
+  webkitSetPresentationMode?: (mode: WebKitPresentationMode) => void;
+  webkitSupportsPresentationMode?: (mode: WebKitPresentationMode) => boolean;
 }
 
 const AUTO_HIDE_CONTROLS_DELAY_MS = 3200;
@@ -280,6 +284,7 @@ onMounted(() => {
   videoElement.value?.addEventListener("webkitendfullscreen", syncFullscreenState);
   videoElement.value?.addEventListener("enterpictureinpicture", syncPictureInPictureState);
   videoElement.value?.addEventListener("leavepictureinpicture", syncPictureInPictureState);
+  videoElement.value?.addEventListener("webkitpresentationmodechanged", syncPictureInPictureState);
   void attachSource({ autoplay: props.autoplay });
 });
 
@@ -311,6 +316,10 @@ onBeforeUnmount(() => {
   videoElement.value?.removeEventListener("webkitendfullscreen", syncFullscreenState);
   videoElement.value?.removeEventListener("enterpictureinpicture", syncPictureInPictureState);
   videoElement.value?.removeEventListener("leavepictureinpicture", syncPictureInPictureState);
+  videoElement.value?.removeEventListener(
+    "webkitpresentationmodechanged",
+    syncPictureInPictureState,
+  );
 });
 
 function destroyHls(): void {
@@ -1308,12 +1317,12 @@ function pictureInPictureDocument(): Document | null {
   return typeof document === "undefined" ? null : document;
 }
 
-function pictureInPictureVideoElement(): HTMLVideoElement | null {
-  return videoElement.value;
+function pictureInPictureVideoElement(): WebKitVideoElement | null {
+  return webKitVideoElement();
 }
 
-function canUsePictureInPicture(
-  video: HTMLVideoElement | null = pictureInPictureVideoElement(),
+function canUseStandardPictureInPicture(
+  video: WebKitVideoElement | null = pictureInPictureVideoElement(),
 ): boolean {
   const currentDocument = pictureInPictureDocument();
   return Boolean(
@@ -1323,11 +1332,57 @@ function canUsePictureInPicture(
   );
 }
 
-function syncPictureInPictureState(): void {
+function canUseWebKitPictureInPicture(
+  video: WebKitVideoElement | null = pictureInPictureVideoElement(),
+): boolean {
+  if (
+    video === null ||
+    video.disablePictureInPicture ||
+    typeof video.webkitSetPresentationMode !== "function" ||
+    typeof video.webkitSupportsPresentationMode !== "function"
+  ) {
+    return false;
+  }
+
+  try {
+    return video.webkitSupportsPresentationMode("picture-in-picture");
+  } catch {
+    return false;
+  }
+}
+
+function canUsePictureInPicture(
+  video: WebKitVideoElement | null = pictureInPictureVideoElement(),
+): boolean {
+  return canUseStandardPictureInPicture(video) || canUseWebKitPictureInPicture(video);
+}
+
+function isStandardPictureInPicture(video: WebKitVideoElement | null): boolean {
   const currentDocument = pictureInPictureDocument();
+  return video !== null && currentDocument?.pictureInPictureElement === video;
+}
+
+function isWebKitPictureInPicture(video: WebKitVideoElement | null): boolean {
+  return video?.webkitPresentationMode === "picture-in-picture";
+}
+
+function syncPictureInPictureState(): void {
   const video = pictureInPictureVideoElement();
   pictureInPictureSupported.value = canUsePictureInPicture(video);
-  pictureInPicture.value = video !== null && currentDocument?.pictureInPictureElement === video;
+  pictureInPicture.value = isStandardPictureInPicture(video) || isWebKitPictureInPicture(video);
+}
+
+function setWebKitPictureInPicture(video: WebKitVideoElement, enabled: boolean): boolean {
+  if (!canUseWebKitPictureInPicture(video)) {
+    return false;
+  }
+
+  try {
+    video.webkitSetPresentationMode?.(enabled ? "picture-in-picture" : "inline");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function togglePictureInPicture(): Promise<void> {
@@ -1339,8 +1394,14 @@ async function togglePictureInPicture(): Promise<void> {
   }
 
   try {
-    if (currentDocument.pictureInPictureElement === video) {
+    if (isStandardPictureInPicture(video)) {
       await currentDocument.exitPictureInPicture?.();
+      syncPictureInPictureState();
+      return;
+    }
+
+    if (isWebKitPictureInPicture(video)) {
+      setWebKitPictureInPicture(video, false);
       syncPictureInPictureState();
       return;
     }
@@ -1349,7 +1410,12 @@ async function togglePictureInPicture(): Promise<void> {
       await currentDocument.exitPictureInPicture?.();
     }
 
-    await video.requestPictureInPicture?.();
+    if (canUseStandardPictureInPicture(video)) {
+      await video.requestPictureInPicture?.();
+    } else {
+      setWebKitPictureInPicture(video, true);
+    }
+
     syncPictureInPictureState();
     showControls({ force: true });
   } catch {

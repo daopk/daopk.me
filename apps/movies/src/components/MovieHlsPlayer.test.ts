@@ -50,6 +50,18 @@ const fullscreenDescriptors = {
     HTMLVideoElement.prototype,
     "webkitExitFullscreen",
   ),
+  videoWebkitPresentationMode: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitPresentationMode",
+  ),
+  videoWebkitSetPresentationMode: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitSetPresentationMode",
+  ),
+  videoWebkitSupportsPresentationMode: Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    "webkitSupportsPresentationMode",
+  ),
   videoDisablePictureInPicture: Object.getOwnPropertyDescriptor(
     HTMLVideoElement.prototype,
     "disablePictureInPicture",
@@ -262,6 +274,21 @@ function restoreFullscreenProperties(): void {
     HTMLVideoElement.prototype,
     "webkitExitFullscreen",
     fullscreenDescriptors.videoWebkitExitFullscreen,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitPresentationMode",
+    fullscreenDescriptors.videoWebkitPresentationMode,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitSetPresentationMode",
+    fullscreenDescriptors.videoWebkitSetPresentationMode,
+  );
+  restoreProperty(
+    HTMLVideoElement.prototype,
+    "webkitSupportsPresentationMode",
+    fullscreenDescriptors.videoWebkitSupportsPresentationMode,
   );
   restoreProperty(
     HTMLVideoElement.prototype,
@@ -886,6 +913,75 @@ content-c.ts
         .exists(),
     ).toBe(true);
     expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
+  });
+
+  it("toggles iOS WebKit picture-in-picture from the control row", async () => {
+    let presentationMode = "inline";
+    const setPresentationMode = vi.fn(function setPresentationMode(
+      this: HTMLVideoElement,
+      mode: string,
+    ) {
+      presentationMode = mode;
+      this.dispatchEvent(new Event("webkitpresentationmodechanged"));
+    });
+    const supportsPresentationMode = vi.fn((mode: string) => mode === "picture-in-picture");
+
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: false,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitPresentationMode", {
+      configurable: true,
+      get: () => presentationMode,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitSetPresentationMode", {
+      configurable: true,
+      value: setPresentationMode,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitSupportsPresentationMode", {
+      configurable: true,
+      value: supportsPresentationMode,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter picture-in-picture"]')
+        .element,
+    );
+    await settle();
+
+    expect(supportsPresentationMode).toHaveBeenCalledWith("picture-in-picture");
+    expect(setPresentationMode).toHaveBeenCalledWith("picture-in-picture");
+    expect(
+      wrapper
+        .find('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
+        .exists(),
+    ).toBe(true);
+    expect(
+      wrapper
+        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(false);
+
+    click(
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit picture-in-picture"]')
+        .element,
+    );
+    await settle();
+
+    expect(setPresentationMode).toHaveBeenLastCalledWith("inline");
+    expect(
+      wrapper
+        .find('.movies-hls-player__control-row button[aria-label="Enter picture-in-picture"]')
+        .exists(),
+    ).toBe(true);
+    expect(
+      wrapper
+        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .exists(),
+    ).toBe(true);
   });
 
   it("renders an optional top-left back button before the title line", async () => {
