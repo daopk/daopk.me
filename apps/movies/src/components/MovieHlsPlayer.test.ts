@@ -271,6 +271,11 @@ function setMediaSupport(options: { nativeHls: boolean; hlsJs: boolean }): void 
     value: false,
     writable: true,
   });
+  Object.defineProperty(HTMLMediaElement.prototype, "playbackRate", {
+    configurable: true,
+    value: 1,
+    writable: true,
+  });
   hlsMock.MockHls.isSupported.mockReturnValue(options.hlsJs);
 }
 
@@ -682,6 +687,22 @@ describe("MovieHlsPlayer", () => {
     await settle();
 
     expect(instance.currentLevel).toBe(0);
+  });
+
+  it("applies playback speed from the settings menu", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    await openSettings(wrapper);
+    expect(document.body.textContent).toContain("Speed");
+    expect(document.body.textContent).toContain("1.5x");
+
+    click(menuRadioItem("1.5x"));
+    await settle();
+
+    expect(video.playbackRate).toBe(1.5);
+    expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.5x");
   });
 
   it("auto-hides controls while playback is active", async () => {

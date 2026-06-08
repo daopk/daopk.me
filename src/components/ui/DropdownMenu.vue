@@ -19,12 +19,14 @@ import {
 
 interface DropdownMenuProps {
   align?: "start" | "center" | "end";
+  contentClass?: string;
   modal?: boolean;
   sideOffset?: number;
 }
 
 withDefaults(defineProps<DropdownMenuProps>(), {
   align: "start",
+  contentClass: "",
   modal: false,
   sideOffset: 4,
 });
@@ -45,7 +47,7 @@ function onUpdateOpen(value: boolean): void {
     </DropdownMenuTrigger>
     <DropdownMenuPortal>
       <DropdownMenuContent
-        class="ds-dropdown-menu"
+        :class="['ds-dropdown-menu', contentClass]"
         :align="align"
         :side-offset="sideOffset"
         :collision-padding="8"

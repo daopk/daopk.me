@@ -66,6 +66,7 @@ const SURFACE_CLICK_DELAY_MS = 220;
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const SEEK_STEP_SECONDS = 10;
 const VOLUME_STEP = 0.1;
+const PLAYBACK_SPEED_OPTIONS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
@@ -88,6 +89,7 @@ const bufferedEnd = ref(0);
 const volume = ref(1);
 const previousVolume = ref(1);
 const muted = ref(false);
+const playbackSpeed = ref(1);
 const playing = ref(false);
 const waiting = ref(false);
 const metadataLoaded = ref(false);
@@ -142,8 +144,14 @@ const qualitySelectValue = computed({
     setQualityLevel(Number(nextValue));
   },
 });
+const playbackSpeedSelectValue = computed({
+  get: () => String(playbackSpeed.value),
+  set: (nextValue: string) => {
+    setPlaybackSpeed(Number(nextValue));
+  },
+});
 const hasQualityMenu = computed(() => qualityOptions.value.length > 0);
-const hasSettingsMenu = computed(() => sourceOptions.value.length > 1 || hasQualityMenu.value);
+const hasSettingsMenu = computed(() => true);
 const selectedSourceLabel = computed(
   () =>
     sourceOptions.value.find((source) => source.index === selectedSourceIndex.value)?.label ??
@@ -165,10 +173,15 @@ const selectedQualityLabel = computed(() => {
     "Auto"
   );
 });
+const selectedPlaybackSpeedStatus = computed(() =>
+  playbackSpeed.value === 1 ? "" : speedLabel(playbackSpeed.value),
+);
 const sourceStatusText = computed(() => {
-  const parts = [selectedSourceLabel.value, selectedQualityLabel.value].filter(
-    (part) => part.length > 0,
-  );
+  const parts = [
+    selectedSourceLabel.value,
+    selectedQualityLabel.value,
+    selectedPlaybackSpeedStatus.value,
+  ].filter((part) => part.length > 0);
   return parts.join(" - ");
 });
 const hasDuration = computed(() => Number.isFinite(duration.value) && duration.value > 0);
@@ -310,6 +323,7 @@ async function attachSource(options: { autoplay: boolean } = { autoplay: false }
 
   video.removeAttribute("src");
   video.currentTime = 0;
+  applyPlaybackSpeed(video);
 
   if (Hls.isSupported()) {
     const instance = new Hls();
@@ -503,6 +517,7 @@ function syncMediaState(): void {
   duration.value = safeMediaNumber(video.duration);
   muted.value = video.muted;
   volume.value = clamp(video.volume, 0, 1);
+  playbackSpeed.value = normalizedPlaybackSpeed(video.playbackRate);
   updateBufferedEnd();
 
   if (!seeking.value) {
@@ -687,6 +702,19 @@ function setQualityLevel(nextLevel: number): void {
     }
   }
   showControls();
+}
+
+function setPlaybackSpeed(nextSpeed: number): void {
+  const speed = normalizedPlaybackSpeed(nextSpeed);
+  playbackSpeed.value = speed;
+  applyPlaybackSpeed(videoElement.value);
+  showControls();
+}
+
+function applyPlaybackSpeed(video: HTMLVideoElement | null): void {
+  if (video !== null) {
+    video.playbackRate = playbackSpeed.value;
+  }
 }
 
 function clearHideControlsTimer(): void {
@@ -1115,6 +1143,10 @@ function safeMediaNumber(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
+function normalizedPlaybackSpeed(value: number): number {
+  return PLAYBACK_SPEED_OPTIONS.includes(value) ? value : 1;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -1146,6 +1178,10 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
   }
 
   return `Quality ${index + 1}`;
+}
+
+function speedLabel(speed: number): string {
+  return `${speed}x`;
 }
 </script>
 
@@ -1183,6 +1219,7 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
         @play="onVideoPlay"
         @playing="onVideoCanPlay"
         @progress="onProgress"
+        @ratechange="syncMediaState"
         @timeupdate="onTimeUpdate"
         @volumechange="syncMediaState"
         @waiting="onVideoWaiting"
@@ -1357,7 +1394,11 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
             @click="togglePictureInPicture"
           />
 
-          <DropdownMenu v-if="hasSettingsMenu" align="end">
+          <DropdownMenu
+            v-if="hasSettingsMenu"
+            align="end"
+            content-class="movies-hls-player__settings-menu"
+          >
             <template #trigger>
               <IconButton
                 class="movies-hls-player__button"
@@ -1385,7 +1426,24 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
 
-              <DropdownMenuSeparator v-if="sourceOptions.length > 1 && hasQualityMenu" />
+              <DropdownMenuSeparator v-if="sourceOptions.length > 1" />
+
+              <DropdownMenuLabel class="ds-dropdown-menu__label"> Speed </DropdownMenuLabel>
+              <DropdownMenuRadioGroup v-model="playbackSpeedSelectValue">
+                <DropdownMenuRadioItem
+                  v-for="speed in PLAYBACK_SPEED_OPTIONS"
+                  :key="speed"
+                  :value="String(speed)"
+                  :text-value="speedLabel(speed)"
+                >
+                  <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
+                    <Check aria-hidden="true" />
+                  </DropdownMenuItemIndicator>
+                  {{ speedLabel(speed) }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+
+              <DropdownMenuSeparator v-if="hasQualityMenu" />
 
               <DropdownMenuLabel v-if="hasQualityMenu" class="ds-dropdown-menu__label">
                 Quality
@@ -1848,6 +1906,35 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
 
   block-size: 104px;
   inline-size: 20px;
+}
+
+:global(.movies-hls-player__settings-menu.ds-dropdown-menu) {
+  min-inline-size: 124px;
+  padding: var(--space-2xs);
+}
+
+:global(.movies-hls-player__settings-menu.ds-dropdown-menu [role="menuitemradio"]) {
+  gap: var(--space-xs);
+  min-block-size: 34px;
+  padding-block: var(--space-xs);
+  padding-inline-end: var(--space-sm);
+  padding-inline-start: 42px;
+}
+
+:global(.movies-hls-player__settings-menu .ds-dropdown-menu__indicator) {
+  block-size: 18px;
+  inline-size: 18px;
+  inset-inline-start: var(--space-sm);
+  justify-content: center;
+}
+
+:global(.movies-hls-player__settings-menu .ds-dropdown-menu__indicator svg) {
+  block-size: 18px;
+  inline-size: 18px;
+}
+
+:global(.movies-hls-player__settings-menu .ds-dropdown-menu__label) {
+  padding: var(--space-xs) var(--space-sm);
 }
 
 .movies-hls-player__poster-fade-enter-active,
