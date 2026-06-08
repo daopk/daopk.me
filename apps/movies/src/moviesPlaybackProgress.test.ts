@@ -4,6 +4,8 @@ import {
   createMoviesPlaybackProgressStore,
   episodePlaybackProgressKey,
   moviePlaybackProgressKey,
+  moviesPlaybackProgressRecords,
+  moviesPlaybackProgressTargetFromKey,
   MOVIES_PLAYBACK_PROGRESS_KV_KEY,
   type MoviesPlaybackProgressState,
 } from "./moviesPlaybackProgress";
@@ -31,6 +33,59 @@ describe("moviesPlaybackProgress", () => {
   it("builds stable movie and episode progress keys", () => {
     expect(moviePlaybackProgressKey(550)).toBe("movie:550");
     expect(episodePlaybackProgressKey(1399, 1, 2)).toBe("tv:1399:s1:e2");
+  });
+
+  it("parses supported progress keys and rejects invalid keys", () => {
+    expect(moviesPlaybackProgressTargetFromKey("movie:550")).toEqual({
+      key: "movie:550",
+      kind: "movie",
+      tmdbId: 550,
+    });
+    expect(moviesPlaybackProgressTargetFromKey("tv:1399:s0:e2")).toEqual({
+      episodeNumber: 2,
+      key: "tv:1399:s0:e2",
+      kind: "episode",
+      seasonNumber: 0,
+      tmdbId: 1399,
+    });
+
+    expect(moviesPlaybackProgressTargetFromKey("movie:0")).toBeNull();
+    expect(moviesPlaybackProgressTargetFromKey("movie:1.5")).toBeNull();
+    expect(moviesPlaybackProgressTargetFromKey("tv:1399:s-1:e2")).toBeNull();
+    expect(moviesPlaybackProgressTargetFromKey("tv:1399:s1:e0")).toBeNull();
+    expect(moviesPlaybackProgressTargetFromKey("legacy:1399")).toBeNull();
+  });
+
+  it("returns supported progress records newest first with an optional limit", () => {
+    const state: MoviesPlaybackProgressState = {
+      entries: {
+        [moviePlaybackProgressKey(550)]: {
+          currentTime: 10,
+          duration: 100,
+          updatedAt: 100,
+        },
+        [episodePlaybackProgressKey(1399, 1, 2)]: {
+          currentTime: 20,
+          duration: 100,
+          updatedAt: 300,
+        },
+        "legacy:42": {
+          currentTime: 30,
+          duration: 100,
+          updatedAt: 400,
+        },
+        [moviePlaybackProgressKey(551)]: {
+          currentTime: 40,
+          duration: 100,
+          updatedAt: 200,
+        },
+      },
+    };
+
+    expect(moviesPlaybackProgressRecords(state, { limit: 2 }).map((record) => record.key)).toEqual([
+      episodePlaybackProgressKey(1399, 1, 2),
+      moviePlaybackProgressKey(551),
+    ]);
   });
 
   it("loads empty progress state and persists valid entries", () => {

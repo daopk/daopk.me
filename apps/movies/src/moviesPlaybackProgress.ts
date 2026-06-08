@@ -18,6 +18,26 @@ export interface MoviesPlaybackProgressState {
   readonly entries: Record<string, MoviesPlaybackProgressEntry>;
 }
 
+export type MoviesPlaybackProgressTarget =
+  | {
+      readonly key: string;
+      readonly kind: "movie";
+      readonly tmdbId: number;
+    }
+  | {
+      readonly episodeNumber: number;
+      readonly key: string;
+      readonly kind: "episode";
+      readonly seasonNumber: number;
+      readonly tmdbId: number;
+    };
+
+export interface MoviesPlaybackProgressRecord {
+  readonly key: string;
+  readonly progress: MoviesPlaybackProgressEntry;
+  readonly target: MoviesPlaybackProgressTarget;
+}
+
 export interface CreateMoviesPlaybackProgressStoreOptions {
   readonly now?: () => number;
   readonly storageNamespace?: string;
@@ -40,6 +60,47 @@ export function episodePlaybackProgressKey(
   episodeNumber: number,
 ): string {
   return `tv:${tmdbId}:s${seasonNumber}:e${episodeNumber}`;
+}
+
+export function moviesPlaybackProgressTargetFromKey(
+  key: string,
+): MoviesPlaybackProgressTarget | null {
+  const movieMatch = /^movie:([1-9]\d*)$/.exec(key);
+  if (movieMatch !== null) {
+    const tmdbId = positiveSafeInteger(movieMatch[1]);
+    return tmdbId === null ? null : { key, kind: "movie", tmdbId };
+  }
+
+  const episodeMatch = /^tv:([1-9]\d*):s(0|[1-9]\d*):e([1-9]\d*)$/.exec(key);
+  if (episodeMatch === null) {
+    return null;
+  }
+
+  const tmdbId = positiveSafeInteger(episodeMatch[1]);
+  const seasonNumber = nonNegativeSafeInteger(episodeMatch[2]);
+  const episodeNumber = positiveSafeInteger(episodeMatch[3]);
+  return tmdbId === null || seasonNumber === null || episodeNumber === null
+    ? null
+    : { episodeNumber, key, kind: "episode", seasonNumber, tmdbId };
+}
+
+export function moviesPlaybackProgressRecords(
+  state: MoviesPlaybackProgressState,
+  options: { readonly limit?: number } = {},
+): readonly MoviesPlaybackProgressRecord[] {
+  const limit =
+    options.limit === undefined
+      ? Number.POSITIVE_INFINITY
+      : Math.max(0, Math.floor(options.limit));
+
+  return Object.entries(state.entries)
+    .map(([key, progress]) => {
+      const target = moviesPlaybackProgressTargetFromKey(key);
+      return target === null ? null : { key, progress, target };
+    })
+    .filter((record): record is MoviesPlaybackProgressRecord => record !== null)
+    .sort((left, right) => right.progress.updatedAt - left.progress.updatedAt)
+    .slice(0, limit);
 }
 
 export function isResumableMoviePlaybackTime(currentTime: number, duration: number): boolean {
@@ -206,6 +267,16 @@ function normalizedMediaTime(value: unknown): number {
 
 function normalizedTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function positiveSafeInteger(value: string | undefined): number | null {
+  const parsed = value === undefined ? Number.NaN : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function nonNegativeSafeInteger(value: string | undefined): number | null {
+  const parsed = value === undefined ? Number.NaN : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

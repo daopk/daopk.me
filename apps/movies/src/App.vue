@@ -60,6 +60,8 @@ const {
     <HomeView
       v-if="view.name === 'home'"
       @scroll="updateToolbarSolid"
+      @open-continue-movie="openDetail($event, { autoplay: true })"
+      @open-continue-episode="openEpisode($event, { autoplay: true })"
       @open-detail="openDetail"
       @open-list="openList"
     />
@@ -72,6 +74,7 @@ const {
     />
     <DetailView
       v-else-if="view.name === 'detail'"
+      :autoplay="view.autoplay === true"
       :media-type="view.mediaType"
       :tmdb-id="view.tmdbId"
       @scroll="updateToolbarSolid"
@@ -82,6 +85,7 @@ const {
     />
     <EpisodeView
       v-else-if="view.name === 'episode'"
+      :autoplay="view.autoplay === true"
       :episode-number="view.episodeNumber"
       :season-number="view.seasonNumber"
       :slug="view.slug"

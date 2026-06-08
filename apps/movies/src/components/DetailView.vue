@@ -27,11 +27,14 @@ import {
 type LoadState = "loading" | "ready" | "error";
 
 interface DetailViewProps {
+  autoplay?: boolean;
   mediaType: MovieMediaType;
   tmdbId: number;
 }
 
-const props = defineProps<DetailViewProps>();
+const props = withDefaults(defineProps<DetailViewProps>(), {
+  autoplay: false,
+});
 
 const emit = defineEmits<{
   back: [];
@@ -58,6 +61,20 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => props.autoplay,
+  (autoplay) => {
+    if (
+      autoplay &&
+      state.value === "ready" &&
+      detail.value?.mediaType === "movie" &&
+      detail.value.play !== null
+    ) {
+      void startWatching();
+    }
+  },
+);
+
 onUnmounted(() => {
   abortController?.abort();
   playbackProgressStore.dispose();
@@ -78,6 +95,9 @@ async function loadDetail(): Promise<void> {
     detail.value = nextDetail;
     refreshResumeProgress();
     state.value = "ready";
+    if (props.autoplay && nextDetail.mediaType === "movie" && nextDetail.play !== null) {
+      await startWatching();
+    }
   } catch {
     if (abortController.signal.aborted) {
       return;

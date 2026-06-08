@@ -8,23 +8,58 @@ import { ChevronRight } from "@daopk/icons";
 import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import {
+  fetchMovieDetail,
+  fetchMovieEpisode,
   fetchMoviesList,
   HOME_DISCOVERY_GROUPS,
+  type MovieEpisodeTarget,
   type MovieSummary,
   type MoviesListPeriod,
   type MoviesListQuery,
   type MoviesRowConfig,
   type MoviesRowGroupConfig,
 } from "../moviesApi";
+import {
+  createMoviesPlaybackProgressStore,
+  moviesPlaybackProgressRecords,
+  type MoviesPlaybackProgressEntry,
+  type MoviesPlaybackProgressRecord,
+} from "../moviesPlaybackProgress";
 
 type LoadState = "loading" | "ready" | "error";
 type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "popular" | "trending">;
 
+interface ContinueWatchingMovieTarget {
+  readonly kind: "movie";
+  readonly movie: MovieSummary;
+}
+
+interface ContinueWatchingEpisodeTarget {
+  readonly episode: MovieEpisodeTarget;
+  readonly kind: "episode";
+}
+
+interface ContinueWatchingItem {
+  readonly id: string;
+  readonly imageUrl: string;
+  readonly kindLabel: string;
+  readonly progress: MoviesPlaybackProgressEntry;
+  readonly progressPercent: number;
+  readonly subtitle: string;
+  readonly target: ContinueWatchingMovieTarget | ContinueWatchingEpisodeTarget;
+  readonly title: string;
+}
+
 const emit = defineEmits<{
+  "open-continue-episode": [request: MovieEpisodeTarget];
+  "open-continue-movie": [movie: MovieSummary];
   "open-detail": [movie: MovieSummary];
   "open-list": [query: MoviesListQuery];
 }>();
 
+const CONTINUE_WATCHING_LIMIT = 10;
+
+const continueWatchingItems = ref<readonly ContinueWatchingItem[]>([]);
 const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
 const state = ref<LoadState>("loading");
@@ -35,18 +70,24 @@ const selectedPeriods = ref<Record<PeriodGroupId, MoviesListPeriod>>({
 });
 
 let abortController: AbortController | null = null;
+let continueAbortController: AbortController | null = null;
+const playbackProgressStore = createMoviesPlaybackProgressStore();
 
 const activeHero = computed(
   () => featured.value[activeHeroIndex.value] ?? featured.value[0] ?? null,
 );
+const hasContinueWatching = computed(() => continueWatchingItems.value.length > 0);
 const hasHomeContent = computed(() => activeHero.value !== null);
 
 onMounted(() => {
   void loadHome();
+  void loadContinueWatching();
 });
 
 onUnmounted(() => {
   abortController?.abort();
+  continueAbortController?.abort();
+  playbackProgressStore.dispose();
 });
 
 async function loadHome(): Promise<void> {
@@ -85,6 +126,85 @@ async function loadHome(): Promise<void> {
     }
     state.value = "error";
   }
+}
+
+async function loadContinueWatching(): Promise<void> {
+  continueAbortController?.abort();
+  const controller = new AbortController();
+  continueAbortController = controller;
+
+  const records = moviesPlaybackProgressRecords(playbackProgressStore.snapshot(), {
+    limit: CONTINUE_WATCHING_LIMIT,
+  });
+  if (records.length === 0) {
+    continueWatchingItems.value = [];
+    return;
+  }
+
+  const hydrated = await Promise.all(
+    records.map(async (record) => {
+      try {
+        return await hydrateContinueWatchingRecord(record, controller.signal);
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  if (controller.signal.aborted) {
+    return;
+  }
+
+  continueWatchingItems.value = hydrated.filter(
+    (item): item is ContinueWatchingItem => item !== null,
+  );
+}
+
+async function hydrateContinueWatchingRecord(
+  record: MoviesPlaybackProgressRecord,
+  signal: AbortSignal,
+): Promise<ContinueWatchingItem | null> {
+  if (record.target.kind === "movie") {
+    const movie = await fetchMovieDetail("movie", record.target.tmdbId, { signal });
+    return {
+      id: record.key,
+      imageUrl: movie.backdropUrl || movie.thumbUrl || movie.posterUrl,
+      kindLabel: "Movie",
+      progress: record.progress,
+      progressPercent: continueProgressPercent(record.progress),
+      subtitle: continueMovieSubtitle(movie),
+      target: { kind: "movie", movie },
+      title: movie.name,
+    };
+  }
+
+  const episodeDetail = await fetchMovieEpisode(
+    record.target.tmdbId,
+    record.target.seasonNumber,
+    record.target.episodeNumber,
+    { signal },
+  );
+  const episodeTarget: MovieEpisodeTarget = {
+    episodeNumber: episodeDetail.episode.episodeNumber,
+    seasonNumber: episodeDetail.episode.seasonNumber,
+    slug: episodeDetail.series.slug,
+    tmdbId: episodeDetail.series.tmdbId,
+  };
+
+  return {
+    id: record.key,
+    imageUrl:
+      episodeDetail.episode.stillUrl ||
+      episodeDetail.series.backdropUrl ||
+      episodeDetail.series.thumbUrl ||
+      episodeDetail.series.posterUrl,
+    kindLabel: "TV",
+    progress: record.progress,
+    progressPercent: continueProgressPercent(record.progress),
+    subtitle: continueEpisodeSubtitle(episodeDetail.episode.name, episodeTarget),
+    target: { episode: episodeTarget, kind: "episode" },
+    title: episodeDetail.series.name,
+  };
 }
 
 function onHeroScroll(event: Event): void {
@@ -129,6 +249,43 @@ function heroMetaLabel(movie: MovieSummary): string {
 
 function heroRatingLabel(movie: MovieSummary): string {
   return movie.rating === null ? "" : `TMDB ${movie.rating.toFixed(1)}`;
+}
+
+function continueMovieSubtitle(movie: MovieSummary): string {
+  return [movie.originName, movie.year]
+    .filter((item): item is string | number => item !== "" && item !== null && item !== undefined)
+    .join(" · ");
+}
+
+function continueEpisodeSubtitle(name: string, target: MovieEpisodeTarget): string {
+  return [`S${target.seasonNumber} E${target.episodeNumber}`, name].filter(Boolean).join(" · ");
+}
+
+function continueProgressPercent(progress: MoviesPlaybackProgressEntry): number {
+  if (!Number.isFinite(progress.currentTime) || !Number.isFinite(progress.duration)) {
+    return 0;
+  }
+
+  return Math.round(Math.min(1, Math.max(0, progress.currentTime / progress.duration)) * 100);
+}
+
+function continueProgressWidth(item: ContinueWatchingItem): string {
+  return `${item.progressPercent}%`;
+}
+
+function continueAriaLabel(item: ContinueWatchingItem): string {
+  return `Continue ${item.title}${item.subtitle.length > 0 ? `, ${item.subtitle}` : ""}, ${
+    item.progressPercent
+  }% watched`;
+}
+
+function openContinueWatchingItem(item: ContinueWatchingItem): void {
+  if (item.target.kind === "movie") {
+    emit("open-continue-movie", item.target.movie);
+    return;
+  }
+
+  emit("open-continue-episode", item.target.episode);
 }
 
 function groupPeriodValue(group: MoviesRowGroupConfig): string {
@@ -244,8 +401,66 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
           </div>
         </div>
       </section>
+    </template>
 
-      <section class="movies-home__rows" aria-label="Discover titles">
+    <section
+      v-if="activeHero || hasContinueWatching"
+      class="movies-home__rows"
+      aria-label="Movies home sections"
+    >
+      <section
+        v-if="hasContinueWatching"
+        class="movies-home__continue"
+        aria-labelledby="movies-home-continue-title"
+      >
+        <div class="movies-home__continue-header">
+          <h2 id="movies-home-continue-title">Continue Watching</h2>
+        </div>
+
+        <ul class="movies-home__continue-rail">
+          <li
+            v-for="item in continueWatchingItems"
+            :key="item.id"
+            class="movies-home__continue-item"
+          >
+            <button
+              type="button"
+              class="movies-home__continue-card"
+              :aria-label="continueAriaLabel(item)"
+              @click="openContinueWatchingItem(item)"
+            >
+              <span class="movies-home__continue-media">
+                <img
+                  v-if="item.imageUrl"
+                  class="movies-home__continue-image"
+                  :src="item.imageUrl"
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span v-else class="movies-home__continue-image" aria-hidden="true" />
+                <span class="movies-home__continue-badge">{{ item.kindLabel }}</span>
+                <span class="movies-home__continue-progress" aria-hidden="true">
+                  <span
+                    class="movies-home__continue-progress-value"
+                    :style="{ inlineSize: continueProgressWidth(item) }"
+                  />
+                </span>
+              </span>
+
+              <span class="movies-home__continue-body">
+                <span class="movies-home__continue-title">{{ item.title }}</span>
+                <span v-if="item.subtitle" class="movies-home__continue-subtitle">
+                  {{ item.subtitle }}
+                </span>
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <template v-if="activeHero">
         <section v-for="group in HOME_DISCOVERY_GROUPS" :key="group.id" class="movies-home__group">
           <div class="movies-home__group-header">
             <h2>{{ group.title }}</h2>
@@ -286,8 +501,8 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
             </section>
           </div>
         </section>
-      </section>
-    </template>
+      </template>
+    </section>
   </ScrollArea>
 </template>
 
@@ -427,6 +642,146 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 .movies-home__group {
   display: grid;
   gap: var(--space-md);
+}
+
+.movies-home__continue {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.movies-home__continue-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.movies-home__continue-header h2 {
+  font-size: var(--font-size-2xl);
+  margin: 0;
+}
+
+.movies-home__continue-rail {
+  display: grid;
+  gap: var(--space-md);
+  grid-auto-columns: minmax(230px, 300px);
+  grid-auto-flow: column;
+  list-style: none;
+  margin: 0;
+  overflow-x: auto;
+  padding: var(--space-xs) 0 var(--space-sm);
+  scrollbar-width: none;
+}
+
+.movies-home__continue-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.movies-home__continue-item {
+  min-inline-size: 0;
+}
+
+.movies-home__continue-card {
+  background: transparent;
+  border: 0;
+  color: var(--color-fg);
+  cursor: pointer;
+  display: grid;
+  gap: var(--space-xs);
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0;
+  text-align: start;
+}
+
+.movies-home__continue-card:focus-visible {
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.movies-home__continue-card:hover .movies-home__continue-image {
+  transform: scale(1.035);
+}
+
+.movies-home__continue-media {
+  aspect-ratio: 16 / 9;
+  background: color-mix(in srgb, var(--color-fg) 10%, transparent);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.movies-home__continue-image {
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-base) var(--ease);
+}
+
+span.movies-home__continue-image {
+  background: color-mix(in srgb, var(--color-fg) 14%, transparent);
+}
+
+.movies-home__continue-badge {
+  background: color-mix(in srgb, var(--color-bg) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 20%, transparent);
+  border-radius: var(--radius-full);
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  inset-block-start: var(--space-xs);
+  inset-inline-end: var(--space-xs);
+  line-height: var(--leading-tight);
+  max-inline-size: calc(100% - var(--space-md));
+  overflow: hidden;
+  padding: var(--space-2xs) var(--space-xs);
+  position: absolute;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movies-home__continue-progress {
+  background: color-mix(in srgb, var(--color-bg) 62%, transparent);
+  block-size: 5px;
+  inset-block-end: 0;
+  inset-inline: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
+.movies-home__continue-progress-value {
+  background: var(--color-accent);
+  block-size: 100%;
+  display: block;
+  inline-size: 0;
+}
+
+.movies-home__continue-body {
+  display: grid;
+  gap: var(--space-2xs);
+  min-inline-size: 0;
+}
+
+.movies-home__continue-title,
+.movies-home__continue-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movies-home__continue-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+.movies-home__continue-subtitle {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--leading-snug);
 }
 
 .movies-home__group-header {
@@ -680,6 +1035,10 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
   .movies-home__rail {
     grid-auto-columns: minmax(136px, 42vw);
   }
+
+  .movies-home__continue-rail {
+    grid-auto-columns: minmax(220px, 74vw);
+  }
 }
 
 @media (max-width: 640px) {
@@ -691,6 +1050,10 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 
 @media (prefers-reduced-motion: reduce) {
   .movies-home__hero-poster-wrap {
+    transition: none;
+  }
+
+  .movies-home__continue-image {
     transition: none;
   }
 

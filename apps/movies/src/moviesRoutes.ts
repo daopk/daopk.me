@@ -12,12 +12,14 @@ export type MoviesView =
   | { readonly name: "home" }
   | { readonly name: "list"; readonly query: MoviesListQuery }
   | {
+      readonly autoplay?: boolean;
       readonly mediaType: MovieMediaType;
       readonly name: "detail";
       readonly slug: string;
       readonly tmdbId: number;
     }
   | {
+      readonly autoplay?: boolean;
       readonly episodeNumber: number;
       readonly name: "episode";
       readonly seasonNumber: number;
@@ -61,8 +63,12 @@ export function createMoviesSearchView(keyword: string): MoviesView {
   return createMoviesListView({ keyword, limit: DEFAULT_MOVIES_LIST_LIMIT, media: "all" });
 }
 
-export function movieDetailViewFromSummary(movie: MovieSummary): MoviesView {
+export function movieDetailViewFromSummary(
+  movie: MovieSummary,
+  options: { readonly autoplay?: boolean } = {},
+): MoviesView {
   return {
+    ...(options.autoplay === true ? { autoplay: true } : {}),
     mediaType: movie.mediaType,
     name: "detail",
     slug: movie.slug,
@@ -70,8 +76,12 @@ export function movieDetailViewFromSummary(movie: MovieSummary): MoviesView {
   };
 }
 
-export function movieEpisodeViewFromTarget(request: MovieEpisodeTarget): MoviesView {
+export function movieEpisodeViewFromTarget(
+  request: MovieEpisodeTarget,
+  options: { readonly autoplay?: boolean } = {},
+): MoviesView {
   return {
+    ...(options.autoplay === true ? { autoplay: true } : {}),
     episodeNumber: request.episodeNumber,
     name: "episode",
     seasonNumber: request.seasonNumber,

@@ -27,13 +27,16 @@ import { episodePlaybackProgressKey } from "../moviesPlaybackProgress";
 type LoadState = "loading" | "ready" | "error";
 
 interface EpisodeViewProps {
+  autoplay?: boolean;
   episodeNumber: number;
   seasonNumber: number;
   slug: string;
   tmdbId: number;
 }
 
-const props = defineProps<EpisodeViewProps>();
+const props = withDefaults(defineProps<EpisodeViewProps>(), {
+  autoplay: false,
+});
 
 const emit = defineEmits<{
   back: [];
@@ -138,6 +141,7 @@ async function loadEpisode(): Promise<void> {
         <MovieHlsPlayer
           v-if="episode.play !== null"
           class="movies-episode__player"
+          :autoplay="autoplay"
           :play="episode.play"
           :poster-url="heroImageUrl"
           :progress-key="progressKey"

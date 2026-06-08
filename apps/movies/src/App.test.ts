@@ -117,10 +117,14 @@ function persistAppProgress(
     updatedAt: Date.now(),
   },
 ): void {
+  persistAppProgressEntries({ [key]: entry });
+}
+
+function persistAppProgressEntries(
+  entries: Record<string, MoviesPlaybackProgressEntry>,
+): void {
   const state: MoviesPlaybackProgressState = {
-    entries: {
-      [key]: entry,
-    },
+    entries,
   };
   localStorage.setItem(
     APP_PROGRESS_STORAGE_KEY,
@@ -386,6 +390,7 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-home__hero-rating").text()).toBe("TMDB 8.4");
     expect(wrapper.find(".movies-home__hero-actions").exists()).toBe(false);
     expect(wrapper.find(".movies-home__hero-dots").exists()).toBe(false);
+    expect(wrapper.find(".movies-home__continue").exists()).toBe(false);
     expect(wrapper.text()).toContain("Trending");
     expect(wrapper.text()).toContain("Popular");
     expect(wrapper.text()).toContain("Current");
@@ -414,6 +419,99 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("renders Continue Watching with movie and TV episode progress newest first", async () => {
+    const now = Date.now();
+    persistAppProgressEntries({
+      [moviePlaybackProgressKey(550)]: {
+        currentTime: 30,
+        duration: 120,
+        updatedAt: now - 1_000,
+      },
+      [episodePlaybackProgressKey(1399, 1, 2)]: {
+        currentTime: 60,
+        duration: 120,
+        updatedAt: now,
+      },
+    });
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 2, expect.anything());
+
+    const continueSection = wrapper.get(".movies-home__continue");
+    expect(continueSection.text()).toContain("Continue Watching");
+    const cards = wrapper.findAll(".movies-home__continue-card");
+    expect(cards).toHaveLength(2);
+    expect(cards[0]!.text()).toContain("Planet Cinema");
+    expect(cards[0]!.text()).toContain("S1 E2");
+    expect(cards[0]!.text()).toContain("The Edit");
+    expect(cards[0]!.get(".movies-home__continue-progress-value").attributes("style")).toContain(
+      "inline-size: 50%;",
+    );
+    expect(cards[1]!.text()).toContain("Fight Club");
+    expect(cards[1]!.get(".movies-home__continue-progress-value").attributes("style")).toContain(
+      "inline-size: 25%;",
+    );
+  });
+
+  it("opens a Continue Watching movie directly into autoplay playback", async () => {
+    vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
+    persistAppProgress(moviePlaybackProgressKey(550));
+
+    const wrapper = mount(App);
+    await settle();
+
+    const continueMovie = wrapper
+      .findAll(".movies-home__continue-card")
+      .find((card) => card.text().includes("Fight Club"));
+    expect(continueMovie).toBeDefined();
+    await continueMovie!.trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+  });
+
+  it("opens a Continue Watching TV episode directly into autoplay playback", async () => {
+    const season = seasonDetail();
+    const episode = { ...season.episodes[0]!, play: playInfo({ slug: "planet-cinema" }) };
+    vi.mocked(fetchMovieEpisode).mockResolvedValue(
+      episodeDetail({ episode, season: { ...season, episodes: [episode, season.episodes[1]!] } }),
+    );
+    persistAppProgress(episodePlaybackProgressKey(1399, 1, 1));
+
+    const wrapper = mount(App);
+    await settle();
+
+    const continueEpisode = wrapper
+      .findAll(".movies-home__continue-card")
+      .find((card) => card.text().includes("Planet Cinema"));
+    expect(continueEpisode).toBeDefined();
+    await continueEpisode!.trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/1");
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
+      episodePlaybackProgressKey(1399, 1, 1),
+    );
+  });
+
+  it("hides Continue Watching when progress hydration fails", async () => {
+    persistAppProgress(moviePlaybackProgressKey(550));
+    vi.mocked(fetchMovieDetail).mockRejectedValueOnce(new Error("No title"));
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(wrapper.find(".movies-home__continue").exists()).toBe(false);
   });
 
   it("shows the toolbar background only after the current view scrolls", async () => {

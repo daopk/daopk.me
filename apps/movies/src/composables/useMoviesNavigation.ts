@@ -29,6 +29,11 @@ export interface UseMoviesNavigationOptions {
   readonly syncPath?: (view: MoviesView) => void;
 }
 
+interface MoviesNavigationOptions {
+  readonly autoplay?: boolean;
+  readonly replace?: boolean;
+}
+
 export interface UseMoviesNavigationBindings {
   readonly activeSearch: ComputedRef<string>;
   readonly canGoBack: ComputedRef<boolean>;
@@ -41,8 +46,8 @@ export interface UseMoviesNavigationBindings {
   goBack(): void;
   goForward(): void;
   goHome(): void;
-  openDetail(movie: MovieSummary): void;
-  openEpisode(request: MovieEpisodeTarget, options?: { replace?: boolean }): void;
+  openDetail(movie: MovieSummary, options?: MoviesNavigationOptions): void;
+  openEpisode(request: MovieEpisodeTarget, options?: MoviesNavigationOptions): void;
   openList(query: MoviesListQuery, options?: { replace?: boolean }): void;
   openPerson(person: MoviePersonCredit): void;
   searchMovies(keyword: string, options?: { replace?: boolean }): void;
@@ -152,12 +157,15 @@ export function useMoviesNavigation({
     navigate(createMoviesSearchView(keyword), options);
   }
 
-  function openDetail(movie: MovieSummary): void {
-    navigate(movieDetailViewFromSummary(movie));
+  function openDetail(movie: MovieSummary, options: MoviesNavigationOptions = {}): void {
+    navigate(movieDetailViewFromSummary(movie, { autoplay: options.autoplay }), options);
   }
 
-  function openEpisode(request: MovieEpisodeTarget, options: { replace?: boolean } = {}): void {
-    navigate(movieEpisodeViewFromTarget(request), options);
+  function openEpisode(
+    request: MovieEpisodeTarget,
+    options: MoviesNavigationOptions = {},
+  ): void {
+    navigate(movieEpisodeViewFromTarget(request, { autoplay: options.autoplay }), options);
   }
 
   function openPerson(person: MoviePersonCredit): void {
