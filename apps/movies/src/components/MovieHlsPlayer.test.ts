@@ -812,6 +812,20 @@ describe("MovieHlsPlayer", () => {
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
+  it("emits next-episode from the optional next episode control", async () => {
+    const wrapper = mountPlayer({ nextEpisodeLabel: "Next episode: Episode 2 - The Edit" });
+    await settle();
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+
+    click(wrapper.get('button[aria-label="Next episode: Episode 2 - The Edit"]').element);
+    await settle();
+
+    expect(wrapper.emitted("next-episode")).toHaveLength(1);
+    expect(play).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+  });
+
   it("shows HLS quality options after manifest parsing and applies manual quality", async () => {
     const wrapper = mountPlayer();
     await settle();
@@ -845,6 +859,30 @@ describe("MovieHlsPlayer", () => {
 
     expect(video.playbackRate).toBe(1.5);
     expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.5x");
+  });
+
+  it("keeps playback active when playback speed changes from the settings menu", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+
+    click(video);
+    vi.advanceTimersByTime(220);
+    await settle();
+
+    expect(play).toHaveBeenCalledTimes(1);
+
+    await openSettings(wrapper);
+    click(menuRadioItem("1.25x"));
+    vi.advanceTimersByTime(220);
+    await settle();
+
+    expect(video.playbackRate).toBe(1.25);
+    expect(pause).not.toHaveBeenCalled();
+    expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.25x");
   });
 
   it("keeps the settings menu inside the fullscreen player stage", async () => {

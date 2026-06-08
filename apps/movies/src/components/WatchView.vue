@@ -17,7 +17,9 @@ import {
   fetchMovieEpisode,
   type MovieDetail,
   type MovieEpisodeDetail,
+  type MovieEpisodeTarget,
   type MoviePlayInfo,
+  type MovieSeasonEpisode,
 } from "../moviesApi";
 import { episodePlaybackProgressKey, moviePlaybackProgressKey } from "../moviesPlaybackProgress";
 import type { MoviesWatchTarget } from "../moviesRoutes";
@@ -33,8 +35,9 @@ const props = withDefaults(defineProps<WatchViewProps>(), {
   autoplay: false,
 });
 
-defineEmits<{
+const emit = defineEmits<{
   back: [];
+  "watch-episode": [request: MovieEpisodeTarget];
 }>();
 
 const state = ref<LoadState>("loading");
@@ -94,6 +97,42 @@ const episodeInfo = computed(() => {
     title: episode.name,
   };
 });
+const nextEpisode = computed<MovieSeasonEpisode | null>(() => {
+  const target = props.target;
+  const currentEpisodeDetail = episodeDetail.value;
+  if (target.kind !== "episode" || currentEpisodeDetail === null) {
+    return null;
+  }
+
+  return (
+    currentEpisodeDetail.season.episodes
+      .filter(
+        (episode) =>
+          episode.seasonNumber === target.seasonNumber &&
+          episode.episodeNumber > target.episodeNumber &&
+          episode.play !== null,
+      )
+      .sort((left, right) => left.episodeNumber - right.episodeNumber)[0] ?? null
+  );
+});
+const nextEpisodeTarget = computed<MovieEpisodeTarget | null>(() => {
+  const episode = nextEpisode.value;
+  const currentEpisodeDetail = episodeDetail.value;
+  if (episode === null || currentEpisodeDetail === null) {
+    return null;
+  }
+
+  return {
+    episodeNumber: episode.episodeNumber,
+    seasonNumber: episode.seasonNumber,
+    slug: currentEpisodeDetail.series.slug,
+    tmdbId: props.target.tmdbId,
+  };
+});
+const nextEpisodeLabel = computed(() => {
+  const episode = nextEpisode.value;
+  return episode === null ? "" : `Next episode: ${formatEpisodeLabel(episode)} - ${episode.name}`;
+});
 
 watch(
   () => props.target,
@@ -137,6 +176,13 @@ async function loadTarget(): Promise<void> {
     state.value = "error";
   }
 }
+
+function watchNextEpisode(): void {
+  const target = nextEpisodeTarget.value;
+  if (target !== null) {
+    emit("watch-episode", target);
+  }
+}
 </script>
 
 <template>
@@ -167,12 +213,14 @@ async function loadTarget(): Promise<void> {
       <MovieHlsPlayer
         class="movies-watch__player"
         :autoplay="autoplay"
+        :next-episode-label="nextEpisodeLabel"
         :play="play"
         :poster-url="posterUrl"
         :progress-key="progressKey"
         show-back-button
         :title="title"
         @back="$emit('back')"
+        @next-episode="watchNextEpisode"
       />
 
       <section
@@ -213,7 +261,7 @@ async function loadTarget(): Promise<void> {
   inline-size: 100%;
   margin: 0;
   max-inline-size: none;
-  padding: 0;
+  padding-block-start: var(--mobile-shell-app-safe-area-top, 0px);
 }
 
 .movies-watch__player {

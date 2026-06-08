@@ -22,6 +22,7 @@ import {
   PictureInPicture,
   PictureInPicture2,
   Play,
+  SkipForward,
   Volume2,
   VolumeX,
 } from "@daopk/icons";
@@ -34,6 +35,7 @@ import type { MoviePlayInfo } from "../moviesApi";
 
 interface MovieHlsPlayerProps {
   autoplay?: boolean;
+  nextEpisodeLabel?: string;
   play: MoviePlayInfo;
   posterUrl?: string;
   progressKey?: string;
@@ -78,6 +80,7 @@ const PROGRESS_PERSIST_INTERVAL_MS = 5000;
 
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
+  nextEpisodeLabel: "",
   posterUrl: "",
   progressKey: "",
   showBackButton: false,
@@ -85,6 +88,7 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
 
 const emit = defineEmits<{
   back: [];
+  "next-episode": [];
 }>();
 
 const playerShell = ref<HTMLElement | null>(null);
@@ -226,6 +230,8 @@ const pictureInPictureIcon = computed(() =>
 const pictureInPictureLabel = computed(() =>
   pictureInPicture.value ? "Exit picture-in-picture" : "Enter picture-in-picture",
 );
+const nextEpisodeButtonLabel = computed(() => props.nextEpisodeLabel.trim());
+const showNextEpisodeButton = computed(() => nextEpisodeButtonLabel.value.length > 0);
 const posterVisible = computed(
   () => !playing.value && currentTime.value === 0 && props.posterUrl.length > 0,
 );
@@ -465,16 +471,13 @@ function isPrimaryClick(event: MouseEvent): boolean {
   return event.button === 0 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
 }
 
-function isSurfaceClickTarget(target: EventTarget | null): boolean {
+function isSettingsMenuTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Node)) {
     return false;
   }
 
-  if (playerControlsContain(target)) {
-    return false;
-  }
-
-  return true;
+  const element = target instanceof Element ? target : target.parentElement;
+  return (element?.closest(".movies-hls-player__settings-menu") ?? null) !== null;
 }
 
 function playerControlsContain(target: EventTarget | null): boolean {
@@ -482,12 +485,30 @@ function playerControlsContain(target: EventTarget | null): boolean {
     target instanceof Node &&
     (controlsRoot.value?.contains(target) === true ||
       backControlsRoot.value?.contains(target) === true ||
-      topControlsRoot.value?.contains(target) === true)
+      topControlsRoot.value?.contains(target) === true ||
+      isSettingsMenuTarget(target))
   );
 }
 
+function playerEventPathContainsControls(event: MouseEvent): boolean {
+  return event.composedPath().some((target) => playerControlsContain(target));
+}
+
+function isSurfaceClickTarget(event: MouseEvent): boolean {
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return false;
+  }
+
+  if (playerControlsContain(target) || playerEventPathContainsControls(event)) {
+    return false;
+  }
+
+  return true;
+}
+
 function onPlayerSurfaceClick(event: MouseEvent): void {
-  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event.target)) {
+  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event)) {
     return;
   }
 
@@ -500,7 +521,7 @@ function onPlayerSurfaceClick(event: MouseEvent): void {
 }
 
 function onPlayerSurfaceDoubleClick(event: MouseEvent): void {
-  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event.target)) {
+  if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event)) {
     return;
   }
 
@@ -1501,6 +1522,16 @@ function speedLabel(speed: number): string {
           </div>
 
           <IconButton
+            v-if="showNextEpisodeButton"
+            class="movies-hls-player__button movies-hls-player__next-episode-button"
+            :icon="SkipForward"
+            :label="nextEpisodeButtonLabel"
+            size="sm"
+            variant="subtle"
+            @click="emit('next-episode')"
+          />
+
+          <IconButton
             class="movies-hls-player__button movies-hls-player__pip-button"
             :icon="pictureInPictureIcon"
             :label="pictureInPictureLabel"
@@ -1928,13 +1959,11 @@ function speedLabel(speed: number): string {
   border-radius: 8px;
   display: grid;
   gap: var(--space-sm);
-  grid-template-columns: auto minmax(88px, 1fr) auto auto auto;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
+  grid-template-columns: auto minmax(88px, 1fr) auto;
   min-inline-size: 0;
   padding: var(--space-sm);
-}
-
-.movies-hls-player__control-row--has-settings {
-  grid-template-columns: auto minmax(88px, 1fr) auto auto auto auto;
 }
 
 .movies-hls-player__button {
@@ -2083,12 +2112,8 @@ function speedLabel(speed: number): string {
 
   .movies-hls-player__control-row {
     gap: var(--space-xs);
-    grid-template-columns: auto minmax(48px, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(48px, 1fr) auto;
     min-block-size: 44px;
-  }
-
-  .movies-hls-player__control-row--has-settings {
-    grid-template-columns: auto minmax(48px, 1fr) auto auto auto auto;
   }
 
   .movies-hls-player__button {

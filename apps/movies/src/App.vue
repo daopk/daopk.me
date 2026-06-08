@@ -105,6 +105,7 @@ const {
       :target="view.target"
       @scroll="updateToolbarSolid"
       @back="goBack"
+      @watch-episode="openEpisodeWatch($event, { autoplay: true, replace: true })"
     />
     <PersonView
       v-else

@@ -41,17 +41,19 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
     name: "MovieHlsPlayer",
     props: {
       autoplay: { default: false, type: Boolean },
+      nextEpisodeLabel: { default: "", type: String },
       play: { required: true, type: Object },
       posterUrl: { default: "", type: String },
       progressKey: { default: "", type: String },
       showBackButton: { default: false, type: Boolean },
       title: { required: true, type: String },
     },
-    emits: ["back"],
+    emits: ["back", "next-episode"],
     template: `
       <div
         class="movies-hls-player"
         :data-autoplay="autoplay ? 'true' : 'false'"
+        :data-next-episode-label="nextEpisodeLabel"
         :data-progress-key="progressKey"
         :data-title="title"
       >
@@ -63,6 +65,15 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
           @click="$emit('back')"
         >
           &lt;
+        </button>
+        <button
+          v-if="nextEpisodeLabel"
+          type="button"
+          class="movies-hls-player__next-episode-button"
+          :aria-label="nextEpisodeLabel"
+          @click="$emit('next-episode')"
+        >
+          Next
         </button>
         <video />
       </div>
@@ -1048,6 +1059,46 @@ describe("Movies app", () => {
     expect(episodeInfo.text()).toContain("Pilot");
     expect(episodeInfo.text()).toContain("Episode 1 · 2024-01-01 · 42 min · 7.8 rating");
     expect(episodeInfo.text()).toContain("Pilot overview.");
+  });
+
+  it("plays the next episode from the player when a playable next episode exists", async () => {
+    window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/1");
+    vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
+    const season = seasonDetail();
+    const firstEpisode = { ...season.episodes[0]!, play: playInfo({ slug: "planet-cinema-1" }) };
+    const secondEpisode = { ...season.episodes[1]!, play: playInfo({ slug: "planet-cinema-2" }) };
+    const playableSeason = { ...season, episodes: [firstEpisode, secondEpisode] };
+    vi.mocked(fetchMovieEpisode).mockImplementation(async (_tmdbId, _seasonNumber, episodeNumber) =>
+      episodeDetail({
+        episode: episodeNumber === 1 ? firstEpisode : secondEpisode,
+        season: playableSeason,
+      }),
+    );
+
+    const wrapper = mount(App);
+    await settle();
+
+    const watchButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().trim() === "Watch");
+    expect(watchButton).toBeDefined();
+    await watchButton!.trigger("click");
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player").attributes("data-next-episode-label")).toBe(
+      "Next episode: Episode 2 - The Edit",
+    );
+
+    await wrapper.get(".movies-hls-player__next-episode-button").trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
+    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
+      episodePlaybackProgressKey(1399, 1, 2),
+    );
+    expect(wrapper.get(".movies-hls-player").attributes("data-title")).toBe("The Edit");
+    expect(wrapper.find(".movies-hls-player__next-episode-button").exists()).toBe(false);
   });
 
   it("ignores unsupported detail routes", async () => {
