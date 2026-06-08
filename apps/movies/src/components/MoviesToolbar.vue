@@ -229,7 +229,7 @@ function openPopularTv(): void {
     border-color var(--duration-base) var(--ease),
     box-shadow var(--duration-base) var(--ease);
   -webkit-backdrop-filter: none;
-  z-index: 2;
+  z-index: 20;
 }
 
 .movies-toolbar--has-close {
