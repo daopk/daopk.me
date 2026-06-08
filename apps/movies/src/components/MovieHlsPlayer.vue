@@ -721,7 +721,10 @@ function previewSeek(nextValue: number): void {
   seekPosition.value = Math.round(clamp(nextValue, 0, duration.value));
 }
 
-function commitSeek(nextValue: number): void {
+function commitSeek(
+  nextValue: number,
+  options: { preserveHiddenControls?: boolean } = {},
+): void {
   if (!hasDuration.value) {
     seeking.value = false;
     return;
@@ -738,6 +741,10 @@ function commitSeek(nextValue: number): void {
   seeking.value = false;
   clearSeekPointerPreview();
   persistPlaybackProgress({ force: true });
+  if (options.preserveHiddenControls && controlsHidden.value && playing.value) {
+    clearHideControlsTimer();
+    return;
+  }
   scheduleAutoHideControls();
 }
 
@@ -747,12 +754,12 @@ function cancelSeekPreview(): void {
   clearSeekPointerPreview();
 }
 
-function seekBy(deltaSeconds: number): void {
+function seekBy(deltaSeconds: number, options: { preserveHiddenControls?: boolean } = {}): void {
   if (!hasDuration.value) {
     return;
   }
 
-  commitSeek(currentTime.value + deltaSeconds);
+  commitSeek(currentTime.value + deltaSeconds, options);
 }
 
 function setVolumeFromSlider(nextValue: number): void {
@@ -1143,13 +1150,13 @@ function onStageKeydown(event: KeyboardEvent): void {
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
-    seekBy(-SEEK_STEP_SECONDS);
+    seekBy(-SEEK_STEP_SECONDS, { preserveHiddenControls: controlsHidden.value && playing.value });
     return;
   }
 
   if (event.key === "ArrowRight") {
     event.preventDefault();
-    seekBy(SEEK_STEP_SECONDS);
+    seekBy(SEEK_STEP_SECONDS, { preserveHiddenControls: controlsHidden.value && playing.value });
     return;
   }
 
@@ -1954,16 +1961,16 @@ function speedLabel(speed: number): string {
 .movies-hls-player__control-row {
   align-items: center;
   backdrop-filter: blur(18px);
-  background: rgb(8 9 13 / 68%);
-  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(8 9 13 / 52%);
+  border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 8px;
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   grid-auto-columns: auto;
   grid-auto-flow: column;
   grid-template-columns: auto minmax(88px, 1fr) auto;
   min-inline-size: 0;
-  padding: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
 }
 
 .movies-hls-player__button {
