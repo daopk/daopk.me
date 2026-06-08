@@ -4,6 +4,7 @@ import { mount } from "@vue/test-utils";
 
 import { debugWarn } from "@daopk/sdk";
 
+import { PHOTOS_CONTENT_BASE } from "./photosContentConfig";
 import { photoFromEntry, usePhotos, type Photo } from "./usePhotos";
 
 vi.mock("@daopk/sdk", async (importOriginal) => ({
@@ -56,11 +57,25 @@ describe("photoFromEntry", () => {
       }),
     ).toEqual({
       key: "ocean.png",
-      url: "/public/photos/ocean.png",
+      url: `${PHOTOS_CONTENT_BASE}/ocean.png`,
       size: 1234,
       uploaded: "2026-05-31T12:00:00.000Z",
       contentType: "image/png",
     });
+  });
+
+  it("preserves absolute URLs from the worker index", () => {
+    expect(
+      photoFromEntry({
+        key: "ocean.png",
+        url: "https://cdn.daopk.test/photos/ocean.png",
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        key: "ocean.png",
+        url: "https://cdn.daopk.test/photos/ocean.png",
+      }),
+    );
   });
 
   it("rejects non-objects and entries without a key", () => {
@@ -72,7 +87,7 @@ describe("photoFromEntry", () => {
   it("fills sensible defaults from a minimal entry", () => {
     expect(photoFromEntry({ key: "a.jpg" })).toEqual({
       key: "a.jpg",
-      url: "/public/photos/a.jpg",
+      url: `${PHOTOS_CONTENT_BASE}/a.jpg`,
       size: 0,
       uploaded: null,
       contentType: "application/octet-stream",

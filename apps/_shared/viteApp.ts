@@ -1,3 +1,5 @@
+import { fileURLToPath, URL } from "node:url";
+
 import vue from "@vitejs/plugin-vue";
 import { defineConfig, type Plugin, type UserConfig } from "vite";
 
@@ -74,12 +76,15 @@ export interface DaopkAppOptions {
   readonly externals?: readonly string[];
 }
 
+const WORKSPACE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+
 /**
  * Build config for a first-party app package. `id` is the published app id; the
  * lib build emits `<id>.js` (the entry contract the per-app CI uploads to R2).
  */
 export function defineDaopkApp(id: string, options: DaopkAppOptions = {}): UserConfig {
   return defineConfig({
+    envDir: WORKSPACE_ROOT,
     plugins: [vue(), injectCssOnLoad(id), ...(options.plugins ?? [])],
     build: {
       target: "es2022",

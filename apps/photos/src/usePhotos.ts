@@ -2,7 +2,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import { debugWarn } from "@daopk/sdk";
 
-import { PHOTOS_CONTENT_BASE, photosIndexUrl } from "./photosContentConfig";
+import { photosContentUrl, photosIndexUrl } from "./photosContentConfig";
 
 export type PhotosStatus = "idle" | "loading" | "ready" | "empty" | "error";
 
@@ -38,7 +38,7 @@ export function photoFromEntry(entry: unknown): Photo | null {
 
   return {
     key,
-    url: asNonEmptyString(record.url) ?? `${PHOTOS_CONTENT_BASE}/${key}`,
+    url: photosContentUrl(asNonEmptyString(record.url) ?? key),
     size,
     uploaded: asNonEmptyString(record.uploaded),
     contentType: asNonEmptyString(record.contentType) ?? "application/octet-stream",
