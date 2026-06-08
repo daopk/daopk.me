@@ -25,6 +25,9 @@ import { episodePlaybackProgressKey, moviePlaybackProgressKey } from "../moviesP
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
 type LoadState = "loading" | "ready" | "error";
+type MovieHlsPlayerInstance = InstanceType<typeof MovieHlsPlayer> & {
+  readonly handleAppKeydown?: (event: KeyboardEvent) => void;
+};
 
 interface WatchViewProps {
   autoplay?: boolean;
@@ -43,6 +46,7 @@ const emit = defineEmits<{
 const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
+const playerRef = ref<MovieHlsPlayerInstance | null>(null);
 let abortController: AbortController | null = null;
 
 const play = computed<MoviePlayInfo | null>(() => {
@@ -183,6 +187,14 @@ function watchNextEpisode(): void {
     emit("watch-episode", target);
   }
 }
+
+function handleKeyboardEvent(event: KeyboardEvent): void {
+  playerRef.value?.handleAppKeydown?.(event);
+}
+
+defineExpose({
+  handleKeyboardEvent,
+});
 </script>
 
 <template>
@@ -211,6 +223,7 @@ function watchNextEpisode(): void {
 
     <article v-else class="movies-watch__content">
       <MovieHlsPlayer
+        ref="playerRef"
         class="movies-watch__player"
         :autoplay="autoplay"
         :next-episode-label="nextEpisodeLabel"

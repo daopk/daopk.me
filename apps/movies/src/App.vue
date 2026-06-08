@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from "vue";
+import { getCurrentInstance, inject, onMounted, onUnmounted, ref } from "vue";
 
 import { AppFrame } from "@daopk/kit";
 import { AppContextInjectionKey } from "@daopk/sdk";
@@ -13,7 +13,13 @@ import PersonView from "./components/PersonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 
+type WatchViewInstance = InstanceType<typeof WatchView> & {
+  readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
+};
+
 const ctx = inject(AppContextInjectionKey, null);
+const appInstance = getCurrentInstance();
+const watchViewRef = ref<WatchViewInstance | null>(null);
 const {
   activeSearch,
   canGoBack,
@@ -35,6 +41,50 @@ const {
   updateToolbarSolid,
   view,
 } = useMoviesNavigation({ appContext: ctx });
+
+function moviesAppRoot(): Element | null {
+  const root = appInstance?.proxy?.$el;
+  return root instanceof Element ? root : null;
+}
+
+function shouldHandleMoviesKeyboardEvent(event: KeyboardEvent): boolean {
+  if (typeof document === "undefined" || view.value.name !== "watch") {
+    return false;
+  }
+
+  const root = moviesAppRoot();
+  if (root === null || !document.contains(root)) {
+    return false;
+  }
+
+  const target = event.target;
+  return (
+    !(target instanceof Node) ||
+    target === document ||
+    target === document.body ||
+    root.contains(target)
+  );
+}
+
+function onMoviesKeydown(event: KeyboardEvent): void {
+  if (!shouldHandleMoviesKeyboardEvent(event)) {
+    return;
+  }
+
+  watchViewRef.value?.handleKeyboardEvent?.(event);
+}
+
+onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", onMoviesKeydown, { capture: true });
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", onMoviesKeydown, { capture: true });
+  }
+});
 </script>
 
 <template>
@@ -101,6 +151,7 @@ const {
     />
     <WatchView
       v-else-if="view.name === 'watch'"
+      ref="watchViewRef"
       :autoplay="view.autoplay === true"
       :target="view.target"
       @scroll="updateToolbarSolid"

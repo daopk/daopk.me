@@ -968,6 +968,35 @@ describe("MovieHlsPlayer", () => {
     );
   });
 
+  it("keeps hidden controls hidden when keyboard seeking causes buffering", async () => {
+    vi.useFakeTimers();
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    click(video);
+    vi.advanceTimersByTime(220);
+    await flushPromises();
+    vi.advanceTimersByTime(3200);
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player__controls").classes()).toContain(
+      "movies-hls-player__controls--hidden",
+    );
+
+    await wrapper.get(".movies-hls-player__stage").trigger("keydown", { key: "ArrowRight" });
+    video.dispatchEvent(new Event("waiting"));
+    await settle();
+
+    expect(video.currentTime).toBe(40);
+    expect(wrapper.get(".movies-hls-player__spinner").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__controls").classes()).toContain(
+      "movies-hls-player__controls--hidden",
+    );
+  });
+
   it("keeps hidden controls hidden when keyboard seeking starts from the seek control", async () => {
     vi.useFakeTimers();
     const wrapper = mountPlayer();
@@ -989,6 +1018,7 @@ describe("MovieHlsPlayer", () => {
     await wrapper.get(".movies-hls-player__seek").trigger("keydown", { key: "ArrowRight" });
     await settle();
 
+    expect(video.currentTime).toBe(40);
     expect(wrapper.get(".movies-hls-player__controls").classes()).toContain(
       "movies-hls-player__controls--hidden",
     );

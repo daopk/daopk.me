@@ -24,6 +24,8 @@ import {
   type MoviesPlaybackProgressState,
 } from "./moviesPlaybackProgress";
 
+const movieHlsPlayerHandleAppKeydown = vi.hoisted(() => vi.fn());
+
 vi.mock("./moviesApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./moviesApi")>();
   return {
@@ -49,6 +51,10 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
       title: { required: true, type: String },
     },
     emits: ["back", "next-episode"],
+    setup(_props: unknown, { expose }: { expose: (exposed: Record<string, unknown>) => void }) {
+      expose({ handleAppKeydown: movieHlsPlayerHandleAppKeydown });
+      return {};
+    },
     template: `
       <div
         class="movies-hls-player"
@@ -792,6 +798,38 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
     expect(wrapper.find(".movies-toolbar").exists()).toBe(true);
     expect(window.location.pathname).toBe("/movie/550-fight-club");
+  });
+
+  it("forwards watch keyboard events from the Movies app level to the player", async () => {
+    vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    const watchButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().trim() === "Watch");
+    expect(watchButton).toBeDefined();
+
+    await watchButton!.trigger("click");
+    await settle();
+
+    movieHlsPlayerHandleAppKeydown.mockClear();
+
+    const event = new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "ArrowRight",
+    });
+    window.dispatchEvent(event);
+
+    expect(movieHlsPlayerHandleAppKeydown).toHaveBeenCalledTimes(1);
+    expect(movieHlsPlayerHandleAppKeydown).toHaveBeenCalledWith(event);
+
+    wrapper.unmount();
   });
 
   it("shows Continue on movie detail when saved progress exists", async () => {

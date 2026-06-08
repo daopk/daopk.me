@@ -54,6 +54,9 @@ interface HlsQualityLevel {
 }
 
 type FullscreenMethod = () => Promise<void> | void;
+type ShowControlsOptions = {
+  readonly force?: boolean;
+};
 
 interface WebKitFullscreenDocument extends Document {
   readonly webkitFullscreenElement?: Element | null;
@@ -77,6 +80,7 @@ const SEEK_STEP_SECONDS = 10;
 const VOLUME_STEP = 0.1;
 const PLAYBACK_SPEED_OPTIONS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const PROGRESS_PERSIST_INTERVAL_MS = 5000;
+const KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS = 1200;
 
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
@@ -126,6 +130,7 @@ const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null)
 let hls: Hls | null = null;
 let hideControlsTimer: number | undefined;
 let surfaceClickTimer: number | undefined;
+let suppressControlsRevealUntilMs = 0;
 let lastProgressPersistedAtMs = 0;
 let resumeProgressApplied = false;
 
@@ -319,6 +324,7 @@ function resetPlaybackState(): void {
   seekPosition.value = 0;
   seekPointerPreview.value = null;
   controlsVisible.value = true;
+  suppressControlsRevealUntilMs = 0;
   lastProgressPersistedAtMs = 0;
   resumeProgressApplied = false;
 }
@@ -396,7 +402,7 @@ function onHlsError(_event: string, data: ErrorData): void {
     playbackError.value = "Could not play this stream.";
     waiting.value = false;
     destroyHls();
-    showControls();
+    showControls({ force: true });
   }
 }
 
@@ -436,7 +442,7 @@ function pauseVideo(): void {
 }
 
 function togglePlayback(): void {
-  showControls();
+  showControls({ force: true });
   if (playing.value) {
     pauseVideo();
   } else {
@@ -527,7 +533,7 @@ function onPlayerSurfaceDoubleClick(event: MouseEvent): void {
 
   event.preventDefault();
   clearSurfaceClickTimer();
-  showControls();
+  showControls({ force: true });
   void toggleFullscreen();
 }
 
@@ -549,7 +555,7 @@ function onCenterPlayDoubleClick(event: MouseEvent): void {
   event.preventDefault();
   event.stopPropagation();
   clearSurfaceClickTimer();
-  showControls();
+  showControls({ force: true });
   void toggleFullscreen();
 }
 
@@ -671,6 +677,7 @@ function onVideoPlay(): void {
 function onVideoPause(): void {
   playing.value = false;
   waiting.value = false;
+  suppressControlsRevealUntilMs = 0;
   controlsVisible.value = true;
   clearHideControlsTimer();
   syncMediaState();
@@ -684,12 +691,14 @@ function onVideoWaiting(): void {
 
 function onVideoCanPlay(): void {
   waiting.value = false;
+  suppressControlsRevealUntilMs = 0;
   syncMediaState();
 }
 
 function onVideoEnded(): void {
   playing.value = false;
   waiting.value = false;
+  suppressControlsRevealUntilMs = 0;
   controlsVisible.value = true;
   clearHideControlsTimer();
   syncMediaState();
@@ -699,11 +708,32 @@ function onVideoEnded(): void {
 function onVideoError(): void {
   playbackError.value = "Could not play this stream.";
   waiting.value = false;
-  showControls();
+  suppressControlsRevealUntilMs = 0;
+  showControls({ force: true });
 }
 
 function shouldPreserveHiddenControls(): boolean {
   return controlsHidden.value && playing.value;
+}
+
+function suppressControlsRevealForKeyboardSeek(): void {
+  suppressControlsRevealUntilMs = Date.now() + KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS;
+}
+
+function shouldSuppressControlsReveal(): boolean {
+  return (
+    playing.value &&
+    !controlsVisible.value &&
+    Date.now() < suppressControlsRevealUntilMs
+  );
+}
+
+function preserveHiddenControlsForKeyboardSeek(): boolean {
+  const preserveHiddenControls = shouldPreserveHiddenControls();
+  if (preserveHiddenControls) {
+    suppressControlsRevealForKeyboardSeek();
+  }
+  return preserveHiddenControls;
 }
 
 function beginSeekPreview(options: { preserveHiddenControls?: boolean } = {}): void {
@@ -719,7 +749,7 @@ function beginSeekPreview(options: { preserveHiddenControls?: boolean } = {}): v
     clearHideControlsTimer();
     return;
   }
-  showControls();
+  showControls({ force: true });
 }
 
 function previewSeek(nextValue: number): void {
@@ -792,7 +822,7 @@ function setVolume(nextVolume: number): void {
   if (normalized === 0) {
     muted.value = true;
   }
-  showControls();
+  showControls({ force: true });
 }
 
 function toggleMute(): void {
@@ -815,7 +845,7 @@ function toggleMute(): void {
     }
   }
 
-  showControls();
+  showControls({ force: true });
 }
 
 function setQualityLevel(nextLevel: number): void {
@@ -830,14 +860,14 @@ function setQualityLevel(nextLevel: number): void {
       hls.nextLevel = -1;
     }
   }
-  showControls();
+  showControls({ force: true });
 }
 
 function setPlaybackSpeed(nextSpeed: number): void {
   const speed = normalizedPlaybackSpeed(nextSpeed);
   playbackSpeed.value = speed;
   applyPlaybackSpeed(videoElement.value);
-  showControls();
+  showControls({ force: true });
 }
 
 function applyPlaybackSpeed(video: HTMLVideoElement | null): void {
@@ -879,7 +909,17 @@ function scheduleAutoHideControls(): void {
   }, AUTO_HIDE_CONTROLS_DELAY_MS);
 }
 
-function showControls(): void {
+function showControls(eventOrOptions?: Event | ShowControlsOptions): void {
+  const force =
+    typeof eventOrOptions === "object" &&
+    eventOrOptions !== null &&
+    "force" in eventOrOptions &&
+    eventOrOptions.force === true;
+
+  if (!force && shouldSuppressControlsReveal()) {
+    return;
+  }
+
   controlsVisible.value = true;
   scheduleAutoHideControls();
 }
@@ -890,6 +930,18 @@ function onControlsFocusOut(event: FocusEvent): void {
     controlsFocused.value = false;
     scheduleAutoHideControls();
   }
+}
+
+function keyboardSeekDeltaSeconds(key: string): number | null {
+  if (key === "ArrowLeft") {
+    return -SEEK_STEP_SECONDS;
+  }
+
+  if (key === "ArrowRight") {
+    return SEEK_STEP_SECONDS;
+  }
+
+  return null;
 }
 
 function onSeekKeydown(event: KeyboardEvent): void {
@@ -908,7 +960,7 @@ function onSeekKeydown(event: KeyboardEvent): void {
     event.key === "PageUp" ||
     event.key === "PageDown"
   ) {
-    beginSeekPreview({ preserveHiddenControls: shouldPreserveHiddenControls() });
+    beginSeekPreview({ preserveHiddenControls: preserveHiddenControlsForKeyboardSeek() });
   }
 }
 
@@ -1105,7 +1157,7 @@ function exitNativeVideoFullscreen(video: WebKitVideoElement | null): boolean {
 function enterFallbackFullscreen(): void {
   fallbackFullscreen.value = true;
   fullscreen.value = true;
-  showControls();
+  showControls({ force: true });
 }
 
 function exitFallbackFullscreen(): void {
@@ -1148,8 +1200,24 @@ async function toggleFullscreen(): Promise<void> {
   syncFullscreenState();
 }
 
-function onStageKeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented || isTypingTarget(event.target)) {
+function onStageKeydownCapture(event: KeyboardEvent): void {
+  const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
+  if (
+    event.defaultPrevented ||
+    seekDeltaSeconds === null ||
+    isTypingTarget(event.target) ||
+    !preserveHiddenControlsForKeyboardSeek()
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  seekBy(seekDeltaSeconds, { preserveHiddenControls: true });
+}
+
+function handleKeyboardShortcut(event: KeyboardEvent): void {
+  if (event.defaultPrevented) {
     return;
   }
 
@@ -1159,15 +1227,12 @@ function onStageKeydown(event: KeyboardEvent): void {
     return;
   }
 
-  if (event.key === "ArrowLeft") {
+  const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
+  if (seekDeltaSeconds !== null) {
     event.preventDefault();
-    seekBy(-SEEK_STEP_SECONDS, { preserveHiddenControls: shouldPreserveHiddenControls() });
-    return;
-  }
-
-  if (event.key === "ArrowRight") {
-    event.preventDefault();
-    seekBy(SEEK_STEP_SECONDS, { preserveHiddenControls: shouldPreserveHiddenControls() });
+    seekBy(seekDeltaSeconds, {
+      preserveHiddenControls: preserveHiddenControlsForKeyboardSeek(),
+    });
     return;
   }
 
@@ -1205,6 +1270,26 @@ function onStageKeydown(event: KeyboardEvent): void {
     cancelSeekPreview();
   }
 }
+
+function handleAppKeydown(event: KeyboardEvent): void {
+  if (isTypingTarget(event.target) || playerControlsContain(event.target)) {
+    return;
+  }
+
+  handleKeyboardShortcut(event);
+}
+
+function onStageKeydown(event: KeyboardEvent): void {
+  if (isTypingTarget(event.target)) {
+    return;
+  }
+
+  handleKeyboardShortcut(event);
+}
+
+defineExpose({
+  handleAppKeydown,
+});
 
 function pictureInPictureDocument(): Document | null {
   return typeof document === "undefined" ? null : document;
@@ -1253,7 +1338,7 @@ async function togglePictureInPicture(): Promise<void> {
 
     await video.requestPictureInPicture?.();
     syncPictureInPictureState();
-    showControls();
+    showControls({ force: true });
   } catch {
     syncPictureInPictureState();
   }
@@ -1325,6 +1410,7 @@ function speedLabel(speed: number): string {
       }"
       tabindex="0"
       :aria-label="`${title} player`"
+      @keydown.capture="onStageKeydownCapture"
       @keydown="onStageKeydown"
       @click="onPlayerSurfaceClick"
       @dblclick="onPlayerSurfaceDoubleClick"
