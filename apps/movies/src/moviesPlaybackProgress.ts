@@ -89,9 +89,7 @@ export function moviesPlaybackProgressRecords(
   options: { readonly limit?: number } = {},
 ): readonly MoviesPlaybackProgressRecord[] {
   const limit =
-    options.limit === undefined
-      ? Number.POSITIVE_INFINITY
-      : Math.max(0, Math.floor(options.limit));
+    options.limit === undefined ? Number.POSITIVE_INFINITY : Math.max(0, Math.floor(options.limit));
 
   return Object.entries(state.entries)
     .map(([key, progress]) => {

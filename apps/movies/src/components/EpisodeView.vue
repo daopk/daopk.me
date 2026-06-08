@@ -146,7 +146,13 @@ async function loadEpisode(): Promise<void> {
 
     <article v-else-if="detail && season && episode" class="movies-episode__content">
       <header class="movies-episode__hero">
-        <span class="movies-episode__media">
+        <button
+          v-if="episode.play !== null"
+          type="button"
+          class="movies-episode__media movies-episode__media--button"
+          :aria-label="`Play ${episode.name}`"
+          @click="watchEpisode"
+        >
           <img
             v-if="heroImageUrl"
             class="movies-episode__still"
@@ -156,13 +162,20 @@ async function loadEpisode(): Promise<void> {
             decoding="async"
           />
           <span v-else class="movies-episode__still" aria-hidden="true" />
-          <span
-            v-if="episode.play !== null"
-            class="movies-episode__play-overlay"
-            aria-hidden="true"
-          >
+          <span class="movies-episode__play-overlay" aria-hidden="true">
             <Play />
           </span>
+        </button>
+        <span v-else class="movies-episode__media">
+          <img
+            v-if="heroImageUrl"
+            class="movies-episode__still"
+            :src="heroImageUrl"
+            :alt="episode.name"
+            loading="eager"
+            decoding="async"
+          />
+          <span v-else class="movies-episode__still" aria-hidden="true" />
         </span>
 
         <div class="movies-episode__intro">
@@ -173,9 +186,6 @@ async function loadEpisode(): Promise<void> {
           </p>
           <p v-else class="movies-episode__subtitle">{{ episodeLabel(episode) }}</p>
           <p v-if="episode.overview" class="movies-episode__overview">{{ episode.overview }}</p>
-          <div v-if="episode.play !== null" class="movies-episode__actions">
-            <Button variant="primary" :icon-start="Play" @click="watchEpisode">Watch</Button>
-          </div>
         </div>
       </header>
 
@@ -243,12 +253,25 @@ async function loadEpisode(): Promise<void> {
 
 .movies-episode__media {
   aspect-ratio: 16 / 9;
+  background: transparent;
+  border: 0;
   border-radius: 8px;
   box-shadow: var(--shadow-md);
+  color: inherit;
   display: block;
   inline-size: 100%;
   overflow: hidden;
+  padding: 0;
   position: relative;
+}
+
+.movies-episode__media--button {
+  cursor: pointer;
+}
+
+.movies-episode__media--button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
 .movies-episode__still {
@@ -258,6 +281,15 @@ async function loadEpisode(): Promise<void> {
   display: block;
   inline-size: 100%;
   object-fit: cover;
+  transition:
+    filter var(--duration-fast) var(--ease),
+    transform var(--duration-base) var(--ease);
+}
+
+.movies-episode__media--button:hover .movies-episode__still,
+.movies-episode__media--button:focus-visible .movies-episode__still {
+  filter: brightness(0.72);
+  transform: scale(1.03);
 }
 
 .movies-episode__play-overlay {
@@ -313,13 +345,6 @@ async function loadEpisode(): Promise<void> {
   line-height: var(--leading-relaxed);
   margin: 0;
   max-inline-size: 78ch;
-}
-
-.movies-episode__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  padding-block-start: var(--space-xs);
 }
 
 .movies-episode__section {

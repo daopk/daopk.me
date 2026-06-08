@@ -988,7 +988,7 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
   });
 
-  it("opens WatchView from Detail when a movie has a play source", async () => {
+  it("opens WatchView from Detail thumbnail when a movie has a play source", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
 
     const wrapper = mount(App);
@@ -997,13 +997,15 @@ describe("Movies app", () => {
     await wrapper.get(".movie-card").trigger("click");
     await settle();
 
-    const watchButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().trim() === "Watch");
-    expect(watchButton).toBeDefined();
+    const playButton = wrapper.get(
+      'button.movies-detail-hero__poster-shell--button[aria-label="Play Fight Club"]',
+    );
+    expect(wrapper.findAll("button").some((button) => button.text().trim() === "Watch")).toBe(
+      false,
+    );
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
 
-    await watchButton!.trigger("click");
+    await playButton.trigger("click");
     await settle();
 
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
@@ -1033,12 +1035,11 @@ describe("Movies app", () => {
     await wrapper.get(".movie-card").trigger("click");
     await settle();
 
-    const watchButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().trim() === "Watch");
-    expect(watchButton).toBeDefined();
+    const playButton = wrapper.get(
+      'button.movies-detail-hero__poster-shell--button[aria-label="Play Fight Club"]',
+    );
 
-    await watchButton!.trigger("click");
+    await playButton.trigger("click");
     await settle();
 
     movieHlsPlayerHandleAppKeydown.mockClear();
@@ -1056,7 +1057,7 @@ describe("Movies app", () => {
     wrapper.unmount();
   });
 
-  it("shows Continue on movie detail when saved progress exists", async () => {
+  it("opens movie detail thumbnail with saved progress", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
     persistAppProgress(moviePlaybackProgressKey(550));
 
@@ -1066,13 +1067,13 @@ describe("Movies app", () => {
     await wrapper.get(".movie-card").trigger("click");
     await settle();
 
-    const continueButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().trim() === "Continue");
-    expect(continueButton).toBeDefined();
+    const continueButton = wrapper.get(
+      'button.movies-detail-hero__poster-shell--button[aria-label="Continue Fight Club"]',
+    );
+    expect(wrapper.text()).not.toContain("Continue");
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
 
-    await continueButton!.trigger("click");
+    await continueButton.trigger("click");
     await settle();
 
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
@@ -1333,11 +1334,11 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-episode__play-overlay").exists()).toBe(true);
     expect(wrapper.find(".movies-episode-list__play-overlay").exists()).toBe(true);
 
-    const watchButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().trim() === "Watch");
-    expect(watchButton).toBeDefined();
-    await watchButton!.trigger("click");
+    const playButton = wrapper.get('button.movies-episode__media--button[aria-label="Play Pilot"]');
+    expect(wrapper.findAll("button").some((button) => button.text().trim() === "Watch")).toBe(
+      false,
+    );
+    await playButton.trigger("click");
     await settle();
 
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
@@ -1372,11 +1373,8 @@ describe("Movies app", () => {
     const wrapper = mount(App);
     await settle();
 
-    const watchButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().trim() === "Watch");
-    expect(watchButton).toBeDefined();
-    await watchButton!.trigger("click");
+    const playButton = wrapper.get('button.movies-episode__media--button[aria-label="Play Pilot"]');
+    await playButton.trigger("click");
     await settle();
 
     expect(wrapper.get(".movies-hls-player").attributes("data-next-episode-label")).toBe(

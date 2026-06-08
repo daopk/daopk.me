@@ -2,7 +2,6 @@
 import { computed } from "vue";
 
 import { Play } from "@daopk/icons";
-import { Button } from "@daopk/ui";
 
 import type { MovieDetail } from "../../moviesApi";
 import type { MoviesPlaybackProgressEntry } from "../../moviesPlaybackProgress";
@@ -23,11 +22,13 @@ defineEmits<{
 
 const detailMeta = computed(() => detailMetaLabel(props.detail));
 const canWatch = computed(() => props.detail.mediaType === "movie" && props.detail.play !== null);
-const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Continue"));
+const playButtonLabel = computed(
+  () => `${props.resumeProgress === null ? "Play" : "Continue"} ${props.detail.name}`,
+);
 </script>
 
 <template>
-  <section class="movies-detail-hero">
+  <section class="movies-detail-hero" :class="{ 'movies-detail-hero--playable': canWatch }">
     <picture
       v-if="detail.backdropUrl || detail.posterUrl"
       class="movies-detail-hero__backdrop"
@@ -39,12 +40,21 @@ const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Co
     <div class="movies-detail-hero__shade" />
     <div class="movies-detail-hero__content">
       <div class="movies-detail-hero__overview">
-        <img
-          v-if="detail.posterUrl"
-          class="movies-detail-hero__poster"
-          :src="detail.posterUrl"
-          :alt="detail.name"
-        />
+        <button
+          v-if="detail.posterUrl && canWatch"
+          type="button"
+          class="movies-detail-hero__poster-shell movies-detail-hero__poster-shell--button"
+          :aria-label="playButtonLabel"
+          @click="$emit('watch')"
+        >
+          <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+          <span class="movies-detail-hero__play-overlay" aria-hidden="true">
+            <Play />
+          </span>
+        </button>
+        <span v-else-if="detail.posterUrl" class="movies-detail-hero__poster-shell">
+          <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+        </span>
         <div class="movies-detail-hero__copy">
           <p class="movies-detail-hero__eyebrow">TMDB {{ detail.mediaType }}</p>
           <h1>{{ detail.name }}</h1>
@@ -57,11 +67,6 @@ const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Co
           </p>
           <div v-if="detail.genres.length > 0" class="movies-detail-hero__chips">
             <span v-for="item in detail.genres" :key="item.slug">{{ item.name }}</span>
-          </div>
-          <div v-if="canWatch" class="movies-detail-hero__actions">
-            <Button variant="primary" :icon-start="Play" @click="$emit('watch')">
-              {{ watchLabel }}
-            </Button>
           </div>
         </div>
       </div>
@@ -127,12 +132,66 @@ const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Co
   grid-template-columns: minmax(160px, 240px) minmax(0, 1fr);
 }
 
-.movies-detail-hero__poster {
+.movies-detail-hero__poster-shell {
   aspect-ratio: 2 / 3;
+  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
+  border: 0;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  color: inherit;
+  display: block;
+  inline-size: 100%;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+}
+
+.movies-detail-hero__poster-shell--button {
+  cursor: pointer;
+}
+
+.movies-detail-hero__poster-shell--button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.movies-detail-hero__poster {
+  block-size: 100%;
+  display: block;
   inline-size: 100%;
   object-fit: cover;
+  transition:
+    filter var(--duration-fast) var(--ease),
+    transform var(--duration-base) var(--ease);
+}
+
+.movies-detail-hero__poster-shell--button:hover .movies-detail-hero__poster,
+.movies-detail-hero__poster-shell--button:focus-visible .movies-detail-hero__poster {
+  filter: brightness(0.72);
+  transform: scale(1.03);
+}
+
+.movies-detail-hero__play-overlay {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: rgb(8 9 13 / 66%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--radius-full);
+  block-size: 56px;
+  color: #fff;
+  display: inline-flex;
+  inline-size: 56px;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  justify-content: center;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.movies-detail-hero__play-overlay svg {
+  block-size: 22px;
+  inline-size: 22px;
+  margin-inline-start: 2px;
 }
 
 .movies-detail-hero__copy {
@@ -185,13 +244,6 @@ const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Co
   padding: var(--space-2xs) var(--space-xs);
 }
 
-.movies-detail-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  padding-block-start: var(--space-xs);
-}
-
 @media (max-width: 700px) {
   .movies-detail-hero {
     align-items: end;
@@ -218,8 +270,13 @@ const watchLabel = computed(() => (props.resumeProgress === null ? "Watch" : "Co
     grid-template-columns: 1fr;
   }
 
-  .movies-detail-hero__poster {
+  .movies-detail-hero__poster-shell {
     display: none;
+  }
+
+  .movies-detail-hero--playable .movies-detail-hero__poster-shell {
+    display: block;
+    inline-size: min(180px, 44vw);
   }
 
   .movies-detail-hero__copy {
