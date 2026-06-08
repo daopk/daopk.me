@@ -16,7 +16,9 @@ import {
   createMoviesSearchView,
   movieDetailViewFromSummary,
   movieEpisodeViewFromTarget,
+  movieEpisodeWatchViewFromTarget,
   moviePersonViewFromCredit,
+  movieWatchViewFromSummary,
   moviesDeepLinkFromInitialState,
   moviesViewFromDeepLink,
   type MoviesView,
@@ -29,9 +31,12 @@ export interface UseMoviesNavigationOptions {
   readonly syncPath?: (view: MoviesView) => void;
 }
 
-interface MoviesNavigationOptions {
-  readonly autoplay?: boolean;
+interface MoviesReplaceOptions {
   readonly replace?: boolean;
+}
+
+interface MoviesWatchOptions extends MoviesReplaceOptions {
+  readonly autoplay?: boolean;
 }
 
 export interface UseMoviesNavigationBindings {
@@ -46,8 +51,10 @@ export interface UseMoviesNavigationBindings {
   goBack(): void;
   goForward(): void;
   goHome(): void;
-  openDetail(movie: MovieSummary, options?: MoviesNavigationOptions): void;
-  openEpisode(request: MovieEpisodeTarget, options?: MoviesNavigationOptions): void;
+  openDetail(movie: MovieSummary, options?: MoviesReplaceOptions): void;
+  openEpisode(request: MovieEpisodeTarget, options?: MoviesReplaceOptions): void;
+  openEpisodeWatch(request: MovieEpisodeTarget, options?: MoviesWatchOptions): void;
+  openMovieWatch(movie: MovieSummary, options?: MoviesWatchOptions): void;
   openList(query: MoviesListQuery, options?: { replace?: boolean }): void;
   openPerson(person: MoviePersonCredit): void;
   searchMovies(keyword: string, options?: { replace?: boolean }): void;
@@ -157,15 +164,20 @@ export function useMoviesNavigation({
     navigate(createMoviesSearchView(keyword), options);
   }
 
-  function openDetail(movie: MovieSummary, options: MoviesNavigationOptions = {}): void {
-    navigate(movieDetailViewFromSummary(movie, { autoplay: options.autoplay }), options);
+  function openDetail(movie: MovieSummary, options: MoviesReplaceOptions = {}): void {
+    navigate(movieDetailViewFromSummary(movie), options);
   }
 
-  function openEpisode(
-    request: MovieEpisodeTarget,
-    options: MoviesNavigationOptions = {},
-  ): void {
-    navigate(movieEpisodeViewFromTarget(request, { autoplay: options.autoplay }), options);
+  function openEpisode(request: MovieEpisodeTarget, options: MoviesReplaceOptions = {}): void {
+    navigate(movieEpisodeViewFromTarget(request), options);
+  }
+
+  function openMovieWatch(movie: MovieSummary, options: MoviesWatchOptions = {}): void {
+    navigate(movieWatchViewFromSummary(movie, { autoplay: options.autoplay }), options);
+  }
+
+  function openEpisodeWatch(request: MovieEpisodeTarget, options: MoviesWatchOptions = {}): void {
+    navigate(movieEpisodeWatchViewFromTarget(request, { autoplay: options.autoplay }), options);
   }
 
   function openPerson(person: MoviePersonCredit): void {
@@ -199,7 +211,9 @@ export function useMoviesNavigation({
     goHome,
     openDetail,
     openEpisode,
+    openEpisodeWatch,
     openList,
+    openMovieWatch,
     openPerson,
     searchMovies,
     updateToolbarSolid,

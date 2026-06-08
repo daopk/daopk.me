@@ -10,6 +10,7 @@ import HomeView from "./components/HomeView.vue";
 import ListView from "./components/ListView.vue";
 import MoviesToolbar from "./components/MoviesToolbar.vue";
 import PersonView from "./components/PersonView.vue";
+import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 
 const ctx = inject(AppContextInjectionKey, null);
@@ -24,7 +25,9 @@ const {
   goHome,
   openDetail,
   openEpisode,
+  openEpisodeWatch,
   openList,
+  openMovieWatch,
   openPerson,
   searchMovies,
   showCloseButton,
@@ -43,6 +46,7 @@ const {
     @dragstart.prevent
   >
     <MoviesToolbar
+      v-if="view.name !== 'watch'"
       :solid="toolbarSolid"
       :can-go-back="canGoBack"
       :can-go-forward="canGoForward"
@@ -60,8 +64,8 @@ const {
     <HomeView
       v-if="view.name === 'home'"
       @scroll="updateToolbarSolid"
-      @open-continue-movie="openDetail($event, { autoplay: true })"
-      @open-continue-episode="openEpisode($event, { autoplay: true })"
+      @open-continue-movie="openMovieWatch($event, { autoplay: true })"
+      @open-continue-episode="openEpisodeWatch($event, { autoplay: true })"
       @open-detail="openDetail"
       @open-list="openList"
     />
@@ -74,7 +78,6 @@ const {
     />
     <DetailView
       v-else-if="view.name === 'detail'"
-      :autoplay="view.autoplay === true"
       :media-type="view.mediaType"
       :tmdb-id="view.tmdbId"
       @scroll="updateToolbarSolid"
@@ -82,10 +85,10 @@ const {
       @open-detail="openDetail"
       @open-episode="openEpisode"
       @open-person="openPerson"
+      @watch="openMovieWatch($event, { autoplay: true })"
     />
     <EpisodeView
       v-else-if="view.name === 'episode'"
-      :autoplay="view.autoplay === true"
       :episode-number="view.episodeNumber"
       :season-number="view.seasonNumber"
       :slug="view.slug"
@@ -94,6 +97,14 @@ const {
       @back="goBack"
       @open-episode="openEpisode($event, { replace: true })"
       @open-person="openPerson"
+      @watch="openEpisodeWatch($event, { autoplay: true })"
+    />
+    <WatchView
+      v-else-if="view.name === 'watch'"
+      :autoplay="view.autoplay === true"
+      :target="view.target"
+      @scroll="updateToolbarSolid"
+      @back="goBack"
     />
     <PersonView
       v-else

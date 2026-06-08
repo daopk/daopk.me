@@ -12,21 +12,34 @@ export type MoviesView =
   | { readonly name: "home" }
   | { readonly name: "list"; readonly query: MoviesListQuery }
   | {
-      readonly autoplay?: boolean;
       readonly mediaType: MovieMediaType;
       readonly name: "detail";
       readonly slug: string;
       readonly tmdbId: number;
     }
   | {
-      readonly autoplay?: boolean;
       readonly episodeNumber: number;
       readonly name: "episode";
       readonly seasonNumber: number;
       readonly slug: string;
       readonly tmdbId: number;
     }
-  | { readonly name: "person"; readonly slug: string; readonly tmdbId: number };
+  | { readonly name: "person"; readonly slug: string; readonly tmdbId: number }
+  | { readonly autoplay?: boolean; readonly name: "watch"; readonly target: MoviesWatchTarget };
+
+export type MoviesWatchTarget =
+  | {
+      readonly kind: "movie";
+      readonly slug: string;
+      readonly tmdbId: number;
+    }
+  | {
+      readonly episodeNumber: number;
+      readonly kind: "episode";
+      readonly seasonNumber: number;
+      readonly slug: string;
+      readonly tmdbId: number;
+    };
 
 export type MoviesDeepLink =
   | {
@@ -63,12 +76,8 @@ export function createMoviesSearchView(keyword: string): MoviesView {
   return createMoviesListView({ keyword, limit: DEFAULT_MOVIES_LIST_LIMIT, media: "all" });
 }
 
-export function movieDetailViewFromSummary(
-  movie: MovieSummary,
-  options: { readonly autoplay?: boolean } = {},
-): MoviesView {
+export function movieDetailViewFromSummary(movie: MovieSummary): MoviesView {
   return {
-    ...(options.autoplay === true ? { autoplay: true } : {}),
     mediaType: movie.mediaType,
     name: "detail",
     slug: movie.slug,
@@ -76,17 +85,45 @@ export function movieDetailViewFromSummary(
   };
 }
 
-export function movieEpisodeViewFromTarget(
-  request: MovieEpisodeTarget,
-  options: { readonly autoplay?: boolean } = {},
-): MoviesView {
+export function movieEpisodeViewFromTarget(request: MovieEpisodeTarget): MoviesView {
   return {
-    ...(options.autoplay === true ? { autoplay: true } : {}),
     episodeNumber: request.episodeNumber,
     name: "episode",
     seasonNumber: request.seasonNumber,
     slug: request.slug,
     tmdbId: request.tmdbId,
+  };
+}
+
+export function movieWatchViewFromSummary(
+  movie: MovieSummary,
+  options: { readonly autoplay?: boolean } = {},
+): MoviesView {
+  return {
+    ...(options.autoplay === true ? { autoplay: true } : {}),
+    name: "watch",
+    target: {
+      kind: "movie",
+      slug: movie.slug,
+      tmdbId: movie.tmdbId,
+    },
+  };
+}
+
+export function movieEpisodeWatchViewFromTarget(
+  request: MovieEpisodeTarget,
+  options: { readonly autoplay?: boolean } = {},
+): MoviesView {
+  return {
+    ...(options.autoplay === true ? { autoplay: true } : {}),
+    name: "watch",
+    target: {
+      episodeNumber: request.episodeNumber,
+      kind: "episode",
+      seasonNumber: request.seasonNumber,
+      slug: request.slug,
+      tmdbId: request.tmdbId,
+    },
   };
 }
 
@@ -132,6 +169,14 @@ export function moviesViewFromDeepLink(intent: MoviesDeepLink): MoviesView {
 export function moviesPathForView(view: MoviesView): string {
   if (view.name === "detail") {
     return `/${view.mediaType}/${view.tmdbId}-${pathSegment(view.slug)}`;
+  }
+
+  if (view.name === "watch") {
+    if (view.target.kind === "movie") {
+      return `/movie/${view.target.tmdbId}-${pathSegment(view.target.slug)}`;
+    }
+
+    return `/tv/${view.target.tmdbId}-${pathSegment(view.target.slug)}/season/${view.target.seasonNumber}/episode/${view.target.episodeNumber}`;
   }
 
   if (view.name === "person") {

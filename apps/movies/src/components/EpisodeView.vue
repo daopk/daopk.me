@@ -3,10 +3,9 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft } from "@daopk/icons";
+import { ArrowLeft, Play } from "@daopk/icons";
 
 import EpisodeList from "./EpisodeList.vue";
-import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
 import {
@@ -22,26 +21,23 @@ import {
   type MoviePersonCredit,
   type MovieSeasonEpisode,
 } from "../moviesApi";
-import { episodePlaybackProgressKey } from "../moviesPlaybackProgress";
 
 type LoadState = "loading" | "ready" | "error";
 
 interface EpisodeViewProps {
-  autoplay?: boolean;
   episodeNumber: number;
   seasonNumber: number;
   slug: string;
   tmdbId: number;
 }
 
-const props = withDefaults(defineProps<EpisodeViewProps>(), {
-  autoplay: false,
-});
+const props = defineProps<EpisodeViewProps>();
 
 const emit = defineEmits<{
   back: [];
   "open-episode": [request: MovieEpisodeTarget];
   "open-person": [person: MoviePersonCredit];
+  watch: [request: MovieEpisodeTarget];
 }>();
 
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
@@ -52,9 +48,6 @@ const detail = computed(() => episodeDetail.value?.series ?? null);
 const season = computed(() => episodeDetail.value?.season ?? null);
 const episode = computed<MovieSeasonEpisode | null>(() => episodeDetail.value?.episode ?? null);
 const heroImageUrl = computed(() => episode.value?.stillUrl || detail.value?.backdropUrl || "");
-const progressKey = computed(() =>
-  episodePlaybackProgressKey(props.tmdbId, props.seasonNumber, props.episodeNumber),
-);
 const seasonMeta = computed(() => (season.value === null ? "" : seasonMetaLabel(season.value)));
 const facts = computed(() => {
   const currentEpisode = episode.value;
@@ -99,6 +92,21 @@ function openSeasonEpisode(nextEpisode: MovieSeasonEpisode): void {
   });
 }
 
+function watchEpisode(): void {
+  const currentDetail = detail.value;
+  const currentEpisode = episode.value;
+  if (currentEpisode === null || currentEpisode.play === null) {
+    return;
+  }
+
+  emit("watch", {
+    episodeNumber: currentEpisode.episodeNumber,
+    seasonNumber: currentEpisode.seasonNumber,
+    slug: currentDetail?.slug ?? props.slug,
+    tmdbId: props.tmdbId,
+  });
+}
+
 async function loadEpisode(): Promise<void> {
   abortController?.abort();
   abortController = new AbortController();
@@ -138,24 +146,24 @@ async function loadEpisode(): Promise<void> {
 
     <article v-else-if="detail && season && episode" class="movies-episode__content">
       <header class="movies-episode__hero">
-        <MovieHlsPlayer
-          v-if="episode.play !== null"
-          class="movies-episode__player"
-          :autoplay="autoplay"
-          :play="episode.play"
-          :poster-url="heroImageUrl"
-          :progress-key="progressKey"
-          :title="`${detail.name} - ${episode.name}`"
-        />
-        <img
-          v-else-if="heroImageUrl"
-          class="movies-episode__still"
-          :src="heroImageUrl"
-          :alt="episode.name"
-          loading="eager"
-          decoding="async"
-        />
-        <span v-else class="movies-episode__still" aria-hidden="true" />
+        <span class="movies-episode__media">
+          <img
+            v-if="heroImageUrl"
+            class="movies-episode__still"
+            :src="heroImageUrl"
+            :alt="episode.name"
+            loading="eager"
+            decoding="async"
+          />
+          <span v-else class="movies-episode__still" aria-hidden="true" />
+          <span
+            v-if="episode.play !== null"
+            class="movies-episode__play-overlay"
+            aria-hidden="true"
+          >
+            <Play />
+          </span>
+        </span>
 
         <div class="movies-episode__intro">
           <p class="movies-episode__eyebrow">{{ detail.name }} · {{ seasonLabel(season) }}</p>
@@ -165,6 +173,9 @@ async function loadEpisode(): Promise<void> {
           </p>
           <p v-else class="movies-episode__subtitle">{{ episodeLabel(episode) }}</p>
           <p v-if="episode.overview" class="movies-episode__overview">{{ episode.overview }}</p>
+          <div v-if="episode.play !== null" class="movies-episode__actions">
+            <Button variant="primary" :icon-start="Play" @click="watchEpisode">Watch</Button>
+          </div>
         </div>
       </header>
 
@@ -230,17 +241,46 @@ async function loadEpisode(): Promise<void> {
   grid-template-columns: minmax(260px, 560px) minmax(0, 1fr);
 }
 
+.movies-episode__media {
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  display: block;
+  inline-size: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
 .movies-episode__still {
   aspect-ratio: 16 / 9;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
-  border-radius: 8px;
-  box-shadow: var(--shadow-md);
+  block-size: 100%;
+  display: block;
   inline-size: 100%;
   object-fit: cover;
 }
 
-.movies-episode__player {
-  inline-size: 100%;
+.movies-episode__play-overlay {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: rgb(8 9 13 / 66%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--radius-full);
+  block-size: 56px;
+  color: #fff;
+  display: inline-flex;
+  inline-size: 56px;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  justify-content: center;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.movies-episode__play-overlay svg {
+  block-size: 22px;
+  inline-size: 22px;
+  margin-inline-start: 2px;
 }
 
 .movies-episode__intro {
@@ -273,6 +313,13 @@ async function loadEpisode(): Promise<void> {
   line-height: var(--leading-relaxed);
   margin: 0;
   max-inline-size: 78ch;
+}
+
+.movies-episode__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding-block-start: var(--space-xs);
 }
 
 .movies-episode__section {

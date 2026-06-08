@@ -44,8 +44,10 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
       play: { required: true, type: Object },
       posterUrl: { default: "", type: String },
       progressKey: { default: "", type: String },
+      showBackButton: { default: false, type: Boolean },
       title: { required: true, type: String },
     },
+    emits: ["back"],
     template: `
       <div
         class="movies-hls-player"
@@ -53,6 +55,15 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
         :data-progress-key="progressKey"
         :data-title="title"
       >
+        <button
+          v-if="showBackButton"
+          type="button"
+          class="movies-hls-player__back-button"
+          aria-label="Back"
+          @click="$emit('back')"
+        >
+          &lt;
+        </button>
         <video />
       </div>
     `,
@@ -120,9 +131,7 @@ function persistAppProgress(
   persistAppProgressEntries({ [key]: entry });
 }
 
-function persistAppProgressEntries(
-  entries: Record<string, MoviesPlaybackProgressEntry>,
-): void {
+function persistAppProgressEntries(entries: Record<string, MoviesPlaybackProgressEntry>): void {
   const state: MoviesPlaybackProgressState = {
     entries,
   };
@@ -473,9 +482,11 @@ describe("Movies app", () => {
     await settle();
 
     expect(window.location.pathname).toBe("/movie/550-fight-club");
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+    expect(wrapper.find(".movies-watch__episode-info").exists()).toBe(false);
   });
 
   it("opens a Continue Watching TV episode directly into autoplay playback", async () => {
@@ -497,11 +508,18 @@ describe("Movies app", () => {
     await settle();
 
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/1");
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
       episodePlaybackProgressKey(1399, 1, 1),
     );
+    const episodeInfo = wrapper.get(".movies-watch__episode-info");
+    expect(episodeInfo.text()).toContain("Planet Cinema");
+    expect(episodeInfo.text()).toContain("Season 1");
+    expect(episodeInfo.text()).toContain("Pilot");
+    expect(episodeInfo.text()).toContain("Episode 1 · 2024-01-01 · 42 min · 7.8 rating");
+    expect(episodeInfo.text()).toContain("Pilot overview.");
   });
 
   it("hides Continue Watching when progress hydration fails", async () => {
@@ -723,7 +741,7 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
   });
 
-  it("shows a movie player when Detail has a play source", async () => {
+  it("opens WatchView from Detail when a movie has a play source", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
 
     const wrapper = mount(App);
@@ -741,10 +759,22 @@ describe("Movies app", () => {
     await watchButton!.trigger("click");
     await settle();
 
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
+    expect(wrapper.find(".movies-toolbar").exists()).toBe(false);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
+    expect(wrapper.find(".movies-hls-player__back-button").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
     expect(wrapper.find("video").exists()).toBe(true);
+
+    await wrapper.get(".movies-hls-player__back-button").trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-watch").exists()).toBe(false);
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+    expect(wrapper.find(".movies-toolbar").exists()).toBe(true);
+    expect(window.location.pathname).toBe("/movie/550-fight-club");
   });
 
   it("shows Continue on movie detail when saved progress exists", async () => {
@@ -766,6 +796,7 @@ describe("Movies app", () => {
     await continueButton!.trigger("click");
     await settle();
 
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
@@ -979,7 +1010,7 @@ describe("Movies app", () => {
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 
-  it("renders an HLS player for a direct episode route with a play source", async () => {
+  it("opens WatchView from an episode detail route with a play source", async () => {
     window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/1");
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
     const season = seasonDetail();
@@ -992,14 +1023,31 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 1, expect.anything());
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+    expect(wrapper.find(".movies-episode__still").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode__play-overlay").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode-list__play-overlay").exists()).toBe(true);
+
+    const watchButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().trim() === "Watch");
+    expect(watchButton).toBeDefined();
+    await watchButton!.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
-    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("false");
+    expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
       episodePlaybackProgressKey(1399, 1, 1),
     );
     expect(wrapper.find("video").exists()).toBe(true);
-    expect(wrapper.find(".movies-episode__still").exists()).toBe(false);
-    expect(wrapper.find(".movies-episode-list__play-overlay").exists()).toBe(true);
+    const episodeInfo = wrapper.get(".movies-watch__episode-info");
+    expect(episodeInfo.text()).toContain("Planet Cinema");
+    expect(episodeInfo.text()).toContain("Season 1");
+    expect(episodeInfo.text()).toContain("Pilot");
+    expect(episodeInfo.text()).toContain("Episode 1 · 2024-01-01 · 42 min · 7.8 rating");
+    expect(episodeInfo.text()).toContain("Pilot overview.");
   });
 
   it("ignores unsupported detail routes", async () => {

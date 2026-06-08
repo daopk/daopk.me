@@ -15,6 +15,7 @@ import {
 import {
   AlertCircle,
   Check,
+  ChevronLeft,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -36,6 +37,7 @@ interface MovieHlsPlayerProps {
   play: MoviePlayInfo;
   posterUrl?: string;
   progressKey?: string;
+  showBackButton?: boolean;
   title: string;
 }
 
@@ -78,9 +80,15 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
   posterUrl: "",
   progressKey: "",
+  showBackButton: false,
 });
 
+const emit = defineEmits<{
+  back: [];
+}>();
+
 const playerShell = ref<HTMLElement | null>(null);
+const backControlsRoot = ref<HTMLElement | null>(null);
 const topControlsRoot = ref<HTMLElement | null>(null);
 const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
@@ -473,6 +481,7 @@ function playerControlsContain(target: EventTarget | null): boolean {
   return (
     target instanceof Node &&
     (controlsRoot.value?.contains(target) === true ||
+      backControlsRoot.value?.contains(target) === true ||
       topControlsRoot.value?.contains(target) === true)
   );
 }
@@ -1337,13 +1346,43 @@ function speedLabel(speed: number): string {
 
       <div
         v-if="!pictureInPicture"
-        class="movies-hls-player__topline"
-        :class="{ 'movies-hls-player__topline--hidden': controlsHidden }"
+        class="movies-hls-player__topbar"
+        :class="{
+          'movies-hls-player__topbar--hidden': controlsHidden,
+          'movies-hls-player__topbar--with-back': showBackButton,
+        }"
       >
-        <span class="movies-hls-player__title">{{ title }}</span>
-        <span v-if="sourceStatusText" class="movies-hls-player__source-status">
-          {{ sourceStatusText }}
-        </span>
+        <div
+          v-if="showBackButton"
+          ref="backControlsRoot"
+          class="movies-hls-player__back-action"
+          @focusin="
+            controlsFocused = true;
+            showControls();
+          "
+          @focusout="onControlsFocusOut"
+          @click.stop
+          @dblclick.stop
+          @pointerdown="showControls"
+          @pointermove="showControls"
+          @touchstart="showControls"
+        >
+          <IconButton
+            class="movies-hls-player__button movies-hls-player__back-button"
+            :icon="ChevronLeft"
+            label="Back"
+            size="sm"
+            variant="subtle"
+            @click="emit('back')"
+          />
+        </div>
+
+        <div class="movies-hls-player__topline">
+          <span class="movies-hls-player__title">{{ title }}</span>
+          <span v-if="sourceStatusText" class="movies-hls-player__source-status">
+            {{ sourceStatusText }}
+          </span>
+        </div>
       </div>
 
       <div
@@ -1564,7 +1603,7 @@ function speedLabel(speed: number): string {
 .movies-hls-player__stage {
   aspect-ratio: 16 / 9;
   background: #08090d;
-  border-radius: 8px;
+  border-radius: 0;
   color: #f7f8fb;
   cursor: pointer;
   inline-size: 100%;
@@ -1728,10 +1767,10 @@ function speedLabel(speed: number): string {
   inline-size: 16px;
 }
 
-.movies-hls-player__topline {
+.movies-hls-player__topbar {
   align-items: center;
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   inset-block-start: var(--space-md);
   inset-inline-end: calc(var(--space-md) + 44px + var(--space-sm));
   inset-inline-start: var(--space-md);
@@ -1739,8 +1778,27 @@ function speedLabel(speed: number): string {
   opacity: 1;
   pointer-events: none;
   position: absolute;
-  transition: opacity var(--duration-fast) var(--ease);
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
   z-index: 2;
+}
+
+.movies-hls-player__topbar--with-back {
+  gap: var(--space-sm);
+}
+
+.movies-hls-player__topline {
+  align-items: center;
+  display: flex;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+  pointer-events: none;
+}
+
+.movies-hls-player__back-action {
+  flex: 0 0 auto;
+  pointer-events: auto;
 }
 
 .movies-hls-player__top-actions {
@@ -1754,11 +1812,12 @@ function speedLabel(speed: number): string {
   z-index: 4;
 }
 
-.movies-hls-player__topline--hidden,
+.movies-hls-player__topbar--hidden,
 .movies-hls-player__top-actions--hidden {
   opacity: 0;
 }
 
+.movies-hls-player__topbar--hidden,
 .movies-hls-player__top-actions--hidden {
   pointer-events: none;
   transform: translateY(calc(var(--space-xs) * -1));
@@ -2011,7 +2070,7 @@ function speedLabel(speed: number): string {
     inset-inline: var(--space-sm);
   }
 
-  .movies-hls-player__topline {
+  .movies-hls-player__topbar {
     inset-block-start: var(--space-sm);
     inset-inline-end: calc(var(--space-sm) + 44px + var(--space-xs));
     inset-inline-start: var(--space-sm);
@@ -2061,7 +2120,7 @@ function speedLabel(speed: number): string {
   .movies-hls-player__poster-fade-enter-active,
   .movies-hls-player__poster-fade-leave-active,
   .movies-hls-player__top-actions,
-  .movies-hls-player__topline,
+  .movies-hls-player__topbar,
   .movies-hls-player__volume-popover {
     transition: none;
   }

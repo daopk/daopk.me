@@ -796,6 +796,22 @@ describe("MovieHlsPlayer", () => {
     expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
   });
 
+  it("renders an optional top-left back button before the title line", async () => {
+    const wrapper = mountPlayer({ showBackButton: true });
+    await settle();
+
+    const backButton = wrapper.get('.movies-hls-player__back-action button[aria-label="Back"]');
+
+    expect(wrapper.get(".movies-hls-player__topbar").classes()).toContain(
+      "movies-hls-player__topbar--with-back",
+    );
+    click(backButton.element);
+    await settle();
+
+    expect(wrapper.emitted("back")).toHaveLength(1);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  });
+
   it("shows HLS quality options after manifest parsing and applies manual quality", async () => {
     const wrapper = mountPlayer();
     await settle();

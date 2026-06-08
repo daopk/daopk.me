@@ -4,6 +4,7 @@ import { DEFAULT_MOVIES_LIST_LIMIT, type MoviePersonCredit } from "./moviesApi";
 import {
   createMoviesListView,
   createMoviesSearchView,
+  movieEpisodeWatchViewFromTarget,
   moviePersonViewFromCredit,
   moviesDeepLinkFromInitialState,
   moviesDeepLinkFromLaunchArgs,
@@ -117,6 +118,23 @@ describe("moviesRoutes", () => {
         tmdbId: 1399,
       }),
     ).toBe("/tv/1399-planet%20cinema/season/1/episode/2");
+    expect(
+      moviesPathForView({
+        autoplay: true,
+        name: "watch",
+        target: { kind: "movie", slug: "fight-club", tmdbId: 550 },
+      }),
+    ).toBe("/movie/550-fight-club");
+    expect(
+      moviesPathForView(
+        movieEpisodeWatchViewFromTarget({
+          episodeNumber: 2,
+          seasonNumber: 1,
+          slug: "planet-cinema",
+          tmdbId: 1399,
+        }),
+      ),
+    ).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 
   it("builds person routes from credits and ignores missing TMDB ids", () => {

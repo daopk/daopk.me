@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { ArrowLeft } from "@daopk/icons";
 
-import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailContent from "./detail/DetailContent.vue";
 import DetailHero from "./detail/DetailHero.vue";
@@ -27,27 +26,23 @@ import {
 type LoadState = "loading" | "ready" | "error";
 
 interface DetailViewProps {
-  autoplay?: boolean;
   mediaType: MovieMediaType;
   tmdbId: number;
 }
 
-const props = withDefaults(defineProps<DetailViewProps>(), {
-  autoplay: false,
-});
+const props = defineProps<DetailViewProps>();
 
 const emit = defineEmits<{
   back: [];
   "open-detail": [movie: MovieSummary];
   "open-episode": [request: MovieEpisodeTarget];
   "open-person": [person: MoviePersonCredit];
+  watch: [movie: MovieSummary];
 }>();
 
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
-const playerSection = ref<HTMLElement | null>(null);
 const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
-const showPlayer = ref(false);
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
 
@@ -61,20 +56,6 @@ watch(
   { immediate: true },
 );
 
-watch(
-  () => props.autoplay,
-  (autoplay) => {
-    if (
-      autoplay &&
-      state.value === "ready" &&
-      detail.value?.mediaType === "movie" &&
-      detail.value.play !== null
-    ) {
-      void startWatching();
-    }
-  },
-);
-
 onUnmounted(() => {
   abortController?.abort();
   playbackProgressStore.dispose();
@@ -86,7 +67,6 @@ async function loadDetail(): Promise<void> {
   state.value = "loading";
   detail.value = null;
   resumeProgress.value = null;
-  showPlayer.value = false;
 
   try {
     const nextDetail = await fetchMovieDetail(props.mediaType, props.tmdbId, {
@@ -95,9 +75,6 @@ async function loadDetail(): Promise<void> {
     detail.value = nextDetail;
     refreshResumeProgress();
     state.value = "ready";
-    if (props.autoplay && nextDetail.mediaType === "movie" && nextDetail.play !== null) {
-      await startWatching();
-    }
   } catch {
     if (abortController.signal.aborted) {
       return;
@@ -127,19 +104,12 @@ function refreshResumeProgress(): void {
       : null;
 }
 
-async function startWatching(): Promise<void> {
+function startWatching(): void {
   refreshResumeProgress();
-  showPlayer.value = true;
-  await nextTick();
-  playerSection.value?.scrollIntoView?.({
-    behavior:
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    block: "start",
-  });
+  const currentDetail = detail.value;
+  if (currentDetail?.mediaType === "movie" && currentDetail.play !== null) {
+    emit("watch", currentDetail);
+  }
 }
 </script>
 
@@ -159,20 +129,6 @@ async function startWatching(): Promise<void> {
 
     <template v-else-if="detail">
       <DetailHero :detail="detail" :resume-progress="resumeProgress" @watch="startWatching" />
-      <section
-        v-if="showPlayer && detail.play !== null"
-        ref="playerSection"
-        class="movies-detail__player"
-        aria-label="Movie player"
-      >
-        <MovieHlsPlayer
-          autoplay
-          :play="detail.play"
-          :poster-url="detail.backdropUrl || detail.posterUrl"
-          :progress-key="progressKey"
-          :title="detail.name"
-        />
-      </section>
       <DetailContent
         :detail="detail"
         @open-detail="$emit('open-detail', $event)"
@@ -193,21 +149,5 @@ async function startWatching(): Promise<void> {
 .movies-detail__status {
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
     var(--space-md) 0;
-}
-
-.movies-detail__player {
-  margin: var(--space-xl) auto 0;
-  max-inline-size: 1100px;
-  padding-inline: var(--space-lg);
-  scroll-margin-block-start: var(
-    --movies-toolbar-content-offset,
-    calc(var(--control-height-md) + var(--space-xl))
-  );
-}
-
-@media (max-width: 700px) {
-  .movies-detail__player {
-    padding-inline: var(--space-md);
-  }
 }
 </style>
