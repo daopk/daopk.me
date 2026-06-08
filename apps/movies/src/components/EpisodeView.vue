@@ -3,8 +3,9 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft, Play } from "@daopk/icons";
+import { ArrowLeft } from "@daopk/icons";
 
+import EpisodeList from "./EpisodeList.vue";
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
@@ -176,47 +177,11 @@ async function loadEpisode(): Promise<void> {
         <p v-if="season.overview" class="movies-episode__season-overview">
           {{ season.overview }}
         </p>
-        <ol class="movies-episode__list">
-          <li v-for="seasonEpisode in season.episodes" :key="seasonEpisode.id">
-            <button
-              type="button"
-              class="movies-episode__item"
-              :class="{
-                'movies-episode__item--active':
-                  seasonEpisode.episodeNumber === episode.episodeNumber,
-              }"
-              @click="openSeasonEpisode(seasonEpisode)"
-            >
-              <span class="movies-episode__item-media">
-                <img
-                  v-if="seasonEpisode.stillUrl"
-                  class="movies-episode__item-still"
-                  :src="seasonEpisode.stillUrl"
-                  :alt="seasonEpisode.name"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span v-else class="movies-episode__item-still" aria-hidden="true" />
-                <span
-                  v-if="seasonEpisode.play !== null"
-                  class="movies-episode__play-overlay"
-                  aria-hidden="true"
-                >
-                  <Play />
-                </span>
-              </span>
-              <span class="movies-episode__item-copy">
-                <span class="movies-episode__label-row">
-                  <span class="movies-episode__label">{{ episodeLabel(seasonEpisode) }}</span>
-                </span>
-                <strong>{{ seasonEpisode.name }}</strong>
-                <span v-if="seasonEpisode.overview" class="movies-episode__item-overview">
-                  {{ seasonEpisode.overview }}
-                </span>
-              </span>
-            </button>
-          </li>
-        </ol>
+        <EpisodeList
+          :episodes="season.episodes"
+          :active-episode-number="episode.episodeNumber"
+          @open="openSeasonEpisode"
+        />
       </section>
 
       <DetailPeopleSection
@@ -256,17 +221,13 @@ async function loadEpisode(): Promise<void> {
   grid-template-columns: minmax(260px, 560px) minmax(0, 1fr);
 }
 
-.movies-episode__still,
-.movies-episode__item-still {
-  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
-  object-fit: cover;
-}
-
 .movies-episode__still {
   aspect-ratio: 16 / 9;
+  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   border-radius: 8px;
   box-shadow: var(--shadow-md);
   inline-size: 100%;
+  object-fit: cover;
 }
 
 .movies-episode__player {
@@ -286,8 +247,7 @@ async function loadEpisode(): Promise<void> {
   margin: 0;
 }
 
-.movies-episode__eyebrow,
-.movies-episode__label {
+.movies-episode__eyebrow {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -340,12 +300,8 @@ async function loadEpisode(): Promise<void> {
   padding-block-start: var(--space-sm);
 }
 
-.movies-episode__facts dt,
-.movies-episode__label {
-  color: var(--color-fg-muted);
-}
-
 .movies-episode__facts dt {
+  color: var(--color-fg-muted);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
 }
@@ -353,144 +309,6 @@ async function loadEpisode(): Promise<void> {
 .movies-episode__facts dd {
   font-weight: var(--font-weight-semibold);
   margin: 0;
-}
-
-.movies-episode__list {
-  display: grid;
-  gap: var(--space-sm);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.movies-episode__item {
-  align-items: start;
-  background: color-mix(in srgb, var(--color-fg) 3%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 9%, transparent);
-  border-radius: 10px;
-  color: inherit;
-  cursor: pointer;
-  display: grid;
-  gap: var(--space-md);
-  grid-template-columns: minmax(104px, 180px) minmax(0, 1fr);
-  inline-size: 100%;
-  min-block-size: 116px;
-  overflow: hidden;
-  padding: var(--space-sm);
-  text-align: start;
-  transition:
-    background-color var(--duration-fast) var(--ease),
-    border-color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease);
-}
-
-.movies-episode__item--active {
-  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-fg) 3%);
-  border-color: color-mix(in srgb, var(--color-accent) 48%, transparent);
-}
-
-.movies-episode__item:hover,
-.movies-episode__item:focus-visible {
-  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
-  box-shadow: var(--shadow-sm);
-}
-
-.movies-episode__item:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.movies-episode__item:hover strong {
-  color: var(--color-accent);
-}
-
-.movies-episode__item-media {
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  display: block;
-  inline-size: 100%;
-  overflow: hidden;
-  position: relative;
-}
-
-.movies-episode__item-still {
-  aspect-ratio: 16 / 9;
-  block-size: 100%;
-  display: block;
-  inline-size: 100%;
-  transition:
-    filter var(--duration-fast) var(--ease),
-    transform var(--duration-base) var(--ease);
-}
-
-.movies-episode__item:hover .movies-episode__item-still,
-.movies-episode__item:focus-visible .movies-episode__item-still {
-  filter: brightness(0.68);
-  transform: scale(1.035);
-}
-
-.movies-episode__play-overlay {
-  align-items: center;
-  backdrop-filter: blur(14px);
-  background: rgb(8 9 13 / 66%);
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: var(--radius-full);
-  block-size: 42px;
-  color: #fff;
-  display: inline-flex;
-  inline-size: 42px;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  justify-content: center;
-  opacity: 0;
-  position: absolute;
-  transform: translate(-50%, -50%) scale(0.9);
-  transition:
-    opacity var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
-}
-
-.movies-episode__play-overlay svg {
-  block-size: 18px;
-  inline-size: 18px;
-  margin-inline-start: 2px;
-}
-
-.movies-episode__item:hover .movies-episode__play-overlay,
-.movies-episode__item:focus-visible .movies-episode__play-overlay {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.movies-episode__item-copy {
-  align-self: center;
-  display: grid;
-  gap: var(--space-xs);
-  min-inline-size: 0;
-}
-
-.movies-episode__label-row {
-  align-items: center;
-  display: flex;
-  gap: var(--space-xs);
-  min-inline-size: 0;
-}
-
-.movies-episode__item-copy strong {
-  font-size: var(--font-size-lg);
-  line-height: var(--leading-snug);
-  transition: color var(--duration-fast) var(--ease);
-}
-
-.movies-episode__item-overview {
-  color: var(--color-fg-muted);
-  display: -webkit-box;
-  line-height: var(--leading-relaxed);
-  max-inline-size: 72ch;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 @media (max-width: 820px) {
@@ -503,14 +321,6 @@ async function loadEpisode(): Promise<void> {
 @media (max-width: 700px) {
   .movies-episode__content {
     padding-inline: var(--space-md);
-  }
-
-  .movies-episode__item {
-    grid-template-columns: 1fr;
-  }
-
-  .movies-episode__item-copy {
-    align-self: start;
   }
 }
 </style>

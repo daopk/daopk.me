@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MovieSummary } from "../moviesApi";
+import PosterFrame from "./PosterFrame.vue";
 
 interface MovieCardProps {
   movie: MovieSummary;
@@ -14,20 +15,17 @@ defineEmits<{
 
 <template>
   <button type="button" class="movie-card" @click="$emit('open', movie)">
-    <span class="movie-card__poster-wrap">
-      <img
-        v-if="movie.posterUrl"
-        class="movie-card__poster"
-        :src="movie.posterUrl"
-        :alt="movie.name"
-        loading="lazy"
-        decoding="async"
-      />
-      <span v-else class="movie-card__poster movie-card__poster--empty" aria-hidden="true" />
+    <PosterFrame
+      class="movie-card__poster-wrap"
+      :src="movie.posterUrl"
+      :alt="movie.name"
+      image-class="movie-card__poster"
+      empty-class="movie-card__poster--empty"
+    >
       <span class="movie-card__badge">
         {{ movie.mediaType === "tv" ? "TV" : "Movie" }}
       </span>
-    </span>
+    </PosterFrame>
 
     <span class="movie-card__body">
       <span class="movie-card__title">{{ movie.name }}</span>
@@ -58,43 +56,8 @@ defineEmits<{
   outline-offset: 3px;
 }
 
-.movie-card__poster-wrap {
-  --movie-card-edge-base: var(--movies-card-edge-base, var(--movies-surface-bg, var(--color-bg)));
-
-  aspect-ratio: 2 / 3;
-  background: color-mix(in srgb, var(--color-fg) 10%, transparent);
-  border-color: color-mix(in srgb, white 34%, var(--movie-card-edge-base))
-    color-mix(in srgb, black 14%, var(--movie-card-edge-base))
-    color-mix(in srgb, black 28%, var(--movie-card-edge-base))
-    color-mix(in srgb, white 18%, var(--movie-card-edge-base));
-  border-radius: var(--radius-md);
-  border-style: solid;
-  border-width: 1px;
-  box-shadow:
-    inset 1px 1px 0 color-mix(in srgb, white 14%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, black 12%, transparent),
-    0 1px 0 color-mix(in srgb, black 16%, var(--movie-card-edge-base)),
-    0 4px 8px -8px color-mix(in srgb, black 28%, transparent);
-  box-sizing: border-box;
-  display: block;
-  overflow: hidden;
-  position: relative;
-}
-
-.movie-card__poster {
-  block-size: 100%;
-  display: block;
-  inline-size: 100%;
-  object-fit: cover;
-  transition: transform var(--duration-base) var(--ease);
-}
-
-.movie-card:hover .movie-card__poster {
+.movie-card:hover :deep(.movies-poster-frame__image) {
   transform: scale(1.035);
-}
-
-.movie-card__poster--empty {
-  background: color-mix(in srgb, var(--color-fg) 14%, transparent);
 }
 
 .movie-card__badge {
@@ -140,7 +103,7 @@ defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .movie-card__poster {
+  .movie-card :deep(.movies-poster-frame__image) {
     transition: none;
   }
 }

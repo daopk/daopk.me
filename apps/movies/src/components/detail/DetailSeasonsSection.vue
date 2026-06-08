@@ -1,21 +1,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
-import { Play } from "@daopk/icons";
-
 import {
   fetchMovieSeason,
   type MovieSeason,
   type MovieSeasonDetail,
   type MovieSeasonEpisode,
 } from "../../moviesApi";
-import {
-  episodeLabel,
-  episodeMetaLabel,
-  episodeTotalLabel,
-  seasonLabel,
-  seasonMetaLabel,
-} from "./detailFormatters";
+import EpisodeList from "../EpisodeList.vue";
+import { episodeTotalLabel, seasonLabel, seasonMetaLabel } from "./detailFormatters";
 
 type EpisodesState = "idle" | "loading" | "ready" | "error";
 
@@ -193,42 +186,12 @@ async function scrollEpisodesIntoView(): Promise<void> {
         No episodes listed.
       </p>
 
-      <ol v-else-if="seasonDetail !== null" class="movies-detail-episodes__list">
-        <li v-for="episode in seasonDetail.episodes" :key="episode.id">
-          <button
-            type="button"
-            class="movies-detail-episodes__button"
-            @click="$emit('open-episode', episode)"
-          >
-            <img
-              v-if="episode.stillUrl"
-              class="movies-detail-episodes__still"
-              :src="episode.stillUrl"
-              :alt="episode.name"
-              loading="lazy"
-              decoding="async"
-            />
-            <span v-else class="movies-detail-episodes__still" aria-hidden="true" />
-            <span class="movies-detail-episodes__copy">
-              <span class="movies-detail-episodes__label-row">
-                <span class="movies-detail-section__label">{{ episodeLabel(episode) }}</span>
-                <Play
-                  v-if="episode.play !== null"
-                  class="movies-detail-episodes__play-indicator"
-                  aria-hidden="true"
-                />
-              </span>
-              <strong>{{ episode.name }}</strong>
-              <span v-if="episodeMetaLabel(episode)" class="movies-detail-section__muted">
-                {{ episodeMetaLabel(episode) }}
-              </span>
-              <span v-if="episode.overview" class="movies-detail-episodes__overview">
-                {{ episode.overview }}
-              </span>
-            </span>
-          </button>
-        </li>
-      </ol>
+      <EpisodeList
+        v-else-if="seasonDetail !== null"
+        show-meta
+        :episodes="seasonDetail.episodes"
+        @open="$emit('open-episode', $event)"
+      />
     </div>
   </section>
 </template>
@@ -372,72 +335,6 @@ async function scrollEpisodesIntoView(): Promise<void> {
   gap: var(--space-2xs);
 }
 
-.movies-detail-episodes__list {
-  display: grid;
-  gap: var(--space-md);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.movies-detail-episodes__button {
-  align-items: start;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  color: inherit;
-  cursor: pointer;
-  display: grid;
-  gap: var(--space-md);
-  grid-template-columns: minmax(96px, 180px) minmax(0, 1fr);
-  inline-size: 100%;
-  padding: 0;
-  text-align: start;
-}
-
-.movies-detail-episodes__button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.movies-detail-episodes__button:hover strong {
-  color: var(--color-accent);
-}
-
-.movies-detail-episodes__still {
-  aspect-ratio: 16 / 9;
-  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
-  border-radius: 8px;
-  inline-size: 100%;
-  object-fit: cover;
-}
-
-.movies-detail-episodes__copy {
-  display: grid;
-  gap: var(--space-2xs);
-  min-inline-size: 0;
-}
-
-.movies-detail-episodes__label-row {
-  align-items: center;
-  display: flex;
-  gap: var(--space-xs);
-  min-inline-size: 0;
-}
-
-.movies-detail-episodes__play-indicator {
-  block-size: 14px;
-  color: var(--color-accent);
-  flex: 0 0 auto;
-  inline-size: 14px;
-}
-
-.movies-detail-episodes__overview {
-  color: var(--color-fg);
-  line-height: var(--leading-relaxed);
-  max-inline-size: 72ch;
-}
-
 @media (max-width: 700px) {
   .movies-detail-section__heading,
   .movies-detail-episodes__heading {
@@ -447,10 +344,6 @@ async function scrollEpisodesIntoView(): Promise<void> {
 
   .movies-detail-seasons__select {
     inline-size: 100%;
-  }
-
-  .movies-detail-episodes__button {
-    grid-template-columns: 1fr;
   }
 }
 </style>

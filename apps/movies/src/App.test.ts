@@ -757,6 +757,8 @@ describe("Movies app", () => {
     expect(fetchMovieSeason).toHaveBeenCalledWith(1399, 1, expect.anything());
     expect(wrapper.text()).toContain("Episodes");
     expect(wrapper.text()).toContain("Pilot");
+    expect(wrapper.find(".movies-episode-list__media").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode-list__overview").text()).toBe("Pilot overview.");
     expect(wrapper.find('select[aria-label="Season"]').exists()).toBe(false);
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
@@ -788,7 +790,7 @@ describe("Movies app", () => {
     await settle();
 
     const pilotButton = wrapper
-      .findAll(".movies-detail-episodes__button")
+      .findAll(".movies-episode-list__item")
       .find((button) => button.text().includes("Pilot"));
     expect(pilotButton).toBeDefined();
     await pilotButton!.trigger("click");
@@ -813,8 +815,8 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Episode Details");
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
     expect(wrapper.find(".movies-episode__still").exists()).toBe(true);
-    expect(wrapper.find(".movies-episode__item-media").exists()).toBe(true);
-    expect(wrapper.find(".movies-episode__item-overview").text()).toBe("Pilot overview.");
+    expect(wrapper.find(".movies-episode-list__media").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode-list__overview").text()).toBe("Pilot overview.");
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 
@@ -835,7 +837,7 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("false");
     expect(wrapper.find("video").exists()).toBe(true);
     expect(wrapper.find(".movies-episode__still").exists()).toBe(false);
-    expect(wrapper.find(".movies-episode__play-overlay").exists()).toBe(true);
+    expect(wrapper.find(".movies-episode-list__play-overlay").exists()).toBe(true);
   });
 
   it("ignores unsupported detail routes", async () => {

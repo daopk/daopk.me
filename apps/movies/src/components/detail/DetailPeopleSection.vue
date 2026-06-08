@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MoviePersonCredit } from "../../moviesApi";
+import PosterFrame from "../PosterFrame.vue";
 import { personMetaLabel } from "./detailFormatters";
 
 type PeopleVariant = "compact" | "profile";
@@ -31,29 +32,25 @@ defineEmits<{
           class="movies-detail-person"
           @click="$emit('open-person', person)"
         >
-          <img
-            v-if="person.profileUrl"
+          <PosterFrame
             :src="person.profileUrl"
             :alt="person.name"
-            loading="lazy"
-            decoding="async"
+            image-class="movies-detail-people__image"
+            empty-class="movies-detail-people__empty"
           />
-          <span v-else class="movies-detail-people__empty" aria-hidden="true" />
-          <span>
+          <span class="movies-detail-person__copy">
             <strong>{{ person.name }}</strong>
             <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
           </span>
         </button>
         <span v-else class="movies-detail-person">
-          <img
-            v-if="person.profileUrl"
+          <PosterFrame
             :src="person.profileUrl"
             :alt="person.name"
-            loading="lazy"
-            decoding="async"
+            image-class="movies-detail-people__image"
+            empty-class="movies-detail-people__empty"
           />
-          <span v-else class="movies-detail-people__empty" aria-hidden="true" />
-          <span>
+          <span class="movies-detail-person__copy">
             <strong>{{ person.name }}</strong>
             <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
           </span>
@@ -136,16 +133,11 @@ button.movies-detail-person:hover strong {
   color: var(--color-accent);
 }
 
-.movies-detail-people img,
-.movies-detail-people__empty {
-  aspect-ratio: 2 / 3;
-  background: color-mix(in srgb, var(--color-fg) 12%, transparent);
-  border-radius: 8px;
-  inline-size: 100%;
-  object-fit: cover;
+button.movies-detail-person:hover :deep(.movies-poster-frame__image) {
+  transform: scale(1.035);
 }
 
-.movies-detail-person > span,
+.movies-detail-person__copy,
 .movies-detail-crew li,
 .movies-detail-person--compact {
   display: grid;
