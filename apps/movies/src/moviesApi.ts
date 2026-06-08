@@ -1,3 +1,5 @@
+import { movieSlugFromText } from "./utils/movieSlug";
+
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
 export type MoviesViewName = "home" | "list" | "detail" | "episode" | "person";
@@ -300,19 +302,6 @@ function asNonNegativeInteger(value: unknown): number | null {
   return number !== null && number >= 0 ? number : null;
 }
 
-function slugFromText(value: string, fallback = "untitled"): string {
-  const slug = value
-    .replace(/\u0110/g, "D")
-    .replace(/\u0111/g, "d")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-{2,}/g, "-");
-  return slug.length > 0 ? slug : fallback;
-}
-
 function yearFromDate(value: string): number | null {
   const match = /^([1-9]\d{3})-\d{2}-\d{2}$/.exec(value);
   return match === null ? null : Number(match[1]);
@@ -333,9 +322,9 @@ function taxonomyFromEntry(entry: unknown): MovieTaxonomyItem | null {
   }
 
   return {
-    id: asNonEmptyString(entry.id) ?? slugFromText(name),
+    id: asNonEmptyString(entry.id) ?? movieSlugFromText(name),
     name,
-    slug: asNonEmptyString(entry.slug) ?? slugFromText(name),
+    slug: asNonEmptyString(entry.slug) ?? movieSlugFromText(name),
   };
 }
 
@@ -372,7 +361,7 @@ function personCreditFromEntry(entry: unknown): MoviePersonCredit | null {
   }
   const tmdbId = asPositiveInteger(entry.tmdbId);
   const id =
-    asNonEmptyString(entry.id) ?? (tmdbId === null ? slugFromText(name) : `person-${tmdbId}`);
+    asNonEmptyString(entry.id) ?? (tmdbId === null ? movieSlugFromText(name) : `person-${tmdbId}`);
 
   return {
     episodeCount: asPositiveInteger(entry.episodeCount),
@@ -531,7 +520,7 @@ export function movieSummaryFromEntry(entry: unknown): MovieSummary | null {
     return null;
   }
 
-  const slug = asNonEmptyString(entry.slug) ?? slugFromText(name, `tmdb-${tmdbId}`);
+  const slug = asNonEmptyString(entry.slug) ?? movieSlugFromText(name, `tmdb-${tmdbId}`);
   const canonicalPath = asNonEmptyString(entry.canonicalPath) ?? `/${mediaType}/${tmdbId}-${slug}`;
   const posterUrl = asString(entry.posterUrl);
   const backdropUrl = asString(entry.backdropUrl);
@@ -616,7 +605,7 @@ export function moviePersonFromPayload(payload: unknown): MoviePersonDetail | nu
     return null;
   }
 
-  const slug = asNonEmptyString(payload.slug) ?? slugFromText(name, `person-${tmdbId}`);
+  const slug = asNonEmptyString(payload.slug) ?? movieSlugFromText(name, `person-${tmdbId}`);
 
   return {
     biography: asString(payload.biography),

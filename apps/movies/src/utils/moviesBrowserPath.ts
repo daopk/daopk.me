@@ -1,22 +1,10 @@
-function pathSegment(value: string): string {
-  return encodeURIComponent(value);
-}
+import { moviesPathForView, type MoviesView } from "../moviesRoutes";
+import { movieSlugFromText } from "./movieSlug";
 
 export type MovieBrowserMediaType = "movie" | "tv";
 
-function slugFromText(value: string): string {
-  return value
-    .replace(/\u0110/g, "D")
-    .replace(/\u0111/g, "d")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function movieServerSlug(serverName: string): string {
-  return slugFromText(serverName) || "server";
+  return movieSlugFromText(serverName, "server");
 }
 
 export function replaceBrowserPath(pathname: string): void {
@@ -39,16 +27,20 @@ export function replaceMoviesAppPath(): void {
   replaceBrowserPath("/apps/movies");
 }
 
+export function replaceMoviesViewPath(view: MoviesView): void {
+  replaceBrowserPath(moviesPathForView(view));
+}
+
 export function replaceMovieDetailPath(
   mediaType: MovieBrowserMediaType,
   tmdbId: number,
   slug: string,
 ): void {
-  replaceBrowserPath(`/${mediaType}/${tmdbId}-${pathSegment(slug)}`);
+  replaceMoviesViewPath({ mediaType, name: "detail", slug, tmdbId });
 }
 
 export function replaceMoviePersonPath(tmdbId: number, slug: string): void {
-  replaceBrowserPath(`/person/${tmdbId}-${pathSegment(slug)}`);
+  replaceMoviesViewPath({ name: "person", slug, tmdbId });
 }
 
 export function replaceMovieEpisodePath(
@@ -57,7 +49,5 @@ export function replaceMovieEpisodePath(
   seasonNumber: number,
   episodeNumber: number,
 ): void {
-  replaceBrowserPath(
-    `/tv/${tmdbId}-${pathSegment(slug)}/season/${seasonNumber}/episode/${episodeNumber}`,
-  );
+  replaceMoviesViewPath({ episodeNumber, name: "episode", seasonNumber, slug, tmdbId });
 }
