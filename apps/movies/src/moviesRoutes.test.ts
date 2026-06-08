@@ -27,7 +27,7 @@ describe("moviesRoutes", () => {
       slug: "planet-cinema",
       tmdbId: 1399,
     });
-    expect(moviesDeepLinkFromPathname("/person/819-edward-norton")).toEqual({
+    expect(moviesDeepLinkFromPathname("/tmdb/person/819-edward-norton")).toEqual({
       name: "person",
       slug: "edward-norton",
       tmdbId: 819,
@@ -52,6 +52,9 @@ describe("moviesRoutes", () => {
     expect(moviesDeepLinkFromPathname("/movie/0-zero")).toBeNull();
     expect(moviesDeepLinkFromPathname("/movie/550-fight%2Fclub")).toBeNull();
     expect(moviesDeepLinkFromPathname("/movie/550-fight-club/season/1/episode/1")).toBeNull();
+    expect(moviesDeepLinkFromPathname("/person/819-edward-norton")).toBeNull();
+    expect(moviesDeepLinkFromPathname("/tmdb/person/0-zero")).toBeNull();
+    expect(moviesDeepLinkFromPathname("/tmdb/person/819-edward%2Fnorton")).toBeNull();
     expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/01")).toBeNull();
     expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/01/episode/1")).toBeNull();
     expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/1/episode/0")).toBeNull();
@@ -90,7 +93,7 @@ describe("moviesRoutes", () => {
 
     expect(
       moviesDeepLinkFromLaunchArgs({
-        path: "/person/819-edward-norton",
+        path: "/tmdb/person/819-edward-norton",
       }),
     ).toEqual({
       name: "person",
@@ -103,7 +106,7 @@ describe("moviesRoutes", () => {
     expect(
       moviesDeepLinkFromInitialState(
         { mediaType: "movie", slug: "fight-club", tmdbId: 550 },
-        "/person/819-edward-norton",
+        "/tmdb/person/819-edward-norton",
       ),
     ).toEqual({
       mediaType: "movie",
@@ -155,6 +158,13 @@ describe("moviesRoutes", () => {
         target: { kind: "movie", slug: "fight-club", tmdbId: 550 },
       }),
     ).toBe("/movie/550-fight-club");
+    expect(
+      moviesPathForView({
+        name: "person",
+        slug: "edward norton",
+        tmdbId: 819,
+      }),
+    ).toBe("/tmdb/person/819-edward%20norton");
     expect(
       moviesPathForView(
         movieEpisodeWatchViewFromTarget({

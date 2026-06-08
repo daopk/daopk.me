@@ -261,7 +261,7 @@ describe("moviesApi", () => {
     const person = moviePersonFromPayload({
       biography: "Edward Norton is an American actor and filmmaker.",
       birthday: "1969-08-18",
-      canonicalPath: "/person/819-edward-norton",
+      canonicalPath: "/tmdb/person/819-edward-norton",
       credits: [
         {
           canonicalPath: "/tv/1399-planet-cinema",
@@ -293,7 +293,7 @@ describe("moviesApi", () => {
     expect(person).toEqual(
       expect.objectContaining({
         biography: "Edward Norton is an American actor and filmmaker.",
-        canonicalPath: "/person/819-edward-norton",
+        canonicalPath: "/tmdb/person/819-edward-norton",
         credits: [
           expect.objectContaining({
             mediaType: "tv",

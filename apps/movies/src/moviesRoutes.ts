@@ -201,7 +201,7 @@ export function moviesPathForView(view: MoviesView): string {
   }
 
   if (view.name === "person") {
-    return `/person/${view.tmdbId}-${pathSegment(view.slug)}`;
+    return `/tmdb/person/${view.tmdbId}-${pathSegment(view.slug)}`;
   }
 
   if (view.name === "season") {
@@ -253,7 +253,21 @@ export function moviesDeepLinkFromLaunchArgs(
 
 export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | null {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments.length !== 2 && segments.length !== 4 && segments.length !== 6) {
+  if (
+    segments.length !== 2 &&
+    segments.length !== 3 &&
+    segments.length !== 4 &&
+    segments.length !== 6
+  ) {
+    return null;
+  }
+
+  const personIntent = personDeepLinkFromPathSegments(segments);
+  if (personIntent !== null) {
+    return personIntent;
+  }
+
+  if (segments.length === 3) {
     return null;
   }
 
@@ -315,15 +329,29 @@ export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | n
     };
   }
 
-  if (segments[0] === "person") {
-    return {
-      name: "person",
-      slug: match[2],
-      tmdbId: Number(match[1]),
-    };
+  return null;
+}
+
+function personDeepLinkFromPathSegments(segments: readonly string[]): MoviesDeepLink | null {
+  if (segments.length !== 3 || segments[0] !== "tmdb" || segments[1] !== "person") {
+    return null;
   }
 
-  return null;
+  const idSlug = decodePathSegment(segments[2]);
+  if (idSlug === null) {
+    return null;
+  }
+
+  const match = /^([1-9]\d*)-([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)$/.exec(idSlug);
+  if (match === null) {
+    return null;
+  }
+
+  return {
+    name: "person",
+    slug: match[2],
+    tmdbId: Number(match[1]),
+  };
 }
 
 function seasonDeepLinkFromLaunchArgs(

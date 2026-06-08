@@ -290,20 +290,29 @@ function parseMoviesUrlIntent(url: URL, segments: readonly string[]): AppUrlInte
     };
   }
 
-  if (segments.length !== 2 || section !== "person") {
-    return { kind: "none" };
+  if (section === "tmdb" && segments[1] === "person") {
+    const path = validMoviesPersonPath(url, segments);
+    return {
+      kind: "app",
+      manifestId: "movies",
+      ...(path === null ? {} : { args: { path } }),
+    };
   }
 
-  const idSlug = decodePathSegment(segments[1]);
+  return { kind: "none" };
+}
+
+function validMoviesPersonPath(url: URL, segments: readonly string[]): string | null {
+  if (segments.length !== 3 || segments[0] !== "tmdb" || segments[1] !== "person") {
+    return null;
+  }
+
+  const idSlug = decodePathSegment(segments[2]);
   if (idSlug === null || TMDB_ID_SLUG_PATTERN.exec(idSlug) === null) {
-    return { kind: "none" };
+    return null;
   }
 
-  return {
-    kind: "app",
-    manifestId: "movies",
-    args: { path: url.pathname },
-  };
+  return url.pathname;
 }
 
 function validMoviesMediaPath(url: URL, segments: readonly string[]): string | null {

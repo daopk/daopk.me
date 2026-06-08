@@ -323,7 +323,7 @@ function personDetail(overrides: Partial<MoviePersonDetail> = {}): MoviePersonDe
   return {
     biography: "Edward Norton is an American actor and filmmaker.",
     birthday: "1969-08-18",
-    canonicalPath: "/person/819-edward-norton",
+    canonicalPath: "/tmdb/person/819-edward-norton",
     credits: [
       movie({
         canonicalPath: "/tv/1399-planet-cinema",
@@ -1194,7 +1194,7 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMoviePerson).toHaveBeenCalledWith(819, expect.anything());
-    expect(window.location.pathname).toBe("/person/819-edward-norton");
+    expect(window.location.pathname).toBe("/tmdb/person/819-edward-norton");
     expect(wrapper.text()).toContain("Biography");
     expect(wrapper.text()).toContain("Edward Norton is an American actor and filmmaker.");
     expect(wrapper.text()).toContain("Known For");
@@ -1202,7 +1202,7 @@ describe("Movies app", () => {
   });
 
   it("opens a direct person route", async () => {
-    window.history.replaceState(null, "", "/person/819-edward-norton");
+    window.history.replaceState(null, "", "/tmdb/person/819-edward-norton");
 
     const wrapper = mount(App);
     await settle();
@@ -1210,7 +1210,7 @@ describe("Movies app", () => {
     expect(fetchMoviePerson).toHaveBeenCalledWith(819, expect.anything());
     expect(wrapper.text()).toContain("Edward Norton");
     expect(wrapper.text()).toContain("Details");
-    expect(window.location.pathname).toBe("/person/819-edward-norton");
+    expect(window.location.pathname).toBe("/tmdb/person/819-edward-norton");
   });
 
   it("opens a direct TV route into Detail", async () => {

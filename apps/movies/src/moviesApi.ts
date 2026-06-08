@@ -610,7 +610,7 @@ export function moviePersonFromPayload(payload: unknown): MoviePersonDetail | nu
   return {
     biography: asString(payload.biography),
     birthday: asString(payload.birthday),
-    canonicalPath: asNonEmptyString(payload.canonicalPath) ?? `/person/${tmdbId}-${slug}`,
+    canonicalPath: asNonEmptyString(payload.canonicalPath) ?? `/tmdb/person/${tmdbId}-${slug}`,
     credits: movieSummaryList(payload.credits),
     deathday: asString(payload.deathday),
     facts: factList(payload.facts),

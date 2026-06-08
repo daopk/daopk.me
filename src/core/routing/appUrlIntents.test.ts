@@ -320,10 +320,10 @@ describe("app URL intents", () => {
       args: { path: "/tv/76479-the-boys" },
     });
 
-    expect(parseAppUrlIntent("/person/819-edward-norton")).toEqual({
+    expect(parseAppUrlIntent("/tmdb/person/819-edward-norton")).toEqual({
       kind: "app",
       manifestId: "movies",
-      args: { path: "/person/819-edward-norton" },
+      args: { path: "/tmdb/person/819-edward-norton" },
     });
 
     expect(parseAppUrlIntent("/tv/76479-the-boys/season/1")).toEqual({
@@ -344,6 +344,7 @@ describe("app URL intents", () => {
     expect(parseAppUrlIntent("/blog/a/b")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/hello%2Fworld")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/%E0%A4%A")).toEqual({ kind: "none" });
+    expect(parseAppUrlIntent("/person/819-edward-norton")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/movie/0-bad")).toEqual({
       kind: "app",
       manifestId: "movies",
@@ -357,6 +358,14 @@ describe("app URL intents", () => {
       manifestId: "movies",
     });
     expect(parseAppUrlIntent("/movie/550-fight-club/season/1/episode/1")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+    });
+    expect(parseAppUrlIntent("/tmdb/person/0-bad")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+    });
+    expect(parseAppUrlIntent("/tmdb/person/819-edward%2Fnorton")).toEqual({
       kind: "app",
       manifestId: "movies",
     });
