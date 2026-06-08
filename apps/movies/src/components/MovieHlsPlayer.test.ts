@@ -74,6 +74,7 @@ const hlsMock = vi.hoisted(() => {
     static isSupported = vi.fn(() => true);
 
     attachMedia = vi.fn();
+    config: unknown;
     currentLevel = -1;
     destroy = vi.fn();
     handlers = new Map<string, HlsHandler>();
@@ -83,7 +84,8 @@ const hlsMock = vi.hoisted(() => {
       this.handlers.set(event, handler);
     });
 
-    constructor() {
+    constructor(config?: unknown) {
+      this.config = config;
       instances.push(this);
     }
 
@@ -448,6 +450,9 @@ describe("MovieHlsPlayer", () => {
 
     const video = wrapper.get("video").element as HTMLVideoElement;
     expect(hlsMock.instances).toHaveLength(1);
+    expect(hlsMock.instances[0]!.config).toMatchObject({
+      pLoader: expect.any(Function),
+    });
     expect(hlsMock.instances[0]!.loadSource).toHaveBeenCalledWith(
       "https://stream.example.test/fight-club/master.m3u8",
     );

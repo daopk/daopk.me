@@ -32,6 +32,7 @@ import {
   isResumableMoviePlaybackTime,
 } from "../moviesPlaybackProgress";
 import type { MoviePlayInfo } from "../moviesApi";
+import { createMoviesHlsConfig } from "../hls/hlsAdSkip";
 
 interface MovieHlsPlayerProps {
   autoplay?: boolean;
@@ -362,7 +363,7 @@ async function attachSource(options: { autoplay: boolean } = { autoplay: false }
   applyPlaybackSpeed(video);
 
   if (Hls.isSupported()) {
-    const instance = new Hls();
+    const instance = new Hls(createMoviesHlsConfig());
     hls = instance;
     instance.on(Hls.Events.ERROR, onHlsError);
     instance.on(Hls.Events.MANIFEST_PARSED, onHlsManifestParsed);
