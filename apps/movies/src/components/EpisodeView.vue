@@ -187,25 +187,32 @@ async function loadEpisode(): Promise<void> {
               }"
               @click="openSeasonEpisode(seasonEpisode)"
             >
-              <img
-                v-if="seasonEpisode.stillUrl"
-                class="movies-episode__item-still"
-                :src="seasonEpisode.stillUrl"
-                :alt="seasonEpisode.name"
-                loading="lazy"
-                decoding="async"
-              />
-              <span v-else class="movies-episode__item-still" aria-hidden="true" />
+              <span class="movies-episode__item-media">
+                <img
+                  v-if="seasonEpisode.stillUrl"
+                  class="movies-episode__item-still"
+                  :src="seasonEpisode.stillUrl"
+                  :alt="seasonEpisode.name"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span v-else class="movies-episode__item-still" aria-hidden="true" />
+                <span
+                  v-if="seasonEpisode.play !== null"
+                  class="movies-episode__play-overlay"
+                  aria-hidden="true"
+                >
+                  <Play />
+                </span>
+              </span>
               <span class="movies-episode__item-copy">
                 <span class="movies-episode__label-row">
                   <span class="movies-episode__label">{{ episodeLabel(seasonEpisode) }}</span>
-                  <Play
-                    v-if="seasonEpisode.play !== null"
-                    class="movies-episode__play-indicator"
-                    aria-hidden="true"
-                  />
                 </span>
                 <strong>{{ seasonEpisode.name }}</strong>
+                <span v-if="seasonEpisode.overview" class="movies-episode__item-overview">
+                  {{ seasonEpisode.overview }}
+                </span>
               </span>
             </button>
           </li>
@@ -358,22 +365,35 @@ async function loadEpisode(): Promise<void> {
 
 .movies-episode__item {
   align-items: start;
-  background: transparent;
-  border: 0;
-  border-block-start: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
-  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-fg) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 9%, transparent);
+  border-radius: 10px;
   color: inherit;
   cursor: pointer;
   display: grid;
   gap: var(--space-md);
   grid-template-columns: minmax(104px, 180px) minmax(0, 1fr);
   inline-size: 100%;
-  padding: var(--space-sm) 0 0;
+  min-block-size: 116px;
+  overflow: hidden;
+  padding: var(--space-sm);
   text-align: start;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
 }
 
 .movies-episode__item--active {
-  border-block-start-color: color-mix(in srgb, var(--color-accent) 54%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-fg) 3%);
+  border-color: color-mix(in srgb, var(--color-accent) 48%, transparent);
+}
+
+.movies-episode__item:hover,
+.movies-episode__item:focus-visible {
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 .movies-episode__item:focus-visible {
@@ -385,15 +405,68 @@ async function loadEpisode(): Promise<void> {
   color: var(--color-accent);
 }
 
-.movies-episode__item-still {
+.movies-episode__item-media {
   aspect-ratio: 16 / 9;
   border-radius: 8px;
+  display: block;
   inline-size: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.movies-episode__item-still {
+  aspect-ratio: 16 / 9;
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
+  transition:
+    filter var(--duration-fast) var(--ease),
+    transform var(--duration-base) var(--ease);
+}
+
+.movies-episode__item:hover .movies-episode__item-still,
+.movies-episode__item:focus-visible .movies-episode__item-still {
+  filter: brightness(0.68);
+  transform: scale(1.035);
+}
+
+.movies-episode__play-overlay {
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: rgb(8 9 13 / 66%);
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--radius-full);
+  block-size: 42px;
+  color: #fff;
+  display: inline-flex;
+  inline-size: 42px;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  justify-content: center;
+  opacity: 0;
+  position: absolute;
+  transform: translate(-50%, -50%) scale(0.9);
+  transition:
+    opacity var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.movies-episode__play-overlay svg {
+  block-size: 18px;
+  inline-size: 18px;
+  margin-inline-start: 2px;
+}
+
+.movies-episode__item:hover .movies-episode__play-overlay,
+.movies-episode__item:focus-visible .movies-episode__play-overlay {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .movies-episode__item-copy {
+  align-self: center;
   display: grid;
-  gap: var(--space-2xs);
+  gap: var(--space-xs);
   min-inline-size: 0;
 }
 
@@ -404,11 +477,20 @@ async function loadEpisode(): Promise<void> {
   min-inline-size: 0;
 }
 
-.movies-episode__play-indicator {
-  block-size: 14px;
-  color: var(--color-accent);
-  flex: 0 0 auto;
-  inline-size: 14px;
+.movies-episode__item-copy strong {
+  font-size: var(--font-size-lg);
+  line-height: var(--leading-snug);
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.movies-episode__item-overview {
+  color: var(--color-fg-muted);
+  display: -webkit-box;
+  line-height: var(--leading-relaxed);
+  max-inline-size: 72ch;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 @media (max-width: 820px) {
@@ -425,6 +507,10 @@ async function loadEpisode(): Promise<void> {
 
   .movies-episode__item {
     grid-template-columns: 1fr;
+  }
+
+  .movies-episode__item-copy {
+    align-self: start;
   }
 }
 </style>
