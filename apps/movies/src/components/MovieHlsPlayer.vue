@@ -78,6 +78,10 @@ interface WebKitVideoElement extends HTMLVideoElement {
   webkitSupportsPresentationMode?: (mode: WebKitPresentationMode) => boolean;
 }
 
+interface StandaloneNavigator extends Navigator {
+  readonly standalone?: boolean;
+}
+
 const AUTO_HIDE_CONTROLS_DELAY_MS = 3200;
 const SURFACE_CLICK_DELAY_MS = 220;
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
@@ -1321,6 +1325,37 @@ function pictureInPictureVideoElement(): WebKitVideoElement | null {
   return webKitVideoElement();
 }
 
+function standaloneNavigator(): StandaloneNavigator | null {
+  return typeof navigator === "undefined" ? null : (navigator as StandaloneNavigator);
+}
+
+function isStandaloneDisplayMode(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(display-mode: standalone)").matches
+  );
+}
+
+function isAppleTouchPlatform(navigatorLike: Navigator | null): boolean {
+  if (navigatorLike === null) {
+    return false;
+  }
+
+  return (
+    /iPad|iPhone|iPod/.test(navigatorLike.userAgent) ||
+    (navigatorLike.platform === "MacIntel" && navigatorLike.maxTouchPoints > 1)
+  );
+}
+
+function isIosStandaloneWebApp(): boolean {
+  const navigatorLike = standaloneNavigator();
+  return (
+    navigatorLike?.standalone === true ||
+    (isAppleTouchPlatform(navigatorLike) && isStandaloneDisplayMode())
+  );
+}
+
 function canUseStandardPictureInPicture(
   video: WebKitVideoElement | null = pictureInPictureVideoElement(),
 ): boolean {
@@ -1354,6 +1389,10 @@ function canUseWebKitPictureInPicture(
 function canUsePictureInPicture(
   video: WebKitVideoElement | null = pictureInPictureVideoElement(),
 ): boolean {
+  if (isIosStandaloneWebApp()) {
+    return false;
+  }
+
   return canUseStandardPictureInPicture(video) || canUseWebKitPictureInPicture(video);
 }
 
@@ -1749,12 +1788,13 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
           />
 
           <IconButton
+            v-if="pictureInPictureSupported"
             class="movies-hls-player__button movies-hls-player__pip-button"
             :icon="pictureInPictureIcon"
             :label="pictureInPictureLabel"
             size="sm"
             variant="subtle"
-            :disabled="!pictureInPictureSupported || playbackError.length > 0"
+            :disabled="playbackError.length > 0"
             @click="togglePictureInPicture"
           />
 

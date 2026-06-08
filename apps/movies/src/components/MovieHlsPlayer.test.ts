@@ -25,6 +25,7 @@ const fullscreenDescriptors = {
     document,
     "pictureInPictureEnabled",
   ),
+  navigatorStandalone: Object.getOwnPropertyDescriptor(navigator, "standalone"),
   documentWebkitExitFullscreen: Object.getOwnPropertyDescriptor(document, "webkitExitFullscreen"),
   documentWebkitFullscreenElement: Object.getOwnPropertyDescriptor(
     document,
@@ -240,6 +241,7 @@ function restoreFullscreenProperties(): void {
     "pictureInPictureEnabled",
     fullscreenDescriptors.documentPictureInPictureEnabled,
   );
+  restoreProperty(navigator, "standalone", fullscreenDescriptors.navigatorStandalone);
   restoreProperty(
     document,
     "webkitExitFullscreen",
@@ -982,6 +984,29 @@ content-c.ts
         .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
+  });
+
+  it("hides picture-in-picture in iOS standalone mode even when the API reports support", async () => {
+    const requestPictureInPicture = vi.fn(() => Promise.resolve({}));
+
+    Object.defineProperty(navigator, "standalone", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(document, "pictureInPictureEnabled", {
+      configurable: true,
+      value: true,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "requestPictureInPicture", {
+      configurable: true,
+      value: requestPictureInPicture,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+
+    expect(wrapper.find(".movies-hls-player__pip-button").exists()).toBe(false);
+    expect(requestPictureInPicture).not.toHaveBeenCalled();
   });
 
   it("renders an optional top-left back button before the title line", async () => {
