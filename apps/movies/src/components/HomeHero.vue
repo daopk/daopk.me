@@ -227,7 +227,9 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
 
       <div class="movies-home__hero-copy">
         <p class="movies-home__hero-eyebrow">Trending this week</p>
-        <h1>{{ activeHero.name }}</h1>
+        <h1>
+          <span class="movies-home__hero-title-text">{{ activeHero.name }}</span>
+        </h1>
         <p v-if="heroMetaLabel(activeHero)" class="movies-home__hero-meta">
           {{ heroMetaLabel(activeHero) }}
         </p>
@@ -771,10 +773,9 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
   .movies-home__hero-copy {
     display: grid;
     gap: var(--space-sm);
+    inline-size: min(560px, 80vw);
     justify-items: center;
     margin-inline: auto;
-    max-inline-size: min(560px, 100%);
-    padding-inline: var(--space-lg);
     text-align: center;
   }
 
@@ -785,8 +786,25 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
   }
 
   .movies-home__hero-copy h1 {
+    align-items: center;
+    block-size: 2lh;
+    display: flex;
     font-size: var(--font-size-2xl);
+    justify-content: center;
     line-height: var(--leading-tight);
+    max-inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .movies-home__hero-title-text {
+    display: -webkit-box;
+    inline-size: 100%;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: balance;
+    -webkit-box-orient: vertical;
   }
 
   .movies-home__hero-meta {
