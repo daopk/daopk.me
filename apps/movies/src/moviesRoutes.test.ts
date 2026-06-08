@@ -32,6 +32,12 @@ describe("moviesRoutes", () => {
       slug: "edward-norton",
       tmdbId: 819,
     });
+    expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/1")).toEqual({
+      name: "season",
+      seasonNumber: 1,
+      slug: "planet-cinema",
+      tmdbId: 1399,
+    });
     expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/1/episode/2")).toEqual({
       episodeNumber: 2,
       name: "episode",
@@ -46,6 +52,8 @@ describe("moviesRoutes", () => {
     expect(moviesDeepLinkFromPathname("/movie/0-zero")).toBeNull();
     expect(moviesDeepLinkFromPathname("/movie/550-fight%2Fclub")).toBeNull();
     expect(moviesDeepLinkFromPathname("/movie/550-fight-club/season/1/episode/1")).toBeNull();
+    expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/01")).toBeNull();
+    expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/01/episode/1")).toBeNull();
     expect(moviesDeepLinkFromPathname("/tv/1399-planet-cinema/season/1/episode/0")).toBeNull();
   });
 
@@ -62,6 +70,20 @@ describe("moviesRoutes", () => {
       episodeNumber: 1,
       name: "episode",
       seasonNumber: 0,
+      slug: "planet-cinema",
+      tmdbId: 1399,
+    });
+
+    expect(
+      moviesDeepLinkFromLaunchArgs({
+        mediaType: "tv",
+        seasonNumber: "2",
+        slug: "planet-cinema",
+        tmdbId: "1399",
+      }),
+    ).toEqual({
+      name: "season",
+      seasonNumber: 2,
       slug: "planet-cinema",
       tmdbId: 1399,
     });
@@ -109,6 +131,14 @@ describe("moviesRoutes", () => {
         }),
       ),
     ).toBe("/movie/550-tmdb-550");
+    expect(
+      moviesPathForView({
+        name: "season",
+        seasonNumber: 1,
+        slug: "planet cinema",
+        tmdbId: 1399,
+      }),
+    ).toBe("/tv/1399-planet%20cinema/season/1");
     expect(
       moviesPathForView({
         episodeNumber: 2,

@@ -10,6 +10,7 @@ import HomeView from "./components/HomeView.vue";
 import ListView from "./components/ListView.vue";
 import MoviesToolbar from "./components/MoviesToolbar.vue";
 import PersonView from "./components/PersonView.vue";
+import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 
@@ -148,6 +149,16 @@ onUnmounted(() => {
       @open-episode="openEpisode($event, { replace: true })"
       @open-person="openPerson"
       @watch="openEpisodeWatch($event, { autoplay: true })"
+    />
+    <SeasonView
+      v-else-if="view.name === 'season'"
+      :season-number="view.seasonNumber"
+      :slug="view.slug"
+      :tmdb-id="view.tmdbId"
+      @scroll="updateToolbarSolid"
+      @back="goBack"
+      @open-episode="openEpisode"
+      @open-person="openPerson"
     />
     <WatchView
       v-else-if="view.name === 'watch'"

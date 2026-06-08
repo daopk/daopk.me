@@ -281,40 +281,21 @@ function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
 
 function parseMoviesUrlIntent(url: URL, segments: readonly string[]): AppUrlIntent {
   const section = segments[0];
-  if (segments.length === 2) {
-    if (section !== "movie" && section !== "tv" && section !== "person") {
-      return { kind: "none" };
-    }
-
-    const idSlug = decodePathSegment(segments[1]);
-    if (idSlug === null || TMDB_ID_SLUG_PATTERN.exec(idSlug) === null) {
-      return { kind: "none" };
-    }
-
+  if (section === "movie" || section === "tv") {
+    const path = validMoviesMediaPath(url, segments);
     return {
       kind: "app",
       manifestId: "movies",
-      args: { path: url.pathname },
+      ...(path === null ? {} : { args: { path } }),
     };
   }
 
-  if (segments.length !== 6 || section !== "tv") {
+  if (segments.length !== 2 || section !== "person") {
     return { kind: "none" };
   }
 
   const idSlug = decodePathSegment(segments[1]);
-  const seasonNumber = decodePathSegment(segments[3] ?? "");
-  const episodeNumber = decodePathSegment(segments[5] ?? "");
-  if (
-    idSlug === null ||
-    TMDB_ID_SLUG_PATTERN.exec(idSlug) === null ||
-    segments[2] !== "season" ||
-    segments[4] !== "episode" ||
-    seasonNumber === null ||
-    episodeNumber === null ||
-    /^(?:0|[1-9]\d*)$/.exec(seasonNumber) === null ||
-    /^[1-9]\d*$/.exec(episodeNumber) === null
-  ) {
+  if (idSlug === null || TMDB_ID_SLUG_PATTERN.exec(idSlug) === null) {
     return { kind: "none" };
   }
 
@@ -323,6 +304,44 @@ function parseMoviesUrlIntent(url: URL, segments: readonly string[]): AppUrlInte
     manifestId: "movies",
     args: { path: url.pathname },
   };
+}
+
+function validMoviesMediaPath(url: URL, segments: readonly string[]): string | null {
+  const section = segments[0];
+  if (segments.length === 2) {
+    const idSlug = decodePathSegment(segments[1]);
+    return idSlug !== null && TMDB_ID_SLUG_PATTERN.exec(idSlug) !== null ? url.pathname : null;
+  }
+
+  if (segments.length === 4 && section === "tv") {
+    const idSlug = decodePathSegment(segments[1]);
+    const seasonNumber = decodePathSegment(segments[3] ?? "");
+    return idSlug !== null &&
+      TMDB_ID_SLUG_PATTERN.exec(idSlug) !== null &&
+      segments[2] === "season" &&
+      seasonNumber !== null &&
+      /^(?:0|[1-9]\d*)$/.exec(seasonNumber) !== null
+      ? url.pathname
+      : null;
+  }
+
+  if (segments.length !== 6 || section !== "tv") {
+    return null;
+  }
+
+  const idSlug = decodePathSegment(segments[1]);
+  const seasonNumber = decodePathSegment(segments[3] ?? "");
+  const episodeNumber = decodePathSegment(segments[5] ?? "");
+  return idSlug !== null &&
+    TMDB_ID_SLUG_PATTERN.exec(idSlug) !== null &&
+    segments[2] === "season" &&
+    segments[4] === "episode" &&
+    seasonNumber !== null &&
+    episodeNumber !== null &&
+    /^(?:0|[1-9]\d*)$/.exec(seasonNumber) !== null &&
+    /^[1-9]\d*$/.exec(episodeNumber) !== null
+    ? url.pathname
+    : null;
 }
 
 export function isFirstPartyAppProtocolUrl(input: string | URL): boolean {

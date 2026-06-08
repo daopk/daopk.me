@@ -18,6 +18,12 @@ export type MoviesView =
       readonly tmdbId: number;
     }
   | {
+      readonly name: "season";
+      readonly seasonNumber: number;
+      readonly slug: string;
+      readonly tmdbId: number;
+    }
+  | {
       readonly episodeNumber: number;
       readonly name: "episode";
       readonly seasonNumber: number;
@@ -45,6 +51,12 @@ export type MoviesDeepLink =
   | {
       readonly mediaType: MovieMediaType;
       readonly name: "detail";
+      readonly slug?: string;
+      readonly tmdbId: number;
+    }
+  | {
+      readonly name: "season";
+      readonly seasonNumber: number;
       readonly slug?: string;
       readonly tmdbId: number;
     }
@@ -149,6 +161,15 @@ export function moviesViewFromDeepLink(intent: MoviesDeepLink): MoviesView {
     };
   }
 
+  if (intent.name === "season") {
+    return {
+      name: "season",
+      seasonNumber: intent.seasonNumber,
+      slug: intent.slug ?? `tmdb-${intent.tmdbId}`,
+      tmdbId: intent.tmdbId,
+    };
+  }
+
   if (intent.name === "episode") {
     return {
       episodeNumber: intent.episodeNumber,
@@ -183,6 +204,10 @@ export function moviesPathForView(view: MoviesView): string {
     return `/person/${view.tmdbId}-${pathSegment(view.slug)}`;
   }
 
+  if (view.name === "season") {
+    return `/tv/${view.tmdbId}-${pathSegment(view.slug)}/season/${view.seasonNumber}`;
+  }
+
   if (view.name === "episode") {
     return `/tv/${view.tmdbId}-${pathSegment(view.slug)}/season/${view.seasonNumber}/episode/${view.episodeNumber}`;
   }
@@ -212,6 +237,11 @@ export function moviesDeepLinkFromLaunchArgs(
     return episodeIntent;
   }
 
+  const seasonIntent = seasonDeepLinkFromLaunchArgs(args);
+  if (seasonIntent !== null) {
+    return seasonIntent;
+  }
+
   const detailIntent = detailDeepLinkFromLaunchArgs(args);
   if (detailIntent !== null) {
     return detailIntent;
@@ -223,7 +253,7 @@ export function moviesDeepLinkFromLaunchArgs(
 
 export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | null {
   const segments = pathname.split("/").filter(Boolean);
-  if (segments.length !== 2 && segments.length !== 6) {
+  if (segments.length !== 2 && segments.length !== 4 && segments.length !== 6) {
     return null;
   }
 
@@ -238,13 +268,31 @@ export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | n
     return null;
   }
 
+  if (segments.length === 4) {
+    if (mediaType !== "tv" || segments[2] !== "season") {
+      return null;
+    }
+
+    const seasonNumber = nonNegativeIntegerPathSegment(decodePathSegment(segments[3]));
+    if (seasonNumber === null) {
+      return null;
+    }
+
+    return {
+      name: "season",
+      seasonNumber,
+      slug: match[2],
+      tmdbId: Number(match[1]),
+    };
+  }
+
   if (segments.length === 6) {
     if (mediaType !== "tv" || segments[2] !== "season" || segments[4] !== "episode") {
       return null;
     }
 
-    const seasonNumber = nonNegativeIntegerArg(decodePathSegment(segments[3]));
-    const episodeNumber = positiveIntegerArg(decodePathSegment(segments[5]));
+    const seasonNumber = nonNegativeIntegerPathSegment(decodePathSegment(segments[3]));
+    const episodeNumber = positiveIntegerPathSegment(decodePathSegment(segments[5]));
     if (seasonNumber === null || episodeNumber === null) {
       return null;
     }
@@ -276,6 +324,25 @@ export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | n
   }
 
   return null;
+}
+
+function seasonDeepLinkFromLaunchArgs(
+  args: Readonly<Record<string, unknown>> | undefined,
+): MoviesDeepLink | null {
+  const mediaType = mediaTypeArg(args?.mediaType);
+  const tmdbId = positiveIntegerArg(args?.tmdbId);
+  const seasonNumber = nonNegativeIntegerArg(args?.seasonNumber);
+  if (mediaType !== "tv" || tmdbId === null || seasonNumber === null) {
+    return null;
+  }
+
+  const slug = stringArg(args?.slug);
+  return {
+    name: "season",
+    seasonNumber,
+    tmdbId,
+    ...(slug === null ? {} : { slug }),
+  };
 }
 
 function episodeDeepLinkFromLaunchArgs(
@@ -337,6 +404,14 @@ function positiveIntegerArg(value: unknown): number | null {
 function nonNegativeIntegerArg(value: unknown): number | null {
   const number = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
   return Number.isInteger(number) && Number(number) >= 0 ? Number(number) : null;
+}
+
+function positiveIntegerPathSegment(value: string | null): number | null {
+  return value !== null && /^[1-9]\d*$/.test(value) ? Number(value) : null;
+}
+
+function nonNegativeIntegerPathSegment(value: string | null): number | null {
+  return value !== null && /^(?:0|[1-9]\d*)$/.test(value) ? Number(value) : null;
 }
 
 function decodePathSegment(segment: string | undefined): string | null {

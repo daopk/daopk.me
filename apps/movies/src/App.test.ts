@@ -1272,6 +1272,32 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Series Cast");
   });
 
+  it("opens a direct season route", async () => {
+    window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/2");
+    vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("tv", 1399, expect.anything());
+    expect(fetchMovieSeason).toHaveBeenCalledWith(1399, 2, expect.anything());
+    expect(wrapper.text()).toContain("Planet Cinema: Season 2");
+    expect(wrapper.text()).toContain("Second Premiere");
+    expect(wrapper.text()).toContain("Series Cast");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/2");
+
+    const episodeButton = wrapper
+      .findAll(".movies-episode-list__item")
+      .find((button) => button.text().includes("Second Premiere"));
+    expect(episodeButton).toBeDefined();
+    await episodeButton!.trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/2/episode/1");
+    expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 2, 1, expect.anything());
+    expect(wrapper.text()).toContain("Episode Details");
+  });
+
   it("opens a direct episode route", async () => {
     window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/2");
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
@@ -1377,6 +1403,17 @@ describe("Movies app", () => {
     expect(fetchMovieDetail).not.toHaveBeenCalled();
     expect(wrapper.find(".movies-home").exists()).toBe(true);
     expect(window.location.pathname).toBe("/legacy/kieu-so");
+  });
+
+  it("shows home for invalid public media routes", async () => {
+    window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/01");
+    const wrapper = mount(App);
+    await settle();
+
+    expect(fetchMovieDetail).not.toHaveBeenCalled();
+    expect(fetchMovieSeason).not.toHaveBeenCalled();
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/01");
   });
 
   it("accepts TMDB launch args instead of movieSlug", async () => {
