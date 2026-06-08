@@ -133,9 +133,9 @@ async function loadContinueWatching(): Promise<void> {
   const controller = new AbortController();
   continueAbortController = controller;
 
-  const records = moviesPlaybackProgressRecords(playbackProgressStore.snapshot(), {
-    limit: CONTINUE_WATCHING_LIMIT,
-  });
+  const records = uniqueContinueWatchingRecords(
+    moviesPlaybackProgressRecords(playbackProgressStore.snapshot()),
+  );
   if (records.length === 0) {
     continueWatchingItems.value = [];
     return;
@@ -158,6 +158,29 @@ async function loadContinueWatching(): Promise<void> {
   continueWatchingItems.value = hydrated.filter(
     (item): item is ContinueWatchingItem => item !== null,
   );
+}
+
+function uniqueContinueWatchingRecords(
+  records: readonly MoviesPlaybackProgressRecord[],
+): readonly MoviesPlaybackProgressRecord[] {
+  const seen = new Set<string>();
+  const uniqueRecords: MoviesPlaybackProgressRecord[] = [];
+
+  for (const record of records) {
+    const groupKey =
+      record.target.kind === "movie" ? `movie:${record.target.tmdbId}` : `tv:${record.target.tmdbId}`;
+    if (seen.has(groupKey)) {
+      continue;
+    }
+
+    seen.add(groupKey);
+    uniqueRecords.push(record);
+    if (uniqueRecords.length >= CONTINUE_WATCHING_LIMIT) {
+      break;
+    }
+  }
+
+  return uniqueRecords;
 }
 
 async function hydrateContinueWatchingRecord(

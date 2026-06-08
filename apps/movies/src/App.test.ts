@@ -441,7 +441,7 @@ describe("Movies app", () => {
     expect(dragEvent.defaultPrevented).toBe(true);
   });
 
-  it("renders Continue Watching with movie and TV episode progress newest first", async () => {
+  it("renders Continue Watching with one card per movie or TV series newest first", async () => {
     const now = Date.now();
     persistAppProgressEntries({
       [moviePlaybackProgressKey(550)]: {
@@ -454,6 +454,11 @@ describe("Movies app", () => {
         duration: 120,
         updatedAt: now,
       },
+      [episodePlaybackProgressKey(1399, 1, 1)]: {
+        currentTime: 42,
+        duration: 120,
+        updatedAt: now - 500,
+      },
     });
 
     const wrapper = mount(App);
@@ -461,6 +466,7 @@ describe("Movies app", () => {
 
     expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
     expect(fetchMovieEpisode).toHaveBeenCalledWith(1399, 1, 2, expect.anything());
+    expect(fetchMovieEpisode).not.toHaveBeenCalledWith(1399, 1, 1, expect.anything());
 
     const continueSection = wrapper.get(".movies-home__continue");
     expect(continueSection.text()).toContain("Continue Watching");

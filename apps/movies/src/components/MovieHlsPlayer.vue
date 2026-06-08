@@ -702,13 +702,23 @@ function onVideoError(): void {
   showControls();
 }
 
-function beginSeekPreview(): void {
+function shouldPreserveHiddenControls(): boolean {
+  return controlsHidden.value && playing.value;
+}
+
+function beginSeekPreview(options: { preserveHiddenControls?: boolean } = {}): void {
   if (!hasDuration.value) {
     return;
   }
 
+  const preserveHiddenControls =
+    options.preserveHiddenControls === true || shouldPreserveHiddenControls();
   seeking.value = true;
   seekPosition.value = Math.round(currentTime.value);
+  if (preserveHiddenControls) {
+    clearHideControlsTimer();
+    return;
+  }
   showControls();
 }
 
@@ -741,7 +751,8 @@ function commitSeek(
   seeking.value = false;
   clearSeekPointerPreview();
   persistPlaybackProgress({ force: true });
-  if (options.preserveHiddenControls && controlsHidden.value && playing.value) {
+  if (options.preserveHiddenControls && playing.value) {
+    controlsVisible.value = false;
     clearHideControlsTimer();
     return;
   }
@@ -897,7 +908,7 @@ function onSeekKeydown(event: KeyboardEvent): void {
     event.key === "PageUp" ||
     event.key === "PageDown"
   ) {
-    beginSeekPreview();
+    beginSeekPreview({ preserveHiddenControls: shouldPreserveHiddenControls() });
   }
 }
 
@@ -1150,13 +1161,13 @@ function onStageKeydown(event: KeyboardEvent): void {
 
   if (event.key === "ArrowLeft") {
     event.preventDefault();
-    seekBy(-SEEK_STEP_SECONDS, { preserveHiddenControls: controlsHidden.value && playing.value });
+    seekBy(-SEEK_STEP_SECONDS, { preserveHiddenControls: shouldPreserveHiddenControls() });
     return;
   }
 
   if (event.key === "ArrowRight") {
     event.preventDefault();
-    seekBy(SEEK_STEP_SECONDS, { preserveHiddenControls: controlsHidden.value && playing.value });
+    seekBy(SEEK_STEP_SECONDS, { preserveHiddenControls: shouldPreserveHiddenControls() });
     return;
   }
 
