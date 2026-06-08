@@ -130,6 +130,15 @@ async function waitForIndexItems(wrapper: VueWrapper, timeoutMs = 1500): Promise
   );
 }
 
+function commentsFrameUrl(wrapper: VueWrapper): URL {
+  const src = wrapper.find(".comments iframe.giscus-frame").attributes("src");
+  if (src === undefined) {
+    throw new Error("comments frame was not rendered");
+  }
+
+  return new URL(src);
+}
+
 const blogContext: AppContext = Object.freeze({
   manifestId: "blog",
   handleId: "h-blog-test",
@@ -307,10 +316,8 @@ New body`,
     expect(coverImage.attributes("height")).toBe("576");
     expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(cover.element);
     expect(wrapper.find(".comments").exists()).toBe(true);
-    expect(wrapper.find(".comments script").attributes("data-term")).toBe("blog:new-post");
-    expect(wrapper.find(".comments script").attributes("data-category-id")).toBe(
-      "DIC_kwDOSsA4Cs4C-vzm",
-    );
+    expect(commentsFrameUrl(wrapper).searchParams.get("term")).toBe("blog:new-post");
+    expect(commentsFrameUrl(wrapper).searchParams.get("categoryId")).toBe("DIC_kwDOSsA4Cs4C-vzm");
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
@@ -342,7 +349,7 @@ New body`,
     await waitForContent(wrapper);
 
     expect(wrapper.find(".comments").exists()).toBe(true);
-    expect(wrapper.find(".comments script").attributes("data-term")).toBe("blog:field-notes");
+    expect(commentsFrameUrl(wrapper).searchParams.get("term")).toBe("blog:field-notes");
   });
 
   it("replaces the URL for blog.open.requested events with valid slugs", async () => {

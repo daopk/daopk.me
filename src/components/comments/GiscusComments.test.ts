@@ -8,43 +8,64 @@ import GiscusComments from "./GiscusComments.vue";
 
 const target = blogCommentTarget("moving-apps-out-of-the-shell", "Moving apps")!;
 
-function script(wrapper: ReturnType<typeof mount>): HTMLScriptElement {
-  const node = wrapper.find("script").element;
-  if (!(node instanceof HTMLScriptElement)) {
-    throw new Error("Giscus script was not rendered.");
+function frame(wrapper: ReturnType<typeof mount>): HTMLIFrameElement {
+  const node = wrapper.find("iframe.giscus-frame").element;
+  if (!(node instanceof HTMLIFrameElement)) {
+    throw new Error("Giscus frame was not rendered.");
   }
   return node;
+}
+
+function frameUrl(wrapper: ReturnType<typeof mount>): URL {
+  const src = frame(wrapper).getAttribute("src");
+  if (src === null) {
+    throw new Error("Giscus frame src was not rendered.");
+  }
+  return new URL(src);
 }
 
 afterEach(() => {
   document.documentElement.removeAttribute("data-theme");
   document.head.querySelector('meta[name="giscus:backlink"]')?.remove();
+  window.history.replaceState(null, "", "/");
+  window.localStorage.clear();
 });
 
 describe("GiscusComments", () => {
-  it("injects the configured Giscus script for the current target", () => {
+  it("injects a credentialless Giscus frame for the current target", () => {
     document.documentElement.dataset.theme = "dark";
+    window.history.replaceState(null, "", "/blog/moving-apps-out-of-the-shell");
     const wrapper = mount(GiscusComments, { props: { target } });
-    const giscusScript = script(wrapper);
+    const giscusFrame = frame(wrapper);
+    const url = frameUrl(wrapper);
 
-    expect(giscusScript.getAttribute("src")).toBe("https://giscus.app/client.js");
-    expect(giscusScript.getAttribute("data-repo")).toBe("daopk/daopk.me");
-    expect(giscusScript.getAttribute("data-repo-id")).toBe("R_kgDOSsA4Cg");
-    expect(giscusScript.getAttribute("data-category")).toBe("Comments");
-    expect(giscusScript.getAttribute("data-category-id")).toBe("DIC_kwDOSsA4Cs4C-vzm");
-    expect(giscusScript.getAttribute("data-mapping")).toBe("specific");
-    expect(giscusScript.getAttribute("data-term")).toBe("blog:moving-apps-out-of-the-shell");
-    expect(giscusScript.getAttribute("data-strict")).toBe("1");
-    expect(giscusScript.getAttribute("data-reactions-enabled")).toBe("1");
-    expect(giscusScript.getAttribute("data-emit-metadata")).toBe("0");
-    expect(giscusScript.getAttribute("data-input-position")).toBe("bottom");
-    expect(giscusScript.getAttribute("data-theme")).toBe("dark");
-    expect(giscusScript.getAttribute("data-lang")).toBe("vi");
-    expect(giscusScript.getAttribute("data-loading")).toBe("lazy");
-    expect(giscusScript.getAttribute("crossorigin")).toBe("anonymous");
-    expect(document.head.querySelector('meta[name="giscus:backlink"]')?.getAttribute("content")).toBe(
+    expect(url.origin).toBe("https://giscus.app");
+    expect(url.pathname).toBe("/vi/widget");
+    expect(url.searchParams.get("repo")).toBe("daopk/daopk.me");
+    expect(url.searchParams.get("repoId")).toBe("R_kgDOSsA4Cg");
+    expect(url.searchParams.get("category")).toBe("Comments");
+    expect(url.searchParams.get("categoryId")).toBe("DIC_kwDOSsA4Cs4C-vzm");
+    expect(url.searchParams.get("term")).toBe("blog:moving-apps-out-of-the-shell");
+    expect(url.searchParams.get("strict")).toBe("1");
+    expect(url.searchParams.get("reactionsEnabled")).toBe("1");
+    expect(url.searchParams.get("emitMetadata")).toBe("0");
+    expect(url.searchParams.get("inputPosition")).toBe("bottom");
+    expect(url.searchParams.get("theme")).toBe("dark");
+    expect(url.searchParams.get("session")).toBe("");
+    expect(url.searchParams.get("origin")).toBe(
+      `${window.location.origin}/blog/moving-apps-out-of-the-shell`,
+    );
+    expect(url.searchParams.get("backLink")).toBe(
       "https://daopk.me/blog/moving-apps-out-of-the-shell",
     );
+    expect(giscusFrame.getAttribute("allow")).toBe("clipboard-write");
+    expect(giscusFrame.getAttribute("credentialless")).toBe("credentialless");
+    expect(giscusFrame.getAttribute("loading")).toBe("lazy");
+    expect(giscusFrame.getAttribute("scrolling")).toBe("no");
+    expect(giscusFrame.getAttribute("title")).toBe("Comments");
+    expect(
+      document.head.querySelector('meta[name="giscus:backlink"]')?.getAttribute("content"),
+    ).toBe("https://daopk.me/blog/moving-apps-out-of-the-shell");
   });
 
   it("reloads the script when the target changes", async () => {
@@ -55,15 +76,30 @@ describe("GiscusComments", () => {
     });
     await nextTick();
 
-    expect(wrapper.findAll("script")).toHaveLength(1);
-    expect(script(wrapper).getAttribute("data-term")).toBe("blog:building-a-tiny-web-os");
-    expect(document.head.querySelector('meta[name="giscus:backlink"]')?.getAttribute("content")).toBe(
-      "https://daopk.me/blog/building-a-tiny-web-os",
-    );
+    expect(wrapper.findAll("iframe.giscus-frame")).toHaveLength(1);
+    expect(frameUrl(wrapper).searchParams.get("term")).toBe("blog:building-a-tiny-web-os");
+    expect(
+      document.head.querySelector('meta[name="giscus:backlink"]')?.getAttribute("content"),
+    ).toBe("https://daopk.me/blog/building-a-tiny-web-os");
 
     wrapper.unmount();
 
     expect(document.head.querySelector('meta[name="giscus:backlink"]')).toBeNull();
+  });
+
+  it("passes the Giscus OAuth callback session into the frame", () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/blog/moving-apps-out-of-the-shell?giscus=session-token#auth",
+    );
+
+    const wrapper = mount(GiscusComments, { props: { target } });
+
+    expect(frameUrl(wrapper).searchParams.get("session")).toBe("session-token");
+    expect(window.localStorage.getItem("giscus-session")).toBe(JSON.stringify("session-token"));
+    expect(window.location.search).toBe("");
+    expect(window.location.hash).toBe("");
   });
 
   it("renders a safe disabled state when the category config is missing", () => {
@@ -74,7 +110,7 @@ describe("GiscusComments", () => {
       },
     });
 
-    expect(wrapper.find("script").exists()).toBe(false);
+    expect(wrapper.find("iframe.giscus-frame").exists()).toBe(false);
     expect(wrapper.find(".comments__disabled").text()).toBe("Comments unavailable.");
   });
 
@@ -86,9 +122,7 @@ describe("GiscusComments", () => {
 
     const wrapper = mount(GiscusComments, { props: { target } });
 
-    expect(meta.getAttribute("content")).toBe(
-      "https://daopk.me/blog/moving-apps-out-of-the-shell",
-    );
+    expect(meta.getAttribute("content")).toBe("https://daopk.me/blog/moving-apps-out-of-the-shell");
 
     wrapper.unmount();
 
