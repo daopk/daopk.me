@@ -34,7 +34,9 @@ withDefaults(defineProps<PosterFrameProps>(), {
       class="movies-poster-frame__image movies-poster-frame__image--empty"
       :class="[imageClass, emptyClass]"
       aria-hidden="true"
-    />
+    >
+      <slot name="empty" />
+    </span>
     <slot />
   </span>
 </template>

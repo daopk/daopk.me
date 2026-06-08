@@ -583,6 +583,7 @@ describe("Movies app", () => {
     );
     expect(wrapper.text()).toContain("Edward Norton");
     expect(wrapper.text()).toContain("David Fincher");
+    expect(wrapper.find(".movies-detail-people__placeholder").exists()).toBe(true);
     expect(wrapper.findAll("button").some((button) => button.text().trim() === "Watch")).toBe(
       false,
     );
