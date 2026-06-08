@@ -192,12 +192,14 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     debugWarnSpy.mockReset();
     __resetWindowManagerForTests();
     window.history.replaceState(null, "", "/");
+    document.title = "WebOS";
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     __resetWindowManagerForTests();
     document.body.innerHTML = "";
+    document.title = "WebOS";
   });
 
   it("emits one debugWarn + skips kernel.apps.launch when restore/focus wins AND args were supplied", async () => {
@@ -343,6 +345,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     bus.emit("app.launch.requested", {
       manifestId: "beta",
@@ -352,6 +355,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/apps/beta");
+    expect(document.title).toBe("Beta - WebOS");
 
     wrapper.unmount();
   });
@@ -380,11 +384,52 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     const record = manager.windows.find((entry) => entry.manifestId === "alpha");
     expect(record).toBeDefined();
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     manager.minimize(record!.id);
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/");
+    expect(document.title).toBe("WebOS");
+
+    manager.restore(record!.id);
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
+
+    manager.close(record!.id);
+    await wrapper.vm.$nextTick();
+
+    expect(window.location.pathname).toBe("/");
+    expect(document.title).toBe("WebOS");
+
+    wrapper.unmount();
+  });
+
+  it("falls back to desktop window title and manifest id for browser titles", async () => {
+    const { kernel } = makeKernel([]);
+    kernelMock = kernel;
+
+    const wrapper = mount(WindowHost, {
+      global: {
+        stubs: {
+          Window: { template: "<div data-window-stub />" },
+          SnapPreview: { template: "<div data-snap-preview-stub />" },
+        },
+      },
+    });
+
+    const manager = useWindowManager();
+    manager.open({ manifestId: "ghost", handleId: "h-ghost", title: "Ghost Title" });
+    await wrapper.vm.$nextTick();
+
+    expect(document.title).toBe("Ghost Title - WebOS");
+
+    manager.open({ manifestId: "blank", handleId: "h-blank", title: "" });
+    await wrapper.vm.$nextTick();
+
+    expect(document.title).toBe("blank - WebOS");
 
     wrapper.unmount();
   });
@@ -413,6 +458,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     const blog = manager.windows.find((entry) => entry.manifestId === "blog");
     expect(blog).toBeDefined();
     expect(window.location.pathname).toBe("/apps/blog");
+    expect(document.title).toBe("Blog - WebOS");
 
     bus.emit("app.url.changed", {
       manifestId: "blog",
@@ -422,6 +468,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+    expect(document.title).toBe("Blog - WebOS");
 
     bus.emit("app.launch.requested", {
       manifestId: "alpha",
@@ -431,11 +478,13 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     manager.focus(blog!.id);
     await wrapper.vm.$nextTick();
 
     expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+    expect(document.title).toBe("Blog - WebOS");
 
     wrapper.unmount();
   });

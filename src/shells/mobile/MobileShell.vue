@@ -13,10 +13,13 @@ import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { debugWarn } from "~/core/debug";
 import {
+  appBrowserTitle,
   appFallbackBrowserPath,
+  DEFAULT_BROWSER_TITLE,
   HOME_BROWSER_PATH,
   normalizeAppBrowserPath,
   replaceBrowserPath,
+  replaceBrowserTitle,
 } from "~/core/routing/appBrowserPaths";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
@@ -79,6 +82,15 @@ const activeBrowserPath = computed(() => {
   }
 
   return frame.browserPath ?? appFallbackBrowserPath(frame.manifestId);
+});
+
+const activeBrowserTitle = computed(() => {
+  const frame = nav.currentFrame.value;
+  if (frame === null) {
+    return DEFAULT_BROWSER_TITLE;
+  }
+
+  return appBrowserTitle(titleFor(frame.manifestId));
 });
 
 type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
@@ -148,6 +160,14 @@ watch(
 watch(activeBrowserPath, (path) => {
   replaceBrowserPath(path);
 });
+
+watch(
+  activeBrowserTitle,
+  (title) => {
+    replaceBrowserTitle(title);
+  },
+  { immediate: true },
+);
 
 const lastLaunchedManifestId = ref<string | null>(null);
 

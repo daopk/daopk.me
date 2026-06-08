@@ -1,15 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  appBrowserTitle,
   appFallbackBrowserPath,
+  DEFAULT_BROWSER_TITLE,
   normalizeAppBrowserPath,
   replaceBrowserPath,
+  replaceBrowserTitle,
 } from "./appBrowserPaths";
 
 describe("app browser paths", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     window.history.replaceState(null, "", "/");
+    document.title = DEFAULT_BROWSER_TITLE;
+  });
+
+  it("builds active app browser titles", () => {
+    expect(DEFAULT_BROWSER_TITLE).toBe("WebOS");
+    expect(appBrowserTitle("Finder")).toBe("Finder - WebOS");
   });
 
   it("builds fallback app paths from manifest ids", () => {
@@ -46,5 +55,32 @@ describe("app browser paths", () => {
     expect(window.location.pathname).toBe("/next");
     expect(window.location.search).toBe("?tab=2");
     expect(window.location.hash).toBe("#pane");
+  });
+
+  it("replaces browser titles and no-ops when unchanged", () => {
+    let title = DEFAULT_BROWSER_TITLE;
+    const titleSetter = vi.fn((nextTitle: string) => {
+      title = nextTitle;
+    });
+
+    Object.defineProperty(document, "title", {
+      configurable: true,
+      get: () => title,
+      set: titleSetter,
+    });
+
+    try {
+      replaceBrowserTitle(DEFAULT_BROWSER_TITLE);
+
+      expect(titleSetter).not.toHaveBeenCalled();
+
+      replaceBrowserTitle(appBrowserTitle("Finder"));
+
+      expect(titleSetter).toHaveBeenCalledTimes(1);
+      expect(titleSetter).toHaveBeenCalledWith("Finder - WebOS");
+      expect(document.title).toBe("Finder - WebOS");
+    } finally {
+      delete (document as unknown as { title?: string }).title;
+    }
   });
 });

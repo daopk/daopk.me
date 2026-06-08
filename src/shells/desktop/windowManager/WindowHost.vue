@@ -9,10 +9,13 @@ import { AppLaunchError } from "~/core/kernel/errors";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
 import {
+  appBrowserTitle,
   appFallbackBrowserPath,
+  DEFAULT_BROWSER_TITLE,
   HOME_BROWSER_PATH,
   normalizeAppBrowserPath,
   replaceBrowserPath,
+  replaceBrowserTitle,
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
 import { normalizeVfsPath } from "~/core/vfs/path";
@@ -227,9 +230,32 @@ const focusedBrowserPath = computed(() => {
   return focusedWindow.browserPath ?? appFallbackBrowserPath(focusedWindow.manifestId);
 });
 
+function focusedWindowAppName(record: DesktopWindowRecord): string {
+  const manifestName = kernel.apps.list().find((entry) => entry.id === record.manifestId)?.name;
+  const appName = manifestName ?? record.title;
+  return appName.trim().length > 0 ? appName : record.manifestId;
+}
+
+const focusedBrowserTitle = computed(() => {
+  const focusedWindow = windowManager.windows.find((record) => record.focused && !record.minimized);
+  if (focusedWindow === undefined) {
+    return DEFAULT_BROWSER_TITLE;
+  }
+
+  return appBrowserTitle(focusedWindowAppName(focusedWindow));
+});
+
 watch(focusedBrowserPath, (path) => {
   replaceBrowserPath(path);
 });
+
+watch(
+  focusedBrowserTitle,
+  (title) => {
+    replaceBrowserTitle(title);
+  },
+  { immediate: true },
+);
 
 function shouldMaximizeLaunch(manifestId: string, source: AppLaunchSource): boolean {
   return manifestId === "blog" && source === "deeplink";

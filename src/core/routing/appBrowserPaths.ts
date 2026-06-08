@@ -1,7 +1,20 @@
 export const HOME_BROWSER_PATH = "/";
+export const DEFAULT_BROWSER_TITLE = "WebOS";
 
 export function appFallbackBrowserPath(manifestId: string): string {
   return `/apps/${encodeURIComponent(manifestId)}`;
+}
+
+export function appBrowserTitle(appName: string): string {
+  return `${appName} - ${DEFAULT_BROWSER_TITLE}`;
+}
+
+export function replaceBrowserTitle(title: string): void {
+  if (typeof document === "undefined" || document.title === title) {
+    return;
+  }
+
+  document.title = title;
 }
 
 export function normalizeAppBrowserPath(path: string, origin = currentOrigin()): string | null {

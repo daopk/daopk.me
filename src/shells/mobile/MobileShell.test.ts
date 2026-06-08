@@ -118,6 +118,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     useSettingsStore().hydrate();
     __resetNavigationForTest();
     window.history.replaceState(null, "", "/");
+    document.title = "WebOS";
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T09:41:00"));
@@ -131,6 +132,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     try {
       useSettingsStore().dispose();
     } catch {}
+    document.title = "WebOS";
   });
 
   it("composes the HomeScreen", () => {
@@ -174,6 +176,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     currentKernel.events.emit("app.launch.requested", {
       manifestId: "beta",
@@ -183,6 +186,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/apps/beta");
+    expect(document.title).toBe("Beta - WebOS");
 
     wrapper.unmount();
   });
@@ -198,6 +202,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     await wrapper.find(".app-view__hide").trigger("click");
     await flushPromises();
@@ -205,6 +210,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/");
+    expect(document.title).toBe("WebOS");
 
     wrapper.unmount();
   });
@@ -221,6 +227,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/apps/blog");
+    expect(document.title).toBe("Blog - WebOS");
 
     currentKernel.events.emit("app.url.changed", {
       manifestId: "blog",
@@ -231,6 +238,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+    expect(document.title).toBe("Blog - WebOS");
 
     currentKernel.events.emit("app.launch.requested", {
       manifestId: "alpha",
@@ -240,6 +248,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/apps/alpha");
+    expect(document.title).toBe("Alpha - WebOS");
 
     currentKernel.events.emit("app.launch.requested", {
       manifestId: "blog",
@@ -249,6 +258,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await nextTick();
 
     expect(window.location.pathname).toBe("/blog/moving-apps-out-of-the-shell");
+    expect(document.title).toBe("Blog - WebOS");
 
     wrapper.unmount();
   });
@@ -426,6 +436,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     await flushPromises();
     await nextTick();
     expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(true);
+    expect(document.title).toBe("Alpha - WebOS");
 
     await wrapper.find('[data-testid="close-app"]').trigger("click");
     await flushPromises();
@@ -434,6 +445,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     expect(wrapper.findAll("section.app-view").length).toBe(0);
     expect(currentKernel.processes.kill).toHaveBeenCalledWith("h-1", "user");
+    expect(document.title).toBe("WebOS");
 
     wrapper.unmount();
   });
