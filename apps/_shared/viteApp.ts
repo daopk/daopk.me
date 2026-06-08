@@ -26,6 +26,7 @@ export const HOST_RUNTIME_EXTERNALS = [
   "@daopk/icons",
   "@daopk/markdown",
   "@daopk/content",
+  "@daopk/comments",
 ];
 
 /**

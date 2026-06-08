@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { inject } from "vue";
+import { computed, inject } from "vue";
 
 import { AppFrame, ScrollArea } from "@daopk/kit";
+import { blogCommentTarget } from "@daopk/comments";
 import { createBlogContentSource } from "@daopk/content";
 import { AppContextInjectionKey, useKernel, useVfs } from "@daopk/sdk";
 
@@ -36,6 +37,13 @@ const blogApp = useBlogAppController({
   blogPost,
   kernel,
 });
+const commentTarget = computed(() => {
+  if (blogPost.status.value !== "ready" || blogPost.slug.value === null) {
+    return null;
+  }
+
+  return blogCommentTarget(blogPost.slug.value, blogPost.metadata.value.title);
+});
 </script>
 
 <template>
@@ -68,6 +76,7 @@ const blogApp = useBlogAppController({
 
       <BlogPostReader
         v-else
+        :comment-target="commentTarget"
         :cover="blogApp.currentPostCover.value"
         :content-blocks="blogPost.contentBlocks.value"
         :load-failed="blogPost.loadFailed.value"

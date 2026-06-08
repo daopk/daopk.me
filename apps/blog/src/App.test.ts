@@ -45,7 +45,21 @@ interface BlogFetchFixture {
   readonly posts?: Readonly<Record<string, string>>;
 }
 
+interface Deferred<T> {
+  readonly promise: Promise<T>;
+  resolve(value: T): void;
+}
+
 const POST_SLUG_PATTERN = /\/([a-z0-9-]+)\.md$/;
+
+function deferred<T>(): Deferred<T> {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+
+  return { promise, resolve };
+}
 
 function requestUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") {
@@ -240,6 +254,7 @@ describe("Blog app", () => {
 
     expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
     expect(wrapper.find(".blog__eyebrow").exists()).toBe(false);
+    expect(wrapper.find(".comments").exists()).toBe(false);
     expect(wrapper.findAll(".blog__index-title").map((row) => row.text())).toEqual([
       "New Post",
       "Old Post",
@@ -291,6 +306,11 @@ New body`,
     expect(coverImage.attributes("width")).toBe("1024");
     expect(coverImage.attributes("height")).toBe("576");
     expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(cover.element);
+    expect(wrapper.find(".comments").exists()).toBe(true);
+    expect(wrapper.find(".comments script").attributes("data-term")).toBe("blog:new-post");
+    expect(wrapper.find(".comments script").attributes("data-category-id")).toBe(
+      "DIC_kwDOSsA4Cs4C-vzm",
+    );
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
@@ -298,6 +318,31 @@ New body`,
     expect(replaceSpy).toHaveBeenLastCalledWith({ preserved: true }, "", "/blog");
     expect(window.location.pathname).toBe("/blog");
     expect(wrapper.find(".blog__index").text()).toContain("Latest posts");
+    expect(wrapper.find(".comments").exists()).toBe(false);
+  });
+
+  it("keeps comments hidden until the post is ready", async () => {
+    const pendingPost = deferred<Response>();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+        if (url.endsWith("/field-notes.md")) {
+          return pendingPost.promise;
+        }
+
+        return new Response("Not found", { status: 404 });
+      }),
+    );
+    const wrapper = mount(wrap(makeKernel()));
+
+    expect(wrapper.find(".comments").exists()).toBe(false);
+
+    pendingPost.resolve(new Response("# Field Notes\n\nNetwork body", { status: 200 }));
+    await waitForContent(wrapper);
+
+    expect(wrapper.find(".comments").exists()).toBe(true);
+    expect(wrapper.find(".comments script").attributes("data-term")).toBe("blog:field-notes");
   });
 
   it("replaces the URL for blog.open.requested events with valid slugs", async () => {
@@ -720,6 +765,7 @@ Event body`,
       expect(wrapper.text()).toContain("Post not found");
       expect(wrapper.text()).toContain("field-notes");
     });
+    expect(wrapper.find(".comments").exists()).toBe(false);
   });
 
   it("propagates injected handleId onto the article in dev", async () => {

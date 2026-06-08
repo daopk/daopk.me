@@ -17,7 +17,8 @@
       "@daopk/ui": ["./src/runtime/ui.ts"],
       "@daopk/icons": ["./src/runtime/icons.ts"],
       "@daopk/markdown": ["./src/runtime/markdown.ts"],
-      "@daopk/content": ["./src/runtime/content.ts"]
+      "@daopk/content": ["./src/runtime/content.ts"],
+      "@daopk/comments": ["./src/runtime/comments.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
