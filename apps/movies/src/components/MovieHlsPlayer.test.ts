@@ -832,6 +832,41 @@ describe("MovieHlsPlayer", () => {
     expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.5x");
   });
 
+  it("keeps the settings menu inside the fullscreen player stage", async () => {
+    let fullscreenElement: Element | null = null;
+    let playerShell: Element | null = null;
+    const requestFullscreen = vi.fn(() => {
+      fullscreenElement = playerShell;
+      document.dispatchEvent(new Event("fullscreenchange"));
+      return Promise.resolve();
+    });
+
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => fullscreenElement,
+    });
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: requestFullscreen,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+    playerShell = wrapper.get(".movies-hls-player__stage").element;
+
+    click(
+      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
+    );
+    await settle();
+
+    await openSettings(wrapper);
+
+    const stage = wrapper.get(".movies-hls-player__stage").element;
+    const menu = stage.querySelector('[role="menu"]');
+    expect(menu).not.toBeNull();
+    expect(stage.contains(menu)).toBe(true);
+  });
+
   it("auto-hides controls while playback is active", async () => {
     vi.useFakeTimers();
     const wrapper = mountPlayer();

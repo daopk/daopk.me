@@ -1479,6 +1479,7 @@ function speedLabel(speed: number): string {
             v-if="hasSettingsMenu"
             align="end"
             content-class="movies-hls-player__settings-menu"
+            :portal-to="playerShell ?? 'body'"
           >
             <template #trigger>
               <IconButton

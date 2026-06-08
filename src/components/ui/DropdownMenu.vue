@@ -21,6 +21,7 @@ interface DropdownMenuProps {
   align?: "start" | "center" | "end";
   contentClass?: string;
   modal?: boolean;
+  portalTo?: string | HTMLElement;
   sideOffset?: number;
 }
 
@@ -28,6 +29,7 @@ withDefaults(defineProps<DropdownMenuProps>(), {
   align: "start",
   contentClass: "",
   modal: false,
+  portalTo: "body",
   sideOffset: 4,
 });
 
@@ -45,7 +47,7 @@ function onUpdateOpen(value: boolean): void {
     <DropdownMenuTrigger as-child>
       <slot name="trigger" />
     </DropdownMenuTrigger>
-    <DropdownMenuPortal>
+    <DropdownMenuPortal :to="portalTo">
       <DropdownMenuContent
         :class="['ds-dropdown-menu', contentClass]"
         :align="align"

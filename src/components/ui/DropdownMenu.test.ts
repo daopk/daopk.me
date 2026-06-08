@@ -151,4 +151,39 @@ describe("DropdownMenu primitive", () => {
     expect(menu).not.toBeNull();
     expect(menu!.classList.contains("ds-dropdown-menu")).toBe(true);
   });
+
+  it("can portal the menu into a custom target", async () => {
+    const target = document.createElement("div");
+    target.setAttribute("data-testid", "menu-target");
+    document.body.appendChild(target);
+
+    const Host = defineComponent({
+      name: "DropdownMenuCustomTargetHost",
+      components: {
+        DropdownMenu,
+        DropdownMenuItem,
+      },
+      setup() {
+        return { target };
+      },
+      template: `
+        <DropdownMenu :portal-to="target">
+          <template #trigger>
+            <button type="button" data-testid="trigger">Open menu</button>
+          </template>
+
+          <template #items>
+            <DropdownMenuItem text-value="Do thing">Do thing</DropdownMenuItem>
+          </template>
+        </DropdownMenu>
+      `,
+    });
+
+    const wrapper = mount(Host, { attachTo: document.body });
+
+    click(wrapper.get('[data-testid="trigger"]').element);
+    await flushReka();
+
+    expect(target.querySelector('[role="menu"]')).not.toBeNull();
+  });
 });
