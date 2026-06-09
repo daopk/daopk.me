@@ -7,12 +7,12 @@ import { useKernel } from "~/composables/useKernel";
 import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService";
 import { ProfileStore } from "~/core/profile/ProfileStore";
 import { migrateGlobalDataToProfile } from "~/core/profile/migration";
-import { setActiveProfileSession } from "~/core/profile/ProfileSession";
+import { setActiveProfileSession, useActiveProfileSession } from "~/core/profile/ProfileSession";
 import { hasAutoGuestLoginUrlIntent } from "~/core/routing/appUrlIntents";
-import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 import type { ActiveProfileSession, GuestProfileRecord, ProfileRecord } from "~/types/profile";
 
 import { profileMeta } from "./authGateLabels";
+import { useAuthAutoUpdate } from "./useAuthAutoUpdate";
 
 type AuthMode = "unlock" | "create";
 
@@ -25,6 +25,7 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
   const passkeys = new PasskeyService();
   const breakpoint = useBreakpoint();
   const kernel = useKernel();
+  const activeProfile = useActiveProfileSession();
 
   const profiles = ref<ProfileRecord[]>([]);
   const selectedProfileId = ref<string | null>(null);
@@ -33,7 +34,7 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
   const busy = ref(false);
   const status = ref("");
   const errorMessage = ref("");
-  const serviceWorkerUpdateState = serviceWorkerUpdateController.state;
+  const autoUpdate = useAuthAutoUpdate(computed(() => activeProfile.value === null));
 
   const hasProfiles = computed(() => profiles.value.length > 0);
   const isCreatingProfile = computed(() => !hasProfiles.value || mode.value === "create");
@@ -63,26 +64,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
       `url("${breakpoint.isMobile.value ? everestPhoneUrl : everestDesktopUrl}")`,
     ].join(", "),
   }));
-  const canUpdateApp = computed(
-    () =>
-      serviceWorkerUpdateState.value.kind === "update-available" ||
-      serviceWorkerUpdateState.value.kind === "refresh-error",
-  );
-  const updateButtonLabel = computed(() =>
-    serviceWorkerUpdateState.value.kind === "refresh-error" ? "Retry update" : "Update app",
-  );
-  const updateMessage = computed(() => {
-    if (serviceWorkerUpdateState.value.kind === "refresh-error") {
-      return "Update could not finish.";
-    }
-
-    return "A newer version is ready.";
-  });
-  const isUpdatingApp = computed(
-    () =>
-      serviceWorkerUpdateState.value.kind === "update-available" &&
-      serviceWorkerUpdateState.value.refreshing,
-  );
   const panelLabel = computed(() =>
     isCreatingProfile.value ? "Create account" : "Unlock account",
   );
@@ -326,12 +307,12 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     }
   }
 
-  function updateApp(): void {
-    void serviceWorkerUpdateController.refresh();
-  }
-
   onMounted(() => {
     refreshProfiles();
+    if (autoUpdate.visible.value) {
+      return;
+    }
+
     if (profiles.value.length === 0) {
       void createDefaultGuestProfile();
       return;
@@ -349,10 +330,12 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
 
   return {
     addAccountLabel,
+    autoUpdateErrorMessage: autoUpdate.errorMessage,
+    autoUpdateFailed: autoUpdate.failed,
+    autoUpdateVisible: autoUpdate.visible,
     authGateStyle,
     busy,
     canUnlockSelected,
-    canUpdateApp,
     createGuestProfile,
     createProfile,
     displayName,
@@ -361,11 +344,11 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     hasProfiles,
     initialImportPending,
     isCreatingProfile,
-    isUpdatingApp,
     panelEyebrow,
     panelLabel,
     passkeyAvailable,
     profiles,
+    retryAutoUpdate: autoUpdate.retry,
     screenSubtitle,
     screenTitle,
     selectProfile,
@@ -377,8 +360,5 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     status,
     unlockButtonLabel,
     unlockSelected,
-    updateApp,
-    updateButtonLabel,
-    updateMessage,
   };
 }

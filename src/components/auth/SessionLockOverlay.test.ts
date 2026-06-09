@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shallowRef, type ShallowRef } from "vue";
 
 import type { Kernel } from "~/types/kernel";
@@ -10,6 +10,7 @@ import type {
   ProfileSessionSnapshot,
 } from "~/types/profile";
 import { ProfileStore } from "~/core/profile/ProfileStore";
+import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
 import SessionLockOverlay from "./SessionLockOverlay.vue";
 
@@ -91,8 +92,74 @@ describe("SessionLockOverlay", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     localStorage.clear();
+    serviceWorkerUpdateController.resetForTests();
     vi.clearAllMocks();
     mocks.isAvailable.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    serviceWorkerUpdateController.resetForTests();
+  });
+
+  it("auto-applies a pending app update while the session is locked", async () => {
+    const update = vi.fn(() => new Promise<void>(() => undefined));
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+    const { kernel, unlock } = makeKernel();
+
+    const wrapper = mountOverlay(kernel);
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(unlock).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Updating WebOS");
+    expect(document.body.textContent).toContain("Applying the newest web version.");
+    expect(document.body.querySelector(".session-lock__actions")).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it("does not auto-apply a pending app update when the session is already unlocked", async () => {
+    const update = vi.fn(async () => undefined);
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+    const { kernel } = makeKernel(passkeySession, shallowRef(false));
+
+    const wrapper = mountOverlay(kernel);
+    await flushPromises();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".session-lock")).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it("keeps locked users on a retryable update error screen", async () => {
+    const update = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+    const { kernel, unlock } = makeKernel();
+
+    const wrapper = mountOverlay(kernel);
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(mocks.unlockProfile).not.toHaveBeenCalled();
+    expect(unlock).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Update couldn't finish");
+    expect(document.body.textContent).toContain("network down");
+    expect(document.body.querySelector(".session-lock__actions")).toBeNull();
+
+    const retry = Array.from(document.body.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Retry update"),
+    );
+    expect(retry).toBeInstanceOf(HTMLButtonElement);
+    retry?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(mocks.unlockProfile).not.toHaveBeenCalled();
+
+    wrapper.unmount();
   });
 
   it("unlocks a passkey profile through PasskeyService and hides the overlay", async () => {

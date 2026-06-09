@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import AuthAutoUpdateScreen from "./AuthAutoUpdateScreen.vue";
 import AuthCreatePanel from "./AuthCreatePanel.vue";
 import AuthGateSurface from "./AuthGateSurface.vue";
 import AuthUnlockPanel from "./AuthUnlockPanel.vue";
-import AuthUpdateBanner from "./AuthUpdateBanner.vue";
 import { useAuthGate } from "./useAuthGate";
 
 const emit = defineEmits<{
@@ -11,10 +11,12 @@ const emit = defineEmits<{
 
 const {
   addAccountLabel,
+  autoUpdateErrorMessage,
+  autoUpdateFailed,
+  autoUpdateVisible,
   authGateStyle,
   busy,
   canUnlockSelected,
-  canUpdateApp,
   createGuestProfile,
   createProfile,
   displayName,
@@ -23,11 +25,11 @@ const {
   hasProfiles,
   initialImportPending,
   isCreatingProfile,
-  isUpdatingApp,
   panelEyebrow,
   panelLabel,
   passkeyAvailable,
   profiles,
+  retryAutoUpdate,
   screenSubtitle,
   screenTitle,
   selectProfile,
@@ -39,30 +41,22 @@ const {
   status,
   unlockButtonLabel,
   unlockSelected,
-  updateApp,
-  updateButtonLabel,
-  updateMessage,
 } = useAuthGate({
   onAuthenticated: () => emit("authenticated"),
 });
 </script>
 
 <template>
-  <main
-    class="auth-gate"
-    :class="{ 'auth-gate--with-update': canUpdateApp }"
-    :style="authGateStyle"
-    aria-labelledby="auth-title"
-  >
-    <AuthUpdateBanner
-      v-if="canUpdateApp"
-      :message="updateMessage"
-      :button-label="updateButtonLabel"
-      :loading="isUpdatingApp"
-      @update="updateApp"
+  <main class="auth-gate" :style="authGateStyle" aria-labelledby="auth-title">
+    <AuthAutoUpdateScreen
+      v-if="autoUpdateVisible"
+      title-id="auth-title"
+      :failed="autoUpdateFailed"
+      :error-message="autoUpdateErrorMessage"
+      @retry="retryAutoUpdate"
     />
 
-    <div class="auth-gate__shell">
+    <div v-else class="auth-gate__shell">
       <AuthGateSurface
         :label="panelLabel"
         :eyebrow="panelEyebrow"
@@ -151,10 +145,6 @@ const {
     pointer-events: none;
     position: fixed;
     z-index: 0;
-  }
-
-  .auth-gate--with-update {
-    padding-block-start: calc(env(safe-area-inset-top, 0px) + 96px);
   }
 
   .auth-gate__shell {

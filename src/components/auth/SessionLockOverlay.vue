@@ -5,10 +5,13 @@ import everestDesktopUrl from "~/assets/wallpapers/everest-desktop.webp";
 import everestPhoneUrl from "~/assets/wallpapers/everest-phone.webp";
 import { Button } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
+import AuthAutoUpdateScreen from "~/components/auth/AuthAutoUpdateScreen.vue";
 import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService";
 import { ProfileStore } from "~/core/profile/ProfileStore";
 import { useKernel } from "~/composables/useKernel";
 import { Lock, LogOut, Unlock } from "~/icons/lucide";
+
+import { useAuthAutoUpdate } from "./useAuthAutoUpdate";
 
 const kernel = useKernel();
 const locked = kernel.profile.useLocked();
@@ -17,6 +20,7 @@ const { shellId } = useActiveShell();
 const store = new ProfileStore();
 const passkeys = new PasskeyService();
 const unlockButtonRef = useTemplateRef<InstanceType<typeof Button>>("unlockButtonRef");
+const autoUpdate = useAuthAutoUpdate(computed(() => locked.value));
 
 const busy = ref(false);
 const errorMessage = ref("");
@@ -82,7 +86,7 @@ function signOut(): void {
 watch(
   locked,
   async (next) => {
-    if (!next) {
+    if (!next || autoUpdate.visible.value) {
       return;
     }
     await nextTick();
@@ -116,7 +120,15 @@ onUnmounted(() => {
         @pointerdown.stop
         @wheel.stop
       >
-        <div class="session-lock__surface">
+        <AuthAutoUpdateScreen
+          v-if="autoUpdate.visible.value"
+          title-id="session-lock-title"
+          :failed="autoUpdate.failed.value"
+          :error-message="autoUpdate.errorMessage.value"
+          @retry="autoUpdate.retry"
+        />
+
+        <div v-else class="session-lock__surface">
           <div class="session-lock__mark" aria-hidden="true">
             <Lock class="session-lock__mark-icon" />
           </div>

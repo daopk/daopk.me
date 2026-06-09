@@ -120,30 +120,60 @@ describe("AuthGate", () => {
     store.dispose();
   });
 
-  it("lets unauthenticated users apply a pending app update", async () => {
+  it("auto-applies a pending app update before showing auth controls", async () => {
     const store = new ProfileStore();
     store.add(profile);
     store.markGlobalImported();
     store.dispose();
-    const update = vi.fn(async () => undefined);
+    const update = vi.fn(() => new Promise<void>(() => undefined));
     serviceWorkerUpdateController.notifyUpdateAvailable(update);
 
     const wrapper = mount(AuthGate);
-    const updateButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("Update app"));
-    const root = wrapper.get(".auth-gate");
-    const updateBanner = wrapper.get(".auth-gate__update");
-
-    expect(wrapper.text()).toContain("A newer version is ready.");
-    expect(root.classes()).toContain("auth-gate--with-update");
-    expect(root.element.firstElementChild).toBe(updateBanner.element);
-    expect(updateBanner.get(".auth-gate__update-copy").attributes("role")).toBe("status");
-    expect(updateButton).toBeDefined();
-
-    await updateButton?.trigger("click");
 
     expect(update).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain("Updating WebOS");
+    expect(wrapper.text()).toContain("Applying the newest web version.");
+    expect(wrapper.find(".auth-gate__surface").exists()).toBe(false);
+    expect(findButtonByText(wrapper, "Unlock")).toBeUndefined();
+    expect(wrapper.emitted("authenticated")).toBeUndefined();
+  });
+
+  it("does not auto-create a guest account while an app update is pending", async () => {
+    const update = vi.fn(() => new Promise<void>(() => undefined));
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(mocks.migrateGlobalDataToProfile).not.toHaveBeenCalled();
+    expect(getActiveProfileSession()).toBeNull();
+    expect(wrapper.emitted("authenticated")).toBeUndefined();
+    expect(wrapper.text()).toContain("Updating WebOS");
+  });
+
+  it("keeps unauthenticated users on a retryable update error screen", async () => {
+    const store = new ProfileStore();
+    store.add(profile);
+    store.markGlobalImported();
+    store.dispose();
+    const update = vi.fn(async () => {
+      throw new Error("network down");
+    });
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).toContain("Update couldn't finish");
+    expect(wrapper.text()).toContain("network down");
+    expect(wrapper.find(".auth-gate__surface").exists()).toBe(false);
+
+    await findButtonByText(wrapper, "Retry update")?.trigger("click");
+    await flushPromises();
+
+    expect(update).toHaveBeenCalledTimes(2);
     expect(wrapper.emitted("authenticated")).toBeUndefined();
   });
 
