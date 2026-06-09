@@ -876,7 +876,7 @@ content-c.ts
     );
     expect(
       wrapper
-        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
     expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
@@ -896,7 +896,7 @@ content-c.ts
     ).toBe(true);
     expect(
       wrapper
-        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(false);
     expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(false);
@@ -911,7 +911,7 @@ content-c.ts
     expect(pictureInPictureElement).toBeNull();
     expect(
       wrapper
-        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
     expect(wrapper.find(".movies-hls-player__topline").exists()).toBe(true);
@@ -963,7 +963,7 @@ content-c.ts
     ).toBe(true);
     expect(
       wrapper
-        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(false);
 
@@ -981,7 +981,7 @@ content-c.ts
     ).toBe(true);
     expect(
       wrapper
-        .find('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]')
+        .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
     ).toBe(true);
   });
@@ -1121,7 +1121,7 @@ content-c.ts
     playerShell = wrapper.get(".movies-hls-player__stage").element;
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
@@ -1237,7 +1237,7 @@ content-c.ts
     );
   });
 
-  it("requests fullscreen on the player shell through the top-right fullscreen button", async () => {
+  it("requests fullscreen on the player shell through the control row fullscreen button", async () => {
     let fullscreenElement: Element | null = null;
     let playerShell: Element | null = null;
     const requestFullscreen = vi.fn(() => {
@@ -1272,21 +1272,21 @@ content-c.ts
       wrapper
         .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
         .exists(),
-    ).toBe(false);
+    ).toBe(true);
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
     expect(requestFullscreen).toHaveBeenCalledTimes(1);
     expect(fullscreenElement).toBe(wrapper.get(".movies-hls-player__stage").element);
     expect(
-      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
     );
     await settle();
 
@@ -1351,13 +1351,13 @@ content-c.ts
     await settle();
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
     expect(enterFullscreen).toHaveBeenCalledTimes(1);
     expect(
-      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
   });
 
@@ -1379,7 +1379,7 @@ content-c.ts
     await settle();
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Enter fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]').element,
     );
     await settle();
 
@@ -1387,11 +1387,11 @@ content-c.ts
       "movies-hls-player__stage--fullscreen",
     );
     expect(
-      wrapper.find('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').exists(),
+      wrapper.find('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').exists(),
     ).toBe(true);
 
     click(
-      wrapper.get('.movies-hls-player__top-actions button[aria-label="Exit fullscreen"]').element,
+      wrapper.get('.movies-hls-player__control-row button[aria-label="Exit fullscreen"]').element,
     );
     await settle();
 

@@ -106,7 +106,6 @@ const emit = defineEmits<{
 
 const playerShell = ref<HTMLElement | null>(null);
 const backControlsRoot = ref<HTMLElement | null>(null);
-const topControlsRoot = ref<HTMLElement | null>(null);
 const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
 const videoElement = ref<HTMLVideoElement | null>(null);
@@ -524,7 +523,6 @@ function playerControlsContain(target: EventTarget | null): boolean {
     target instanceof Node &&
     (controlsRoot.value?.contains(target) === true ||
       backControlsRoot.value?.contains(target) === true ||
-      topControlsRoot.value?.contains(target) === true ||
       isSettingsMenuTarget(target))
   );
 }
@@ -1658,32 +1656,6 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
       </div>
 
       <div
-        v-if="!pictureInPicture"
-        ref="topControlsRoot"
-        class="movies-hls-player__top-actions"
-        :class="{ 'movies-hls-player__top-actions--hidden': controlsHidden }"
-        @focusin="
-          controlsFocused = true;
-          showControls();
-        "
-        @focusout="onControlsFocusOut"
-        @click.stop
-        @dblclick.stop
-        @pointerdown="showControls"
-        @pointermove="showControls"
-        @touchstart="showControls"
-      >
-        <IconButton
-          class="movies-hls-player__button movies-hls-player__fullscreen-button"
-          :icon="fullscreenIcon"
-          :label="fullscreenLabel"
-          size="sm"
-          variant="subtle"
-          @click="toggleFullscreen"
-        />
-      </div>
-
-      <div
         ref="controlsRoot"
         class="movies-hls-player__controls"
         :class="{ 'movies-hls-player__controls--hidden': controlsHidden }"
@@ -1874,6 +1846,16 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
               </DropdownMenuRadioGroup>
             </template>
           </DropdownMenu>
+
+          <IconButton
+            v-if="!pictureInPicture"
+            class="movies-hls-player__button movies-hls-player__fullscreen-button"
+            :icon="fullscreenIcon"
+            :label="fullscreenLabel"
+            size="sm"
+            variant="subtle"
+            @click="toggleFullscreen"
+          />
         </div>
       </div>
     </div>
@@ -2060,7 +2042,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   display: flex;
   gap: var(--space-xs);
   inset-block-start: var(--space-md);
-  inset-inline-end: calc(var(--space-md) + 44px + var(--space-sm));
+  inset-inline-end: var(--space-md);
   inset-inline-start: var(--space-md);
   min-inline-size: 0;
   opacity: 1;
@@ -2089,24 +2071,11 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   pointer-events: auto;
 }
 
-.movies-hls-player__top-actions {
-  inset-block-start: var(--space-md);
-  inset-inline-end: var(--space-md);
-  opacity: 1;
-  position: absolute;
-  transition:
-    opacity var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
-  z-index: 4;
-}
-
-.movies-hls-player__topbar--hidden,
-.movies-hls-player__top-actions--hidden {
+.movies-hls-player__topbar--hidden {
   opacity: 0;
 }
 
-.movies-hls-player__topbar--hidden,
-.movies-hls-player__top-actions--hidden {
+.movies-hls-player__topbar--hidden {
   pointer-events: none;
   transform: translateY(calc(var(--space-xs) * -1));
 }
@@ -2235,12 +2204,6 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   color: #fff;
 }
 
-.movies-hls-player__fullscreen-button {
-  backdrop-filter: blur(18px);
-  background: rgb(8 9 13 / 68%);
-  border: 1px solid rgb(255 255 255 / 14%);
-}
-
 .movies-hls-player__time,
 .movies-hls-player__duration {
   color: rgb(255 255 255 / 88%);
@@ -2366,13 +2329,8 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
 
   .movies-hls-player__topbar {
     inset-block-start: var(--space-sm);
-    inset-inline-end: calc(var(--space-sm) + 44px + var(--space-xs));
-    inset-inline-start: var(--space-sm);
-  }
-
-  .movies-hls-player__top-actions {
-    inset-block-start: var(--space-sm);
     inset-inline-end: var(--space-sm);
+    inset-inline-start: var(--space-sm);
   }
 
   .movies-hls-player__control-row {
@@ -2409,7 +2367,6 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   .movies-hls-player__controls,
   .movies-hls-player__poster-fade-enter-active,
   .movies-hls-player__poster-fade-leave-active,
-  .movies-hls-player__top-actions,
   .movies-hls-player__topbar,
   .movies-hls-player__volume-popover {
     transition: none;
