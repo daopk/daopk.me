@@ -339,6 +339,23 @@ describe("app URL intents", () => {
     });
   });
 
+  it("normalizes localized public Movies routes while preserving a locale hint", () => {
+    const urlIntent = {
+      originalPath: "/vi/tv/220102-spider-noir",
+      canonicalPath: "/tv/220102-spider-noir",
+      localeHint: "vi",
+    };
+
+    expect(parseAppUrlIntent("/vi/tv/220102-spider-noir")).toEqual({
+      kind: "app",
+      manifestId: "movies",
+      args: {
+        path: "/tv/220102-spider-noir",
+        urlIntent,
+      },
+    });
+  });
+
   it("ignores unclaimed and malformed routes", () => {
     expect(parseAppUrlIntent("/blogs/xin-chao")).toEqual({ kind: "none" });
     expect(parseAppUrlIntent("/blog/a/b")).toEqual({ kind: "none" });
@@ -458,6 +475,25 @@ describe("app URL intents", () => {
     });
   });
 
+  it("emits canonical Movies launch args for localized public media routes", () => {
+    const { kernel, eventsEmit } = makeKernel(["movies"]);
+
+    expect(consumeInitialAppUrlIntent(kernel, "/vi/tv/220102-spider-noir")).toBe(true);
+
+    expect(eventsEmit).toHaveBeenCalledWith("app.launch.requested", {
+      manifestId: "movies",
+      source: "deeplink",
+      args: {
+        path: "/tv/220102-spider-noir",
+        urlIntent: {
+          originalPath: "/vi/tv/220102-spider-noir",
+          canonicalPath: "/tv/220102-spider-noir",
+          localeHint: "vi",
+        },
+      },
+    });
+  });
+
   it("fails softly for an unknown app deep link", () => {
     const { kernel, eventsEmit } = makeKernel(["about"]);
 
@@ -501,6 +537,7 @@ describe("app URL intents", () => {
     expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys")).toBe(true);
     expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys/season/1")).toBe(true);
     expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys/season/1/episode/2")).toBe(true);
+    expect(hasAutoGuestLoginUrlIntent(kernel, "/vi/tv/220102-spider-noir")).toBe(true);
     expect(hasAutoGuestLoginUrlIntent(kernel, "/movie/not-a-valid-route")).toBe(true);
 
     expect(eventsEmit).not.toHaveBeenCalled();

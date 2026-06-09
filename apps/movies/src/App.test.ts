@@ -1317,6 +1317,22 @@ describe("Movies app", () => {
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
   });
 
+  it("canonicalizes localized direct TV routes", async () => {
+    window.history.replaceState(null, "", "/vi/tv/1399-planet-cinema");
+    vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
+    const replaceSpy = vi.spyOn(window.history, "replaceState");
+    const pushSpy = vi.spyOn(window.history, "pushState");
+
+    const wrapper = mount(App);
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("tv", 1399, expect.anything());
+    expect(wrapper.text()).toContain("Planet Cinema");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
+    expect(replaceSpy).toHaveBeenCalledWith(null, "", "/tv/1399-planet-cinema");
+    expect(pushSpy).not.toHaveBeenCalled();
+  });
+
   it("opens episode detail from a TV detail episode row", async () => {
     window.history.replaceState(null, "", "/tv/1399-planet-cinema");
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());

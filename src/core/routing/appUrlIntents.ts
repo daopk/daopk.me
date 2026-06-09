@@ -22,6 +22,12 @@ export interface AppUrlLaunchIntent {
 
 export type AppUrlIntent = AppUrlLaunchIntent | { kind: "none" };
 
+export interface AppUrlIntentMetadata {
+  readonly canonicalPath: string;
+  readonly localeHint?: "vi";
+  readonly originalPath: string;
+}
+
 export interface YouTubePlayerUrlIntentOptions {
   readonly autoplay?: boolean;
 }
@@ -32,6 +38,26 @@ const FIRST_PARTY_APP_PROTOCOLS = new Map([["youtube-player", "youtube-player"]]
 const YOUTUBE_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
 let initialAppUrlIntentConsumed = false;
+
+function appIntent(
+  manifestId: string,
+  args?: Readonly<Record<string, unknown>>,
+  urlIntent?: AppUrlIntentMetadata,
+): AppUrlLaunchIntent {
+  const mergedArgs =
+    urlIntent === undefined
+      ? args
+      : {
+          ...(args ?? {}),
+          urlIntent,
+        };
+
+  return {
+    kind: "app",
+    manifestId,
+    ...(mergedArgs === undefined ? {} : { args: mergedArgs }),
+  };
+}
 
 function urlFrom(input: string | URL): URL {
   if (input instanceof URL) {
@@ -59,6 +85,29 @@ function currentUrl(): URL | null {
   }
 
   return new URL(window.location.href);
+}
+
+function normalizedUrlPathIntent(url: URL): {
+  readonly canonicalPath: string;
+  readonly segments: readonly string[];
+  readonly urlIntent?: AppUrlIntentMetadata;
+} {
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (segments[0] !== "vi") {
+    return { canonicalPath: url.pathname, segments };
+  }
+
+  const canonicalSegments = segments.slice(1);
+  const canonicalPath = `/${canonicalSegments.join("/")}`;
+  return {
+    canonicalPath,
+    segments: canonicalSegments,
+    urlIntent: {
+      canonicalPath,
+      localeHint: "vi",
+      originalPath: url.pathname,
+    },
+  };
 }
 
 function decodePathSegment(segment: string): string | null {
@@ -251,12 +300,12 @@ function protocolArgsForApp(
   return undefined;
 }
 
-function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
+function parseBlogUrlIntent(
+  segments: readonly string[],
+  urlIntent?: AppUrlIntentMetadata,
+): AppUrlIntent {
   if (segments.length === 1 && segments[0] === "blog") {
-    return {
-      kind: "app",
-      manifestId: "blog",
-    };
+    return appIntent("blog", undefined, urlIntent);
   }
 
   if (segments.length !== 2 || segments[0] !== "blog") {
@@ -269,40 +318,36 @@ function parseBlogUrlIntent(segments: readonly string[]): AppUrlIntent {
   }
 
   const path = blogPostPathFromSlug(slug);
-  return {
-    kind: "app",
-    manifestId: "blog",
-    args: {
+  return appIntent(
+    "blog",
+    {
       slug,
       ...(path === null ? {} : { path }),
     },
-  };
+    urlIntent,
+  );
 }
 
-function parseMoviesUrlIntent(url: URL, segments: readonly string[]): AppUrlIntent {
+function parseMoviesUrlIntent(
+  canonicalPath: string,
+  segments: readonly string[],
+  urlIntent?: AppUrlIntentMetadata,
+): AppUrlIntent {
   const section = segments[0];
   if (section === "movie" || section === "tv") {
-    const path = validMoviesMediaPath(url, segments);
-    return {
-      kind: "app",
-      manifestId: "movies",
-      ...(path === null ? {} : { args: { path } }),
-    };
+    const path = validMoviesMediaPath(canonicalPath, segments);
+    return appIntent("movies", path === null ? undefined : { path }, urlIntent);
   }
 
   if (section === "tmdb" && segments[1] === "person") {
-    const path = validMoviesPersonPath(url, segments);
-    return {
-      kind: "app",
-      manifestId: "movies",
-      ...(path === null ? {} : { args: { path } }),
-    };
+    const path = validMoviesPersonPath(canonicalPath, segments);
+    return appIntent("movies", path === null ? undefined : { path }, urlIntent);
   }
 
   return { kind: "none" };
 }
 
-function validMoviesPersonPath(url: URL, segments: readonly string[]): string | null {
+function validMoviesPersonPath(pathname: string, segments: readonly string[]): string | null {
   if (segments.length !== 3 || segments[0] !== "tmdb" || segments[1] !== "person") {
     return null;
   }
@@ -312,14 +357,14 @@ function validMoviesPersonPath(url: URL, segments: readonly string[]): string | 
     return null;
   }
 
-  return url.pathname;
+  return pathname;
 }
 
-function validMoviesMediaPath(url: URL, segments: readonly string[]): string | null {
+function validMoviesMediaPath(pathname: string, segments: readonly string[]): string | null {
   const section = segments[0];
   if (segments.length === 2) {
     const idSlug = decodePathSegment(segments[1]);
-    return idSlug !== null && TMDB_ID_SLUG_PATTERN.exec(idSlug) !== null ? url.pathname : null;
+    return idSlug !== null && TMDB_ID_SLUG_PATTERN.exec(idSlug) !== null ? pathname : null;
   }
 
   if (segments.length === 4 && section === "tv") {
@@ -330,7 +375,7 @@ function validMoviesMediaPath(url: URL, segments: readonly string[]): string | n
       segments[2] === "season" &&
       seasonNumber !== null &&
       /^(?:0|[1-9]\d*)$/.exec(seasonNumber) !== null
-      ? url.pathname
+      ? pathname
       : null;
   }
 
@@ -349,7 +394,7 @@ function validMoviesMediaPath(url: URL, segments: readonly string[]): string | n
     episodeNumber !== null &&
     /^(?:0|[1-9]\d*)$/.exec(seasonNumber) !== null &&
     /^[1-9]\d*$/.exec(episodeNumber) !== null
-    ? url.pathname
+    ? pathname
     : null;
 }
 
@@ -413,14 +458,14 @@ export function parseAppUrlIntent(input: string | URL): AppUrlIntent {
   }
 
   const url = urlFrom(input);
-  const segments = url.pathname.split("/").filter(Boolean);
+  const { canonicalPath, segments, urlIntent } = normalizedUrlPathIntent(url);
 
-  const blogIntent = parseBlogUrlIntent(segments);
+  const blogIntent = parseBlogUrlIntent(segments, urlIntent);
   if (blogIntent.kind !== "none") {
     return blogIntent;
   }
 
-  const moviesIntent = parseMoviesUrlIntent(url, segments);
+  const moviesIntent = parseMoviesUrlIntent(canonicalPath, segments, urlIntent);
   if (moviesIntent.kind !== "none") {
     return moviesIntent;
   }
@@ -435,11 +480,7 @@ export function parseAppUrlIntent(input: string | URL): AppUrlIntent {
   }
 
   const args = argsForApp(manifestId, url.searchParams);
-  return {
-    kind: "app",
-    manifestId,
-    ...(args === undefined ? {} : { args }),
-  };
+  return appIntent(manifestId, args, urlIntent);
 }
 
 export function hasRegisteredAppUrlIntent(kernel: Kernel, input?: string | URL): boolean {

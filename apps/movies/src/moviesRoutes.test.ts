@@ -47,6 +47,28 @@ describe("moviesRoutes", () => {
     });
   });
 
+  it("parses localized TV paths as canonical public routes", () => {
+    expect(moviesDeepLinkFromPathname("/vi/tv/220102-spider-noir")).toEqual({
+      mediaType: "tv",
+      name: "detail",
+      slug: "spider-noir",
+      tmdbId: 220102,
+    });
+    expect(moviesDeepLinkFromPathname("/vi/tv/1399-planet-cinema/season/1")).toEqual({
+      name: "season",
+      seasonNumber: 1,
+      slug: "planet-cinema",
+      tmdbId: 1399,
+    });
+    expect(moviesDeepLinkFromPathname("/vi/tv/1399-planet-cinema/season/1/episode/2")).toEqual({
+      episodeNumber: 2,
+      name: "episode",
+      seasonNumber: 1,
+      slug: "planet-cinema",
+      tmdbId: 1399,
+    });
+  });
+
   it("rejects unsupported or unsafe paths", () => {
     expect(moviesDeepLinkFromPathname("/apps/movies")).toBeNull();
     expect(moviesDeepLinkFromPathname("/movie/0-zero")).toBeNull();

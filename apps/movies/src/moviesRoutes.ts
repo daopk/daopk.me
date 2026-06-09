@@ -265,7 +265,7 @@ export function moviesDeepLinkFromLaunchArgs(
 }
 
 export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | null {
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = moviesPathSegments(pathname);
   if (
     segments.length !== 2 &&
     segments.length !== 3 &&
@@ -343,6 +343,11 @@ export function moviesDeepLinkFromPathname(pathname: string): MoviesDeepLink | n
   }
 
   return null;
+}
+
+function moviesPathSegments(pathname: string): readonly string[] {
+  const segments = pathname.split("/").filter(Boolean);
+  return segments[0] === "vi" ? segments.slice(1) : segments;
 }
 
 function personDeepLinkFromPathSegments(segments: readonly string[]): MoviesDeepLink | null {
