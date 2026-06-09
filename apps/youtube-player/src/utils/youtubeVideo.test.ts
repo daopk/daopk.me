@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizedVideoId,
   videoIdFromLaunchArgs,
+  videoIdFromUserInput,
   videoIdFromUrl,
   youtubeThumbnailUrls,
 } from "./youtubeVideo";
@@ -28,6 +29,13 @@ describe("youtubeVideo utils", () => {
   it("rejects malformed and non-YouTube URLs", () => {
     expect(videoIdFromUrl("youtube.com/watch?v=IQsLEaj89bg")).toBeNull();
     expect(videoIdFromUrl("https://example.com/watch?v=IQsLEaj89bg")).toBeNull();
+  });
+
+  it("extracts video ids from manual user input", () => {
+    expect(videoIdFromUserInput(" IQsLEaj89bg ")).toBe("IQsLEaj89bg");
+    expect(videoIdFromUserInput("youtube.com/watch?v=IQsLEaj89bg")).toBe("IQsLEaj89bg");
+    expect(videoIdFromUserInput("https://youtu.be/IQsLEaj89bg")).toBe("IQsLEaj89bg");
+    expect(videoIdFromUserInput("https://example.com/watch?v=IQsLEaj89bg")).toBeNull();
   });
 
   it("prioritizes direct videoId launch args over URL args", () => {

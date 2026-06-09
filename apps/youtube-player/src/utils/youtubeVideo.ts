@@ -56,6 +56,24 @@ export function videoIdFromUrl(input: unknown): string | null {
   return null;
 }
 
+export function videoIdFromUserInput(input: unknown): string | null {
+  const directVideoId = normalizedVideoId(input);
+  if (directVideoId !== null) {
+    return directVideoId;
+  }
+
+  if (typeof input !== "string") {
+    return null;
+  }
+
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return videoIdFromUrl(trimmed) ?? videoIdFromUrl(`https://${trimmed}`);
+}
+
 export function videoIdFromLaunchArgs(
   args: Readonly<Record<string, unknown>> | null | undefined,
 ): string | null {

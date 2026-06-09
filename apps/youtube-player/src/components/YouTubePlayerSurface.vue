@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
 
+import { EmptyState, TextInput } from "@daopk/kit";
+import { Play } from "@daopk/icons";
 import type { AppChromeContentSize } from "@daopk/sdk";
+import { Button } from "@daopk/ui";
 
 import YouTubeEmbed from "./YouTubeEmbed.vue";
 import YouTubePlayerControls from "./YouTubePlayerControls.vue";
@@ -13,6 +16,7 @@ import { useYouTubePlayer } from "../composables/useYouTubePlayer";
 import { fitAspectRatioBox } from "../utils/aspectRatio";
 import { playerStatusMessage } from "../utils/playerStatus";
 import { fetchYouTubeVideoAspectRatio } from "../utils/youtubeOEmbed";
+import { videoIdFromUserInput } from "../utils/youtubeVideo";
 
 const PREFERRED_PLAYER_CONTENT_SIZE = { width: 960, height: 540 };
 
@@ -31,8 +35,11 @@ const props = withDefaults(
 const emit = defineEmits<{
   "content-size-change": [size: AppChromeContentSize | null];
   "title-change": [title: string];
+  "video-request": [videoId: string];
 }>();
 
+const manualVideoInput = ref("");
+const manualVideoInputInvalid = ref(false);
 const playerViewport = ref<HTMLElement | null>(null);
 const playerShell = ref<HTMLElement | null>(null);
 const playerHost = ref<HTMLIFrameElement | null>(null);
@@ -150,6 +157,22 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
     height: Math.max(1, Math.round(fittedBox.height)),
   });
 }
+
+function clearManualVideoInputError(): void {
+  manualVideoInputInvalid.value = false;
+}
+
+function submitManualVideo(): void {
+  const nextVideoId = videoIdFromUserInput(manualVideoInput.value);
+  if (nextVideoId === null) {
+    manualVideoInputInvalid.value = true;
+    return;
+  }
+
+  manualVideoInput.value = "";
+  manualVideoInputInvalid.value = false;
+  emit("video-request", nextVideoId);
+}
 </script>
 
 <template>
@@ -165,6 +188,51 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
         @touchstart="showControls"
       >
         <YouTubeEmbed :has-video="hasVideo" :video-id="videoId" @host-change="setPlayerHost" />
+
+        <EmptyState v-if="!hasVideo" class="youtube-player__empty" role="presentation">
+          <form
+            class="youtube-player__open-form"
+            aria-label="Open YouTube video"
+            @submit.prevent="submitManualVideo"
+          >
+            <label class="youtube-player__input-label" for="youtube-player-video-input">
+              YouTube URL or video ID
+            </label>
+            <div
+              class="youtube-player__open-group"
+              :class="{ 'youtube-player__open-group--invalid': manualVideoInputInvalid }"
+            >
+              <TextInput
+                id="youtube-player-video-input"
+                v-model="manualVideoInput"
+                class="youtube-player__open-input"
+                type="text"
+                variant="plain"
+                autocomplete="url"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
+                inputmode="url"
+                placeholder="YouTube URL or video ID"
+                :invalid="manualVideoInputInvalid"
+                @update:model-value="clearManualVideoInputError"
+              />
+              <Button
+                class="youtube-player__open-button"
+                type="submit"
+                size="sm"
+                variant="primary"
+                :icon-start="Play"
+                :disabled="manualVideoInput.trim().length === 0"
+              >
+                Play
+              </Button>
+            </div>
+            <p v-if="manualVideoInputInvalid" class="youtube-player__input-error" role="alert">
+              Enter a valid YouTube URL or video ID.
+            </p>
+          </form>
+        </EmptyState>
 
         <Transition name="youtube-player__poster-fade">
           <YouTubePosterOverlay
@@ -262,6 +330,87 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
   z-index: 1;
 }
 
+.youtube-player__empty {
+  align-self: stretch;
+  justify-self: stretch;
+}
+
+.youtube-player__open-form {
+  display: grid;
+  gap: var(--space-xs);
+  inline-size: min(100%, 34rem);
+}
+
+.youtube-player__open-group {
+  align-items: center;
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--color-bg-elevated) 78%, transparent),
+      color-mix(in srgb, var(--color-bg-elevated) 78%, transparent)
+    ),
+    color-mix(in srgb, var(--color-bg) 88%, black);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 16px 48px color-mix(in srgb, black 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+  display: grid;
+  gap: var(--space-xs);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-block-size: 52px;
+  padding: var(--space-2xs);
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease);
+}
+
+.youtube-player__open-group:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent) 80%, var(--color-border));
+  box-shadow:
+    0 18px 54px color-mix(in srgb, black 20%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+}
+
+.youtube-player__open-group--invalid {
+  border-color: color-mix(in srgb, var(--color-error-soft) 82%, var(--color-border));
+}
+
+.youtube-player__input-label {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.youtube-player__open-input {
+  color: var(--color-fg);
+  min-inline-size: 0;
+  padding-inline: var(--space-md) var(--space-sm);
+}
+
+.youtube-player__open-input:focus-visible {
+  outline: none;
+}
+
+.youtube-player__open-button {
+  border-radius: var(--radius-sm);
+  min-block-size: 40px;
+  min-inline-size: 5.5rem;
+  white-space: nowrap;
+}
+
+.youtube-player__input-error {
+  color: var(--color-error-soft);
+  font-size: var(--font-size-sm);
+  grid-column: 1 / -1;
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+
 :deep(.youtube-player__poster-fade-enter-active),
 :deep(.youtube-player__poster-fade-leave-active) {
   transition:
@@ -300,6 +449,17 @@ function requestAspectRatioWindowSize(nextAspectRatio: number): void {
   :deep(.youtube-player__poster-fade-enter-active),
   :deep(.youtube-player__poster-fade-leave-active) {
     transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .youtube-player__open-group {
+    grid-template-columns: 1fr;
+    padding: var(--space-xs);
+  }
+
+  .youtube-player__open-button {
+    inline-size: 100%;
   }
 }
 </style>

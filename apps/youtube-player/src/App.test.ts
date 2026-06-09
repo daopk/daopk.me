@@ -305,13 +305,71 @@ describe("YouTube Player App", () => {
     ["invalid video id", { videoId: "not-a-video-id" }],
     ["non-YouTube URL", { url: "https://example.com/watch?v=IQsLEaj89bg" }],
     ["malformed URL", { url: "youtube.com/watch?v=IQsLEaj89bg" }],
-  ])("renders only the blank player surface for %s", async (_label, args) => {
+  ])("renders a manual video form for %s", async (_label, args) => {
     const wrapper = mountYoutubePlayer(makeContext(args));
     await flushPromises();
 
     expect(youtubeApi.loadYouTubeIframeApi).not.toHaveBeenCalled();
     expect(wrapper.find(".youtube-player__controls").exists()).toBe(false);
-    expect(wrapper.text()).toBe("");
+    expect(wrapper.get('form[aria-label="Open YouTube video"]').exists()).toBe(true);
+    expect(wrapper.get("#youtube-player-video-input").attributes("placeholder")).toBe(
+      "YouTube URL or video ID",
+    );
+    expect(wrapper.get('button[type="submit"]').text()).toContain("Play");
+
+    wrapper.unmount();
+  });
+
+  it("opens and autoplays a manually entered video id", async () => {
+    const wrapper = mountYoutubePlayer(makeContext());
+
+    await wrapper.get("#youtube-player-video-input").setValue("dQw4w9WgXcQ");
+    await wrapper.get('form[aria-label="Open YouTube video"]').trigger("submit");
+    const player = await waitForPlayer();
+
+    expectPlayerIframe(wrapper, player, "dQw4w9WgXcQ");
+    expect(wrapper.find('form[aria-label="Open YouTube video"]').exists()).toBe(false);
+
+    player.options.events?.onReady?.({ target: player } as YouTubePlayerEvent);
+    await nextTick();
+
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+  });
+
+  it("opens a manually entered YouTube URL", async () => {
+    const wrapper = mountYoutubePlayer(makeContext());
+
+    await wrapper
+      .get("#youtube-player-video-input")
+      .setValue("https://www.youtube.com/watch?v=IQsLEaj89bg");
+    await wrapper.get('form[aria-label="Open YouTube video"]').trigger("submit");
+    const player = await waitForPlayer();
+
+    expectPlayerIframe(wrapper, player, "IQsLEaj89bg");
+
+    wrapper.unmount();
+  });
+
+  it("keeps the manual video form open for invalid input", async () => {
+    const wrapper = mountYoutubePlayer(makeContext());
+
+    await wrapper
+      .get("#youtube-player-video-input")
+      .setValue("https://example.com/watch?v=IQsLEaj89bg");
+    await wrapper.get('form[aria-label="Open YouTube video"]').trigger("submit");
+    await nextTick();
+
+    expect(youtubeApi.loadYouTubeIframeApi).not.toHaveBeenCalled();
+    expect(wrapper.get(".youtube-player__input-error").text()).toBe(
+      "Enter a valid YouTube URL or video ID.",
+    );
+
+    await wrapper.get("#youtube-player-video-input").setValue("IQsLEaj89bg");
+    await nextTick();
+
+    expect(wrapper.find(".youtube-player__input-error").exists()).toBe(false);
 
     wrapper.unmount();
   });

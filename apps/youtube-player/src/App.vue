@@ -47,6 +47,11 @@ function setPlayerTitle(nextTitle: string): void {
 function setContentSize(size: AppChromeContentSize | null): void {
   chrome.setContentSize(size);
 }
+
+function openVideo(nextVideoId: string): void {
+  autoplayRevision.value += 1;
+  videoId.value = nextVideoId;
+}
 </script>
 
 <template>
@@ -63,6 +68,7 @@ function setContentSize(size: AppChromeContentSize | null): void {
       resize-to-aspect-ratio
       @content-size-change="setContentSize"
       @title-change="setPlayerTitle"
+      @video-request="openVideo"
     />
   </AppFrame>
 </template>
