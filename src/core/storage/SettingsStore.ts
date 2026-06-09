@@ -22,7 +22,7 @@ export const DEFAULT_DOCK_PINNED_APP_IDS = [
   "clock",
   "notes",
   "photos",
-  "pdf-viewer",
+  "movies",
   "settings",
   "app-store",
 ];

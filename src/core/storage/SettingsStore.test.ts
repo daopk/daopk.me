@@ -46,6 +46,11 @@ describe("useSettingsStore", () => {
     expect(s.effectiveTheme).toBe("light");
   });
 
+  it("pins Movies instead of PDF Viewer in the default desktop dock", () => {
+    expect(DEFAULT_DOCK_PINNED_APP_IDS).toContain("movies");
+    expect(DEFAULT_DOCK_PINNED_APP_IDS).not.toContain("pdf-viewer");
+  });
+
   it("setDockAutoHide persists + emits onSettingsChanged", async () => {
     vi.useFakeTimers();
     const onChange = vi.fn();
