@@ -161,16 +161,28 @@ function selectMedia(media: MovieMediaType): void {
       </button>
     </nav>
 
-    <IconButton
-      class="movies-toolbar__search-button"
-      label="Search Movies"
-      size="sm"
-      :active="activeSearch.length > 0 || isSearchDialogOpen"
-      :icon="Search"
-      :pressed="isSearchDialogOpen || undefined"
-      title="Search Movies"
-      @click="openSearchDialog"
-    />
+    <div class="movies-toolbar__actions">
+      <IconButton
+        class="movies-toolbar__search-button"
+        label="Search Movies"
+        size="sm"
+        :active="activeSearch.length > 0 || isSearchDialogOpen"
+        :icon="Search"
+        :pressed="isSearchDialogOpen || undefined"
+        title="Search Movies"
+        @click="openSearchDialog"
+      />
+
+      <IconButton
+        v-if="showClose"
+        class="movies-toolbar__close"
+        label="Close Movies"
+        size="sm"
+        :icon="X"
+        title="Close Movies"
+        @click="$emit('close')"
+      />
+    </div>
 
     <Dialog :open="isSearchDialogOpen" title="Search" @update:open="setSearchDialogOpen">
       <form class="movies-toolbar__search-form" role="search" @submit.prevent="submitSearch">
@@ -197,16 +209,6 @@ function selectMedia(media: MovieMediaType): void {
         </DialogActions>
       </form>
     </Dialog>
-
-    <IconButton
-      v-if="showClose"
-      class="movies-toolbar__close"
-      label="Close Movies"
-      size="sm"
-      :icon="X"
-      title="Close Movies"
-      @click="$emit('close')"
-    />
   </header>
 </template>
 
@@ -219,7 +221,7 @@ function selectMedia(media: MovieMediaType): void {
   color: var(--color-fg);
   display: grid;
   gap: var(--space-sm);
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   inline-size: 100%;
   inset-block-start: 0;
   padding-block-end: var(--space-sm);
@@ -236,10 +238,6 @@ function selectMedia(media: MovieMediaType): void {
   z-index: 20;
 }
 
-.movies-toolbar--has-close {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-}
-
 .movies-toolbar--solid {
   backdrop-filter: blur(18px) saturate(120%);
   background: color-mix(in srgb, var(--color-bg) 76%, transparent);
@@ -254,6 +252,7 @@ function selectMedia(media: MovieMediaType): void {
   border-radius: var(--radius-full);
   display: inline-flex;
   gap: var(--space-2xs);
+  justify-self: start;
   min-block-size: var(--control-height-md);
   padding: 0 var(--space-2xs);
 }
@@ -274,6 +273,7 @@ function selectMedia(media: MovieMediaType): void {
   display: flex;
   gap: var(--space-sm);
   justify-content: center;
+  justify-self: center;
   min-inline-size: 0;
   overflow-x: auto;
   scrollbar-width: none;
@@ -318,11 +318,17 @@ function selectMedia(media: MovieMediaType): void {
   inline-size: 14px;
 }
 
+.movies-toolbar__actions {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-sm);
+  justify-self: end;
+}
+
 .movies-toolbar__search-button {
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--color-bg) 36%, transparent);
   color: color-mix(in srgb, var(--color-fg) 74%, transparent);
-  justify-self: end;
 }
 
 .movies-toolbar__search-button:hover,
@@ -345,7 +351,6 @@ function selectMedia(media: MovieMediaType): void {
   background: color-mix(in srgb, var(--color-bg) 36%, transparent);
   border-radius: var(--radius-full);
   color: color-mix(in srgb, var(--color-fg) 74%, transparent);
-  justify-self: end;
 }
 
 .movies-toolbar__close:hover,
@@ -358,15 +363,15 @@ function selectMedia(media: MovieMediaType): void {
   .movies-toolbar {
     align-items: center;
     gap: var(--space-xs);
-    grid-template-areas: "history catalog search";
+    grid-template-areas: "history catalog actions";
     grid-template-columns: auto minmax(0, 1fr) auto;
     padding-block-end: var(--space-xs);
     padding-block-start: calc(var(--space-xs) + var(--mobile-shell-app-safe-area-top, 0px));
   }
 
   .movies-toolbar--has-close {
-    grid-template-areas: "history catalog search close";
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "history catalog actions";
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .movies-toolbar__history {
@@ -377,18 +382,16 @@ function selectMedia(media: MovieMediaType): void {
   .movies-toolbar__catalog {
     grid-area: catalog;
     justify-content: flex-start;
+    justify-self: stretch;
   }
 
   .movies-toolbar__menu-button {
     max-inline-size: 220px;
   }
 
-  .movies-toolbar__search-button {
-    grid-area: search;
-  }
-
-  .movies-toolbar__close {
-    grid-area: close;
+  .movies-toolbar__actions {
+    gap: var(--space-xs);
+    grid-area: actions;
   }
 }
 
@@ -398,7 +401,7 @@ function selectMedia(media: MovieMediaType): void {
   }
 
   .movies-toolbar--has-close {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .movies-toolbar__menu-button {
