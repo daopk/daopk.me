@@ -139,9 +139,9 @@ describe("moviesRoutes", () => {
   });
 
   it("creates extensible view models and canonical paths", () => {
-    expect(createMoviesListView({ kind: "popular-tv" })).toEqual({
+    expect(createMoviesListView({ kind: "trending-tv" })).toEqual({
       name: "list",
-      query: { kind: "popular-tv", limit: DEFAULT_MOVIES_LIST_LIMIT },
+      query: { kind: "trending-tv", limit: DEFAULT_MOVIES_LIST_LIMIT },
     });
     expect(createMoviesSearchView("Fight")).toEqual({
       name: "list",

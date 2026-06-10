@@ -28,7 +28,7 @@ import {
 } from "../moviesPlaybackProgress";
 
 type LoadState = "loading" | "ready" | "error";
-type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "popular" | "trending">;
+type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "trending">;
 
 interface ContinueWatchingMovieTarget {
   readonly kind: "movie";
@@ -65,7 +65,6 @@ const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
 const state = ref<LoadState>("loading");
 const selectedPeriods = ref<Record<PeriodGroupId, MoviesListPeriod>>({
-  popular: "week",
   trending: "week",
 });
 
@@ -267,15 +266,15 @@ function openContinueWatchingItem(item: ContinueWatchingItem): void {
 }
 
 function groupPeriodValue(group: MoviesRowGroupConfig): string {
-  return group.id === "popular" || group.id === "trending" ? selectedPeriods.value[group.id] : "";
+  return group.id === "trending" ? selectedPeriods.value[group.id] : "";
 }
 
 function isMoviesListPeriod(value: string): value is MoviesListPeriod {
-  return value === "day" || value === "month" || value === "week";
+  return value === "day" || value === "week";
 }
 
 function setGroupPeriod(group: MoviesRowGroupConfig, next: string): void {
-  if ((group.id !== "popular" && group.id !== "trending") || !isMoviesListPeriod(next)) {
+  if (group.id !== "trending" || !isMoviesListPeriod(next)) {
     return;
   }
 
@@ -288,13 +287,12 @@ function setGroupPeriod(group: MoviesRowGroupConfig, next: string): void {
 }
 
 function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesListQuery {
-  const period =
-    group.id === "popular" || group.id === "trending" ? selectedPeriods.value[group.id] : undefined;
+  const period = group.id === "trending" ? selectedPeriods.value[group.id] : undefined;
   return period === undefined ? row.query : { ...row.query, period };
 }
 
 function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string {
-  return group.id === "current" ? row.title : `${group.title} ${row.title}`;
+  return `${group.title} ${row.title}`;
 }
 </script>
 
@@ -315,103 +313,109 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 
     <section
       v-if="hasFeatured || hasContinueWatching"
-      class="movies-home__rows"
+      class="movies-home__rows-shell"
       aria-label="Movies home sections"
     >
-      <section
-        v-if="hasContinueWatching"
-        class="movies-home__continue"
-        aria-labelledby="movies-home-continue-title"
-      >
-        <div class="movies-home__continue-header">
-          <h2 id="movies-home-continue-title">Continue Watching</h2>
-        </div>
+      <div class="movies-home__rows">
+        <section
+          v-if="hasContinueWatching"
+          class="movies-home__continue"
+          aria-labelledby="movies-home-continue-title"
+        >
+          <div class="movies-home__continue-header">
+            <h2 id="movies-home-continue-title">Continue Watching</h2>
+          </div>
 
-        <ul class="movies-home__continue-rail">
-          <li
-            v-for="item in continueWatchingItems"
-            :key="item.id"
-            class="movies-home__continue-item"
-          >
-            <button
-              type="button"
-              class="movies-home__continue-card"
-              :aria-label="continueAriaLabel(item)"
-              @click="openContinueWatchingItem(item)"
+          <ul class="movies-home__continue-rail">
+            <li
+              v-for="item in continueWatchingItems"
+              :key="item.id"
+              class="movies-home__continue-item"
             >
-              <span class="movies-home__continue-media">
-                <img
-                  v-if="item.imageUrl"
-                  class="movies-home__continue-image"
-                  :src="item.imageUrl"
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <span v-else class="movies-home__continue-image" aria-hidden="true" />
-                <span class="movies-home__continue-badge">{{ item.kindLabel }}</span>
-                <span class="movies-home__continue-progress" aria-hidden="true">
-                  <span
-                    class="movies-home__continue-progress-value"
-                    :style="{ inlineSize: continueProgressWidth(item) }"
+              <button
+                type="button"
+                class="movies-home__continue-card"
+                :aria-label="continueAriaLabel(item)"
+                @click="openContinueWatchingItem(item)"
+              >
+                <span class="movies-home__continue-media">
+                  <img
+                    v-if="item.imageUrl"
+                    class="movies-home__continue-image"
+                    :src="item.imageUrl"
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    decoding="async"
                   />
+                  <span v-else class="movies-home__continue-image" aria-hidden="true" />
+                  <span class="movies-home__continue-badge">{{ item.kindLabel }}</span>
+                  <span class="movies-home__continue-progress" aria-hidden="true">
+                    <span
+                      class="movies-home__continue-progress-value"
+                      :style="{ inlineSize: continueProgressWidth(item) }"
+                    />
+                  </span>
                 </span>
-              </span>
 
-              <span class="movies-home__continue-body">
-                <span class="movies-home__continue-title">{{ item.title }}</span>
-                <span v-if="item.subtitle" class="movies-home__continue-subtitle">
-                  {{ item.subtitle }}
+                <span class="movies-home__continue-body">
+                  <span class="movies-home__continue-title">{{ item.title }}</span>
+                  <span v-if="item.subtitle" class="movies-home__continue-subtitle">
+                    {{ item.subtitle }}
+                  </span>
                 </span>
-              </span>
-            </button>
-          </li>
-        </ul>
-      </section>
-
-      <template v-if="hasFeatured">
-        <section v-for="group in HOME_DISCOVERY_GROUPS" :key="group.id" class="movies-home__group">
-          <div class="movies-home__group-header">
-            <h2>{{ group.title }}</h2>
-            <SegmentedControl
-              v-if="group.periodOptions"
-              class="movies-home__period-control"
-              :label="`${group.title} period`"
-              :model-value="groupPeriodValue(group)"
-              :options="group.periodOptions"
-              size="sm"
-              @change="setGroupPeriod(group, $event)"
-            />
-          </div>
-
-          <div class="movies-home__group-rows">
-            <section v-for="row in group.rows" :key="row.id" class="movies-home__row">
-              <div class="movies-home__row-header">
-                <h3>{{ row.title }}</h3>
-                <Button
-                  class="movies-home__row-action"
-                  size="sm"
-                  variant="ghost"
-                  :icon-start="ChevronRight"
-                  :aria-label="`View all ${rowListLabel(group, row)}`"
-                  @click="$emit('open-list', queryForRow(group, row))"
-                />
-              </div>
-
-              <ul class="movies-home__rail">
-                <li
-                  v-for="movie in rows[row.id] ?? []"
-                  :key="movie.id"
-                  class="movies-home__rail-item"
-                >
-                  <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
-                </li>
-              </ul>
-            </section>
-          </div>
+              </button>
+            </li>
+          </ul>
         </section>
-      </template>
+
+        <template v-if="hasFeatured">
+          <section
+            v-for="group in HOME_DISCOVERY_GROUPS"
+            :key="group.id"
+            class="movies-home__group"
+          >
+            <div class="movies-home__group-header">
+              <h2>{{ group.title }}</h2>
+              <SegmentedControl
+                v-if="group.periodOptions"
+                class="movies-home__period-control"
+                :label="`${group.title} period`"
+                :model-value="groupPeriodValue(group)"
+                :options="group.periodOptions"
+                size="sm"
+                @change="setGroupPeriod(group, $event)"
+              />
+            </div>
+
+            <div class="movies-home__group-rows">
+              <section v-for="row in group.rows" :key="row.id" class="movies-home__row">
+                <div class="movies-home__row-header">
+                  <h3>{{ row.title }}</h3>
+                  <Button
+                    class="movies-home__row-action"
+                    size="sm"
+                    variant="ghost"
+                    :icon-start="ChevronRight"
+                    :aria-label="`View all ${rowListLabel(group, row)}`"
+                    @click="$emit('open-list', queryForRow(group, row))"
+                  />
+                </div>
+
+                <ul class="movies-home__rail">
+                  <li
+                    v-for="movie in rows[row.id] ?? []"
+                    :key="movie.id"
+                    class="movies-home__rail-item"
+                  >
+                    <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
+                  </li>
+                </ul>
+              </section>
+            </div>
+          </section>
+        </template>
+      </div>
     </section>
   </ScrollArea>
 </template>
@@ -448,11 +452,14 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
 }
 
 .movies-home__status {
+  box-sizing: border-box;
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
-    var(--space-md) 0;
+    auto 0;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding-inline: var(--movies-content-outer-padding-inline, var(--space-md));
 }
 
-.movies-home__rows {
+.movies-home__rows-shell {
   background:
     radial-gradient(
       100% 38% at 12% 18%,
@@ -471,9 +478,16 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
       var(--movies-home-bg-base) 46%,
       var(--movies-home-bg-deep) 100%
     );
+  padding: var(--space-lg)
+    var(--movies-content-outer-padding-inline, clamp(var(--space-xl), 5vw, 72px)) var(--space-xl);
+}
+
+.movies-home__rows {
   display: grid;
   gap: clamp(var(--space-xl), 5vw, 64px);
-  padding: var(--space-lg) clamp(var(--space-xl), 5vw, 64px) var(--space-xl);
+  inline-size: 100%;
+  margin-inline: auto;
+  max-inline-size: var(--movies-content-max-inline-size, 1296px);
 }
 
 .movies-home__group {
@@ -695,9 +709,12 @@ span.movies-home__continue-image {
 }
 
 @media (max-width: 760px) {
+  .movies-home__rows-shell {
+    padding-block: var(--space-lg) var(--space-xl);
+  }
+
   .movies-home__rows {
     gap: var(--space-xl);
-    padding: var(--space-lg) var(--space-md) var(--space-xl);
   }
 
   .movies-home__rail {

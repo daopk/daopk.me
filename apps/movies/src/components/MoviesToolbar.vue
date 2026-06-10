@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
 import { IconButton, TextInput } from "@daopk/kit";
-import { Button, Dialog, DialogActions, DropdownMenu, DropdownMenuItem } from "@daopk/ui";
-import { ChevronLeft, ChevronRight, Film, Home, Menu, Search, Tv, X } from "@daopk/icons";
+import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { ChevronLeft, ChevronRight, Film, Home, Search, Tv, X } from "@daopk/icons";
 
-import type { MoviesListQuery } from "../moviesApi";
+import { type MovieMediaType, type MoviesListQuery } from "../moviesApi";
 
 interface TextInputHandle {
   focus: (options?: FocusOptions) => void;
@@ -14,6 +14,7 @@ interface TextInputHandle {
 
 interface MoviesToolbarProps {
   solid: boolean;
+  activeListQuery?: MoviesListQuery | null;
   activeSearch?: string;
   canGoBack?: boolean;
   canGoForward?: boolean;
@@ -22,6 +23,7 @@ interface MoviesToolbarProps {
 }
 
 const props = withDefaults(defineProps<MoviesToolbarProps>(), {
+  activeListQuery: null,
   activeSearch: "",
   canGoBack: false,
   canGoForward: false,
@@ -34,13 +36,22 @@ const emit = defineEmits<{
   close: [];
   forward: [];
   home: [];
-  search: [keyword: string];
   "open-list": [query: MoviesListQuery];
+  search: [keyword: string];
 }>();
 
 const searchDraft = ref(props.activeSearch);
 const isSearchDialogOpen = ref(false);
 const searchInput = ref<TextInputHandle | null>(null);
+
+const activeCatalogQuery = computed(() =>
+  props.activeListQuery?.keyword === undefined && props.activeListQuery?.kind === undefined
+    ? props.activeListQuery
+    : null,
+);
+const filterMedia = computed<MovieMediaType>(() =>
+  activeCatalogQuery.value?.media === "tv" ? "tv" : "movie",
+);
 
 watch(
   () => props.activeSearch,
@@ -78,12 +89,31 @@ function submitSearch(): void {
   setSearchDialogOpen(false);
 }
 
-function openPopularMovies(): void {
-  emit("open-list", { kind: "popular-movie" });
+function catalogBaseQuery(): MoviesListQuery {
+  const current = activeCatalogQuery.value;
+  return {
+    ...(current?.country === undefined ? {} : { country: current.country }),
+    ...(current?.countryName === undefined ? {} : { countryName: current.countryName }),
+    ...(current?.genre === undefined ? {} : { genre: current.genre }),
+    ...(current?.genreName === undefined ? {} : { genreName: current.genreName }),
+    ...(current?.limit === undefined ? {} : { limit: current.limit }),
+    media: filterMedia.value,
+    ...(current?.sort === undefined ? {} : { sort: current.sort }),
+  };
 }
 
-function openPopularTv(): void {
-  emit("open-list", { kind: "popular-tv" });
+function openCatalogList(query: MoviesListQuery): void {
+  emit("open-list", { ...query, page: 1 });
+}
+
+function selectMedia(media: MovieMediaType): void {
+  const {
+    genre: _genre,
+    genreName: _genreName,
+    filterFocus: _filterFocus,
+    ...query
+  } = catalogBaseQuery();
+  openCatalogList({ ...query, media });
 }
 </script>
 
@@ -92,37 +122,6 @@ function openPopularTv(): void {
     class="movies-toolbar"
     :class="{ 'movies-toolbar--solid': solid, 'movies-toolbar--has-close': showClose }"
   >
-    <DropdownMenu align="start">
-      <template #trigger>
-        <IconButton
-          class="movies-toolbar__section-menu"
-          label="Movies menu"
-          size="sm"
-          :icon="Menu"
-          title="Movies menu"
-        />
-      </template>
-
-      <template #items>
-        <DropdownMenuItem
-          class="movies-toolbar__section-menu-item"
-          text-value="Movies"
-          @select="openPopularMovies"
-        >
-          <Film class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-          <span>Movies</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          class="movies-toolbar__section-menu-item"
-          text-value="TV"
-          @select="openPopularTv"
-        >
-          <Tv class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-          <span>TV</span>
-        </DropdownMenuItem>
-      </template>
-    </DropdownMenu>
-
     <nav class="movies-toolbar__history" aria-label="Movies navigation">
       <IconButton
         label="Back"
@@ -150,11 +149,16 @@ function openPopularTv(): void {
       />
     </nav>
 
-    <nav class="movies-toolbar__nav" aria-label="Movies sections">
-      <Button class="movies-toolbar__menu-button" size="sm" @click="openPopularMovies">
-        Movies
-      </Button>
-      <Button class="movies-toolbar__menu-button" size="sm" @click="openPopularTv"> TV </Button>
+    <nav class="movies-toolbar__catalog" aria-label="Movies catalog">
+      <button type="button" class="movies-toolbar__menu-button" @click="selectMedia('movie')">
+        <Film class="movies-toolbar__menu-icon" aria-hidden="true" />
+        <span>Movies</span>
+      </button>
+
+      <button type="button" class="movies-toolbar__menu-button" @click="selectMedia('tv')">
+        <Tv class="movies-toolbar__menu-icon" aria-hidden="true" />
+        <span>TV Shows</span>
+      </button>
     </nav>
 
     <IconButton
@@ -244,19 +248,6 @@ function openPopularTv(): void {
   -webkit-backdrop-filter: blur(18px) saturate(120%);
 }
 
-.movies-toolbar__section-menu {
-  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
-  border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
-  display: none;
-}
-
-.movies-toolbar__section-menu:hover,
-.movies-toolbar__section-menu:focus-visible {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  color: var(--color-fg);
-}
-
 .movies-toolbar__history {
   align-items: center;
   background: color-mix(in srgb, var(--color-bg) 36%, transparent);
@@ -278,38 +269,53 @@ function openPopularTv(): void {
   color: var(--color-fg);
 }
 
-.movies-toolbar__nav {
+.movies-toolbar__catalog {
   align-items: center;
   display: flex;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
+  justify-content: center;
   min-inline-size: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.movies-toolbar__nav::-webkit-scrollbar {
+.movies-toolbar__catalog::-webkit-scrollbar {
   display: none;
 }
 
-.movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button) {
-  background: transparent;
+.movies-toolbar__menu-button {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
   border: 0;
-  box-shadow: none;
-  color: color-mix(in srgb, var(--color-fg) 86%, transparent);
-  padding-inline: var(--space-xs);
+  border-radius: var(--radius-full);
+  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: var(--font-size-sm);
+  gap: var(--space-xs);
+  min-block-size: var(--control-height-md);
+  max-inline-size: min(260px, 42vw);
+  min-inline-size: 0;
+  padding: 0 var(--space-md);
   white-space: nowrap;
 }
 
-.movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:hover),
-.movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:focus-visible) {
+.movies-toolbar__menu-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.movies-toolbar__menu-button:hover,
+.movies-toolbar__menu-button:focus-visible {
+  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
   color: var(--color-fg);
 }
 
-.movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button:focus-visible) {
-  background: color-mix(in srgb, var(--color-fg) 8%, transparent);
-  border-radius: var(--radius-full);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-fg) 18%, transparent);
-  outline: 0;
+.movies-toolbar__menu-icon {
+  block-size: 14px;
+  flex: 0 0 auto;
+  inline-size: 14px;
 }
 
 .movies-toolbar__search-button {
@@ -352,31 +358,15 @@ function openPopularTv(): void {
   .movies-toolbar {
     align-items: center;
     gap: var(--space-xs);
-    grid-template-areas: "sections history search";
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas: "history catalog search";
+    grid-template-columns: auto minmax(0, 1fr) auto;
     padding-block-end: var(--space-xs);
     padding-block-start: calc(var(--space-xs) + var(--mobile-shell-app-safe-area-top, 0px));
   }
 
   .movies-toolbar--has-close {
-    grid-template-areas: "sections history search close";
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
-  }
-
-  .movies-toolbar__section-menu {
-    display: inline-flex;
-    grid-area: sections;
-  }
-
-  .movies-toolbar__section-menu-item {
-    font-size: var(--font-size-base);
-    min-block-size: 52px;
-    padding-block: var(--space-md);
-  }
-
-  .movies-toolbar__section-menu-item :deep(.ds-dropdown-menu__item-icon) {
-    block-size: 18px;
-    inline-size: 18px;
+    grid-template-areas: "history catalog search close";
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
   .movies-toolbar__history {
@@ -384,11 +374,13 @@ function openPopularTv(): void {
     min-inline-size: 0;
   }
 
-  .movies-toolbar__nav {
-    display: none;
-    grid-area: nav;
-    min-block-size: var(--control-height-sm);
-    padding-inline-end: var(--space-xs);
+  .movies-toolbar__catalog {
+    grid-area: catalog;
+    justify-content: flex-start;
+  }
+
+  .movies-toolbar__menu-button {
+    max-inline-size: 220px;
   }
 
   .movies-toolbar__search-button {
@@ -402,15 +394,15 @@ function openPopularTv(): void {
 
 @media (max-width: 520px) {
   .movies-toolbar {
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .movies-toolbar--has-close {
-    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
 
-  .movies-toolbar__nav :deep(.movies-toolbar__menu-button.ds-button) {
-    padding-inline: var(--space-2xs);
+  .movies-toolbar__menu-button {
+    max-inline-size: 180px;
   }
 }
 

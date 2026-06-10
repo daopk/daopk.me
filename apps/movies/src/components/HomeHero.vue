@@ -331,9 +331,10 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
   grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
   inline-size: 100%;
   margin-inline: auto;
-  max-inline-size: 1440px;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
   padding: calc(var(--movies-toolbar-content-offset, var(--control-height-md)) + var(--space-xl))
-    clamp(var(--space-xl), 5vw, 72px) clamp(56px, 8vh, 96px);
+    var(--movies-content-outer-padding-inline, clamp(var(--space-xl), 5vw, 72px))
+    clamp(56px, 8vh, 96px);
   position: relative;
   z-index: 2;
 }
@@ -649,7 +650,6 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
   .movies-home__hero-desktop {
     gap: var(--space-xl);
     grid-template-columns: minmax(264px, 0.86fr) minmax(360px, 1fr);
-    padding-inline: var(--space-xl);
   }
 
   .movies-home__hero-copy h1 {

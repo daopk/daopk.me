@@ -79,7 +79,8 @@ const playButtonLabel = computed(
   background: var(--movies-surface-bg, var(--color-bg));
   min-block-size: 520px;
   overflow: hidden;
-  padding: calc(var(--control-height-md) + var(--space-xl)) var(--space-lg) var(--space-xl);
+  padding: calc(var(--control-height-md) + var(--space-xl))
+    var(--movies-content-outer-padding-inline, var(--space-lg)) var(--space-xl);
   position: relative;
 }
 
@@ -120,7 +121,7 @@ const playButtonLabel = computed(
   display: grid;
   gap: var(--space-lg);
   margin-inline: auto;
-  max-inline-size: 1100px;
+  max-inline-size: var(--movies-content-max-inline-size, 1296px);
   position: relative;
   z-index: 1;
 }

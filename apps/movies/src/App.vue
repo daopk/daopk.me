@@ -13,6 +13,7 @@ import PersonView from "./components/PersonView.vue";
 import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
+import type { MoviesListQuery } from "./moviesApi";
 
 type WatchViewInstance = InstanceType<typeof WatchView> & {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
@@ -76,6 +77,10 @@ function onMoviesKeydown(event: KeyboardEvent): void {
   watchViewRef.value?.handleKeyboardEvent?.(event);
 }
 
+function openToolbarList(query: MoviesListQuery): void {
+  openList(query, { replace: view.value.name === "list" });
+}
+
 onMounted(() => {
   if (typeof window !== "undefined") {
     window.addEventListener("keydown", onMoviesKeydown, { capture: true });
@@ -100,6 +105,7 @@ onUnmounted(() => {
     <MoviesToolbar
       v-if="view.name !== 'watch'"
       :solid="toolbarSolid"
+      :active-list-query="view.name === 'list' ? view.query : null"
       :can-go-back="canGoBack"
       :can-go-forward="canGoForward"
       :can-go-home="canGoHome"
@@ -109,8 +115,8 @@ onUnmounted(() => {
       @close="closeApp"
       @forward="goForward"
       @home="goHome"
+      @open-list="openToolbarList"
       @search="searchMovies"
-      @open-list="openList"
     />
 
     <HomeView
@@ -182,6 +188,12 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .movies-app {
+  --movies-content-max-inline-size: 1296px;
+  --movies-content-outer-padding-inline: clamp(var(--space-xl), 5vw, 72px);
+  --movies-content-box-max-inline-size: calc(
+    var(--movies-content-max-inline-size) + var(--movies-content-outer-padding-inline) +
+      var(--movies-content-outer-padding-inline)
+  );
   --movies-surface-bg: color-mix(in srgb, var(--color-bg) 84%, var(--color-fg) 16%);
   --movies-toolbar-content-offset: calc(var(--control-height-md) + var(--space-xl));
 
@@ -198,8 +210,15 @@ onUnmounted(() => {
   -webkit-user-drag: none;
 }
 
+@media (max-width: 1120px) {
+  .movies-app {
+    --movies-content-outer-padding-inline: var(--space-xl);
+  }
+}
+
 @media (max-width: 760px) {
   .movies-app {
+    --movies-content-outer-padding-inline: var(--space-md);
     --movies-toolbar-content-offset: calc(
       var(--mobile-shell-app-safe-area-top, 0px) + var(--control-height-md) + var(--space-xl)
     );

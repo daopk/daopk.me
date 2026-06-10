@@ -57,16 +57,13 @@ defineEmits<{
 
 <style scoped lang="scss">
 .movies-detail-content {
+  box-sizing: border-box;
   display: grid;
   gap: var(--space-xl);
+  inline-size: 100%;
   margin-inline: auto;
-  max-inline-size: 1100px;
-  padding: var(--space-xl) var(--space-lg) clamp(var(--space-xl), 10vh, 96px);
-}
-
-@media (max-width: 700px) {
-  .movies-detail-content {
-    padding-inline: var(--space-md);
-  }
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding: var(--space-xl) var(--movies-content-outer-padding-inline, var(--space-lg))
+    clamp(var(--space-xl), 10vh, 96px);
 }
 </style>

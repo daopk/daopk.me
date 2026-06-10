@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  buildMoviesFiltersUrl,
   buildMoviePersonUrl,
   buildMovieSeasonUrl,
   buildMoviesListUrl,
   DEFAULT_MOVIES_LIST_LIMIT,
+  fetchMoviesFilters,
   fetchMoviesList,
   movieDetailFromPayload,
   movieEpisodeDetailFromParts,
+  moviesFiltersFromPayload,
   moviePersonFromPayload,
   movieSeasonFromPayload,
   moviesListFromPayload,
@@ -32,15 +35,30 @@ describe("moviesApi", () => {
 
   it("builds public Movies API URLs for lists and search", () => {
     const listUrl = new URL(
-      buildMoviesListUrl({ kind: "popular-tv", page: 2, period: "month" }),
+      buildMoviesListUrl({ kind: "trending-tv", page: 2, period: "day" }),
       "https://daopk.test",
     );
     expect(listUrl.pathname).toBe("/public/movies/list");
-    expect(listUrl.searchParams.get("kind")).toBe("popular-tv");
+    expect(listUrl.searchParams.get("kind")).toBe("trending-tv");
     expect(listUrl.searchParams.get("page")).toBe("2");
     expect(listUrl.searchParams.get("limit")).toBe(String(DEFAULT_MOVIES_LIST_LIMIT));
-    expect(listUrl.searchParams.get("period")).toBe("month");
+    expect(listUrl.searchParams.get("period")).toBe("day");
     expect(listUrl.searchParams.has("country")).toBe(false);
+
+    const catalogUrl = new URL(
+      buildMoviesListUrl({ country: "kr", genre: 18, media: "tv", sort: "newest" }),
+      "https://daopk.test",
+    );
+    expect(catalogUrl.pathname).toBe("/public/movies/list");
+    expect(catalogUrl.searchParams.has("kind")).toBe(false);
+    expect(catalogUrl.searchParams.get("media")).toBe("tv");
+    expect(catalogUrl.searchParams.get("genre")).toBe("18");
+    expect(catalogUrl.searchParams.get("country")).toBe("KR");
+    expect(catalogUrl.searchParams.get("sort")).toBe("newest");
+
+    const allCatalogUrl = new URL(buildMoviesListUrl({ media: "all" }), "https://daopk.test");
+    expect(allCatalogUrl.pathname).toBe("/public/movies/list");
+    expect(allCatalogUrl.searchParams.get("media")).toBe("all");
 
     const searchUrl = new URL(
       buildMoviesListUrl({ keyword: "Fight Club", media: "movie" }),
@@ -54,7 +72,7 @@ describe("moviesApi", () => {
     expect(searchUrl.searchParams.has("country")).toBe(false);
 
     const cappedUrl = new URL(
-      buildMoviesListUrl({ kind: "popular-movie", limit: 120 }),
+      buildMoviesListUrl({ kind: "trending-movie", limit: 120 }),
       "https://daopk.test",
     );
     expect(cappedUrl.searchParams.get("limit")).toBe("100");
@@ -64,6 +82,10 @@ describe("moviesApi", () => {
 
     const personUrl = new URL(buildMoviePersonUrl(819), "https://daopk.test");
     expect(personUrl.pathname).toBe("/public/movies/person/819");
+
+    const filtersUrl = new URL(buildMoviesFiltersUrl("tv"), "https://daopk.test");
+    expect(filtersUrl.pathname).toBe("/public/movies/filters");
+    expect(filtersUrl.searchParams.get("media")).toBe("tv");
   });
 
   it("normalizes app-ready TMDB list payloads", () => {
@@ -130,10 +152,123 @@ describe("moviesApi", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    const result = await fetchMoviesList({ kind: "popular-movie" });
+    const result = await fetchMoviesList({ kind: "trending-movie" });
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(result.pagination.totalItemsPerPage).toBe(7);
+  });
+
+  it("fetches All catalog lists by combining movie and TV pages", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "https://daopk.test");
+      const media = url.searchParams.get("media");
+      expect(url.pathname).toBe("/public/movies/list");
+      expect(url.searchParams.get("limit")).toBe("12");
+      if (media === "movie") {
+        return new Response(
+          JSON.stringify({
+            items: [{ mediaType: "movie", name: "Fight Club", tmdbId: 550 }],
+            pagination: {
+              currentPage: 1,
+              totalItems: 2,
+              totalItemsPerPage: 1,
+              totalPages: 2,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (media === "tv") {
+        return new Response(
+          JSON.stringify({
+            items: [{ mediaType: "tv", name: "Planet Cinema", tmdbId: 1399 }],
+            pagination: {
+              currentPage: 1,
+              totalItems: 3,
+              totalItemsPerPage: 1,
+              totalPages: 3,
+            },
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`Unexpected media: ${media}`);
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const result = await fetchMoviesList({ limit: 24, media: "all" });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(result.items.map((item) => item.mediaType)).toEqual(["movie", "tv"]);
+    expect(result.pagination).toEqual({
+      currentPage: 1,
+      totalItems: 5,
+      totalItemsPerPage: 2,
+      totalPages: 3,
+    });
+  });
+
+  it("normalizes and fetches Movies filter metadata", async () => {
+    const result = moviesFiltersFromPayload(
+      {
+        countries: [
+          { code: "KR", name: "South Korea" },
+          { code: "bad", name: "Ignored" },
+          { code: "US", name: "United States of America" },
+        ],
+        genres: [
+          { id: 28, name: "Action", slug: "action" },
+          { id: 0, name: "Ignored" },
+          { id: 18, name: "Drama" },
+        ],
+        media: "movie",
+        sortOptions: [
+          { label: "Popular", value: "popular" },
+          { label: "Ignored", value: "rating" },
+          { label: "Newest", value: "newest" },
+        ],
+      },
+      "tv",
+    );
+
+    expect(result).toEqual({
+      countries: [
+        { code: "KR", name: "South Korea" },
+        { code: "US", name: "United States of America" },
+      ],
+      genres: [
+        { id: 28, name: "Action", slug: "action" },
+        { id: 18, name: "Drama", slug: "drama" },
+      ],
+      media: "movie",
+      sortOptions: [
+        { label: "Popular", value: "popular" },
+        { label: "Newest", value: "newest" },
+      ],
+    });
+
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "https://daopk.test");
+      expect(url.pathname).toBe("/public/movies/filters");
+      expect(url.searchParams.get("media")).toBe("tv");
+      return new Response(
+        JSON.stringify({
+          countries: [{ code: "US", name: "United States of America" }],
+          genres: [{ id: 99, name: "Documentary" }],
+          media: "tv",
+          sortOptions: [{ label: "Popular", value: "popular" }],
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    await expect(fetchMoviesFilters("tv")).resolves.toMatchObject({
+      countries: [{ code: "US", name: "United States of America" }],
+      genres: [{ id: 99, name: "Documentary" }],
+      media: "tv",
+    });
+    expect(fetch).toHaveBeenCalledOnce();
   });
 
   it("normalizes detail payloads and keeps playback dormant", () => {

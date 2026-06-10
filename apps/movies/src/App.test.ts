@@ -16,6 +16,7 @@ import type {
   MoviePersonDetail,
   MoviePlayInfo,
   MovieSeasonDetail,
+  MoviesFiltersResult,
   MovieSummary,
   MoviesListResult,
 } from "./moviesApi";
@@ -37,6 +38,7 @@ vi.mock("./moviesApi", async (importOriginal) => {
     fetchMovieEpisode: vi.fn(),
     fetchMoviePerson: vi.fn(),
     fetchMovieSeason: vi.fn(),
+    fetchMoviesFilters: vi.fn(),
     fetchMoviesList: vi.fn(),
   };
 });
@@ -95,6 +97,7 @@ import {
   DEFAULT_MOVIES_LIST_LIMIT,
   fetchMovieDetail,
   fetchMovieEpisode,
+  fetchMoviesFilters,
   fetchMoviePerson,
   fetchMovieSeason,
   fetchMoviesList,
@@ -354,30 +357,37 @@ function personDetail(overrides: Partial<MoviePersonDetail> = {}): MoviePersonDe
   };
 }
 
+function filters(media: "movie" | "tv" = "movie"): MoviesFiltersResult {
+  return {
+    countries: [
+      { code: "AD", name: "Andorra" },
+      { code: "KR", name: "South Korea" },
+      { code: "US", name: "United States of America" },
+      { code: "VN", name: "Vietnam" },
+    ],
+    genres:
+      media === "tv"
+        ? [
+            { id: 18, name: "Drama", slug: "drama" },
+            { id: 99, name: "Documentary", slug: "documentary" },
+          ]
+        : [
+            { id: 28, name: "Action", slug: "action" },
+            { id: 18, name: "Drama", slug: "drama" },
+          ],
+    media,
+    sortOptions: [
+      { label: "Popular", value: "popular" },
+      { label: "Newest", value: "newest" },
+      { label: "Top Rated", value: "top-rated" },
+    ],
+  };
+}
+
 async function settle(): Promise<void> {
   await flushPromises();
   await flushPromises();
   await flushPromises();
-}
-
-function click(element: Element): void {
-  element.dispatchEvent(
-    new MouseEvent("click", {
-      bubbles: true,
-      button: 0,
-      cancelable: true,
-    }),
-  );
-}
-
-function menuItem(label: string): Element {
-  const item = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
-    (candidate) => candidate.textContent?.trim() === label,
-  );
-  if (item === undefined) {
-    throw new Error(`Menu item not found: ${label}`);
-  }
-  return item;
 }
 
 function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
@@ -392,6 +402,7 @@ describe("Movies app", () => {
     localStorage.clear();
     window.history.replaceState(null, "", "/apps/movies");
     vi.mocked(fetchMoviesList).mockResolvedValue(list([movie()]));
+    vi.mocked(fetchMoviesFilters).mockImplementation(async (media = "movie") => filters(media));
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail());
     vi.mocked(fetchMoviePerson).mockResolvedValue(personDetail());
     vi.mocked(fetchMovieSeason).mockImplementation(async (_tmdbId, seasonNumber) =>
@@ -452,29 +463,40 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-home__hero-dots").exists()).toBe(false);
     expect(wrapper.find(".movies-home__continue").exists()).toBe(false);
     expect(wrapper.text()).toContain("Trending");
-    expect(wrapper.text()).toContain("Popular");
-    expect(wrapper.text()).toContain("Current");
-    expect(wrapper.text()).toContain("Now Playing");
-    expect(wrapper.text()).toContain("Airing Today");
+    expect(wrapper.text()).not.toContain("Popular");
+    expect(wrapper.text()).not.toContain("Current");
+    expect(wrapper.text()).not.toContain("Now Playing");
+    expect(wrapper.text()).not.toContain("Airing Today");
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.find('[aria-label="View all Trending Movies"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="View all Trending TV"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="View all Popular Movies"]').exists()).toBe(true);
-    expect(wrapper.find('[aria-label="View all Popular TV"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Now Playing"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="View all Airing Today"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="View all Popular Movies"]').exists()).toBe(false);
+    expect(wrapper.find('[aria-label="View all Popular TV"]').exists()).toBe(false);
     expect(wrapper.find(".movies-toolbar__credit").exists()).toBe(false);
     expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
     expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
       "Movies",
-      "TV",
+      "TV Shows",
     ]);
+    expect(wrapper.find('button[aria-label="Genres"]').exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="Country"]').exists()).toBe(false);
     expect(fetchMoviesList).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "trending-movie", limit: 6, period: "week" }),
       expect.anything(),
     );
-    expect(fetchMoviesList).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "popular-tv", limit: 12, period: "week" }),
-      expect.anything(),
-    );
+    expect(
+      vi
+        .mocked(fetchMoviesList)
+        .mock.calls.some(([query]) => String(query.kind ?? "").startsWith("popular-")),
+    ).toBe(false);
+    expect(
+      vi.mocked(fetchMoviesList).mock.calls.some(([query]) => {
+        const kind = String(query.kind ?? "");
+        return kind === "now-playing" || kind === "airing-today";
+      }),
+    ).toBe(false);
 
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
@@ -866,46 +888,94 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-toolbar").classes()).toContain("movies-toolbar--solid");
   });
 
-  it("opens Movies and TV from the toolbar section menu", async () => {
+  it("opens catalog lists from the toolbar menus", async () => {
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
 
+    expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
+      "Movies",
+      "TV Shows",
+    ]);
+
     vi.mocked(fetchMoviesList).mockClear();
-    click(wrapper.get('button[aria-label="Movies menu"]').element);
-    await settle();
-
-    expect(
-      Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) =>
-        item.textContent?.trim(),
-      ),
-    ).toEqual(["Movies", "TV"]);
-
-    click(menuItem("TV"));
-    await settle();
-
-    expect(fetchMoviesList).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: "popular-tv", limit: DEFAULT_MOVIES_LIST_LIMIT, page: 1 }),
-      expect.anything(),
-    );
-    expect(wrapper.text()).toContain("Popular TV");
-
-    click(wrapper.get('button[aria-label="Movies menu"]').element);
-    await settle();
-    click(menuItem("Movies"));
+    await wrapper
+      .findAll(".movies-toolbar__menu-button")
+      .find((button) => button.text().trim() === "TV Shows")!
+      .trigger("click");
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        kind: "popular-movie",
         limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "tv",
         page: 1,
       }),
       expect.anything(),
     );
-    expect(wrapper.text()).toContain("Popular Movies");
+    expect(wrapper.text()).toContain("TV Shows");
+    expect(
+      wrapper
+        .get('select[aria-label="Type"]')
+        .findAll("option")
+        .map((option) => option.text()),
+    ).toEqual(["All", "Movies", "TV Shows"]);
+    expect(
+      wrapper
+        .get('select[aria-label="Country"]')
+        .findAll("option")
+        .map((option) => option.text()),
+    ).toEqual(["All countries", "Vietnam", "United States of America", "South Korea"]);
+
+    await wrapper.get('select[aria-label="Genre"]').setValue("18");
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        genre: 18,
+        genreName: "Drama",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "tv",
+        page: 1,
+      }),
+      expect.anything(),
+    );
+    expect(wrapper.text()).toContain("TV Shows · Drama");
+
+    await wrapper.get('select[aria-label="Country"]').setValue("KR");
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        country: "KR",
+        countryName: "South Korea",
+        genre: 18,
+        genreName: "Drama",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "tv",
+        page: 1,
+      }),
+      expect.anything(),
+    );
+    expect(wrapper.text()).toContain("TV Shows · Drama · South Korea");
+
+    await wrapper.get('select[aria-label="Type"]').setValue("all");
+    await settle();
+
+    const [allQuery] = vi.mocked(fetchMoviesList).mock.calls.at(-1)!;
+    expect(allQuery).toEqual(
+      expect.objectContaining({
+        country: "KR",
+        countryName: "South Korea",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "all",
+        page: 1,
+      }),
+    );
+    expect(allQuery).not.toHaveProperty("genre");
+    expect(wrapper.text()).toContain("All Titles · South Korea");
   });
 
-  it("switches Home Trending and Popular periods", async () => {
+  it("switches Home Trending period", async () => {
     const wrapper = mount(App);
     await settle();
 
@@ -921,19 +991,7 @@ describe("Movies app", () => {
       expect.objectContaining({ kind: "trending-tv", limit: 12, period: "day" }),
       expect.anything(),
     );
-
-    vi.mocked(fetchMoviesList).mockClear();
-    await wrapper.get('[aria-label="Popular period"] button[data-value="month"]').trigger("click");
-    await settle();
-
-    expect(fetchMoviesList).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "popular-movie", limit: 12, period: "month" }),
-      expect.anything(),
-    );
-    expect(fetchMoviesList).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "popular-tv", limit: 12, period: "month" }),
-      expect.anything(),
-    );
+    expect(wrapper.find('[aria-label="Popular period"]').exists()).toBe(false);
   });
 
   it("keeps Home content mounted while a period refresh is loading", async () => {

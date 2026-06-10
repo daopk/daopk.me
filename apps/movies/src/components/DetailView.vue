@@ -147,7 +147,10 @@ function startWatching(): void {
 }
 
 .movies-detail__status {
+  box-sizing: border-box;
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
-    var(--space-md) 0;
+    auto 0;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding-inline: var(--movies-content-outer-padding-inline, var(--space-md));
 }
 </style>

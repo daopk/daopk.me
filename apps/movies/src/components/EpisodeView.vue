@@ -231,17 +231,22 @@ async function loadEpisode(): Promise<void> {
 }
 
 .movies-episode__status {
+  box-sizing: border-box;
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
-    var(--space-md) 0;
+    auto 0;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding-inline: var(--movies-content-outer-padding-inline, var(--space-md));
 }
 
 .movies-episode__content {
+  box-sizing: border-box;
   display: grid;
   gap: var(--space-xl);
+  inline-size: 100%;
   margin-inline: auto;
-  max-inline-size: 1100px;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
   padding: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
-    var(--space-lg) clamp(var(--space-xl), 10vh, 96px);
+    var(--movies-content-outer-padding-inline, var(--space-lg)) clamp(var(--space-xl), 10vh, 96px);
 }
 
 .movies-episode__hero {
@@ -396,12 +401,6 @@ async function loadEpisode(): Promise<void> {
   .movies-episode__hero {
     align-items: start;
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 700px) {
-  .movies-episode__content {
-    padding-inline: var(--space-md);
   }
 }
 </style>

@@ -265,8 +265,11 @@ defineExpose({
 }
 
 .movies-watch__status {
+  box-sizing: border-box;
   margin: var(--movies-toolbar-content-offset, calc(var(--control-height-md) + var(--space-xl)))
-    var(--space-md) 0;
+    auto 0;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding-inline: var(--movies-content-outer-padding-inline, var(--space-md));
 }
 
 .movies-watch__content {
@@ -282,11 +285,14 @@ defineExpose({
 }
 
 .movies-watch__episode-info {
+  box-sizing: border-box;
   display: grid;
   gap: var(--space-xs);
-  inline-size: min(100%, 1100px);
+  inline-size: 100%;
   margin-inline: auto;
-  padding: var(--space-lg) var(--space-lg) clamp(var(--space-xl), 10vh, 96px);
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding: var(--space-lg) var(--movies-content-outer-padding-inline, var(--space-lg))
+    clamp(var(--space-xl), 10vh, 96px);
 }
 
 .movies-watch__episode-eyebrow,
@@ -311,11 +317,5 @@ defineExpose({
   line-height: var(--leading-relaxed);
   margin: 0;
   max-inline-size: 78ch;
-}
-
-@media (max-width: 700px) {
-  .movies-watch__episode-info {
-    padding-inline: var(--space-md);
-  }
 }
 </style>
