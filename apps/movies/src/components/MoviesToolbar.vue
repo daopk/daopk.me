@@ -19,6 +19,7 @@ interface MoviesToolbarProps {
   canGoBack?: boolean;
   canGoForward?: boolean;
   canGoHome?: boolean;
+  searchDialogContainer?: HTMLElement | null;
   showClose?: boolean;
 }
 
@@ -28,6 +29,7 @@ const props = withDefaults(defineProps<MoviesToolbarProps>(), {
   canGoBack: false,
   canGoForward: false,
   canGoHome: false,
+  searchDialogContainer: null,
   showClose: false,
 });
 
@@ -52,6 +54,7 @@ const activeCatalogQuery = computed(() =>
 const filterMedia = computed<MovieMediaType>(() =>
   activeCatalogQuery.value?.media === "tv" ? "tv" : "movie",
 );
+const searchDialogPortalTarget = computed(() => props.searchDialogContainer ?? "body");
 
 watch(
   () => props.activeSearch,
@@ -184,7 +187,14 @@ function selectMedia(media: MovieMediaType): void {
       />
     </div>
 
-    <Dialog :open="isSearchDialogOpen" title="Search" @update:open="setSearchDialogOpen">
+    <Dialog
+      :open="isSearchDialogOpen"
+      title="Search"
+      :portal-to="searchDialogPortalTarget"
+      scope="container"
+      :modal="false"
+      @update:open="setSearchDialogOpen"
+    >
       <form class="movies-toolbar__search-form" role="search" @submit.prevent="submitSearch">
         <TextInput
           ref="searchInput"

@@ -1125,19 +1125,24 @@ describe("Movies app", () => {
     await wrapper.get(".movies-toolbar__search-button").trigger("click");
     await settle();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const moviesApp = wrapper.get(".movies-app").element;
+    const dialog = moviesApp.querySelector('[role="dialog"]');
+    const overlay = moviesApp.querySelector(".ds-dialog__overlay");
     expect(dialog).toBeInstanceOf(HTMLElement);
+    expect(overlay).toBeInstanceOf(HTMLElement);
+    expect(dialog?.classList.contains("ds-dialog__content--container")).toBe(true);
+    expect(overlay?.classList.contains("ds-dialog__overlay--container")).toBe(true);
     expect(dialog?.querySelector("h2")?.textContent).toBe("Search");
     expect(dialog?.textContent).not.toContain("Movies and TV");
 
-    const searchInput = document.body.querySelector<HTMLInputElement>(
+    const searchInput = moviesApp.querySelector<HTMLInputElement>(
       'input[type="search"][aria-label="Search movies"]',
     );
     expect(searchInput).toBeInstanceOf(HTMLInputElement);
     searchInput!.value = "Fight";
     searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
 
-    const searchForm = document.body.querySelector<HTMLFormElement>('form[role="search"]');
+    const searchForm = moviesApp.querySelector<HTMLFormElement>('form[role="search"]');
     expect(searchForm).toBeInstanceOf(HTMLFormElement);
     searchForm!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await settle();
@@ -1152,7 +1157,7 @@ describe("Movies app", () => {
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Search: Fight");
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(moviesApp.querySelector('[role="dialog"]')).toBeNull();
 
     const moviesTab = wrapper
       .findAll(".movies-list__tabs button")

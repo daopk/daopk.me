@@ -16,6 +16,9 @@ interface DialogProps {
   /** Optional description — wires `aria-describedby` when present. */
   description?: string;
   variant?: "modal" | "sheet";
+  portalTo?: string | HTMLElement;
+  scope?: "viewport" | "container";
+  modal?: boolean;
   /**
    * When `false`, ESC + overlay-click do NOT close the dialog. Used
    * by the permission prompt to force an explicit user decision —
@@ -27,6 +30,9 @@ interface DialogProps {
 const props = withDefaults(defineProps<DialogProps>(), {
   description: undefined,
   variant: "modal",
+  portalTo: "body",
+  scope: "viewport",
+  modal: true,
   dismissible: true,
 });
 
@@ -53,15 +59,32 @@ function onInteractOutside(event: Event): void {
 function onEscapeKeyDown(event: Event): void {
   if (!props.dismissible) event.preventDefault();
 }
+
+function onOverlayPointerDown(): void {
+  if (props.dismissible) {
+    onUpdateOpen(false);
+  }
+}
 </script>
 
 <template>
-  <DialogRoot :open="open" @update:open="onUpdateOpen">
-    <DialogPortal>
-      <DialogOverlay class="ds-dialog__overlay" :class="`ds-dialog__overlay--${variant}`" />
+  <DialogRoot :open="open" :modal="modal" @update:open="onUpdateOpen">
+    <DialogPortal :to="portalTo">
+      <DialogOverlay
+        v-if="modal"
+        class="ds-dialog__overlay"
+        :class="[`ds-dialog__overlay--${variant}`, `ds-dialog__overlay--${scope}`]"
+      />
+      <div
+        v-else-if="open"
+        class="ds-dialog__overlay"
+        :class="[`ds-dialog__overlay--${variant}`, `ds-dialog__overlay--${scope}`]"
+        aria-hidden="true"
+        @pointerdown="onOverlayPointerDown"
+      />
       <DialogContent
         class="ds-dialog__content"
-        :class="`ds-dialog__content--${variant}`"
+        :class="[`ds-dialog__content--${variant}`, `ds-dialog__content--${scope}`]"
         v-bind="contentA11yAttrs"
         @interact-outside="onInteractOutside"
         @escape-key-down="onEscapeKeyDown"
@@ -80,9 +103,16 @@ function onEscapeKeyDown(event: Event): void {
 .ds-dialog__overlay {
   background-color: color-mix(in oklab, var(--color-bg) 60%, transparent);
   inset: 0;
-  position: fixed;
   z-index: var(--dialog-overlay-z);
   animation: ds-dialog-overlay-in 160ms var(--ease) both;
+}
+
+.ds-dialog__overlay--viewport {
+  position: fixed;
+}
+
+.ds-dialog__overlay--container {
+  position: absolute;
 }
 
 .ds-dialog__overlay--sheet {
@@ -93,7 +123,6 @@ function onEscapeKeyDown(event: Event): void {
   background-color: var(--color-bg-elevated);
   box-shadow: var(--shadow-lg);
   color: var(--color-fg);
-  position: fixed;
   z-index: var(--dialog-content-z);
   outline: none;
 
@@ -101,6 +130,14 @@ function onEscapeKeyDown(event: Event): void {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
+}
+
+.ds-dialog__content--viewport {
+  position: fixed;
+}
+
+.ds-dialog__content--container {
+  position: absolute;
 }
 
 .ds-dialog__content--modal {
@@ -112,6 +149,10 @@ function onEscapeKeyDown(event: Event): void {
   padding: var(--space-lg);
   transform: translate(-50%, -50%) scale(1);
   animation: ds-dialog-modal-in 180ms var(--ease) both;
+}
+
+.ds-dialog__content--modal.ds-dialog__content--container {
+  inline-size: min(420px, calc(100% - 32px));
 }
 
 .ds-dialog__content--sheet {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { getCurrentInstance, inject, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 
 import { AppFrame } from "@daopk/kit";
 import { AppContextInjectionKey, KernelInjectionKey } from "@daopk/sdk";
@@ -19,9 +19,14 @@ type WatchViewInstance = InstanceType<typeof WatchView> & {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
 };
 
+interface AppFrameRef {
+  element: HTMLElement | null;
+}
+
 const ctx = inject(AppContextInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
-const appInstance = getCurrentInstance();
+const rootRef = useTemplateRef<AppFrameRef>("rootRef");
+const rootElement = computed(() => rootRef.value?.element ?? null);
 const watchViewRef = ref<WatchViewInstance | null>(null);
 const {
   activeSearch,
@@ -46,8 +51,7 @@ const {
 } = useMoviesNavigation({ appContext: ctx, kernel });
 
 function moviesAppRoot(): Element | null {
-  const root = appInstance?.proxy?.$el;
-  return root instanceof Element ? root : null;
+  return rootElement.value;
 }
 
 function shouldHandleMoviesKeyboardEvent(event: KeyboardEvent): boolean {
@@ -96,6 +100,7 @@ onUnmounted(() => {
 
 <template>
   <AppFrame
+    ref="rootRef"
     class="movies-app"
     layout="grid"
     :safe-area="false"
@@ -111,6 +116,7 @@ onUnmounted(() => {
       :can-go-home="canGoHome"
       :show-close="showCloseButton"
       :active-search="activeSearch"
+      :search-dialog-container="rootElement"
       @back="goBack"
       @close="closeApp"
       @forward="goForward"
