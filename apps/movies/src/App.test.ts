@@ -467,9 +467,21 @@ describe("Movies app", () => {
     expect(wrapper.text()).not.toContain("Current");
     expect(wrapper.text()).not.toContain("Now Playing");
     expect(wrapper.text()).not.toContain("Airing Today");
+    expect(wrapper.text()).toContain("Countries");
+    expect(wrapper.text()).toContain("South Korea");
+    expect(wrapper.text()).toContain("China");
+    expect(wrapper.text()).toContain("Genres");
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.find('[aria-label="View all Trending Movies"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="View all Trending TV"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Countries South Korea"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Countries China"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Countries United States"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Countries United Kingdom"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Genres Animation"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Genres Action"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Genres Comedy"]').exists()).toBe(true);
+    expect(wrapper.find('[aria-label="View all Genres Science Fiction"]').exists()).toBe(true);
     expect(wrapper.find('[aria-label="View all Now Playing"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="View all Airing Today"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="View all Popular Movies"]').exists()).toBe(false);
@@ -484,6 +496,86 @@ describe("Movies app", () => {
     expect(wrapper.find('button[aria-label="Country"]').exists()).toBe(false);
     expect(fetchMoviesList).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "trending-movie", limit: 6, period: "week" }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "KR",
+        countryName: "South Korea",
+        limit: 12,
+        media: "all",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "US",
+        countryName: "United States of America",
+        limit: 12,
+        media: "all",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "GB",
+        countryName: "United Kingdom",
+        limit: 12,
+        media: "all",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        country: "CN",
+        countryName: "China",
+        limit: 12,
+        media: "all",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        genre: 16,
+        genreName: "Animation",
+        limit: 12,
+        media: "movie",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        genre: 28,
+        genreName: "Action",
+        limit: 12,
+        media: "movie",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        genre: 35,
+        genreName: "Comedy",
+        limit: 12,
+        media: "movie",
+        sort: "top-rated",
+      }),
+      expect.anything(),
+    );
+    expect(fetchMoviesList).toHaveBeenCalledWith(
+      expect.objectContaining({
+        genre: 878,
+        genreName: "Science Fiction",
+        limit: 12,
+        media: "movie",
+        sort: "top-rated",
+      }),
       expect.anything(),
     );
     expect(

@@ -206,7 +206,7 @@ export interface MoviesPeriodOption {
 
 export interface MoviesRowGroupConfig {
   readonly defaultPeriod?: MoviesListPeriod;
-  readonly id: "trending";
+  readonly id: "countries" | "genres" | "trending";
   readonly periodOptions?: readonly MoviesPeriodOption[];
   readonly rows: readonly MoviesRowConfig[];
   readonly title: string;
@@ -225,6 +225,98 @@ export const HOME_DISCOVERY_GROUPS: readonly MoviesRowGroupConfig[] = [
       { id: "trending-tv", title: "TV", query: { kind: "trending-tv" } },
     ],
     title: "Trending",
+  },
+  {
+    id: "countries",
+    rows: [
+      {
+        id: "south-korea-all-titles",
+        title: "South Korea",
+        query: {
+          country: "KR",
+          countryName: "South Korea",
+          media: "all",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "china-all-titles",
+        title: "China",
+        query: {
+          country: "CN",
+          countryName: "China",
+          media: "all",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "united-states-all-titles",
+        title: "United States",
+        query: {
+          country: "US",
+          countryName: "United States of America",
+          media: "all",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "united-kingdom-all-titles",
+        title: "United Kingdom",
+        query: {
+          country: "GB",
+          countryName: "United Kingdom",
+          media: "all",
+          sort: "top-rated",
+        },
+      },
+    ],
+    title: "Countries",
+  },
+  {
+    id: "genres",
+    rows: [
+      {
+        id: "action-movies",
+        title: "Action",
+        query: {
+          genre: 28,
+          genreName: "Action",
+          media: "movie",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "comedy-movies",
+        title: "Comedy",
+        query: {
+          genre: 35,
+          genreName: "Comedy",
+          media: "movie",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "animation-movies",
+        title: "Animation",
+        query: {
+          genre: 16,
+          genreName: "Animation",
+          media: "movie",
+          sort: "top-rated",
+        },
+      },
+      {
+        id: "science-fiction-movies",
+        title: "Science Fiction",
+        query: {
+          genre: 878,
+          genreName: "Science Fiction",
+          media: "movie",
+          sort: "top-rated",
+        },
+      },
+    ],
+    title: "Genres",
   },
 ];
 
