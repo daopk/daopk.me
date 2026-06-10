@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
-import { EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
+import { EmptyState, ScrollArea, Spinner, StatusBanner } from "@daopk/kit";
 import { Search } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
-import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import MovieCard from "./MovieCard.vue";
 import {
   DEFAULT_MOVIES_LIST_LIMIT,
@@ -531,36 +530,44 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
         </StatusBanner>
       </header>
 
-      <MoviesLoadingOverlay v-if="loadingInitial" />
-      <StatusBanner v-else-if="state === 'error'" tone="error" role="alert">
-        Could not load titles. Try again.
-      </StatusBanner>
-
-      <EmptyState
-        v-else-if="state === 'ready' && items.length === 0"
-        title="No titles found"
-        description="Try another keyword or filter."
-      />
-
-      <template v-else>
-        <ul class="movies-list__grid">
-          <li v-for="movie in items" :key="movie.id" class="movies-list__item">
-            <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
-          </li>
-        </ul>
-
-        <div class="movies-list__footer">
-          <Button
-            v-if="canLoadMore"
-            class="movies-list__load-more"
-            size="sm"
-            :loading="state === 'loading'"
-            @click="loadMore"
-          >
-            Load more
-          </Button>
+      <section
+        class="movies-list__results"
+        :aria-busy="loadingInitial ? 'true' : 'false'"
+        aria-live="polite"
+      >
+        <div v-if="loadingInitial" class="movies-list__loading">
+          <Spinner size="lg" label="Loading Movies" />
         </div>
-      </template>
+        <StatusBanner v-else-if="state === 'error'" tone="error" role="alert">
+          Could not load titles. Try again.
+        </StatusBanner>
+
+        <EmptyState
+          v-else-if="state === 'ready' && items.length === 0"
+          title="No titles found"
+          description="Try another keyword or filter."
+        />
+
+        <template v-else>
+          <ul class="movies-list__grid">
+            <li v-for="movie in items" :key="movie.id" class="movies-list__item">
+              <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
+            </li>
+          </ul>
+
+          <div class="movies-list__footer">
+            <Button
+              v-if="canLoadMore"
+              class="movies-list__load-more"
+              size="sm"
+              :loading="state === 'loading'"
+              @click="loadMore"
+            >
+              Load more
+            </Button>
+          </div>
+        </template>
+      </section>
     </div>
   </ScrollArea>
 </template>
@@ -596,6 +603,28 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
   font-size: var(--font-size-2xl);
   line-height: var(--leading-tight);
   margin: 0;
+}
+
+.movies-list__results {
+  display: grid;
+  min-block-size: clamp(220px, 42vh, 520px);
+  min-inline-size: 0;
+}
+
+.movies-list__loading {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  min-block-size: clamp(220px, 42vh, 520px);
+}
+
+.movies-list__loading :deep(.ds-kit-spinner) {
+  block-size: 40px;
+  inline-size: 40px;
+}
+
+.movies-list__loading :deep(.ds-kit-spinner__ring) {
+  border-width: 3px;
 }
 
 .movies-list__grid {

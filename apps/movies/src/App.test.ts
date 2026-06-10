@@ -1116,6 +1116,83 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Day Shift");
   });
 
+  it("keeps catalog controls visible while list results are loading", async () => {
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    let resolveCatalogList!: (result: MoviesListResult) => void;
+    const catalogListResult = new Promise<MoviesListResult>((resolve) => {
+      resolveCatalogList = resolve;
+    });
+    vi.mocked(fetchMoviesList).mockImplementation(() => catalogListResult);
+
+    await wrapper
+      .findAll(".movies-toolbar__menu-button")
+      .find((button) => button.text().trim() === "TV Shows")!
+      .trigger("click");
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("TV Shows");
+    expect(wrapper.find(".movies-list__filters").exists()).toBe(true);
+    expect(wrapper.find('select[aria-label="Type"]').exists()).toBe(true);
+    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
+    expect(wrapper.find('.movies-list__results[aria-busy="true"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-list__loading").exists()).toBe(true);
+
+    resolveCatalogList(list([movie({ id: "tv-1399", mediaType: "tv", name: "Planet Cinema" })]));
+    await settle();
+
+    expect(wrapper.find('.movies-list__results[aria-busy="false"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-list__loading").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Planet Cinema");
+  });
+
+  it("keeps search controls visible while search results are loading", async () => {
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    await wrapper.get(".movies-toolbar__search-button").trigger("click");
+    await settle();
+
+    let resolveSearchList!: (result: MoviesListResult) => void;
+    const searchListResult = new Promise<MoviesListResult>((resolve) => {
+      resolveSearchList = resolve;
+    });
+    vi.mocked(fetchMoviesList).mockImplementation(() => searchListResult);
+
+    const moviesApp = wrapper.get(".movies-app").element;
+    const searchInput = moviesApp.querySelector<HTMLInputElement>(
+      'input[type="search"][aria-label="Search movies"]',
+    );
+    expect(searchInput).toBeInstanceOf(HTMLInputElement);
+    searchInput!.value = "Matrix";
+    searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const searchForm = moviesApp.querySelector<HTMLFormElement>('form[role="search"]');
+    expect(searchForm).toBeInstanceOf(HTMLFormElement);
+    searchForm!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Search: Matrix");
+    expect(wrapper.find(".movies-list__search-panel").exists()).toBe(true);
+    expect(
+      wrapper.find('.movies-list__search-input-shell input[aria-label="Keyword"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find(".movies-list__tabs").exists()).toBe(true);
+    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(false);
+    expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
+    expect(wrapper.find('.movies-list__results[aria-busy="true"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-list__loading").exists()).toBe(true);
+
+    resolveSearchList(list([movie({ id: "movie-603", name: "The Matrix", tmdbId: 603 })]));
+    await settle();
+
+    expect(wrapper.find('.movies-list__results[aria-busy="false"]').exists()).toBe(true);
+    expect(wrapper.find(".movies-list__loading").exists()).toBe(false);
+    expect(wrapper.text()).toContain("The Matrix");
+  });
+
   it("opens a clear keyword search list from toolbar search and switches media tabs", async () => {
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
