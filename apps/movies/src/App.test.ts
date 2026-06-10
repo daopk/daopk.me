@@ -1116,11 +1116,11 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Day Shift");
   });
 
-  it("opens a keyword List Page from toolbar search and switches media tabs", async () => {
+  it("opens a clear keyword search list from toolbar search and switches media tabs", async () => {
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
 
-    expect(wrapper.find('input[type="search"]').exists()).toBe(false);
+    expect(wrapper.find(".movies-list__search-panel").exists()).toBe(false);
 
     await wrapper.get(".movies-toolbar__search-button").trigger("click");
     await settle();
@@ -1159,6 +1159,30 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Search: Fight");
     expect(moviesApp.querySelector('[role="dialog"]')).toBeNull();
 
+    const keywordInput = wrapper.get<HTMLInputElement>(
+      '.movies-list__search-input-shell input[type="search"][aria-label="Keyword"]',
+    );
+    expect(keywordInput.element.value).toBe("Fight");
+    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(false);
+    expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
+    expect(wrapper.find('select[aria-label="Sort"]').exists()).toBe(false);
+
+    keywordInput.element.value = "Matrix";
+    keywordInput.element.dispatchEvent(new Event("input", { bubbles: true }));
+    await wrapper.get(".movies-list__search-form").trigger("submit");
+    await settle();
+
+    expect(fetchMoviesList).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        keyword: "Matrix",
+        limit: DEFAULT_MOVIES_LIST_LIMIT,
+        media: "all",
+        page: 1,
+      }),
+      expect.anything(),
+    );
+    expect(wrapper.text()).toContain("Search: Matrix");
+
     const moviesTab = wrapper
       .findAll(".movies-list__tabs button")
       .find((button) => button.text().trim() === "Movies");
@@ -1168,14 +1192,14 @@ describe("Movies app", () => {
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        keyword: "Fight",
+        keyword: "Matrix",
         limit: DEFAULT_MOVIES_LIST_LIMIT,
         media: "movie",
         page: 1,
       }),
       expect.anything(),
     );
-    expect(wrapper.text()).toContain("Search Movies: Fight");
+    expect(wrapper.text()).toContain("Search Movies: Matrix");
   });
 
   it("opens Detail on canonical TMDB routes and keeps Watch hidden", async () => {

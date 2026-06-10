@@ -2,6 +2,7 @@
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
+import { Search } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
@@ -79,9 +80,11 @@ const filtersAbortControllers: Record<MovieMediaType, AbortController | null> = 
 };
 
 const title = computed(() => listTitleForQuery(props.query));
+const searchKeyword = computed(() => props.query.keyword?.trim() ?? "");
+const searchDraft = ref(searchKeyword.value);
 const activeSearchMedia = computed(() => props.query.media ?? "all");
 const searchMediaTabs = Object.entries(SEARCH_MEDIA_LABELS) as Array<[MoviesSearchMedia, string]>;
-const isSearchList = computed(() => (props.query.keyword?.trim().length ?? 0) > 0);
+const isSearchList = computed(() => searchKeyword.value.length > 0);
 const catalogMedia = computed<MoviesSearchMedia>(() => catalogMediaForQuery(props.query));
 const combinedFilters = computed<MoviesFiltersResult | null>(() =>
   combineFilters(filtersByMedia.value.movie, filtersByMedia.value.tv),
@@ -138,6 +141,13 @@ watch(
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => props.query.keyword,
+  (keyword) => {
+    searchDraft.value = keyword?.trim() ?? "";
+  },
 );
 
 watch(
@@ -235,7 +245,32 @@ async function loadMore(): Promise<void> {
 }
 
 function mediaQuery(media: MoviesSearchMedia): MoviesListQuery {
+  if (isSearchList.value) {
+    return searchQuery(searchDraft.value.trim() || searchKeyword.value, media);
+  }
+
   return { ...props.query, media, page: 1 };
+}
+
+function searchQuery(
+  keyword: string,
+  media: MoviesSearchMedia = activeSearchMedia.value,
+): MoviesListQuery {
+  return {
+    keyword,
+    limit: props.query.limit ?? DEFAULT_MOVIES_LIST_LIMIT,
+    media,
+    page: 1,
+  };
+}
+
+function submitSearchKeyword(): void {
+  const keyword = searchDraft.value.trim();
+  if (keyword.length === 0) {
+    return;
+  }
+
+  emit("open-list", searchQuery(keyword));
 }
 
 function catalogQuery(next: Partial<MoviesListQuery> = {}): MoviesListQuery {
@@ -394,7 +429,37 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
     <div class="movies-list__content">
       <header class="movies-list__header">
         <h1>{{ title }}</h1>
-        <div v-if="!query.keyword" class="movies-list__filters" aria-label="Catalog filters">
+        <div v-if="isSearchList" class="movies-list__search-panel" aria-label="Search results">
+          <form
+            class="movies-list__search-form"
+            role="search"
+            @submit.prevent="submitSearchKeyword"
+          >
+            <div class="movies-list__search-input-shell">
+              <Search class="movies-list__search-input-icon" aria-hidden="true" />
+              <input
+                v-model="searchDraft"
+                type="search"
+                aria-label="Keyword"
+                placeholder="Search titles"
+                autocomplete="off"
+                @search="submitSearchKeyword"
+              />
+            </div>
+          </form>
+          <div class="movies-list__tabs" aria-label="Search media type">
+            <Button
+              v-for="[media, label] in searchMediaTabs"
+              :key="media"
+              size="md"
+              :variant="activeSearchMedia === media ? 'primary' : 'secondary'"
+              @click="$emit('open-list', mediaQuery(media))"
+            >
+              {{ label }}
+            </Button>
+          </div>
+        </div>
+        <div v-else class="movies-list__filters" aria-label="Catalog filters">
           <label class="movies-list__filter-field">
             <span>Type</span>
             <select
@@ -461,20 +526,9 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
             </select>
           </label>
         </div>
-        <StatusBanner v-if="!query.keyword && currentFilterState === 'error'" tone="warning">
+        <StatusBanner v-if="!isSearchList && currentFilterState === 'error'" tone="warning">
           Could not load filters. You can still browse the default list.
         </StatusBanner>
-        <div v-if="query.keyword" class="movies-list__tabs" aria-label="Search media type">
-          <Button
-            v-for="[media, label] in searchMediaTabs"
-            :key="media"
-            size="sm"
-            :variant="activeSearchMedia === media ? 'primary' : 'secondary'"
-            @click="$emit('open-list', mediaQuery(media))"
-          >
-            {{ label }}
-          </Button>
-        </div>
       </header>
 
       <MoviesLoadingOverlay v-if="loadingInitial" />
@@ -553,10 +607,126 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
   padding: 0;
 }
 
-.movies-list__tabs {
+.movies-list__search-panel {
+  align-items: center;
+  column-gap: var(--space-md);
   display: flex;
   flex-wrap: wrap;
+  row-gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.movies-list__search-form {
+  flex: 1 1 420px;
+  inline-size: auto;
+  max-inline-size: 680px;
+  min-inline-size: min(100%, 320px);
+}
+
+.movies-list__tabs {
+  align-items: center;
+  align-self: center;
+  background: color-mix(in srgb, var(--color-bg-elevated) 32%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 8%, transparent);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 7%, transparent);
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   gap: var(--space-xs);
+  inline-size: fit-content;
+  justify-content: flex-start;
+  margin-inline-start: auto;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-2xs);
+}
+
+.movies-list__tabs :deep(.ds-button) {
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  min-block-size: calc(var(--control-height-md) + 2px);
+  padding-inline: var(--space-md);
+}
+
+.movies-list__tabs :deep(.ds-button--secondary) {
+  background: transparent;
+  border-color: transparent;
+  color: color-mix(in srgb, var(--color-fg) 70%, transparent);
+}
+
+.movies-list__tabs :deep(.ds-button--secondary:hover),
+.movies-list__tabs :deep(.ds-button--secondary:focus-visible) {
+  background: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
+  border-color: color-mix(in srgb, var(--color-fg) 10%, transparent);
+  color: var(--color-fg);
+}
+
+.movies-list__tabs :deep(.ds-button--primary) {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
+    0 6px 14px -12px color-mix(in srgb, var(--color-accent) 62%, black);
+}
+
+.movies-list__tabs :deep(.ds-button:focus-visible) {
+  outline-offset: 1px;
+}
+
+.movies-list__search-form,
+.movies-list__tabs {
+  min-inline-size: 0;
+}
+
+.movies-list__search-input-shell {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-bg-elevated) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-fg) 10%, transparent);
+  border-radius: var(--radius-full);
+  display: grid;
+  gap: var(--space-sm);
+  grid-template-columns: auto minmax(0, 1fr);
+  min-block-size: calc(var(--control-height-lg) + 4px);
+  min-inline-size: 0;
+  padding: 0 var(--space-md);
+  transition:
+    background-color var(--duration-base) var(--ease),
+    border-color var(--duration-base) var(--ease),
+    box-shadow var(--duration-base) var(--ease);
+}
+
+.movies-list__search-input-shell:focus-within {
+  background: color-mix(in srgb, var(--color-bg-elevated) 58%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.movies-list__search-input-icon {
+  block-size: 16px;
+  color: color-mix(in srgb, var(--color-fg-muted) 84%, transparent);
+  inline-size: 16px;
+  margin-inline-start: 2px;
+}
+
+.movies-list__search-input-shell input {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--color-fg);
+  font: inherit;
+  min-block-size: var(--control-height-md);
+  min-inline-size: 0;
+  padding: 0;
+}
+
+.movies-list__search-input-shell input::placeholder {
+  color: color-mix(in srgb, var(--color-fg-muted) 72%, transparent);
+}
+
+.movies-list__search-input-shell input:focus-visible {
+  outline: 0;
 }
 
 .movies-list__filters {
@@ -646,6 +816,31 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
 }
 
 @media (max-width: 640px) {
+  .movies-list__search-panel {
+    align-items: stretch;
+    gap: var(--space-sm);
+  }
+
+  .movies-list__search-form {
+    flex-basis: 100%;
+    inline-size: 100%;
+    max-inline-size: none;
+  }
+
+  .movies-list__tabs {
+    align-self: stretch;
+    inline-size: 100%;
+    justify-content: stretch;
+    margin-inline-start: 0;
+    padding: var(--space-xs);
+  }
+
+  .movies-list__tabs :deep(.ds-button) {
+    flex: 1 1 0;
+    min-block-size: var(--control-height-lg);
+    padding-inline: var(--space-sm);
+  }
+
   .movies-list__filters {
     grid-template-columns: 1fr;
   }

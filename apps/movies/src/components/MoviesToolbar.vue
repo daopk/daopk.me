@@ -153,12 +153,24 @@ function selectMedia(media: MovieMediaType): void {
     </nav>
 
     <nav class="movies-toolbar__catalog" aria-label="Movies catalog">
-      <button type="button" class="movies-toolbar__menu-button" @click="selectMedia('movie')">
+      <button
+        type="button"
+        class="movies-toolbar__menu-button"
+        aria-label="Movies"
+        title="Movies"
+        @click="selectMedia('movie')"
+      >
         <Film class="movies-toolbar__menu-icon" aria-hidden="true" />
         <span>Movies</span>
       </button>
 
-      <button type="button" class="movies-toolbar__menu-button" @click="selectMedia('tv')">
+      <button
+        type="button"
+        class="movies-toolbar__menu-button"
+        aria-label="TV Shows"
+        title="TV Shows"
+        @click="selectMedia('tv')"
+      >
         <Tv class="movies-toolbar__menu-icon" aria-hidden="true" />
         <span>TV Shows</span>
       </button>
@@ -407,15 +419,38 @@ function selectMedia(media: MovieMediaType): void {
 
 @media (max-width: 520px) {
   .movies-toolbar {
+    gap: var(--space-2xs);
     grid-template-columns: auto minmax(0, 1fr) auto;
+    padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
+    padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
   }
 
   .movies-toolbar--has-close {
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  .movies-toolbar__history {
+    gap: 0;
+  }
+
+  .movies-toolbar__catalog {
+    gap: var(--space-2xs);
+    justify-content: center;
+  }
+
   .movies-toolbar__menu-button {
-    max-inline-size: 180px;
+    inline-size: var(--control-height-md);
+    justify-content: center;
+    max-inline-size: var(--control-height-md);
+    padding: 0;
+  }
+
+  .movies-toolbar__menu-button span {
+    display: none;
+  }
+
+  .movies-toolbar__actions {
+    gap: var(--space-2xs);
   }
 }
 
