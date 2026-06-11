@@ -3,6 +3,7 @@ import { nextTick, ref, watch } from "vue";
 
 import { Check as CheckIcon, Trash2 as TrashIcon } from "~/icons/lucide";
 
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { previewStyleForTile, type BackgroundTile } from "./wallpaperTiles";
 
 const props = defineProps<{
@@ -15,6 +16,7 @@ const emit = defineEmits<{
   remove: [id: string, event: Event];
 }>();
 
+const { t } = useSettingsI18n();
 const tileButtonRefs = ref<(HTMLElement | null)[]>([]);
 const focusedTileIndex = ref<number>(0);
 
@@ -103,7 +105,7 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
         v-if="tile.kind === 'user'"
         type="button"
         class="background__tile-remove"
-        :aria-label="`Delete wallpaper ${tile.name}`"
+        :aria-label="t('settings.background.deleteWallpaper', { name: tile.name })"
         @click="(e) => emit('remove', tile.id, e)"
       >
         <TrashIcon aria-hidden="true" />

@@ -34,6 +34,8 @@ describe("useSettingsStore", () => {
     const s = useSettingsStore();
     s.hydrate();
 
+    expect(s.locale).toBe("en");
+    expect(s.localeMode).toBe("auto");
     expect(s.theme).toBe("system");
     expect(s.bootCount).toBe(0);
     expect(s.shellOverride).toBeNull();
@@ -70,6 +72,138 @@ describe("useSettingsStore", () => {
     expect(envelope.data.dockAutoHide).toBe(true);
 
     vi.useRealTimers();
+  });
+
+  it("setLocale persists supported locales + emits onSettingsChanged", async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+
+    const s = useSettingsStore();
+    s.hydrate({ onSettingsChanged: onChange });
+
+    s.setLocale("vi");
+    expect(s.locale).toBe("vi");
+    expect(s.localeMode).toBe("auto");
+    expect(onChange).toHaveBeenCalledWith("locale");
+
+    vi.advanceTimersByTime(250);
+    await nextTick();
+
+    const raw = localStorage.getItem(SETTINGS_PHYSICAL_STORAGE_KEY);
+    const envelope = JSON.parse(raw as string) as { data: { locale: string } };
+    expect(envelope.data.locale).toBe("vi");
+
+    vi.useRealTimers();
+  });
+
+  it("setLocaleMode persists + emits onSettingsChanged", async () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+
+    const s = useSettingsStore();
+    s.hydrate({ onSettingsChanged: onChange });
+
+    s.setLocaleMode("manual");
+    expect(s.localeMode).toBe("manual");
+    expect(onChange).toHaveBeenCalledWith("localeMode");
+
+    vi.advanceTimersByTime(250);
+    await nextTick();
+
+    const raw = localStorage.getItem(SETTINGS_PHYSICAL_STORAGE_KEY);
+    const envelope = JSON.parse(raw as string) as { data: { localeMode: string } };
+    expect(envelope.data.localeMode).toBe("manual");
+
+    vi.useRealTimers();
+  });
+
+  it("hydrates supported locales and coerces invalid locale values to English", () => {
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          locale: "vi",
+          localeMode: "manual",
+        },
+      }),
+    );
+
+    const s = useSettingsStore();
+    s.hydrate();
+
+    expect(s.locale).toBe("vi");
+    expect(s.localeMode).toBe("manual");
+
+    s.dispose();
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          locale: "fr",
+        },
+      }),
+    );
+
+    setActivePinia(createPinia());
+    const next = useSettingsStore();
+    next.hydrate();
+
+    expect(next.locale).toBe("en");
+    expect(next.localeMode).toBe("auto");
+  });
+
+  it("hydrates supported locale modes and falls back invalid values to auto", () => {
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          localeMode: "manual",
+        },
+      }),
+    );
+
+    const s = useSettingsStore();
+    s.hydrate();
+
+    expect(s.localeMode).toBe("manual");
+
+    s.dispose();
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          localeMode: "browser",
+        },
+      }),
+    );
+
+    setActivePinia(createPinia());
+    const next = useSettingsStore();
+    next.hydrate();
+
+    expect(next.localeMode).toBe("auto");
+  });
+
+  it("migrates legacy Vietnamese locale without a mode as manual", () => {
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          locale: "vi",
+        },
+      }),
+    );
+
+    const s = useSettingsStore();
+    s.hydrate();
+
+    expect(s.locale).toBe("vi");
+    expect(s.localeMode).toBe("manual");
   });
 
   it("hydrates dockAutoHide true and coerces invalid values to false", () => {
@@ -175,13 +309,19 @@ describe("useSettingsStore", () => {
     s.hydrate();
 
     s.setDockAutoHide(true);
+    s.setLocale("vi");
+    s.setLocaleMode("manual");
     s.setDockPinnedAppIds(["finder"]);
     expect(s.dockAutoHide).toBe(true);
+    expect(s.locale).toBe("vi");
+    expect(s.localeMode).toBe("manual");
     expect(s.dockPinnedAppIds).toEqual(["finder"]);
 
     s.reset();
 
     expect(s.dockAutoHide).toBe(false);
+    expect(s.locale).toBe("en");
+    expect(s.localeMode).toBe("auto");
     expect(s.dockPinnedAppIds).toEqual(DEFAULT_DOCK_PINNED_APP_IDS);
   });
 

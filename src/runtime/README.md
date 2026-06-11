@@ -63,6 +63,30 @@ import { useKernel, useVfs } from "@daopk/sdk";
 import { AppFrame } from "@daopk/kit";
 ```
 
+### App-Owned Translations
+
+Apps can ship their own locale JSON next to their Vue code and register it from
+the app entry. The shell owns locale selection and fallback behavior; the app
+owns its translation keys and can publish translation updates with its own app
+release.
+
+```ts
+import { registerAppTranslations } from "@daopk/sdk";
+
+import en from "./i18n/en.json";
+import vi from "./i18n/vi.json";
+
+registerAppTranslations("notes", { en, vi });
+```
+
+App components can then read the current effective locale and translate keys:
+
+```ts
+import { useI18n } from "@daopk/sdk";
+
+const { locale, t } = useI18n();
+```
+
 ## Dev vs Preview/Prod
 
 In development, the shell loads workspace packages directly through

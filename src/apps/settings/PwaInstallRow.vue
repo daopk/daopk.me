@@ -3,9 +3,11 @@ import { computed } from "vue";
 import { Download as InstallIcon } from "~/icons/lucide";
 
 import Button from "~/components/ui/Button.vue";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { pwaInstallController } from "~/service-worker/installController";
 
 const state = pwaInstallController.state;
+const { t } = useSettingsI18n();
 
 const isVisible = computed(() => state.value.kind !== "hidden");
 const isNativePrompt = computed(() => state.value.kind === "native-prompt");
@@ -14,9 +16,9 @@ const isPrompting = computed(() => state.value.kind === "native-prompt" && state
 const title = computed(() => {
   switch (state.value.kind) {
     case "native-prompt":
-      return "Install WebOS";
+      return t("settings.pwa.installWebOS");
     case "ios-tip":
-      return "Add to Home Screen";
+      return t("settings.pwa.addToHomeScreen");
     case "hidden":
       return "";
   }
@@ -27,9 +29,9 @@ const title = computed(() => {
 const body = computed(() => {
   switch (state.value.kind) {
     case "native-prompt":
-      return "Open it as a standalone app with offline boot after the first visit.";
+      return t("settings.pwa.nativeBody");
     case "ios-tip":
-      return "In Safari, use Share, then Add to Home Screen.";
+      return t("settings.pwa.iosBody");
     case "hidden":
       return "";
   }
@@ -62,9 +64,9 @@ function dismiss(): void {
         :loading="isPrompting"
         @click="install"
       >
-        Install
+        {{ t("settings.pwa.install") }}
       </Button>
-      <Button variant="ghost" size="sm" @click="dismiss">Later</Button>
+      <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.pwa.later") }}</Button>
     </div>
   </section>
 </template>

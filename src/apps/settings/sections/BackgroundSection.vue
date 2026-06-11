@@ -6,8 +6,11 @@ import { ActionRow, Badge, Panel, SectionHeader, StatusBanner } from "~/componen
 import Button from "~/components/ui/Button.vue";
 import Switch from "~/components/ui/Switch.vue";
 import { useActiveShell } from "~/composables/useActiveShell";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
+import { WALLPAPER_BLOB_CAP_BYTES, WALLPAPER_COUNT_CAP } from "~/core/storage/constants";
 import { useWallpaperStore } from "~/core/wallpaper/WallpaperStore";
+import type { WallpaperUploadResult } from "~/types/wallpaper";
 
 import BackgroundStagePreview from "./background/BackgroundStagePreview.vue";
 import BackgroundTileGrid from "./background/BackgroundTileGrid.vue";
@@ -19,6 +22,7 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 });
 
 const kernel = useKernel();
+const { t } = useSettingsI18n();
 const { shellId } = useActiveShell();
 const wallpaperStore = useWallpaperStore();
 const desktopActiveIdRef = kernel.settings.use("desktopWallpaperActiveId");
@@ -62,7 +66,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 async function handleFile(file: File): Promise<void> {
   // without this short-circuit a second drop could race the first through
   if (isUploading.value) {
-    status.value = { tone: "info", message: "Already processing an image." };
+    status.value = { tone: "info", message: t("settings.background.alreadyProcessing") };
     return;
   }
   status.value = null;
@@ -70,10 +74,13 @@ async function handleFile(file: File): Promise<void> {
   try {
     const result = await wallpaperStore.upload(file);
     if (result.ok) {
-      status.value = { tone: "info", message: `Uploaded "${result.meta.name}".` };
+      status.value = {
+        tone: "info",
+        message: t("settings.background.uploaded", { name: result.meta.name }),
+      };
       setActiveWallpaperId(result.meta.id);
     } else {
-      status.value = { tone: "error", message: result.message };
+      status.value = { tone: "error", message: describeUploadFailure(result) };
     }
   } finally {
     isUploading.value = false;
@@ -130,19 +137,40 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
   }
   await wallpaperStore.remove(id);
 }
+
+function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: false }>): string {
+  switch (result.reason) {
+    case "invalid-type": {
+      const [, type = "unknown"] = result.message.split(": ");
+      return t("settings.background.uploadError.invalidType", { type });
+    }
+    case "too-large":
+      return t("settings.background.uploadError.tooLarge", {
+        size: Math.round(WALLPAPER_BLOB_CAP_BYTES / 1024 / 1024),
+      });
+    case "count-cap":
+      return t("settings.background.uploadError.countCap", { count: WALLPAPER_COUNT_CAP });
+    case "io-error":
+      return t("settings.background.uploadError.io");
+    default: {
+      const _exhaustive: never = result.reason;
+      return _exhaustive;
+    }
+  }
+}
 </script>
 
 <template>
   <article
     class="background"
     :class="{ 'background--drag-over': isDragOver }"
-    aria-label="Background settings"
+    :aria-label="t('settings.background.ariaLabel')"
     @dragenter="onDragEnter"
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <SectionHeader v-if="props.showHeader" size="page" title="Background">
+    <SectionHeader v-if="props.showHeader" size="page" :title="t('settings.background.title')">
       <template #actions>
         <Badge class="background__count">{{ wallpaperCountLabel }}</Badge>
       </template>
@@ -157,15 +185,21 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
 
       <Panel as="aside" class="background__control-panel" variant="elevated" padding="none">
         <div class="background__current">
-          <span id="background-current-label" class="background__meta-label">Current</span>
+          <span id="background-current-label" class="background__meta-label">
+            {{ t("settings.background.current") }}
+          </span>
           <strong class="background__current-name">{{ activeTileName }}</strong>
           <span class="background__current-description">{{ activeTileDescription }}</span>
         </div>
 
         <div class="background__upload-zone">
           <div class="background__upload-copy">
-            <span class="background__meta-label">Personal wallpaper</span>
-            <span class="background__upload-format">PNG, JPG, or WebP</span>
+            <span class="background__meta-label">
+              {{ t("settings.background.personalWallpaper") }}
+            </span>
+            <span class="background__upload-format">
+              {{ t("settings.background.uploadFormat") }}
+            </span>
           </div>
           <Button
             id="background-upload-trigger"
@@ -175,7 +209,11 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
             aria-controls="background-file-input"
             @click="triggerFilePicker"
           >
-            {{ isUploading ? "Processing…" : "Upload image" }}
+            {{
+              isUploading
+                ? t("settings.background.processing")
+                : t("settings.background.uploadImage")
+            }}
           </Button>
           <input
             id="background-file-input"
@@ -192,8 +230,10 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
           <ActionRow as="div" class="background__toggle-row">
             <template #copy>
               <div class="background__toggle-copy">
-                <h3 id="background-blur-label" class="background__group-title">Blur</h3>
-                <p class="background__hint">Soften the wallpaper behind the interface.</p>
+                <h3 id="background-blur-label" class="background__group-title">
+                  {{ t("settings.background.blur") }}
+                </h3>
+                <p class="background__hint">{{ t("settings.background.blurHint") }}</p>
               </div>
             </template>
             <Switch
@@ -220,7 +260,9 @@ async function removeUserTile(id: string, event: Event): Promise<void> {
     <section class="background__group" aria-labelledby="background-wallpaper-label">
       <div class="background__group-header">
         <div>
-          <h3 id="background-wallpaper-label" class="background__group-title">Wallpaper Library</h3>
+          <h3 id="background-wallpaper-label" class="background__group-title">
+            {{ t("settings.background.library") }}
+          </h3>
           <p class="background__hint">{{ wallpaperCountLabel }}</p>
         </div>
       </div>

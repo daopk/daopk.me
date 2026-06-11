@@ -2,9 +2,11 @@
 import { computed } from "vue";
 
 import Button from "~/components/ui/Button.vue";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
 const state = serviceWorkerUpdateController.state;
+const { t } = useSettingsI18n();
 
 const isVisible = computed(() => state.value.kind !== "idle");
 const isActionable = computed(
@@ -17,13 +19,13 @@ const isRefreshing = computed(
 const title = computed(() => {
   switch (state.value.kind) {
     case "update-installing":
-      return "Updating";
+      return t("settings.sw.updating");
     case "update-available":
-      return "Update available";
+      return t("settings.sw.updateAvailable");
     case "refresh-error":
-      return "Update couldn't finish";
+      return t("settings.sw.updateFailed");
     case "offline-ready":
-      return "Ready offline";
+      return t("settings.sw.readyOffline");
     case "idle":
       return "";
   }
@@ -34,9 +36,9 @@ const title = computed(() => {
 const body = computed(() => {
   switch (state.value.kind) {
     case "update-installing":
-      return "Downloading the latest version.";
+      return t("settings.sw.downloading");
     case "update-available":
-      return "Refresh to use the latest version.";
+      return t("settings.sw.refreshBody");
     case "refresh-error":
       return state.value.message;
     case "idle":
@@ -48,7 +50,7 @@ const body = computed(() => {
 });
 
 const primaryLabel = computed(() =>
-  state.value.kind === "refresh-error" ? "Try again" : "Refresh",
+  state.value.kind === "refresh-error" ? t("settings.sw.tryAgain") : t("settings.sw.refresh"),
 );
 
 function refresh(): void {
@@ -71,7 +73,7 @@ function dismiss(): void {
       <Button variant="primary" size="sm" :loading="isRefreshing" @click="refresh">
         {{ primaryLabel }}
       </Button>
-      <Button variant="ghost" size="sm" @click="dismiss">Later</Button>
+      <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.sw.later") }}</Button>
     </div>
   </section>
 </template>

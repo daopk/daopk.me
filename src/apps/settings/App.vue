@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
 import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
-import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
+import { ChevronRight as NavChevronIcon, Globe as LanguageIcon } from "~/icons/lucide";
 import {
   SettingsAccountIcon as AccountIcon,
   SettingsAboutDeviceIcon as AboutIcon,
@@ -19,11 +19,13 @@ import AppearanceSection from "./sections/AppearanceSection.vue";
 import BackgroundSection from "./sections/BackgroundSection.vue";
 import ComfortSection from "./sections/ComfortSection.vue";
 import DockSection from "./sections/DockSection.vue";
+import LanguageSection from "./sections/LanguageSection.vue";
 import PrivacySection from "./sections/PrivacySection.vue";
 import PwaInstallRow from "./PwaInstallRow.vue";
 import ServiceWorkerUpdateRow from "./ServiceWorkerUpdateRow.vue";
 
 import { useActiveShell } from "~/composables/useActiveShell";
+import { useSettingsI18n, type SettingsTranslationKey } from "~/apps/settings/i18n/useSettingsI18n";
 import { pwaInstallController } from "~/service-worker/installController";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 import { AppChromeInjectionKey, AppContextInjectionKey } from "~/types/app";
@@ -38,7 +40,7 @@ import {
 
 interface SectionEntry {
   id: SettingsSectionId;
-  label: string;
+  labelKey: SettingsTranslationKey;
   icon: Component;
   component: Component;
 }
@@ -50,43 +52,49 @@ interface AppFrameRef {
 const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
   appearance: {
     id: "appearance",
-    label: "Appearance",
+    labelKey: "settings.nav.appearance",
     icon: AppearanceIcon as Component,
     component: AppearanceSection,
   },
+  language: {
+    id: "language",
+    labelKey: "settings.nav.language",
+    icon: LanguageIcon as Component,
+    component: LanguageSection,
+  },
   background: {
     id: "background",
-    label: "Background",
+    labelKey: "settings.nav.background",
     icon: BackgroundIcon as Component,
     component: BackgroundSection,
   },
   comfort: {
     id: "comfort",
-    label: "Comfort",
+    labelKey: "settings.nav.comfort",
     icon: ComfortIcon as Component,
     component: ComfortSection,
   },
   dock: {
     id: "dock",
-    label: "Dock",
+    labelKey: "settings.nav.dock",
     icon: DockIcon as Component,
     component: DockSection,
   },
   account: {
     id: "account",
-    label: "Account",
+    labelKey: "settings.nav.account",
     icon: AccountIcon as Component,
     component: AccountSection,
   },
   privacy: {
     id: "privacy",
-    label: "Privacy",
+    labelKey: "settings.nav.privacy",
     icon: PrivacyIcon as Component,
     component: PrivacySection,
   },
   about: {
     id: "about",
-    label: "About",
+    labelKey: "settings.nav.about",
     icon: AboutIcon as Component,
     component: AboutDeviceSection,
   },
@@ -94,6 +102,7 @@ const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
 
 const componentMap: Record<SettingsSectionId, Component> = {
   appearance: AppearanceSection,
+  language: LanguageSection,
   background: BackgroundSection,
   comfort: ComfortSection,
   dock: DockSection,
@@ -111,6 +120,7 @@ const appContext = inject(AppContextInjectionKey, null);
 const appChromeAvailable = inject(AppChromeInjectionKey, null) !== null;
 const kernel = inject(KernelInjectionKey, null);
 const { shellId } = useActiveShell();
+const { t } = useSettingsI18n();
 
 useResizeObserver(rootElement, ([entry]) => {
   if (entry) {
@@ -133,7 +143,7 @@ function normalizeSection(value: unknown): SettingsSectionId {
 
 const activeId = ref<SettingsSectionId>(normalizeSection(appContext?.args.section));
 const activeComponent = computed<Component>(() => componentMap[activeId.value]);
-const activeLabel = computed(() => sectionEntries[activeId.value].label);
+const activeLabel = computed(() => t(sectionEntries[activeId.value].labelKey));
 
 const narrowPanelOpen = ref(false);
 const usesSectionChrome = computed(
@@ -186,7 +196,9 @@ function goBack(): void {
 useAppChrome({
   title: () => (usesSectionChrome.value ? activeLabel.value : null),
   backAction: () =>
-    usesSectionChrome.value ? { ariaLabel: "Back to Settings", handler: goBack } : null,
+    usesSectionChrome.value
+      ? { ariaLabel: t("settings.app.backToSettings"), handler: goBack }
+      : null,
 });
 </script>
 
@@ -197,14 +209,14 @@ useAppChrome({
     class="settings"
     :class="{ 'settings--narrow': isNarrow }"
     layout="grid"
-    aria-label="Settings"
+    :aria-label="t('settings.app.ariaLabel')"
   >
     <div v-if="showNavInstallRow || showNavUpdateRow" class="settings__status-stack">
       <PwaInstallRow v-if="showNavInstallRow" />
       <ServiceWorkerUpdateRow v-if="showNavUpdateRow" />
     </div>
 
-    <nav v-if="showNav" class="settings__nav" aria-label="Settings sections">
+    <nav v-if="showNav" class="settings__nav" :aria-label="t('settings.app.sectionsAriaLabel')">
       <ListButton
         v-for="section in sections"
         :key="section.id"
@@ -216,7 +228,7 @@ useAppChrome({
         <template #icon>
           <component :is="section.icon" class="settings__nav-icon" aria-hidden="true" />
         </template>
-        <span class="settings__nav-label">{{ section.label }}</span>
+        <span class="settings__nav-label">{{ t(section.labelKey) }}</span>
         <template v-if="isNarrow" #end>
           <component :is="NavChevronIcon" class="settings__nav-chevron" aria-hidden="true" />
         </template>

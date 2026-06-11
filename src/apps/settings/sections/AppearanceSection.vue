@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
+import { useSettingsI18n, type SettingsTranslationKey } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { useTheme } from "~/composables/useTheme";
 import type { ThemePreference } from "~/types/theme";
@@ -13,22 +14,39 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 
 const kernel = useKernel();
 const { preference, setTheme } = useTheme();
+const { t } = useSettingsI18n();
 
 const ACCENT_PRESETS = [
-  { id: "default", label: "Iris (default)", value: "#5a2d82" },
-  { id: "ocean", label: "Ocean", value: "#0284c7" },
-  { id: "forest", label: "Forest", value: "#15803d" },
-  { id: "sunset", label: "Sunset", value: "#ea580c" },
-  { id: "rose", label: "Rose", value: "#be185d" },
-  { id: "slate", label: "Slate", value: "#475569" },
+  { id: "default", labelKey: "settings.appearance.accent.default", value: "#5a2d82" },
+  { id: "ocean", labelKey: "settings.appearance.accent.ocean", value: "#0284c7" },
+  { id: "forest", labelKey: "settings.appearance.accent.forest", value: "#15803d" },
+  { id: "sunset", labelKey: "settings.appearance.accent.sunset", value: "#ea580c" },
+  { id: "rose", labelKey: "settings.appearance.accent.rose", value: "#be185d" },
+  { id: "slate", labelKey: "settings.appearance.accent.slate", value: "#475569" },
 ] as const;
 
 type ThemeChoice = { id: ThemePreference; label: string; hint: string };
 
-const THEME_OPTIONS: readonly ThemeChoice[] = [
-  { id: "system", label: "System", hint: "Match OS preference" },
-  { id: "light", label: "Light", hint: "Always light" },
-  { id: "dark", label: "Dark", hint: "Always dark" },
+const THEME_OPTIONS: readonly {
+  id: ThemePreference;
+  labelKey: SettingsTranslationKey;
+  hintKey: SettingsTranslationKey;
+}[] = [
+  {
+    id: "system",
+    labelKey: "settings.appearance.theme.system.label",
+    hintKey: "settings.appearance.theme.system.hint",
+  },
+  {
+    id: "light",
+    labelKey: "settings.appearance.theme.light.label",
+    hintKey: "settings.appearance.theme.light.hint",
+  },
+  {
+    id: "dark",
+    labelKey: "settings.appearance.theme.dark.label",
+    hintKey: "settings.appearance.theme.dark.hint",
+  },
 ];
 
 const accentRef = ref<string | undefined>(kernel.theme.currentOverrides()["--color-accent"]);
@@ -65,16 +83,24 @@ function selectAccent(presetId: string, value: string): void {
   }
   kernel.theme.setOverride("--color-accent", value);
 }
+
+const themeOptions = computed<readonly ThemeChoice[]>(() =>
+  THEME_OPTIONS.map((option) => ({
+    id: option.id,
+    label: t(option.labelKey),
+    hint: t(option.hintKey),
+  })),
+);
 </script>
 
 <template>
-  <article class="appearance" aria-label="Appearance settings">
+  <article class="appearance" :aria-label="t('settings.appearance.ariaLabel')">
     <SectionHeader
       v-if="props.showHeader"
       class="appearance__header"
       size="page"
-      title="Appearance"
-      subtitle="Theme + accent color. Live preview on change."
+      :title="t('settings.appearance.title')"
+      :subtitle="t('settings.appearance.subtitle')"
     />
 
     <Panel
@@ -84,14 +110,16 @@ function selectAccent(presetId: string, value: string): void {
       padding="none"
       aria-labelledby="appearance-theme-label"
     >
-      <GroupLabel id="appearance-theme-label" as="h3">Theme</GroupLabel>
+      <GroupLabel id="appearance-theme-label" as="h3">
+        {{ t("settings.appearance.theme") }}
+      </GroupLabel>
       <div
         class="appearance__theme-grid"
         role="radiogroup"
         aria-labelledby="appearance-theme-label"
       >
         <button
-          v-for="option in THEME_OPTIONS"
+          v-for="option in themeOptions"
           :key="option.id"
           type="button"
           class="appearance__theme-card"
@@ -150,7 +178,9 @@ function selectAccent(presetId: string, value: string): void {
       padding="none"
       aria-labelledby="appearance-accent-label"
     >
-      <GroupLabel id="appearance-accent-label" as="h3">Accent color</GroupLabel>
+      <GroupLabel id="appearance-accent-label" as="h3">
+        {{ t("settings.appearance.accentColor") }}
+      </GroupLabel>
       <div class="appearance__swatches" role="radiogroup" aria-labelledby="appearance-accent-label">
         <button
           v-for="preset in ACCENT_PRESETS"
@@ -161,8 +191,8 @@ function selectAccent(presetId: string, value: string): void {
           :style="{ '--swatch-color': preset.value }"
           role="radio"
           :aria-checked="preset.id === selectedAccent"
-          :aria-label="preset.label"
-          :title="preset.label"
+          :aria-label="t(preset.labelKey)"
+          :title="t(preset.labelKey)"
           @click="selectAccent(preset.id, preset.value)"
         >
           <CheckIcon
@@ -173,7 +203,7 @@ function selectAccent(presetId: string, value: string): void {
         </button>
       </div>
       <p v-if="selectedAccent === 'custom'" class="appearance__custom-hint">
-        Custom override applied via `kernel.theme.setOverride`.
+        {{ t("settings.appearance.customAccentHint") }}
       </p>
     </Panel>
   </article>

@@ -1,0 +1,11 @@
+{
+  "i18n.locale.auto.label": "Tự động",
+  "i18n.locale.auto.native": "Ngôn ngữ trình duyệt",
+  "i18n.locale.auto.description": "Theo ngôn ngữ được hỗ trợ đầu tiên từ trình duyệt.",
+  "i18n.locale.en.label": "Tiếng Anh",
+  "i18n.locale.en.native": "English",
+  "i18n.locale.en.description": "Dùng tiếng Anh cho shell và cài đặt first-party.",
+  "i18n.locale.vi.label": "Tiếng Việt",
+  "i18n.locale.vi.native": "Tiếng Việt",
+  "i18n.locale.vi.description": "Dùng tiếng Việt cho shell và cài đặt first-party."
+}

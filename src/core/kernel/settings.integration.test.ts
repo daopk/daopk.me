@@ -45,6 +45,38 @@ describe("kernel settings facade", () => {
     expect(payloads).toContainEqual({ key: "dockAutoHide" });
   });
 
+  it("writes locale through the store and emits settings.changed", () => {
+    const payloads: Array<{ key: keyof SettingsState }> = [];
+    const stop = kernel.events.on("settings.changed", (payload) => {
+      payloads.push(payload);
+    });
+
+    kernel.settings.set("locale", "vi");
+
+    stop();
+
+    expect(kernel.settings.get("locale")).toBe("vi");
+    expect(kernel.settings.use("locale").value).toBe("vi");
+    expect(useSettingsStore().locale).toBe("vi");
+    expect(payloads).toContainEqual({ key: "locale" });
+  });
+
+  it("writes localeMode through the store and emits settings.changed", () => {
+    const payloads: Array<{ key: keyof SettingsState }> = [];
+    const stop = kernel.events.on("settings.changed", (payload) => {
+      payloads.push(payload);
+    });
+
+    kernel.settings.set("localeMode", "manual");
+
+    stop();
+
+    expect(kernel.settings.get("localeMode")).toBe("manual");
+    expect(kernel.settings.use("localeMode").value).toBe("manual");
+    expect(useSettingsStore().localeMode).toBe("manual");
+    expect(payloads).toContainEqual({ key: "localeMode" });
+  });
+
   it("writes dockPinnedAppIds through the store and emits settings.changed", () => {
     const payloads: Array<{ key: keyof SettingsState }> = [];
     const stop = kernel.events.on("settings.changed", (payload) => {

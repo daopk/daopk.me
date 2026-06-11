@@ -1,5 +1,10 @@
+import type { LocaleMode, SupportedLocale } from "~/types/i18n";
+
+export type { LocaleMode, SupportedLocale };
+
 export type SettingsSectionId =
   | "appearance"
+  | "language"
   | "background"
   | "comfort"
   | "dock"
@@ -16,6 +21,7 @@ export interface SettingsSectionDefinition {
 
 export const SETTINGS_SECTIONS: readonly SettingsSectionDefinition[] = [
   { id: "appearance", scope: "shared" },
+  { id: "language", scope: "shared" },
   { id: "background", scope: "shared" },
   { id: "comfort", scope: "shared" },
   { id: "dock", scope: "desktop" },
@@ -58,6 +64,8 @@ export function firstSettingsSectionForShell(shellId: "desktop" | "mobile"): Set
 
 export interface SettingsState {
   bootCount: number;
+  locale: SupportedLocale;
+  localeMode: LocaleMode;
   theme: "light" | "dark" | "system";
   shellOverride: "mobile" | "desktop" | null;
   reduceMotion: "auto" | "always" | "never";

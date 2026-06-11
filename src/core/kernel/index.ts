@@ -744,6 +744,16 @@ function buildKernel(): Kernel {
         const settings = useSettingsStore(requirePinia());
 
         switch (key) {
+          case "locale":
+            settings.setLocale(value as SettingsState["locale"]);
+
+            return;
+
+          case "localeMode":
+            settings.setLocaleMode(value as SettingsState["localeMode"]);
+
+            return;
+
           case "theme":
             settings.setTheme(value as SettingsState["theme"]);
 

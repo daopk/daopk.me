@@ -1,5 +1,6 @@
 import { computed, onUnmounted, ref, watch, type Ref } from "vue";
 
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { resolveWallpaperValue, type Wallpaper } from "~/core/theme/wallpapers";
 import type { useWallpaperStore } from "~/core/wallpaper/WallpaperStore";
 import type { Kernel } from "~/types/kernel";
@@ -38,6 +39,7 @@ export function useWallpaperTiles({
   readonly shellId: Readonly<Ref<ShellId>>;
   readonly wallpaperStore: WallpaperStore;
 }) {
+  const { t } = useSettingsI18n();
   const registryVersion = ref(0);
   const stopWallpaperRegistered = kernel.events.on("wallpaper.registered", () => {
     registryVersion.value++;
@@ -115,7 +117,7 @@ export function useWallpaperTiles({
       kind: "builtin",
       id: w.id,
       name: w.name,
-      description: describeBuiltin(w),
+      description: describeBuiltin(w, t),
       preview: resolveWallpaperValue(w, shellId.value),
       previewKind: w.type === "image" ? "image" : "gradient",
     }));
@@ -136,13 +138,17 @@ export function useWallpaperTiles({
     return tiles.value.find((t) => t.id === id) ?? tiles.value[0];
   });
 
-  const activeTileName = computed(() => activeTile.value?.name ?? "No wallpaper");
+  const activeTileName = computed(
+    () => activeTile.value?.name ?? t("settings.background.noWallpaper"),
+  );
   const activeTileDescription = computed(
-    () => activeTile.value?.description ?? "No wallpaper selected",
+    () => activeTile.value?.description ?? t("settings.background.noWallpaperSelected"),
   );
   const wallpaperCountLabel = computed(() => {
     const count = tiles.value.length;
-    return `${count} ${count === 1 ? "wallpaper" : "wallpapers"}`;
+    return t(count === 1 ? "settings.background.count.one" : "settings.background.count.other", {
+      count,
+    });
   });
 
   return {
@@ -175,8 +181,8 @@ export function previewStyleForTile(tile: BackgroundTile): Record<string, string
   return { background: tile.preview };
 }
 
-function describeBuiltin(w: Wallpaper): string {
-  if (w.preferredTheme === "dark") return "Suits dark themes";
-  if (w.preferredTheme === "light") return "Suits light themes";
-  return "Works on any theme";
+function describeBuiltin(w: Wallpaper, t: ReturnType<typeof useSettingsI18n>["t"]): string {
+  if (w.preferredTheme === "dark") return t("settings.background.builtin.dark");
+  if (w.preferredTheme === "light") return t("settings.background.builtin.light");
+  return t("settings.background.builtin.any");
 }

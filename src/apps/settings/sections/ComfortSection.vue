@@ -4,6 +4,7 @@ import { Check as CheckIcon } from "~/icons/lucide";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import Card from "~/components/ui/Card.vue";
+import { useSettingsI18n, type SettingsTranslationKey } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
 import type { SettingsState } from "~/types/settings";
@@ -14,38 +15,66 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 
 const kernel = useKernel();
 const settings = useSettings();
+const { t } = useSettingsI18n();
 
 interface DensityOption {
   id: "compact" | "cozy" | "spacious";
-  label: string;
-  hint: string;
+  labelKey: SettingsTranslationKey;
+  hintKey: SettingsTranslationKey;
   scale: number;
 }
 
 const DENSITY_OPTIONS: readonly DensityOption[] = [
-  { id: "compact", label: "Compact", hint: "More content per screen", scale: 0.85 },
-  { id: "cozy", label: "Cozy", hint: "Default spacing", scale: 1.0 },
-  { id: "spacious", label: "Spacious", hint: "Roomier touch targets", scale: 1.15 },
+  {
+    id: "compact",
+    labelKey: "settings.comfort.density.compact.label",
+    hintKey: "settings.comfort.density.compact.hint",
+    scale: 0.85,
+  },
+  {
+    id: "cozy",
+    labelKey: "settings.comfort.density.cozy.label",
+    hintKey: "settings.comfort.density.cozy.hint",
+    scale: 1.0,
+  },
+  {
+    id: "spacious",
+    labelKey: "settings.comfort.density.spacious.label",
+    hintKey: "settings.comfort.density.spacious.hint",
+    scale: 1.15,
+  },
 ];
 
 type ReduceMotionChoice = SettingsState["reduceMotion"];
 
 interface MotionOption {
   id: ReduceMotionChoice;
-  label: string;
-  hint: string;
+  labelKey: SettingsTranslationKey;
+  hintKey: SettingsTranslationKey;
 }
 
 const MOTION_OPTIONS: readonly MotionOption[] = [
-  { id: "auto", label: "Match system", hint: "Follow OS preference" },
-  { id: "always", label: "Reduce motion", hint: "Skip animations everywhere" },
-  { id: "never", label: "Full motion", hint: "Always animate" },
+  {
+    id: "auto",
+    labelKey: "settings.comfort.motion.auto.label",
+    hintKey: "settings.comfort.motion.auto.hint",
+  },
+  {
+    id: "always",
+    labelKey: "settings.comfort.motion.always.label",
+    hintKey: "settings.comfort.motion.always.hint",
+  },
+  {
+    id: "never",
+    labelKey: "settings.comfort.motion.never.label",
+    hintKey: "settings.comfort.motion.never.hint",
+  },
 ];
 
 interface FontFamilyOption {
   id: "system" | "inter" | "mono";
-  label: string;
-  hint: string;
+  labelKey: SettingsTranslationKey;
+  hintKey: SettingsTranslationKey;
   value: string;
 }
 
@@ -55,30 +84,50 @@ const SYSTEM_STACK_DEFAULT =
 const FONT_FAMILY_OPTIONS: readonly FontFamilyOption[] = [
   {
     id: "system",
-    label: "System",
-    hint: "Inter with native fallbacks",
+    labelKey: "settings.comfort.font.system.label",
+    hintKey: "settings.comfort.font.system.hint",
     value: SYSTEM_STACK_DEFAULT,
   },
   {
     id: "inter",
-    label: "Inter only",
-    hint: "Force Inter explicitly",
+    labelKey: "settings.comfort.font.inter.label",
+    hintKey: "settings.comfort.font.inter.hint",
     value: '"Inter", sans-serif',
   },
-  { id: "mono", label: "Mono", hint: "Programmer-style monospace", value: "var(--font-mono)" },
+  {
+    id: "mono",
+    labelKey: "settings.comfort.font.mono.label",
+    hintKey: "settings.comfort.font.mono.hint",
+    value: "var(--font-mono)",
+  },
 ];
 
 interface FontSizeOption {
   id: "small" | "medium" | "large";
-  label: string;
-  hint: string;
+  labelKey: SettingsTranslationKey;
+  hintKey: SettingsTranslationKey;
   value: string;
 }
 
 const FONT_SIZE_OPTIONS: readonly FontSizeOption[] = [
-  { id: "small", label: "Small", hint: "13px", value: "13px" },
-  { id: "medium", label: "Medium", hint: "14px default", value: "14px" },
-  { id: "large", label: "Large", hint: "15px", value: "15px" },
+  {
+    id: "small",
+    labelKey: "settings.comfort.size.small.label",
+    hintKey: "settings.comfort.size.small.hint",
+    value: "13px",
+  },
+  {
+    id: "medium",
+    labelKey: "settings.comfort.size.medium.label",
+    hintKey: "settings.comfort.size.medium.hint",
+    value: "14px",
+  },
+  {
+    id: "large",
+    labelKey: "settings.comfort.size.large.label",
+    hintKey: "settings.comfort.size.large.hint",
+    value: "15px",
+  },
 ];
 
 const densityRef = ref<string | undefined>(kernel.theme.currentOverrides()["--density-scale"]);
@@ -174,12 +223,12 @@ function selectSize(option: FontSizeOption): void {
 </script>
 
 <template>
-  <article class="comfort" aria-label="Comfort settings">
+  <article class="comfort" :aria-label="t('settings.comfort.ariaLabel')">
     <SectionHeader
       v-if="props.showHeader"
       size="page"
-      title="Comfort"
-      subtitle="Density, motion, and type preferences for the shell."
+      :title="t('settings.comfort.title')"
+      :subtitle="t('settings.comfort.subtitle')"
     />
 
     <Panel
@@ -189,7 +238,9 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-density-label"
     >
-      <GroupLabel id="comfort-density-label" as="h3">Density</GroupLabel>
+      <GroupLabel id="comfort-density-label" as="h3">
+        {{ t("settings.comfort.density") }}
+      </GroupLabel>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-density-label">
         <Card
           v-for="option in DENSITY_OPTIONS"
@@ -209,8 +260,8 @@ function selectSize(option: FontSizeOption): void {
             <span class="comfort__density-preview-row comfort__density-preview-row--short" />
           </span>
           <span class="comfort__card-meta">
-            <span class="comfort__card-label">{{ option.label }}</span>
-            <span class="comfort__card-hint">{{ option.hint }}</span>
+            <span class="comfort__card-label">{{ t(option.labelKey) }}</span>
+            <span class="comfort__card-hint">{{ t(option.hintKey) }}</span>
           </span>
           <CheckIcon
             v-if="option.id === selectedDensity"
@@ -220,8 +271,7 @@ function selectSize(option: FontSizeOption): void {
         </Card>
       </div>
       <p v-if="selectedDensity === 'custom'" class="comfort__custom-hint">
-        Custom density scale applied via
-        <code class="comfort__code">kernel.theme.setOverride</code>.
+        {{ t("settings.comfort.customDensityHint") }}
       </p>
     </Panel>
 
@@ -232,7 +282,9 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-motion-label"
     >
-      <GroupLabel id="comfort-motion-label" as="h3">Motion</GroupLabel>
+      <GroupLabel id="comfort-motion-label" as="h3">
+        {{ t("settings.comfort.motion") }}
+      </GroupLabel>
       <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-motion-label">
         <Card
           v-for="option in MOTION_OPTIONS"
@@ -247,8 +299,8 @@ function selectSize(option: FontSizeOption): void {
           @click="selectMotion(option)"
         >
           <span class="comfort__card-meta">
-            <span class="comfort__card-label">{{ option.label }}</span>
-            <span class="comfort__card-hint">{{ option.hint }}</span>
+            <span class="comfort__card-label">{{ t(option.labelKey) }}</span>
+            <span class="comfort__card-hint">{{ t(option.hintKey) }}</span>
           </span>
           <CheckIcon
             v-if="option.id === currentMotion"
@@ -266,9 +318,13 @@ function selectSize(option: FontSizeOption): void {
       padding="none"
       aria-labelledby="comfort-typography-label"
     >
-      <GroupLabel id="comfort-typography-label" as="h3">Typography</GroupLabel>
+      <GroupLabel id="comfort-typography-label" as="h3">
+        {{ t("settings.comfort.typography") }}
+      </GroupLabel>
       <div class="comfort__subgroup" aria-labelledby="comfort-family-label">
-        <h4 id="comfort-family-label" class="comfort__subgroup-title">Font family</h4>
+        <h4 id="comfort-family-label" class="comfort__subgroup-title">
+          {{ t("settings.comfort.fontFamily") }}
+        </h4>
         <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-family-label">
           <Card
             v-for="option in FONT_FAMILY_OPTIONS"
@@ -284,8 +340,8 @@ function selectSize(option: FontSizeOption): void {
           >
             <span class="comfort__type-preview" :style="{ fontFamily: option.value }">Aa</span>
             <span class="comfort__card-meta">
-              <span class="comfort__card-label">{{ option.label }}</span>
-              <span class="comfort__card-hint">{{ option.hint }}</span>
+              <span class="comfort__card-label">{{ t(option.labelKey) }}</span>
+              <span class="comfort__card-hint">{{ t(option.hintKey) }}</span>
             </span>
             <CheckIcon
               v-if="option.id === selectedFamily"
@@ -295,13 +351,14 @@ function selectSize(option: FontSizeOption): void {
           </Card>
         </div>
         <p v-if="selectedFamily === 'custom'" class="comfort__custom-hint">
-          Custom font-family override applied via
-          <code class="comfort__code">kernel.theme.setOverride</code>.
+          {{ t("settings.comfort.customFamilyHint") }}
         </p>
       </div>
 
       <div class="comfort__subgroup" aria-labelledby="comfort-size-label">
-        <h4 id="comfort-size-label" class="comfort__subgroup-title">Base size</h4>
+        <h4 id="comfort-size-label" class="comfort__subgroup-title">
+          {{ t("settings.comfort.baseSize") }}
+        </h4>
         <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-size-label">
           <Card
             v-for="option in FONT_SIZE_OPTIONS"
@@ -317,8 +374,8 @@ function selectSize(option: FontSizeOption): void {
           >
             <span class="comfort__type-preview" :style="{ fontSize: option.value }">Aa</span>
             <span class="comfort__card-meta">
-              <span class="comfort__card-label">{{ option.label }}</span>
-              <span class="comfort__card-hint">{{ option.hint }}</span>
+              <span class="comfort__card-label">{{ t(option.labelKey) }}</span>
+              <span class="comfort__card-hint">{{ t(option.hintKey) }}</span>
             </span>
             <CheckIcon
               v-if="option.id === selectedSize"
@@ -328,8 +385,7 @@ function selectSize(option: FontSizeOption): void {
           </Card>
         </div>
         <p v-if="selectedSize === 'custom'" class="comfort__custom-hint">
-          Custom font-size override applied via
-          <code class="comfort__code">kernel.theme.setOverride</code>.
+          {{ t("settings.comfort.customSizeHint") }}
         </p>
       </div>
     </Panel>

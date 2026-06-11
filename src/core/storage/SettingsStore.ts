@@ -8,6 +8,7 @@ import { computed, ref, watch, type WatchStopHandle } from "vue";
 
 import { SETTINGS_KV_PRIMARY_KEY } from "~/core/storage/constants";
 import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import { DEFAULT_LOCALE, DEFAULT_LOCALE_MODE, isLocaleMode, isSupportedLocale } from "~/core/i18n";
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import { subscribeSystemPreference } from "~/core/theme/systemPreference";
 import { DEFAULT_WALLPAPER_ID, LEGACY_DEFAULT_WALLPAPER_IDS } from "~/core/theme/wallpapers";
@@ -29,6 +30,10 @@ export const DEFAULT_DOCK_PINNED_APP_IDS = [
 
 const DEFAULT_SETTINGS: SettingsState = {
   bootCount: 0,
+
+  locale: DEFAULT_LOCALE,
+
+  localeMode: DEFAULT_LOCALE_MODE,
 
   theme: "system",
 
@@ -106,6 +111,16 @@ function coerceSettings(candidate: unknown): SettingsState {
     merged.bootCount = Math.max(0, Math.floor(c.bootCount));
   }
 
+  if (isSupportedLocale(c.locale)) {
+    merged.locale = c.locale;
+  }
+
+  if (isLocaleMode(c.localeMode)) {
+    merged.localeMode = c.localeMode;
+  } else if (isSupportedLocale(c.locale) && c.locale !== DEFAULT_LOCALE) {
+    merged.localeMode = "manual";
+  }
+
   if (c.theme === "light" || c.theme === "dark" || c.theme === "system") {
     merged.theme = c.theme;
   }
@@ -146,6 +161,8 @@ function stringArraysEqual(left: readonly string[], right: readonly string[]): b
 function snapshotsEqual(left: SettingsState, right: SettingsState): boolean {
   return (
     left.bootCount === right.bootCount &&
+    left.locale === right.locale &&
+    left.localeMode === right.localeMode &&
     left.theme === right.theme &&
     left.shellOverride === right.shellOverride &&
     left.reduceMotion === right.reduceMotion &&
@@ -187,6 +204,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
 
   const bootCount = ref(DEFAULT_SETTINGS.bootCount);
 
+  const locale = ref<SettingsState["locale"]>(DEFAULT_SETTINGS.locale);
+
+  const localeMode = ref<SettingsState["localeMode"]>(DEFAULT_SETTINGS.localeMode);
+
   const theme = ref<SettingsState["theme"]>(DEFAULT_SETTINGS.theme);
 
   const shellOverride = ref<SettingsState["shellOverride"]>(DEFAULT_SETTINGS.shellOverride);
@@ -210,6 +231,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
   function stateSnapshot(): SettingsState {
     return {
       bootCount: bootCount.value,
+
+      locale: locale.value,
+
+      localeMode: localeMode.value,
 
       theme: theme.value,
 
@@ -248,6 +273,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
 
     persistence.runSuppressedUntilNextTick(() => {
       bootCount.value = next.bootCount;
+
+      locale.value = next.locale;
+
+      localeMode.value = next.localeMode;
 
       theme.value = next.theme;
 
@@ -305,6 +334,34 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     theme.value = pref;
 
     hooksRef.value?.onSettingsChanged?.("theme");
+
+    persistence.schedule();
+  }
+
+  function setLocale(value: SettingsState["locale"]): void {
+    const next = isSupportedLocale(value) ? value : DEFAULT_SETTINGS.locale;
+
+    if (next === locale.value) {
+      return;
+    }
+
+    locale.value = next;
+
+    hooksRef.value?.onSettingsChanged?.("locale");
+
+    persistence.schedule();
+  }
+
+  function setLocaleMode(value: SettingsState["localeMode"]): void {
+    const next = isLocaleMode(value) ? value : DEFAULT_SETTINGS.localeMode;
+
+    if (next === localeMode.value) {
+      return;
+    }
+
+    localeMode.value = next;
+
+    hooksRef.value?.onSettingsChanged?.("localeMode");
 
     persistence.schedule();
   }
@@ -389,6 +446,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     persistence.runSuppressed(() => {
       bootCount.value = DEFAULT_SETTINGS.bootCount;
 
+      locale.value = DEFAULT_SETTINGS.locale;
+
+      localeMode.value = DEFAULT_SETTINGS.localeMode;
+
       theme.value = DEFAULT_SETTINGS.theme;
 
       shellOverride.value = DEFAULT_SETTINGS.shellOverride;
@@ -407,6 +468,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     });
 
     hooksRef.value?.onSettingsChanged?.("bootCount");
+
+    hooksRef.value?.onSettingsChanged?.("locale");
+
+    hooksRef.value?.onSettingsChanged?.("localeMode");
 
     hooksRef.value?.onSettingsChanged?.("theme");
 
@@ -452,6 +517,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
 
     persistence.runSuppressed(() => {
       bootCount.value = loaded.bootCount;
+
+      locale.value = loaded.locale;
+
+      localeMode.value = loaded.localeMode;
 
       theme.value = loaded.theme;
 
@@ -499,6 +568,8 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     persistStop = watch(
       [
         bootCount,
+        locale,
+        localeMode,
         theme,
         shellOverride,
         reduceMotion,
@@ -549,6 +620,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
   return {
     bootCount,
 
+    locale,
+
+    localeMode,
+
     theme,
 
     shellOverride,
@@ -576,6 +651,10 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     incrementBootCount,
 
     setTheme,
+
+    setLocale,
+
+    setLocaleMode,
 
     setShellOverride,
 

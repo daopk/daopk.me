@@ -5,8 +5,9 @@ import { X as RevokeIcon } from "~/icons/lucide";
 
 import { ActionRow, EmptyState, Panel, SectionHeader } from "~/components/kit";
 import { Button, Switch } from "~/components/ui";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
-import { permissionLabel } from "~/core/permissions/copy";
+import type { AppPermission } from "~/types/app";
 import type { PermissionLedgerEntry } from "~/types/permissions";
 
 const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
@@ -20,6 +21,7 @@ interface GroupedApp {
 }
 
 const kernel = useKernel();
+const { locale, t } = useSettingsI18n();
 const telemetryEnabled = kernel.settings.use("telemetryEnabled");
 
 const entries = ref<readonly PermissionLedgerEntry[]>(kernel.permissions.list());
@@ -66,21 +68,35 @@ const groups = computed<readonly GroupedApp[]>(() => {
 });
 
 function describeDecision(entry: PermissionLedgerEntry): string {
-  const verb = entry.granted ? "Allowed to" : "Blocked from";
-  return `${verb} ${permissionLabel(entry.permission)}`;
+  return t(entry.granted ? "settings.privacy.allowedTo" : "settings.privacy.blockedFrom", {
+    permission: permissionCopy(entry.permission),
+  });
 }
 
 function describeWhen(decidedAt: number): string {
   const ms = Date.now() - decidedAt;
   const sec = Math.floor(ms / 1000);
-  if (sec < 60) return "just now";
+  if (sec < 60) return t("settings.privacy.when.justNow");
   const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} minute${min === 1 ? "" : "s"} ago`;
+  if (min < 60) {
+    return t(
+      min === 1 ? "settings.privacy.when.minute.one" : "settings.privacy.when.minute.other",
+      { count: min },
+    );
+  }
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} hour${hr === 1 ? "" : "s"} ago`;
+  if (hr < 24) {
+    return t(hr === 1 ? "settings.privacy.when.hour.one" : "settings.privacy.when.hour.other", {
+      count: hr,
+    });
+  }
   const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} day${day === 1 ? "" : "s"} ago`;
-  return new Date(decidedAt).toLocaleDateString();
+  if (day < 30) {
+    return t(day === 1 ? "settings.privacy.when.day.one" : "settings.privacy.when.day.other", {
+      count: day,
+    });
+  }
+  return new Date(decidedAt).toLocaleDateString(locale.value);
 }
 
 function revoke(entry: PermissionLedgerEntry): void {
@@ -90,30 +106,56 @@ function revoke(entry: PermissionLedgerEntry): void {
 function setTelemetryEnabled(next: boolean): void {
   kernel.settings.set("telemetryEnabled", next);
 }
+
+function permissionCopy(permission: AppPermission): string {
+  switch (permission) {
+    case "notifications.post":
+      return t("settings.permission.notifications.post");
+    case "network.fetch":
+      return t("settings.permission.network.fetch");
+    case "vfs.read":
+      return t("settings.permission.vfs.read");
+    case "vfs.write":
+      return t("settings.permission.vfs.write");
+    case "storage.write":
+      return t("settings.permission.storage.write");
+    case "shortcut.global":
+      return t("settings.permission.shortcut.global");
+    default: {
+      const _exhaustive: never = permission;
+      return _exhaustive;
+    }
+  }
+}
 </script>
 
 <template>
-  <article class="privacy" aria-label="Privacy settings">
+  <article class="privacy" :aria-label="t('settings.privacy.ariaLabel')">
     <SectionHeader
       v-if="props.showHeader"
       size="page"
-      title="Privacy"
-      subtitle="Apps you've granted (or denied) sensitive capabilities. Revoke any decision to make the app ask again the next time it tries."
+      :title="t('settings.privacy.title')"
+      :subtitle="t('settings.privacy.subtitle')"
     />
 
     <ActionRow as="section" class="privacy__telemetry" aria-labelledby="privacy-telemetry-title">
       <template #copy>
         <div class="privacy__telemetry-text">
-          <h3 id="privacy-telemetry-title" class="privacy__telemetry-title">Product telemetry</h3>
+          <h3 id="privacy-telemetry-title" class="privacy__telemetry-title">
+            {{ t("settings.privacy.telemetryTitle") }}
+          </h3>
           <p class="privacy__telemetry-copy">
-            Off by default. When enabled, WebOS records command counters and boot timing only; the
-            current transport does not send data anywhere.
+            {{ t("settings.privacy.telemetryCopy") }}
           </p>
         </div>
       </template>
       <Switch
         :model-value="telemetryEnabled"
-        :aria-label="telemetryEnabled ? 'Disable product telemetry' : 'Enable product telemetry'"
+        :aria-label="
+          telemetryEnabled
+            ? t('settings.privacy.disableTelemetry')
+            : t('settings.privacy.enableTelemetry')
+        "
         @update:model-value="setTelemetryEnabled"
       />
     </ActionRow>
@@ -123,8 +165,7 @@ function setTelemetryEnabled(next: boolean): void {
         <ShieldIcon class="privacy__empty-icon" aria-hidden="true" />
       </template>
       <p class="privacy__empty-text">
-        No remembered permission decisions yet. They'll appear here after an app prompts you and you
-        pick "Allow and remember" or "Don't allow".
+        {{ t("settings.privacy.empty") }}
       </p>
     </EmptyState>
 
@@ -158,9 +199,14 @@ function setTelemetryEnabled(next: boolean): void {
               variant="ghost"
               size="sm"
               :icon-start="RevokeIcon"
-              :aria-label="`Revoke ${describeDecision(row).toLowerCase()} for ${group.appName}`"
+              :aria-label="
+                t('settings.privacy.revokeAria', {
+                  decision: describeDecision(row).toLocaleLowerCase(locale),
+                  appName: group.appName,
+                })
+              "
               @click="revoke(row)"
-              >Revoke</Button
+              >{{ t("settings.privacy.revoke") }}</Button
             >
           </ActionRow>
         </ul>

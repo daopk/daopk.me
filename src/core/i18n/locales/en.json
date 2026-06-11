@@ -1,0 +1,11 @@
+{
+  "i18n.locale.auto.label": "Automatic",
+  "i18n.locale.auto.native": "Browser language",
+  "i18n.locale.auto.description": "Follow the first supported language from your browser.",
+  "i18n.locale.en.label": "English",
+  "i18n.locale.en.native": "English",
+  "i18n.locale.en.description": "Use English for shell and first-party settings.",
+  "i18n.locale.vi.label": "Vietnamese",
+  "i18n.locale.vi.native": "Tiếng Việt",
+  "i18n.locale.vi.description": "Use Vietnamese for shell and first-party settings."
+}

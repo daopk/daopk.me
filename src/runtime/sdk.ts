@@ -125,7 +125,22 @@ export {
 // Added for the satellite-app migration — treat as stable ABI like the rest of
 // this surface.
 export { useBreakpoint } from "~/composables/useBreakpoint";
+export { useI18n } from "~/composables/useI18n";
 export { debugLog, debugWarn } from "~/core/debug";
+export {
+  DEFAULT_LOCALE,
+  DEFAULT_LOCALE_MODE,
+  LOCALE_OPTIONS,
+  SUPPORTED_LOCALES,
+  browserPreferredLocale,
+  isLocaleMode,
+  isSupportedLocale,
+  normalizeLocaleTag,
+  preferredLocaleFromLanguages,
+  registerAppTranslations,
+  registerTranslationBundle,
+  translate,
+} from "~/core/i18n";
 export { VfsError } from "~/core/vfs/errors";
 export { KVStore } from "~/core/storage/KVStore";
 export { activeProfileKvNamespace } from "~/core/profile/storageScope";
@@ -142,6 +157,16 @@ export type {
   AppPermission,
 } from "~/types/app";
 export type { Kernel } from "~/types/kernel";
+export type {
+  CoreTranslationKey,
+  LocaleMode,
+  LocaleOptionDefinition,
+  SupportedLocale,
+  TranslationBundle,
+  TranslationDictionary,
+  TranslationKey,
+  TranslationParams,
+} from "~/core/i18n";
 export type {
   AppPreviewComponentProps,
   AppPreviewInput,

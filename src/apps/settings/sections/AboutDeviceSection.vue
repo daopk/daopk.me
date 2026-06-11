@@ -3,11 +3,13 @@ import { computed } from "vue";
 
 import { Badge, Panel, SectionHeader } from "~/components/kit";
 import Button from "~/components/ui/Button.vue";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useSettings } from "~/composables/useSettings";
 import { ExternalLink as ExternalLinkIcon, RefreshCw as RefreshIcon } from "~/icons/lucide";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
 const settings = useSettings();
+const { locale, t } = useSettingsI18n();
 const updateState = serviceWorkerUpdateController.state;
 const updateCheckState = serviceWorkerUpdateController.checkState;
 
@@ -24,7 +26,7 @@ const userAgent = computed((): string => {
 
 const buildTime = computed((): string => {
   const d = new Date(__BUILD_TIME__);
-  return d.toLocaleString(undefined, {
+  return d.toLocaleString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -46,22 +48,22 @@ const updateButtonVariant = computed<"primary" | "secondary">(() =>
 );
 const updateButtonLabel = computed((): string => {
   if (updateState.value.kind === "refresh-error") {
-    return "Try again";
+    return t("settings.about.tryAgain");
   }
 
   if (updateState.value.kind === "update-installing") {
-    return "Updating...";
+    return t("settings.about.updatingButton");
   }
 
   if (updateState.value.kind === "update-available") {
-    return "Refresh";
+    return t("settings.about.refresh");
   }
 
   if (updateCheckState.value.kind === "check-error") {
-    return "Check again";
+    return t("settings.about.checkAgain");
   }
 
-  return "Check for updates";
+  return t("settings.about.checkForUpdates");
 });
 const softwareUpdateTone = computed<"muted" | "success" | "warning" | "danger">(() => {
   if (
@@ -97,22 +99,24 @@ const softwareUpdateBadgeTone = computed<"neutral" | "accent" | "success" | "dan
 const softwareUpdateStatus = computed((): string => {
   switch (updateState.value.kind) {
     case "update-installing":
-      return "Downloading update...";
+      return t("settings.about.update.downloading");
     case "update-available":
-      return updateState.value.refreshing ? "Applying update..." : "Update available";
+      return updateState.value.refreshing
+        ? t("settings.about.update.applying")
+        : t("settings.about.update.available");
     case "refresh-error":
-      return `Update couldn't finish. ${updateState.value.message}`;
+      return t("settings.about.update.failed", { message: updateState.value.message });
     case "offline-ready":
-      return "Ready offline";
+      return t("settings.about.update.readyOffline");
     case "idle":
       break;
   }
 
   switch (updateCheckState.value.kind) {
     case "checking":
-      return "Checking for updates...";
+      return t("settings.about.update.checking");
     case "up-to-date":
-      return "You're up to date.";
+      return t("settings.about.update.upToDate");
     case "check-error":
       return updateCheckState.value.message;
     case "idle":
@@ -138,12 +142,12 @@ function runSoftwareUpdateAction(): void {
 </script>
 
 <template>
-  <article class="about-device" aria-label="About">
+  <article class="about-device" :aria-label="t('settings.about.ariaLabel')">
     <SectionHeader
       v-if="props.showHeader"
       size="page"
-      title="About"
-      subtitle="Read-only snapshot of what the shell sees. Useful for bug reports and quick diagnostics."
+      :title="t('settings.about.title')"
+      :subtitle="t('settings.about.subtitle')"
     />
 
     <Panel as="section" class="about-device__github-card" variant="elevated" padding="lg">
@@ -151,7 +155,7 @@ function runSoftwareUpdateAction(): void {
         <div class="about-device__github-heading">
           <h2 class="about-device__github-title">GitHub</h2>
         </div>
-        <p class="about-device__github-note">Source code for this WebOS shell and app catalog.</p>
+        <p class="about-device__github-note">{{ t("settings.about.githubNote") }}</p>
       </div>
       <a
         class="about-device__github-link"
@@ -167,7 +171,7 @@ function runSoftwareUpdateAction(): void {
     <Panel as="section" class="about-device__update-card" variant="elevated" padding="lg">
       <div class="about-device__update-copy">
         <div class="about-device__update-heading">
-          <h2 class="about-device__update-title">Software update</h2>
+          <h2 class="about-device__update-title">{{ t("settings.about.softwareUpdate") }}</h2>
           <Badge
             v-if="showSoftwareUpdateStatus"
             class="about-device__update-status"
@@ -178,7 +182,7 @@ function runSoftwareUpdateAction(): void {
           </Badge>
         </div>
         <p class="about-device__update-note">
-          Updates the system shell only. Apps update on their own from the catalog.
+          {{ t("settings.about.updateNote") }}
         </p>
       </div>
       <Button
@@ -196,15 +200,15 @@ function runSoftwareUpdateAction(): void {
 
     <Panel as="dl" class="about-device__list" variant="plain" padding="none">
       <div class="about-device__row">
-        <dt class="about-device__key">Build time</dt>
+        <dt class="about-device__key">{{ t("settings.about.buildTime") }}</dt>
         <dd class="about-device__value">{{ buildTime }}</dd>
       </div>
       <div class="about-device__row">
-        <dt class="about-device__key">Boot count</dt>
+        <dt class="about-device__key">{{ t("settings.about.bootCount") }}</dt>
         <dd class="about-device__value">{{ settings.bootCount }}</dd>
       </div>
       <div class="about-device__row about-device__row--block">
-        <dt class="about-device__key">User-agent</dt>
+        <dt class="about-device__key">{{ t("settings.about.userAgent") }}</dt>
         <dd class="about-device__value about-device__value--block">
           <code class="about-device__code about-device__code--wrap">{{ userAgent }}</code>
         </dd>

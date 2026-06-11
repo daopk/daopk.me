@@ -185,6 +185,11 @@ function setShellViewportWidth(width: number): void {
   vi.stubGlobal("visualViewport", { width, height: 800 });
 }
 
+function mockBrowserLanguages(languages: readonly string[], language = languages[0] ?? ""): void {
+  vi.spyOn(navigator, "languages", "get").mockReturnValue(languages);
+  vi.spyOn(navigator, "language", "get").mockReturnValue(language);
+}
+
 function findButtonByText(wrapper: ReturnType<typeof mountApp>, text: string) {
   return wrapper.findAll("button").find((button) => button.text() === text);
 }
@@ -232,6 +237,7 @@ describe("Settings App.vue", () => {
     resizeCallbacks.length = 0;
     localStorage.removeItem(PWA_INSTALL_DISMISSED_KEY);
     setActivePinia(createPinia());
+    mockBrowserLanguages(["en-US"], "en-US");
     pwaInstallController.resetForTests();
     serviceWorkerUpdateController.resetForTests();
   });
@@ -248,11 +254,12 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp();
 
     const items = wrapper.findAll(".settings__nav-item");
-    expect(items).toHaveLength(7);
+    expect(items).toHaveLength(8);
 
     const labels = items.map((item) => item.find(".settings__nav-label").text());
     expect(labels).toEqual([
       "Appearance",
+      "Language",
       "Background",
       "Comfort",
       "Dock",
@@ -269,9 +276,56 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp();
 
     const labels = wrapper.findAll(".settings__nav-label").map((item) => item.text());
-    expect(labels).toEqual(["Appearance", "Background", "Comfort", "Account", "Privacy", "About"]);
+    expect(labels).toEqual([
+      "Appearance",
+      "Language",
+      "Background",
+      "Comfort",
+      "Account",
+      "Privacy",
+      "About",
+    ]);
     expect(wrapper.text()).not.toContain("Desktop Dock");
     expect(wrapper.text()).not.toContain("Automatically hide the Dock");
+
+    wrapper.unmount();
+  });
+
+  it("renders Settings nav and active section in Vietnamese when locale is vi", () => {
+    useSettingsStore().$patch({ locale: "vi", localeMode: "manual" });
+    const wrapper = mountApp();
+
+    const labels = wrapper.findAll(".settings__nav-label").map((item) => item.text());
+    expect(labels).toEqual([
+      "Giao diện",
+      "Ngôn ngữ",
+      "Hình nền",
+      "Trải nghiệm",
+      "Dock",
+      "Tài khoản",
+      "Quyền riêng tư",
+      "Giới thiệu",
+    ]);
+    expect(wrapper.text()).toContain("Chủ đề");
+    expect(wrapper.text()).toContain("Màu nhấn");
+
+    wrapper.unmount();
+  });
+
+  it("changing language from the Language section rerenders nav and section copy", async () => {
+    const wrapper = mountApp();
+
+    await wrapper.findAll(".settings__nav-item")[1]?.trigger("click");
+    expect(wrapper.find(".language").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Display language");
+
+    await wrapper.findAll(".language__card")[2]?.trigger("click");
+    await nextTick();
+
+    const labels = wrapper.findAll(".settings__nav-label").map((item) => item.text());
+    expect(labels[0]).toBe("Giao diện");
+    expect(labels[1]).toBe("Ngôn ngữ");
+    expect(wrapper.text()).toContain("Ngôn ngữ hiển thị");
 
     wrapper.unmount();
   });
@@ -296,8 +350,8 @@ describe("Settings App.vue", () => {
     const wrapper = mountApp({ appArgs: { section: "background" } });
 
     const items = wrapper.findAll(".settings__nav-item");
-    expect(items[1]?.classes()).toContain("settings__nav-item--active");
-    expect(items[1]?.attributes("aria-current")).toBe("page");
+    expect(items[2]?.classes()).toContain("settings__nav-item--active");
+    expect(items[2]?.attributes("aria-current")).toBe("page");
     expect(wrapper.find(".background").exists()).toBe(true);
 
     wrapper.unmount();
@@ -324,8 +378,8 @@ describe("Settings App.vue", () => {
     await nextTick();
 
     const items = wrapper.findAll(".settings__nav-item");
-    expect(items[1]?.classes()).toContain("settings__nav-item--active");
-    expect(items[1]?.attributes("aria-current")).toBe("page");
+    expect(items[2]?.classes()).toContain("settings__nav-item--active");
+    expect(items[2]?.attributes("aria-current")).toBe("page");
     expect(wrapper.find(".background").exists()).toBe(true);
 
     wrapper.unmount();
@@ -409,7 +463,7 @@ describe("Settings App.vue", () => {
   it("clicking Comfort swaps the active section + renders Comfort content", async () => {
     const wrapper = mountApp();
 
-    const comfortItem = wrapper.findAll(".settings__nav-item")[2];
+    const comfortItem = wrapper.findAll(".settings__nav-item")[3];
     await comfortItem?.trigger("click");
 
     expect(comfortItem?.classes()).toContain("settings__nav-item--active");
@@ -436,12 +490,13 @@ describe("Settings App.vue", () => {
 
     const expectations: ReadonlyArray<[number, string, string]> = [
       [0, "appearance", "Theme"],
-      [1, "background", "Wallpaper"],
-      [2, "comfort", "Density"],
-      [3, "dock-settings", "Automatically hide the Dock"],
-      [4, "account", "Lock Session"],
-      [5, "privacy", "Privacy"],
-      [6, "about-device", "Boot count"],
+      [1, "language", "Display language"],
+      [2, "background", "Wallpaper"],
+      [3, "comfort", "Density"],
+      [4, "dock-settings", "Automatically hide the Dock"],
+      [5, "account", "Lock Session"],
+      [6, "privacy", "Privacy"],
+      [7, "about-device", "Boot count"],
     ];
 
     for (const [idx, rootClass, marker] of expectations) {

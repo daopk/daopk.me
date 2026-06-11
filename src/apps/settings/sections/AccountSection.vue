@@ -12,6 +12,7 @@ import { computed, ref } from "vue";
 
 import { Panel, SectionHeader, StatusBanner, TextInput } from "~/components/kit";
 import { Button, Dialog } from "~/components/ui";
+import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, CloudOff, KeyRound, Lock, LogOut, Shield, Trash2 } from "~/icons/lucide";
 
@@ -20,6 +21,7 @@ const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
 });
 
 const kernel = useKernel();
+const { t } = useSettingsI18n();
 const profile = kernel.profile.current();
 const deleteDialogOpen = ref(false);
 const deleteConfirmationText = ref("");
@@ -28,19 +30,20 @@ const deleteError = ref("");
 
 const protectionLabel = computed(() => {
   if (profile.authMode === "guest") {
-    return "Guest account";
+    return t("settings.account.guestAccount");
   }
-  return profile.encrypted ? "Encrypted passkey profile" : "Passkey protected";
+  return profile.encrypted
+    ? t("settings.account.encryptedProfile")
+    : t("settings.account.passkeyProtected");
 });
 const storageLabel = computed(() =>
   profile.authMode === "guest"
-    ? "No encryption; stored only in this browser"
-    : "Stored only in this browser",
+    ? t("settings.account.guestStorage")
+    : t("settings.account.browserStorage"),
 );
 const canConfirmDelete = computed(() => deleteConfirmationText.value === profile.displayName);
-const deleteDialogDescription = computed(
-  () =>
-    `This permanently deletes ${profile.displayName} and all local data stored for this account in this browser.`,
+const deleteDialogDescription = computed(() =>
+  t("settings.account.deleteDialogDescription", { name: profile.displayName }),
 );
 
 function lockSession(): void {
@@ -55,7 +58,7 @@ function describeDeleteError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return "Account deletion failed.";
+  return t("settings.account.deleteFailed");
 }
 
 function requestDeleteAccount(): void {
@@ -91,12 +94,12 @@ async function confirmDeleteAccount(): Promise<void> {
 </script>
 
 <template>
-  <article class="account" aria-label="Account settings">
+  <article class="account" :aria-label="t('settings.account.ariaLabel')">
     <SectionHeader
       v-if="props.showHeader"
       size="page"
-      title="Account"
-      subtitle="This account is local to this browser. Lock keeps your apps open; sign out closes them and returns to account unlock."
+      :title="t('settings.account.title')"
+      :subtitle="t('settings.account.subtitle')"
     />
 
     <Panel
@@ -123,7 +126,7 @@ async function confirmDeleteAccount(): Promise<void> {
           :icon-start="Lock"
           @click="lockSession"
         >
-          Lock Session
+          {{ t("settings.account.lockSession") }}
         </Button>
         <Button
           class="account__action"
@@ -132,7 +135,7 @@ async function confirmDeleteAccount(): Promise<void> {
           :icon-start="LogOut"
           @click="signOut"
         >
-          Sign Out
+          {{ t("settings.account.signOut") }}
         </Button>
       </div>
     </Panel>
@@ -142,12 +145,12 @@ async function confirmDeleteAccount(): Promise<void> {
       class="account__facts"
       variant="plain"
       padding="none"
-      aria-label="Current account details"
+      :aria-label="t('settings.account.currentDetails')"
     >
       <Panel as="div" class="account__fact" variant="elevated" padding="none">
         <dt class="account__fact-label">
           <KeyRound class="account__fact-icon" aria-hidden="true" />
-          Protection
+          {{ t("settings.account.protection") }}
         </dt>
         <dd class="account__fact-value">{{ protectionLabel }}</dd>
       </Panel>
@@ -155,7 +158,7 @@ async function confirmDeleteAccount(): Promise<void> {
       <Panel as="div" class="account__fact" variant="elevated" padding="none">
         <dt class="account__fact-label">
           <CloudOff class="account__fact-icon" aria-hidden="true" />
-          Storage
+          {{ t("settings.account.storage") }}
         </dt>
         <dd class="account__fact-value">{{ storageLabel }}</dd>
       </Panel>
@@ -169,9 +172,11 @@ async function confirmDeleteAccount(): Promise<void> {
       aria-labelledby="account-danger-title"
     >
       <div class="account__danger-copy">
-        <h3 id="account-danger-title" class="account__danger-title">Delete account</h3>
+        <h3 id="account-danger-title" class="account__danger-title">
+          {{ t("settings.account.deleteTitle") }}
+        </h3>
         <p class="account__danger-text">
-          Permanently remove this account and its local data from this browser.
+          {{ t("settings.account.deleteCopy") }}
         </p>
       </div>
       <Button
@@ -181,13 +186,13 @@ async function confirmDeleteAccount(): Promise<void> {
         :icon-start="Trash2"
         @click="requestDeleteAccount"
       >
-        Delete Account...
+        {{ t("settings.account.deleteButton") }}
       </Button>
     </Panel>
 
     <Dialog
       v-model:open="deleteDialogOpen"
-      title="Delete current account?"
+      :title="t('settings.account.deleteDialogTitle')"
       :description="deleteDialogDescription"
       :dismissible="!deletingAccount"
       @close="cancelDeleteAccount"
@@ -195,12 +200,13 @@ async function confirmDeleteAccount(): Promise<void> {
       <div class="account__delete-dialog">
         <StatusBanner as="p" class="account__delete-warning" tone="warning" role="alert">
           <AlertCircle class="account__delete-warning-icon" aria-hidden="true" />
-          This cannot be undone. Passkeys saved in your browser or device may need to be removed
-          separately from your passkey manager.
+          {{ t("settings.account.deleteWarning") }}
         </StatusBanner>
 
         <label class="account__delete-field">
-          <span class="account__delete-label">Type {{ profile.displayName }} to confirm</span>
+          <span class="account__delete-label">
+            {{ t("settings.account.deleteConfirmLabel", { name: profile.displayName }) }}
+          </span>
           <TextInput
             v-model="deleteConfirmationText"
             class="account__delete-input"
@@ -222,7 +228,9 @@ async function confirmDeleteAccount(): Promise<void> {
         </StatusBanner>
 
         <div class="account__dialog-actions">
-          <Button size="sm" :disabled="deletingAccount" @click="cancelDeleteAccount">Cancel</Button>
+          <Button size="sm" :disabled="deletingAccount" @click="cancelDeleteAccount">
+            {{ t("settings.account.cancel") }}
+          </Button>
           <Button
             size="sm"
             class="account__danger-button"
@@ -232,7 +240,7 @@ async function confirmDeleteAccount(): Promise<void> {
             :loading="deletingAccount"
             @click="confirmDeleteAccount"
           >
-            Delete Account
+            {{ t("settings.account.deleteConfirmButton") }}
           </Button>
         </div>
       </div>

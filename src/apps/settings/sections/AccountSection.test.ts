@@ -1,5 +1,6 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 import type { Kernel } from "~/types/kernel";
@@ -63,6 +64,10 @@ async function flushAndPaint(): Promise<void> {
 }
 
 describe("AccountSection", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
   afterEach(() => {
     for (const wrapper of mountedWrappers.splice(0)) {
       wrapper.unmount();
