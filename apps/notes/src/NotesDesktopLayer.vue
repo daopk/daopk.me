@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 
-import type { DesktopRendererComponentProps, VfsPath } from "@daopk/sdk";
+import type { VfsPath } from "@daopk/sdk";
 
 import DesktopStickyNote from "./DesktopStickyNote.vue";
 import { usePinnedDesktopNotes } from "./usePinnedDesktopNotes";
 
-defineProps<DesktopRendererComponentProps>();
+interface NotesDesktopLayerProps {
+  stageSize: {
+    width: number;
+    height: number;
+  };
+}
+
+defineProps<NotesDesktopLayerProps>();
 
 const pinnedNotes = usePinnedDesktopNotes();
 
