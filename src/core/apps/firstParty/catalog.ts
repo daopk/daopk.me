@@ -17,8 +17,8 @@ import type { AppPreviewSurface } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
 import type { WidgetDefaultPlacement, WidgetSize, WidgetSurface } from "~/types/widget";
 
-/** Catalog of published first-party apps, served from R2. */
-const FIRST_PARTY_CATALOG_URL = publicApiUrl("/apps/index.json");
+/** Catalog of published first-party apps, served by the public API from R2. */
+const FIRST_PARTY_CATALOG_URL = publicApiUrl("/public/apps/index.json");
 
 const DEFAULT_TIMEOUT_MS = 4000;
 
@@ -50,7 +50,8 @@ export type FirstPartyCatalogFetchResult =
  * origin. First-party apps run in the trusted lane, so the catalog must never
  * point that lane at an arbitrary cross-origin URL.
  */
-const ENTRY_PATH_PATTERN = /^\/apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
+const ENTRY_PATH_PATTERN =
+  /^\/(?:public\/)?apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -439,7 +440,10 @@ function isTrustedEntryUrl(entry: string, id: string): boolean {
     return false;
   }
 
-  return ENTRY_PATH_PATTERN.test(pathname) && pathname.startsWith(`/apps/${id}/`);
+  return (
+    ENTRY_PATH_PATTERN.test(pathname) &&
+    (pathname.startsWith(`/apps/${id}/`) || pathname.startsWith(`/public/apps/${id}/`))
+  );
 }
 
 function absoluteEntryPathname(entry: string, configuredOrigin: string): string | null {

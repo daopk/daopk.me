@@ -19,8 +19,8 @@ function isAbsoluteUrl(value: string): boolean {
 /**
  * Where the Photos app pulls its gallery from at runtime.
  *
- * Images live in a dedicated Cloudflare R2 bucket (`daopk-photos`). `daopk-api`
- * enumerates that bucket and serves both the generated index and the image
+ * Images live in a dedicated Cloudflare R2 bucket (`daopk-photos`). The public
+ * API enumerates that bucket and serves both the generated index and the image
  * bytes under `/public/photos/*`.
  */
 export const PHOTOS_INDEX_FILENAME = "index.json";

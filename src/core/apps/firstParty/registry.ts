@@ -1,8 +1,9 @@
 /**
  * First-party app ids that the shell will accept from the external app catalog.
  * App identity and capabilities live in each `apps/<id>/app.manifest.json` and
- * are published through `/apps/index.json`; this allowlist is the remaining
- * shell-owned trust boundary for independently-shipped apps.
+ * are published through the public API `/public/apps/index.json` catalog; this
+ * allowlist is the remaining shell-owned trust boundary for independently-
+ * shipped apps.
  */
 export const FIRST_PARTY_APP_ID_LIST = [
   "baby-touch",

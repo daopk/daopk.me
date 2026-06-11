@@ -24,7 +24,7 @@ vi.mock("./devManifests", () => ({
       id: "notes",
       version: "1.0.1",
       build: 0,
-      entry: "/apps/notes/1.0.1+0/notes.js",
+      entry: "/public/apps/notes/1.0.1+0/notes.js",
       manifest: {
         id: "notes",
         name: "Notes",
@@ -224,7 +224,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
       version: "1.2.3",
       build: 42,
       revision: "abc1234",
-      entry: "/apps/notes/1.2.3+42/notes.js",
+      entry: "/public/apps/notes/1.2.3+42/notes.js",
       manifest: {
         id: "notes",
         name: "Notes",
@@ -249,7 +249,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
         id: "notes",
         version: "1.2.3",
         build: 42,
-        entry: "/apps/notes/1.2.3+42/notes.js",
+        entry: "/public/apps/notes/1.2.3+42/notes.js",
       }),
     ).toBeNull();
   });

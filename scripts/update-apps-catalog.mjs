@@ -1,10 +1,11 @@
 // Merge per-app catalog-entry fragments into the first-party app catalog.
 //
-// The catalog (`/apps/index.json`, served from R2) maps every published app id
-// to its current serializable manifest and immutable, release-pinned module
-// URL. A publish only rebuilds the apps that changed, so we MUST preserve the
-// entries of the apps that did not: read the current catalog, upsert the
-// changed entries, write it back.
+// The catalog (`index.json` in the apps R2 bucket, served by the public API at
+// `/public/apps/index.json`) maps every published app id to its current
+// serializable manifest and immutable, release-pinned module URL. A publish only
+// rebuilds the apps that changed, so we MUST preserve the entries of the apps
+// that did not: read the current catalog, upsert the changed entries, write it
+// back.
 //
 // Usage: node scripts/update-apps-catalog.mjs <currentCatalog> <entriesDir> <outFile>
 //   currentCatalog  existing catalog JSON (missing/empty => start fresh)

@@ -4,8 +4,8 @@ import { publicApiUrl } from "~/core/publicApi";
  * Where the Blog app pulls live content from at runtime.
  *
  * Posts live as `blog/<slug>.md` in the GitHub repo. CI publishes them (plus a
- * generated `index.json` manifest) to a Cloudflare R2 bucket, and `daopk-api`
- * serves the raw content under `/public/blog/*`.
+ * generated `index.json` manifest) to a Cloudflare R2 bucket, and the public
+ * API serves the raw content under `/public/blog/*`.
  */
 export const BLOG_INDEX_FILENAME = "index.json";
 

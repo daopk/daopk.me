@@ -88,6 +88,15 @@ describe("first-party catalog coercion", () => {
             entry: "https://example.test/apps/notes/1.0.1/notes.js",
             manifest: notesManifest,
           },
+        ],
+      }).apps,
+    ).toEqual([]);
+  });
+
+  it("accepts public API app module URLs", () => {
+    expect(
+      coerceFirstPartyCatalog({
+        apps: [
           {
             id: "notes",
             version: "1.0.1",
@@ -96,7 +105,15 @@ describe("first-party catalog coercion", () => {
           },
         ],
       }).apps,
-    ).toEqual([]);
+    ).toEqual([
+      {
+        id: "notes",
+        version: "1.0.1",
+        build: 0,
+        entry: "/public/apps/notes/1.0.1/notes.js",
+        manifest: notesManifest,
+      },
+    ]);
   });
 
   it("drops entries whose id is not in the first-party allowlist", () => {

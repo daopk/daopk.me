@@ -21,10 +21,10 @@ copies of an injection-key symbol, silently break injection.
 - The build-only `externalRuntimeImportMap` plugin injects an import map into
   `index.html` so bare imports like `vue`, `@daopk/sdk`, and `@daopk/kit`
   resolve to those host chunks.
-- First-party catalog entries include the app manifest and point to same-origin,
-  release-pinned modules under `/apps/<id>/<version+build>/...`. When a module
-  imports the shared surfaces, it gets the same instances the shell already
-  uses.
+- First-party catalog entries include the app manifest and point to release-
+  pinned modules served by the public API under `/public/apps/<id>/<version+build>/...`.
+  When a module imports the shared surfaces, it gets the same instances the
+  shell already uses.
 
 ## First-Party App Packages
 
@@ -68,11 +68,12 @@ import { AppFrame } from "@daopk/kit";
 In development, the shell loads workspace packages directly through
 `firstPartyAppsPhase`, so HMR stays simple and no import map is needed.
 
-In preview and production, the shell fetches `/apps/index.json`, validates each
-same-origin catalog entry and manifest, resolves serializable icon/matcher keys,
-and loads the published module only when the user launches the app or mounts one
-of its widgets. The import map is injected only during `vite build`, so runtime
-composition should be verified with `pnpm build` plus `pnpm preview`.
+In preview and production, the shell fetches `/public/apps/index.json` from the
+configured public API, validates each catalog entry and manifest, resolves serializable
+icon/matcher keys, and loads the published module only when the user launches
+the app or mounts one of its widgets. The import map is injected only during
+`vite build`, so runtime composition should be verified with `pnpm build` plus
+`pnpm preview`.
 
 ## Verification Checklist
 
@@ -81,7 +82,7 @@ composition should be verified with `pnpm build` plus `pnpm preview`.
    `@daopk/sdk`, `@daopk/kit`, and related facades at hashed `/assets/*`
    runtime chunks.
 3. Launch a first-party app from the App Store or shell and confirm the module
-   loads from its `/apps/<id>/...` catalog URL.
+   loads from its `/public/apps/<id>/...` catalog URL.
 4. In DevTools Network, confirm one shared Vue runtime chunk is used by both the
    shell and launched app.
 5. Confirm `useKernel()`, `useVfs()`, and injected `AppContext` work inside the
