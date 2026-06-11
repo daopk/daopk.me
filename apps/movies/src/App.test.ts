@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 
 import {
   AppChromeInjectionKey,
@@ -167,6 +168,15 @@ function persistAppProgressEntries(entries: Record<string, MoviesPlaybackProgres
       data: state,
     }),
   );
+}
+
+function readAppProgressState(): MoviesPlaybackProgressState {
+  const raw = localStorage.getItem(APP_PROGRESS_STORAGE_KEY);
+  if (raw === null) {
+    return { entries: {} };
+  }
+
+  return (JSON.parse(raw) as { data: MoviesPlaybackProgressState }).data;
 }
 
 function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
@@ -390,6 +400,26 @@ async function settle(): Promise<void> {
   await flushPromises();
   await flushPromises();
   await flushPromises();
+}
+
+function dispatchContextMenu(target: Element): void {
+  const ev = new Event("contextmenu", { bubbles: true, cancelable: true });
+  Object.defineProperties(ev, {
+    clientX: { value: 12 },
+    clientY: { value: 24 },
+    button: { value: 2 },
+  });
+  target.dispatchEvent(ev);
+}
+
+async function flushReka(): Promise<void> {
+  await nextTick();
+  await nextTick();
+  await flushPromises();
+}
+
+function menuItems(): HTMLElement[] {
+  return Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
 }
 
 function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
@@ -932,6 +962,57 @@ describe("Movies app", () => {
     expect(cards[1]!.get(".movies-home__continue-progress-value").attributes("style")).toContain(
       "inline-size: 25%;",
     );
+  });
+
+  it("removes a Continue Watching item from its context menu", async () => {
+    const now = Date.now();
+    const movieKey = moviePlaybackProgressKey(550);
+    const latestEpisodeKey = episodePlaybackProgressKey(1399, 1, 2);
+    const olderEpisodeKey = episodePlaybackProgressKey(1399, 1, 1);
+    persistAppProgressEntries({
+      [movieKey]: {
+        currentTime: 30,
+        duration: 120,
+        updatedAt: now - 1_000,
+      },
+      [latestEpisodeKey]: {
+        currentTime: 60,
+        duration: 120,
+        updatedAt: now,
+      },
+      [olderEpisodeKey]: {
+        currentTime: 42,
+        duration: 120,
+        updatedAt: now - 500,
+      },
+    });
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    const continueEpisode = wrapper
+      .findAll(".movies-home__continue-card")
+      .find((card) => card.text().includes("Planet Cinema"));
+    expect(continueEpisode).toBeDefined();
+
+    dispatchContextMenu(continueEpisode!.element);
+    await flushReka();
+
+    expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
+      "Remove from Continue Watching",
+    ]);
+
+    menuItems()[0]!.click();
+    await flushReka();
+
+    const cards = wrapper.findAll(".movies-home__continue-card");
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.text()).toContain("Fight Club");
+
+    const entries = readAppProgressState().entries;
+    expect(entries[movieKey]).toBeDefined();
+    expect(entries[latestEpisodeKey]).toBeUndefined();
+    expect(entries[olderEpisodeKey]).toBeUndefined();
   });
 
   it("opens a Continue Watching movie directly into autoplay playback", async () => {

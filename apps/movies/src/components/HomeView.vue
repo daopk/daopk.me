@@ -2,8 +2,8 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
-import { Button } from "@daopk/ui";
-import { ChevronRight } from "@daopk/icons";
+import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
+import { ChevronRight, Trash2 } from "@daopk/icons";
 
 import HomeHero from "./HomeHero.vue";
 import MovieCard from "./MovieCard.vue";
@@ -176,10 +176,7 @@ function uniqueContinueWatchingRecords(
   const uniqueRecords: MoviesPlaybackProgressRecord[] = [];
 
   for (const record of records) {
-    const groupKey =
-      record.target.kind === "movie"
-        ? `movie:${record.target.tmdbId}`
-        : `tv:${record.target.tmdbId}`;
+    const groupKey = continueWatchingRecordGroupKey(record);
     if (seen.has(groupKey)) {
       continue;
     }
@@ -261,6 +258,18 @@ function continueProgressWidth(item: ContinueWatchingItem): string {
   return `${item.progressPercent}%`;
 }
 
+function continueWatchingRecordGroupKey(record: MoviesPlaybackProgressRecord): string {
+  return record.target.kind === "movie"
+    ? `movie:${record.target.tmdbId}`
+    : `tv:${record.target.tmdbId}`;
+}
+
+function continueWatchingItemGroupKey(item: ContinueWatchingItem): string {
+  return item.target.kind === "movie"
+    ? `movie:${item.target.movie.tmdbId}`
+    : `tv:${item.target.episode.tmdbId}`;
+}
+
 function continueKindLabel(item: ContinueWatchingItem): string {
   return item.target.kind === "movie"
     ? mediaLabel("movie", t, "singular")
@@ -287,6 +296,21 @@ function openContinueWatchingItem(item: ContinueWatchingItem): void {
   }
 
   emit("open-continue-episode", item.target.episode);
+}
+
+function removeContinueWatchingItem(item: ContinueWatchingItem): void {
+  const groupKey = continueWatchingItemGroupKey(item);
+  const records = moviesPlaybackProgressRecords(playbackProgressStore.snapshot());
+
+  for (const record of records) {
+    if (continueWatchingRecordGroupKey(record) === groupKey) {
+      playbackProgressStore.clear(record.key);
+    }
+  }
+
+  continueWatchingItems.value = continueWatchingItems.value.filter(
+    (current) => continueWatchingItemGroupKey(current) !== groupKey,
+  );
 }
 
 function groupPeriodValue(group: MoviesRowGroupConfig): string {
@@ -352,39 +376,50 @@ function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesL
               :key="item.id"
               class="movies-home__continue-item"
             >
-              <button
-                type="button"
-                class="movies-home__continue-card"
-                :aria-label="continueAriaLabel(item)"
-                @click="openContinueWatchingItem(item)"
-              >
-                <span class="movies-home__continue-media">
-                  <img
-                    v-if="item.imageUrl"
-                    class="movies-home__continue-image"
-                    :src="item.imageUrl"
-                    alt=""
-                    aria-hidden="true"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span v-else class="movies-home__continue-image" aria-hidden="true" />
-                  <span class="movies-home__continue-badge">{{ continueKindLabel(item) }}</span>
-                  <span class="movies-home__continue-progress" aria-hidden="true">
-                    <span
-                      class="movies-home__continue-progress-value"
-                      :style="{ inlineSize: continueProgressWidth(item) }"
-                    />
-                  </span>
-                </span>
+              <ContextMenu>
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="movies-home__continue-card"
+                    :aria-label="continueAriaLabel(item)"
+                    @click="openContinueWatchingItem(item)"
+                  >
+                    <span class="movies-home__continue-media">
+                      <img
+                        v-if="item.imageUrl"
+                        class="movies-home__continue-image"
+                        :src="item.imageUrl"
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                      <span v-else class="movies-home__continue-image" aria-hidden="true" />
+                      <span class="movies-home__continue-badge">{{ continueKindLabel(item) }}</span>
+                      <span class="movies-home__continue-progress" aria-hidden="true">
+                        <span
+                          class="movies-home__continue-progress-value"
+                          :style="{ inlineSize: continueProgressWidth(item) }"
+                        />
+                      </span>
+                    </span>
 
-                <span class="movies-home__continue-body">
-                  <span class="movies-home__continue-title">{{ item.title }}</span>
-                  <span v-if="item.subtitle" class="movies-home__continue-subtitle">
-                    {{ item.subtitle }}
-                  </span>
-                </span>
-              </button>
+                    <span class="movies-home__continue-body">
+                      <span class="movies-home__continue-title">{{ item.title }}</span>
+                      <span v-if="item.subtitle" class="movies-home__continue-subtitle">
+                        {{ item.subtitle }}
+                      </span>
+                    </span>
+                  </button>
+                </template>
+
+                <template #items>
+                  <ContextMenuItem @select="removeContinueWatchingItem(item)">
+                    <Trash2 class="movies-home__continue-menu-icon" aria-hidden="true" />
+                    <span>{{ t("movies.home.continue.remove") }}</span>
+                  </ContextMenuItem>
+                </template>
+              </ContextMenu>
             </li>
           </ul>
         </section>
@@ -653,6 +688,13 @@ span.movies-home__continue-image {
   color: var(--color-fg-muted);
   font-size: var(--font-size-xs);
   line-height: var(--leading-snug);
+}
+
+.movies-home__continue-menu-icon {
+  block-size: 16px;
+  color: var(--color-error-soft);
+  flex: 0 0 auto;
+  inline-size: 16px;
 }
 
 .movies-home__group-header {

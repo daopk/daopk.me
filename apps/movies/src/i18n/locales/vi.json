@@ -88,6 +88,7 @@
   "movies.genre.10768": "Chiến tranh & Chính trị",
   "movies.genre.10770": "Phim truyền hình",
   "movies.home.continue.ariaLabel": "Tiếp tục {title}{subtitle}, đã xem {progress}%",
+  "movies.home.continue.remove": "Xóa khỏi Xem tiếp",
   "movies.home.continue.title": "Xem tiếp",
   "movies.home.group.countries": "Quốc gia",
   "movies.home.group.genres": "Thể loại",

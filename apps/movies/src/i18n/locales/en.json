@@ -88,6 +88,7 @@
   "movies.genre.10768": "War & Politics",
   "movies.genre.10770": "TV Movie",
   "movies.home.continue.ariaLabel": "Continue {title}{subtitle}, {progress}% watched",
+  "movies.home.continue.remove": "Remove from Continue Watching",
   "movies.home.continue.title": "Continue Watching",
   "movies.home.group.countries": "Countries",
   "movies.home.group.genres": "Genres",
