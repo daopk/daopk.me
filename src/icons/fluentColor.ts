@@ -67,6 +67,7 @@ export const SettingsAppearanceIcon = createFluentIcon(
   "paint-brush-24",
   "FluentSettingsAppearanceIcon",
 );
+export const SettingsLanguageIcon = createFluentIcon("globe-24", "FluentSettingsLanguageIcon");
 export const SettingsBackgroundIcon = createFluentIcon("image-24", "FluentSettingsBackgroundIcon");
 export const SettingsDockIcon = createFluentIcon("apps-list-24", "FluentSettingsDockIcon");
 export const SettingsWidgetsIcon = createFluentIcon("apps-24", "FluentSettingsWidgetsIcon");
@@ -110,6 +111,7 @@ export const fluentColorIconComponents = {
   FinderImageFileIcon,
   FinderPdfFileIcon,
   SettingsAppearanceIcon,
+  SettingsLanguageIcon,
   SettingsBackgroundIcon,
   SettingsDockIcon,
   SettingsWidgetsIcon,

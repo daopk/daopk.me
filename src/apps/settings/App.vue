@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
 import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
-import { ChevronRight as NavChevronIcon, Globe as LanguageIcon } from "~/icons/lucide";
+import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
 import {
   SettingsAccountIcon as AccountIcon,
   SettingsAboutDeviceIcon as AboutIcon,
@@ -9,6 +9,7 @@ import {
   SettingsBackgroundIcon as BackgroundIcon,
   SettingsComfortIcon as ComfortIcon,
   SettingsDockIcon as DockIcon,
+  SettingsLanguageIcon as LanguageIcon,
   SettingsPrivacyIcon as PrivacyIcon,
 } from "~/icons/fluentColor";
 import { useResizeObserver } from "@vueuse/core";
