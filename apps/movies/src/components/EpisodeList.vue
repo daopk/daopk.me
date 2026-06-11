@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Play } from "@daopk/icons";
 
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSeasonEpisode } from "../moviesApi";
 import { episodeLabel, episodeMetaLabel } from "./detail/detailFormatters";
 
@@ -18,6 +19,8 @@ withDefaults(defineProps<EpisodeListProps>(), {
 defineEmits<{
   open: [episode: MovieSeasonEpisode];
 }>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
@@ -52,11 +55,11 @@ defineEmits<{
         </span>
         <span class="movies-episode-list__copy">
           <span class="movies-episode-list__label-row">
-            <span class="movies-episode-list__label">{{ episodeLabel(episode) }}</span>
+            <span class="movies-episode-list__label">{{ episodeLabel(episode, t) }}</span>
           </span>
           <strong>{{ episode.name }}</strong>
-          <span v-if="showMeta && episodeMetaLabel(episode)" class="movies-episode-list__meta">
-            {{ episodeMetaLabel(episode) }}
+          <span v-if="showMeta && episodeMetaLabel(episode, t)" class="movies-episode-list__meta">
+            {{ episodeMetaLabel(episode, t) }}
           </span>
           <span v-if="episode.overview" class="movies-episode-list__overview">
             {{ episode.overview }}

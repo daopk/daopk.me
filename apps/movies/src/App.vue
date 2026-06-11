@@ -13,6 +13,7 @@ import PersonView from "./components/PersonView.vue";
 import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
+import { useMoviesI18n } from "./i18n/useMoviesI18n";
 import type { MoviesListQuery } from "./moviesApi";
 
 type WatchViewInstance = InstanceType<typeof WatchView> & {
@@ -25,6 +26,7 @@ interface AppFrameRef {
 
 const ctx = inject(AppContextInjectionKey, null);
 const kernel = inject(KernelInjectionKey, null);
+const { t } = useMoviesI18n();
 const rootRef = useTemplateRef<AppFrameRef>("rootRef");
 const rootElement = computed(() => rootRef.value?.element ?? null);
 const watchViewRef = ref<WatchViewInstance | null>(null);
@@ -104,7 +106,7 @@ onUnmounted(() => {
     class="movies-app"
     layout="grid"
     :safe-area="false"
-    aria-label="Movies"
+    :aria-label="t('movies.app.ariaLabel')"
     @dragstart.prevent
   >
     <MoviesToolbar

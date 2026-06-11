@@ -8,6 +8,7 @@ import { ArrowLeft } from "@daopk/icons";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailContent from "./detail/DetailContent.vue";
 import DetailHero from "./detail/DetailHero.vue";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
   fetchMovieDetail,
   type MovieDetail,
@@ -43,6 +44,7 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
 const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
+const { t } = useMoviesI18n();
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
 
@@ -121,10 +123,10 @@ function startWatching(): void {
       v-else-if="state === 'error'"
       class="movies-detail__status"
       role="alert"
-      title="Could not load title"
-      description="Go back and try another movie or TV show."
+      :title="t('movies.error.detail.title')"
+      :description="t('movies.error.detail.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <template v-else-if="detail">

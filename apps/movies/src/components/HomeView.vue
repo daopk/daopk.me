@@ -9,6 +9,15 @@ import HomeHero from "./HomeHero.vue";
 import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import {
+  homeGroupTitle,
+  homePeriodOptions,
+  homeRowTitle,
+  mediaLabel,
+  moviesText,
+  rowListLabel,
+} from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
+import {
   fetchMovieDetail,
   fetchMovieEpisode,
   fetchMoviesList,
@@ -43,7 +52,6 @@ interface ContinueWatchingEpisodeTarget {
 interface ContinueWatchingItem {
   readonly id: string;
   readonly imageUrl: string;
-  readonly kindLabel: string;
   readonly progress: MoviesPlaybackProgressEntry;
   readonly progressPercent: number;
   readonly subtitle: string;
@@ -60,6 +68,7 @@ const emit = defineEmits<{
 
 const CONTINUE_WATCHING_LIMIT = 10;
 
+const { t } = useMoviesI18n();
 const continueWatchingItems = ref<readonly ContinueWatchingItem[]>([]);
 const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
@@ -190,7 +199,6 @@ async function hydrateContinueWatchingRecord(
     return {
       id: record.key,
       imageUrl: movie.backdropUrl || movie.thumbUrl || movie.posterUrl,
-      kindLabel: "Movie",
       progress: record.progress,
       progressPercent: continueProgressPercent(record.progress),
       subtitle: continueMovieSubtitle(movie),
@@ -219,7 +227,6 @@ async function hydrateContinueWatchingRecord(
       episodeDetail.series.backdropUrl ||
       episodeDetail.series.thumbUrl ||
       episodeDetail.series.posterUrl,
-    kindLabel: "TV",
     progress: record.progress,
     progressPercent: continueProgressPercent(record.progress),
     subtitle: continueEpisodeSubtitle(episodeDetail.episode.name, episodeTarget),
@@ -250,10 +257,23 @@ function continueProgressWidth(item: ContinueWatchingItem): string {
   return `${item.progressPercent}%`;
 }
 
+function continueKindLabel(item: ContinueWatchingItem): string {
+  return item.target.kind === "movie"
+    ? mediaLabel("movie", t, "singular")
+    : mediaLabel("tv", t, "short");
+}
+
 function continueAriaLabel(item: ContinueWatchingItem): string {
-  return `Continue ${item.title}${item.subtitle.length > 0 ? `, ${item.subtitle}` : ""}, ${
-    item.progressPercent
-  }% watched`;
+  return moviesText(
+    t,
+    "movies.home.continue.ariaLabel",
+    "Continue {title}{subtitle}, {progress}% watched",
+    {
+      progress: item.progressPercent,
+      subtitle: item.subtitle.length > 0 ? `, ${item.subtitle}` : "",
+      title: item.title,
+    },
+  );
 }
 
 function openContinueWatchingItem(item: ContinueWatchingItem): void {
@@ -290,10 +310,6 @@ function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesL
   const period = group.id === "trending" ? selectedPeriods.value[group.id] : undefined;
   return period === undefined ? row.query : { ...row.query, period };
 }
-
-function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string {
-  return `${group.title} ${row.title}`;
-}
 </script>
 
 <template>
@@ -306,7 +322,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
       tone="error"
       role="alert"
     >
-      Could not load Movies data. Try again later.
+      {{ t("movies.error.homeData") }}
     </StatusBanner>
 
     <HomeHero v-if="hasFeatured" :featured="featured" @open-detail="$emit('open-detail', $event)" />
@@ -314,7 +330,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
     <section
       v-if="hasFeatured || hasContinueWatching"
       class="movies-home__rows-shell"
-      aria-label="Movies home sections"
+      :aria-label="t('movies.home.sections.ariaLabel')"
     >
       <div class="movies-home__rows">
         <section
@@ -323,7 +339,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
           aria-labelledby="movies-home-continue-title"
         >
           <div class="movies-home__continue-header">
-            <h2 id="movies-home-continue-title">Continue Watching</h2>
+            <h2 id="movies-home-continue-title">{{ t("movies.home.continue.title") }}</h2>
           </div>
 
           <ul class="movies-home__continue-rail">
@@ -349,7 +365,7 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
                     decoding="async"
                   />
                   <span v-else class="movies-home__continue-image" aria-hidden="true" />
-                  <span class="movies-home__continue-badge">{{ item.kindLabel }}</span>
+                  <span class="movies-home__continue-badge">{{ continueKindLabel(item) }}</span>
                   <span class="movies-home__continue-progress" aria-hidden="true">
                     <span
                       class="movies-home__continue-progress-value"
@@ -376,13 +392,13 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
             class="movies-home__group"
           >
             <div class="movies-home__group-header">
-              <h2>{{ group.title }}</h2>
+              <h2>{{ homeGroupTitle(group, t) }}</h2>
               <SegmentedControl
                 v-if="group.periodOptions"
                 class="movies-home__period-control"
-                :label="`${group.title} period`"
+                :label="t('movies.home.periodControlLabel', { group: homeGroupTitle(group, t) })"
                 :model-value="groupPeriodValue(group)"
-                :options="group.periodOptions"
+                :options="homePeriodOptions(group, t)"
                 size="sm"
                 @change="setGroupPeriod(group, $event)"
               />
@@ -391,13 +407,13 @@ function rowListLabel(group: MoviesRowGroupConfig, row: MoviesRowConfig): string
             <div class="movies-home__group-rows">
               <section v-for="row in group.rows" :key="row.id" class="movies-home__row">
                 <div class="movies-home__row-header">
-                  <h3>{{ row.title }}</h3>
+                  <h3>{{ homeRowTitle(row, t) }}</h3>
                   <Button
                     class="movies-home__row-action"
                     size="sm"
                     variant="ghost"
                     :icon-start="ChevronRight"
-                    :aria-label="`View all ${rowListLabel(group, row)}`"
+                    :aria-label="t('movies.home.viewAll', { label: rowListLabel(group, row, t) })"
                     @click="$emit('open-list', queryForRow(group, row))"
                   />
                 </div>

@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
@@ -438,6 +439,7 @@ function menuRadioItem(label: string): Element {
 
 describe("MovieHlsPlayer", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     localStorage.clear();
     hlsMock.instances.length = 0;
     hlsMock.MockHls.isSupported.mockReset();

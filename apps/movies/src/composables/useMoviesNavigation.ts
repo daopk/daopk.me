@@ -4,12 +4,13 @@ import { useAppChrome } from "@daopk/kit";
 import type { AppChromeBackAction, AppContext, Kernel } from "@daopk/sdk";
 
 import {
-  listTitleForQuery,
   type MovieEpisodeTarget,
   type MoviePersonCredit,
   type MovieSummary,
   type MoviesListQuery,
 } from "../moviesApi";
+import { localizedListTitleForQuery, moviesText } from "../i18n/labels";
+import { useMoviesI18n, type MoviesTranslate } from "../i18n/useMoviesI18n";
 import {
   createMoviesHomeView,
   createMoviesListView,
@@ -69,6 +70,7 @@ export function useMoviesNavigation({
   currentPathname = browserPathname,
   syncPath = replaceMoviesViewPath,
 }: UseMoviesNavigationOptions): UseMoviesNavigationBindings {
+  const { t } = useMoviesI18n();
   const view = ref<MoviesView>(createMoviesHomeView());
   const history = ref<MoviesView[]>([]);
   const futureHistory = ref<MoviesView[]>([]);
@@ -81,10 +83,10 @@ export function useMoviesNavigation({
     view.value.name === "list" ? (view.value.query.keyword ?? "") : "",
   );
   const chromeTitle = computed(() => {
-    return chromeTitleForView(view.value);
+    return chromeTitleForView(view.value, t);
   });
   const chromeBackAction = computed<AppChromeBackAction | null>(() =>
-    canGoBack.value ? { ariaLabel: "Back to Movies", handler: goBack } : null,
+    canGoBack.value ? { ariaLabel: t("movies.action.backToMovies"), handler: goBack } : null,
   );
 
   const appChrome = useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
@@ -245,50 +247,59 @@ function browserPathname(): string | null {
   return typeof window === "undefined" ? null : window.location.pathname;
 }
 
-function chromeTitleForView(view: MoviesView): string {
+function chromeTitleForView(view: MoviesView, t?: MoviesTranslate): string {
   if (view.name === "list") {
-    return listTitleForQuery(view.query);
+    return localizedListTitleForQuery(view.query, t);
   }
 
   if (view.name === "detail") {
-    return view.title ?? titleFromSlug(view.slug);
+    return view.title ?? titleFromSlug(view.slug, t);
   }
 
   if (view.name === "watch") {
     if (view.target.kind === "movie") {
-      return view.target.title ?? titleFromSlug(view.target.slug);
+      return view.target.title ?? titleFromSlug(view.target.slug, t);
     }
 
-    return view.target.title ?? episodeTitleFromParts(view.target.slug, view.target.episodeNumber);
+    return (
+      view.target.title ?? episodeTitleFromParts(view.target.slug, view.target.episodeNumber, t)
+    );
   }
 
   if (view.name === "person") {
-    return view.title ?? titleFromSlug(view.slug);
+    return view.title ?? titleFromSlug(view.slug, t);
   }
 
   if (view.name === "season") {
-    return view.title ?? `${titleFromSlug(view.slug)}: Season ${view.seasonNumber.toString()}`;
+    return (
+      view.title ??
+      `${titleFromSlug(view.slug, t)}: ${moviesText(t, "movies.format.season", "Season {number}", {
+        number: view.seasonNumber,
+      })}`
+    );
   }
 
   if (view.name === "episode") {
-    return view.title ?? episodeTitleFromParts(view.slug, view.episodeNumber);
+    return view.title ?? episodeTitleFromParts(view.slug, view.episodeNumber, t);
   }
 
-  return "Movies";
+  return moviesText(t, "movies.app.ariaLabel", "Movies");
 }
 
-function episodeTitleFromParts(slug: string, episodeNumber: number): string {
-  return `${titleFromSlug(slug)}: Episode ${episodeNumber.toString()}`;
+function episodeTitleFromParts(slug: string, episodeNumber: number, t?: MoviesTranslate): string {
+  return `${titleFromSlug(slug, t)}: ${moviesText(t, "movies.format.episode", "Episode {number}", {
+    number: episodeNumber,
+  })}`;
 }
 
-function titleFromSlug(slug: string): string {
+function titleFromSlug(slug: string, t?: MoviesTranslate): string {
   const title = slug
     .split("-")
     .filter((part) => part.length > 0)
     .map((part) => (/^(?:tmdb|tv)$/i.test(part) ? part.toUpperCase() : capitalize(part)))
     .join(" ");
 
-  return title.length > 0 ? title : "Movies";
+  return title.length > 0 ? title : moviesText(t, "movies.app.ariaLabel", "Movies");
 }
 
 function capitalize(value: string): string {

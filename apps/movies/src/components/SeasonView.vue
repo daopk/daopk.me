@@ -9,6 +9,7 @@ import EpisodeList from "./EpisodeList.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
 import { episodeCountLabel, seasonLabel, seasonMetaLabel } from "./detail/detailFormatters";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
   fetchMovieDetail,
   fetchMovieSeason,
@@ -38,6 +39,7 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const season = ref<MovieSeasonDetail | null>(null);
 const state = ref<LoadState>("loading");
+const { t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const heroImageUrl = computed(
@@ -50,7 +52,7 @@ const heading = computed(() => {
     return "";
   }
 
-  return `${currentDetail.name}: ${seasonLabel(currentSeason)}`;
+  return `${currentDetail.name}: ${seasonLabel(currentSeason, t)}`;
 });
 const meta = computed(() => {
   const currentSeason = season.value;
@@ -58,7 +60,7 @@ const meta = computed(() => {
     return "";
   }
 
-  return seasonMetaLabel(currentSeason) || episodeCountLabel(currentSeason.episodes.length);
+  return seasonMetaLabel(currentSeason, t) || episodeCountLabel(currentSeason.episodes.length, t);
 });
 
 watch(
@@ -114,10 +116,10 @@ async function loadSeason(): Promise<void> {
       v-else-if="state === 'error'"
       class="movies-season__status"
       role="alert"
-      title="Could not load season"
-      description="Go back and try another season."
+      :title="t('movies.error.season.title')"
+      :description="t('movies.error.season.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <article v-else-if="detail && season" class="movies-season__content">
@@ -144,15 +146,19 @@ async function loadSeason(): Promise<void> {
 
       <section class="movies-season__section">
         <span class="movies-season__section-heading">
-          <h2>Episodes</h2>
-          <p v-if="season.episodes.length > 0">{{ episodeCountLabel(season.episodes.length) }}</p>
+          <h2>{{ t("movies.section.episodes") }}</h2>
+          <p v-if="season.episodes.length > 0">
+            {{ episodeCountLabel(season.episodes.length, t) }}
+          </p>
         </span>
-        <p v-if="season.episodes.length === 0" class="movies-season__muted">No episodes listed.</p>
+        <p v-if="season.episodes.length === 0" class="movies-season__muted">
+          {{ t("movies.section.noEpisodes") }}
+        </p>
         <EpisodeList v-else show-meta :episodes="season.episodes" @open="openEpisode" />
       </section>
 
       <DetailPeopleSection
-        title="Series Cast"
+        :title="t('movies.section.seriesCast')"
         :people="detail.cast"
         @open-person="$emit('open-person', $event)"
       />

@@ -5,6 +5,7 @@ import type {
   MovieSeasonEpisode,
   MovieSummary,
 } from "../../moviesApi";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import DetailCollectionSection from "./DetailCollectionSection.vue";
 import DetailFactsSection from "./DetailFactsSection.vue";
 import DetailPeopleSection from "./DetailPeopleSection.vue";
@@ -21,10 +22,12 @@ defineEmits<{
   "open-episode": [episode: MovieSeasonEpisode];
   "open-person": [person: MoviePersonCredit];
 }>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
-  <section class="movies-detail-content" aria-label="TMDB title information">
+  <section class="movies-detail-content" :aria-label="t('movies.detail.ariaLabel')">
     <DetailFactsSection :description="detail.content" :facts="detail.facts" />
 
     <DetailSeasonsSection
@@ -42,12 +45,12 @@ defineEmits<{
     />
 
     <DetailPeopleSection
-      title="Cast"
+      :title="t('movies.section.cast')"
       :people="detail.cast"
       @open-person="$emit('open-person', $event)"
     />
     <DetailPeopleSection
-      title="Crew"
+      :title="t('movies.section.crew')"
       :people="detail.crew"
       variant="compact"
       @open-person="$emit('open-person', $event)"

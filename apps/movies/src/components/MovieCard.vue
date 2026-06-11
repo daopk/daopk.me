@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { mediaLabel } from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSummary } from "../moviesApi";
 import PosterFrame from "./PosterFrame.vue";
 
@@ -11,6 +13,8 @@ defineProps<MovieCardProps>();
 defineEmits<{
   open: [movie: MovieSummary];
 }>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
@@ -23,7 +27,7 @@ defineEmits<{
       empty-class="movie-card__poster--empty"
     >
       <span class="movie-card__badge">
-        {{ movie.mediaType === "tv" ? "TV" : "Movie" }}
+        {{ mediaLabel(movie.mediaType, t, movie.mediaType === "tv" ? "short" : "singular") }}
       </span>
     </PosterFrame>
 

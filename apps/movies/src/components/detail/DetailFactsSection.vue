@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MovieFact } from "../../moviesApi";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 
 interface DetailFactsSectionProps {
   description?: string;
@@ -7,11 +8,13 @@ interface DetailFactsSectionProps {
 }
 
 defineProps<DetailFactsSectionProps>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
   <section v-if="facts.length > 0 || description" class="movies-detail-section">
-    <h2>Details</h2>
+    <h2>{{ t("movies.section.details") }}</h2>
     <p v-if="description" class="movies-detail-section__description">
       {{ description }}
     </p>

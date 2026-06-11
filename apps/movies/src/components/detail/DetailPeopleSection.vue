@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MoviePersonCredit } from "../../moviesApi";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import PosterFrame from "../PosterFrame.vue";
 import { personMetaLabel } from "./detailFormatters";
 
@@ -18,6 +19,8 @@ withDefaults(defineProps<DetailPeopleSectionProps>(), {
 defineEmits<{
   "open-person": [person: MoviePersonCredit];
 }>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
@@ -44,7 +47,7 @@ defineEmits<{
           </PosterFrame>
           <span class="movies-detail-person__copy">
             <strong>{{ person.name }}</strong>
-            <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
+            <span v-if="personMetaLabel(person, t)">{{ personMetaLabel(person, t) }}</span>
           </span>
         </button>
         <span v-else class="movies-detail-person">
@@ -60,7 +63,7 @@ defineEmits<{
           </PosterFrame>
           <span class="movies-detail-person__copy">
             <strong>{{ person.name }}</strong>
-            <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
+            <span v-if="personMetaLabel(person, t)">{{ personMetaLabel(person, t) }}</span>
           </span>
         </span>
       </li>
@@ -75,11 +78,11 @@ defineEmits<{
           @click="$emit('open-person', person)"
         >
           <strong>{{ person.name }}</strong>
-          <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
+          <span v-if="personMetaLabel(person, t)">{{ personMetaLabel(person, t) }}</span>
         </button>
         <span v-else class="movies-detail-person movies-detail-person--compact">
           <strong>{{ person.name }}</strong>
-          <span v-if="personMetaLabel(person)">{{ personMetaLabel(person) }}</span>
+          <span v-if="personMetaLabel(person, t)">{{ personMetaLabel(person, t) }}</span>
         </span>
       </li>
     </ul>

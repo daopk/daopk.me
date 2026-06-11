@@ -5,6 +5,8 @@ import { IconButton, TextInput } from "@daopk/kit";
 import { Button, Dialog, DialogActions } from "@daopk/ui";
 import { ChevronLeft, ChevronRight, Film, Home, Search, Tv, X } from "@daopk/icons";
 
+import { mediaLabel } from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import { type MovieMediaType, type MoviesListQuery } from "../moviesApi";
 
 interface TextInputHandle {
@@ -45,6 +47,7 @@ const emit = defineEmits<{
 const searchDraft = ref(props.activeSearch);
 const isSearchDialogOpen = ref(false);
 const searchInput = ref<TextInputHandle | null>(null);
+const { t } = useMoviesI18n();
 
 const activeCatalogQuery = computed(() =>
   props.activeListQuery?.keyword === undefined && props.activeListQuery?.kind === undefined
@@ -125,83 +128,83 @@ function selectMedia(media: MovieMediaType): void {
     class="movies-toolbar"
     :class="{ 'movies-toolbar--solid': solid, 'movies-toolbar--has-close': showClose }"
   >
-    <nav class="movies-toolbar__history" aria-label="Movies navigation">
+    <nav class="movies-toolbar__history" :aria-label="t('movies.nav.ariaLabel')">
       <IconButton
-        label="Back"
+        :label="t('movies.action.back')"
         size="sm"
         :icon="ChevronLeft"
         :disabled="!canGoBack"
-        title="Back"
+        :title="t('movies.action.back')"
         @click="$emit('back')"
       />
       <IconButton
-        label="Forward"
+        :label="t('movies.action.forward')"
         size="sm"
         :icon="ChevronRight"
         :disabled="!canGoForward"
-        title="Forward"
+        :title="t('movies.action.forward')"
         @click="$emit('forward')"
       />
       <IconButton
-        label="Home"
+        :label="t('movies.action.home')"
         size="sm"
         :icon="Home"
         :disabled="!canGoHome"
-        title="Home"
+        :title="t('movies.action.home')"
         @click="$emit('home')"
       />
     </nav>
 
-    <nav class="movies-toolbar__catalog" aria-label="Movies catalog">
+    <nav class="movies-toolbar__catalog" :aria-label="t('movies.catalog.ariaLabel')">
       <button
         type="button"
         class="movies-toolbar__menu-button"
-        aria-label="Movies"
-        title="Movies"
+        :aria-label="mediaLabel('movie', t)"
+        :title="mediaLabel('movie', t)"
         @click="selectMedia('movie')"
       >
         <Film class="movies-toolbar__menu-icon" aria-hidden="true" />
-        <span>Movies</span>
+        <span>{{ mediaLabel("movie", t) }}</span>
       </button>
 
       <button
         type="button"
         class="movies-toolbar__menu-button"
-        aria-label="TV Shows"
-        title="TV Shows"
+        :aria-label="mediaLabel('tv', t)"
+        :title="mediaLabel('tv', t)"
         @click="selectMedia('tv')"
       >
         <Tv class="movies-toolbar__menu-icon" aria-hidden="true" />
-        <span>TV Shows</span>
+        <span>{{ mediaLabel("tv", t) }}</span>
       </button>
     </nav>
 
     <div class="movies-toolbar__actions">
       <IconButton
         class="movies-toolbar__search-button"
-        label="Search Movies"
+        :label="t('movies.action.searchMovies')"
         size="sm"
         :active="activeSearch.length > 0 || isSearchDialogOpen"
         :icon="Search"
         :pressed="isSearchDialogOpen || undefined"
-        title="Search Movies"
+        :title="t('movies.action.searchMovies')"
         @click="openSearchDialog"
       />
 
       <IconButton
         v-if="showClose"
         class="movies-toolbar__close"
-        label="Close Movies"
+        :label="t('movies.action.closeMovies')"
         size="sm"
         :icon="X"
-        title="Close Movies"
+        :title="t('movies.action.closeMovies')"
         @click="$emit('close')"
       />
     </div>
 
     <Dialog
       :open="isSearchDialogOpen"
-      title="Search"
+      :title="t('movies.search.dialog.title')"
       :portal-to="searchDialogPortalTarget"
       scope="container"
       :modal="false"
@@ -212,13 +215,13 @@ function selectMedia(media: MovieMediaType): void {
           ref="searchInput"
           v-model="searchDraft"
           type="search"
-          aria-label="Search movies"
-          placeholder="Search..."
+          :aria-label="t('movies.search.input.ariaLabel')"
+          :placeholder="t('movies.search.placeholder')"
           autocomplete="off"
         />
         <DialogActions align="stretch">
           <Button type="button" variant="secondary" @click="setSearchDialogOpen(false)">
-            Cancel
+            {{ t("movies.action.cancel") }}
           </Button>
           <Button
             type="submit"
@@ -226,7 +229,7 @@ function selectMedia(media: MovieMediaType): void {
             :disabled="searchDraft.trim().length === 0"
             :icon-start="Search"
           >
-            Search
+            {{ t("movies.action.submitSearch") }}
           </Button>
         </DialogActions>
       </form>

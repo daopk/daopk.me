@@ -14,6 +14,8 @@ import {
   seasonLabel,
   seasonMetaLabel,
 } from "./detail/detailFormatters";
+import { moviesText } from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
   fetchMovieEpisode,
   type MovieEpisodeDetail,
@@ -42,13 +44,14 @@ const emit = defineEmits<{
 
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const state = ref<LoadState>("loading");
+const { t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const detail = computed(() => episodeDetail.value?.series ?? null);
 const season = computed(() => episodeDetail.value?.season ?? null);
 const episode = computed<MovieSeasonEpisode | null>(() => episodeDetail.value?.episode ?? null);
 const heroImageUrl = computed(() => episode.value?.stillUrl || detail.value?.backdropUrl || "");
-const seasonMeta = computed(() => (season.value === null ? "" : seasonMetaLabel(season.value)));
+const seasonMeta = computed(() => (season.value === null ? "" : seasonMetaLabel(season.value, t)));
 const facts = computed(() => {
   const currentEpisode = episode.value;
   const currentSeason = season.value;
@@ -57,15 +60,20 @@ const facts = computed(() => {
   }
 
   return [
-    { label: "Season", value: seasonLabel(currentSeason) },
-    { label: "Episode", value: String(currentEpisode.episodeNumber) },
-    { label: "Air Date", value: currentEpisode.airDate },
+    { label: t("movies.section.season"), value: seasonLabel(currentSeason, t) },
+    { label: t("movies.section.episode"), value: String(currentEpisode.episodeNumber) },
+    { label: t("movies.section.airDate"), value: currentEpisode.airDate },
     {
-      label: "Runtime",
-      value: currentEpisode.runtime === null ? "" : `${currentEpisode.runtime} min`,
+      label: t("movies.section.runtime"),
+      value:
+        currentEpisode.runtime === null
+          ? ""
+          : moviesText(t, "movies.format.minute.short", "{count} min", {
+              count: currentEpisode.runtime,
+            }),
     },
     {
-      label: "Rating",
+      label: t("movies.section.rating"),
       value: currentEpisode.rating === null ? "" : currentEpisode.rating.toFixed(1),
     },
   ].filter((fact) => fact.value.length > 0);
@@ -138,10 +146,10 @@ async function loadEpisode(): Promise<void> {
       v-else-if="state === 'error'"
       class="movies-episode__status"
       role="alert"
-      title="Could not load episode"
-      description="Go back and try another episode."
+      :title="t('movies.error.episode.title')"
+      :description="t('movies.error.episode.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <article v-else-if="detail && season && episode" class="movies-episode__content">
@@ -150,7 +158,7 @@ async function loadEpisode(): Promise<void> {
           v-if="episode.play !== null"
           type="button"
           class="movies-episode__media movies-episode__media--button"
-          :aria-label="`Play ${episode.name}`"
+          :aria-label="`${t('movies.action.play')} ${episode.name}`"
           @click="watchEpisode"
         >
           <img
@@ -179,18 +187,18 @@ async function loadEpisode(): Promise<void> {
         </span>
 
         <div class="movies-episode__intro">
-          <p class="movies-episode__eyebrow">{{ detail.name }} · {{ seasonLabel(season) }}</p>
+          <p class="movies-episode__eyebrow">{{ detail.name }} · {{ seasonLabel(season, t) }}</p>
           <h1>{{ episode.name }}</h1>
-          <p v-if="episodeMetaLabel(episode)" class="movies-episode__subtitle">
-            {{ episodeLabel(episode) }} · {{ episodeMetaLabel(episode) }}
+          <p v-if="episodeMetaLabel(episode, t)" class="movies-episode__subtitle">
+            {{ episodeLabel(episode, t) }} · {{ episodeMetaLabel(episode, t) }}
           </p>
-          <p v-else class="movies-episode__subtitle">{{ episodeLabel(episode) }}</p>
+          <p v-else class="movies-episode__subtitle">{{ episodeLabel(episode, t) }}</p>
           <p v-if="episode.overview" class="movies-episode__overview">{{ episode.overview }}</p>
         </div>
       </header>
 
       <section v-if="facts.length > 0" class="movies-episode__section">
-        <h2>Episode Details</h2>
+        <h2>{{ t("movies.section.episodeDetails") }}</h2>
         <dl class="movies-episode__facts">
           <div v-for="fact in facts" :key="fact.label">
             <dt>{{ fact.label }}</dt>
@@ -215,7 +223,7 @@ async function loadEpisode(): Promise<void> {
       </section>
 
       <DetailPeopleSection
-        title="Series Cast"
+        :title="t('movies.section.seriesCast')"
         :people="detail.cast"
         @open-person="$emit('open-person', $event)"
       />

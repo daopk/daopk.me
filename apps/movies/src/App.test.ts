@@ -1,4 +1,5 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -93,6 +94,7 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
 }));
 
 import App from "./App.vue";
+import { useSettingsStore } from "~/core/storage/SettingsStore";
 import {
   DEFAULT_MOVIES_LIST_LIMIT,
   fetchMovieDetail,
@@ -398,6 +400,7 @@ function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
 
 describe("Movies app", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
     localStorage.clear();
     window.history.replaceState(null, "", "/apps/movies");
@@ -593,6 +596,44 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("renders Movies home and catalog controls in Vietnamese when locale is vi", async () => {
+    useSettingsStore().$patch({ locale: "vi", localeMode: "manual" });
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    expect(wrapper.text()).toContain("Xu hướng tuần này");
+    expect(wrapper.text()).toContain("Quốc gia");
+    expect(wrapper.text()).toContain("Hàn Quốc");
+    expect(wrapper.text()).toContain("Thể loại");
+    expect(wrapper.text()).toContain("Hành động");
+    expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
+      "Phim lẻ",
+      "Phim bộ",
+    ]);
+    expect(wrapper.find('[aria-label="Xem tất cả Xu hướng Phim lẻ"]').exists()).toBe(true);
+
+    await wrapper
+      .findAll(".movies-toolbar__menu-button")
+      .find((button) => button.text().trim() === "Phim bộ")!
+      .trigger("click");
+    await settle();
+
+    expect(wrapper.text()).toContain("Phim bộ");
+    expect(
+      wrapper
+        .get('select[aria-label="Loại"]')
+        .findAll("option")
+        .map((option) => option.text()),
+    ).toEqual(["Tất cả", "Phim lẻ", "Phim bộ"]);
+    expect(
+      wrapper
+        .get('select[aria-label="Quốc gia"]')
+        .findAll("option")
+        .map((option) => option.text()),
+    ).toEqual(["Tất cả quốc gia", "Việt Nam", "Hoa Kỳ", "Hàn Quốc"]);
   });
 
   it("emits app URL changes for the initial home view and detail navigation", async () => {

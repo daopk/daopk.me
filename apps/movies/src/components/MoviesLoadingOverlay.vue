@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { Spinner } from "@daopk/kit";
+
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
   <div class="movies-loading-overlay" aria-live="polite">
     <div class="movies-loading-overlay__content">
-      <Spinner size="lg" label="Loading Movies" />
+      <Spinner size="lg" :label="t('movies.loading.movies')" />
     </div>
   </div>
 </template>

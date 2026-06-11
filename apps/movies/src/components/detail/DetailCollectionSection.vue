@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MovieCard from "../MovieCard.vue";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import type { MovieCollection, MovieSummary } from "../../moviesApi";
 
 interface DetailCollectionSectionProps {
@@ -11,12 +12,14 @@ defineProps<DetailCollectionSectionProps>();
 defineEmits<{
   "open-detail": [movie: MovieSummary];
 }>();
+
+const { t } = useMoviesI18n();
 </script>
 
 <template>
   <section class="movies-detail-section">
     <div class="movies-detail-section__heading">
-      <p class="movies-detail-section__label">Collection</p>
+      <p class="movies-detail-section__label">{{ t("movies.collection.label") }}</p>
       <h2>{{ collection.name }}</h2>
     </div>
     <p v-if="collection.overview" class="movies-detail-section__copy">

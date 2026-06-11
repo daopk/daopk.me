@@ -7,6 +7,7 @@ import {
   type MovieSeasonDetail,
   type MovieSeasonEpisode,
 } from "../../moviesApi";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import EpisodeList from "../EpisodeList.vue";
 import { episodeTotalLabel, seasonLabel, seasonMetaLabel } from "./detailFormatters";
 
@@ -28,6 +29,7 @@ const selectedSeason = ref("");
 const seasonDetail = ref<MovieSeasonDetail | null>(null);
 const episodesState = ref<EpisodesState>("idle");
 const episodesSection = ref<HTMLElement | null>(null);
+const { t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const orderedSeasons = computed(() =>
@@ -125,8 +127,8 @@ async function scrollEpisodesIntoView(): Promise<void> {
   <section v-if="orderedSeasons.length > 0" class="movies-detail-section">
     <div class="movies-detail-section__heading">
       <span>
-        <h2>Seasons</h2>
-        <p v-if="props.episodeTotal">{{ episodeTotalLabel(props.episodeTotal) }}</p>
+        <h2>{{ t("movies.section.seasons") }}</h2>
+        <p v-if="props.episodeTotal">{{ episodeTotalLabel(props.episodeTotal, t) }}</p>
       </span>
     </div>
 
@@ -152,10 +154,10 @@ async function scrollEpisodesIntoView(): Promise<void> {
           />
           <span v-else class="movies-detail-seasons__poster" aria-hidden="true" />
           <span class="movies-detail-seasons__copy">
-            <span class="movies-detail-section__label">{{ seasonLabel(season) }}</span>
+            <span class="movies-detail-section__label">{{ seasonLabel(season, t) }}</span>
             <strong>{{ season.name }}</strong>
-            <span v-if="seasonMetaLabel(season)" class="movies-detail-section__muted">
-              {{ seasonMetaLabel(season) }}
+            <span v-if="seasonMetaLabel(season, t)" class="movies-detail-section__muted">
+              {{ seasonMetaLabel(season, t) }}
             </span>
             <span v-if="season.overview" class="movies-detail-seasons__overview">
               {{ season.overview }}
@@ -168,22 +170,22 @@ async function scrollEpisodesIntoView(): Promise<void> {
     <div id="movies-detail-episodes" ref="episodesSection" class="movies-detail-episodes">
       <div class="movies-detail-episodes__heading">
         <span>
-          <h3>Episodes</h3>
-          <p v-if="activeSeason">{{ seasonLabel(activeSeason) }}</p>
+          <h3>{{ t("movies.section.episodes") }}</h3>
+          <p v-if="activeSeason">{{ seasonLabel(activeSeason, t) }}</p>
         </span>
       </div>
 
       <p v-if="episodesState === 'loading'" class="movies-detail-section__muted">
-        Loading episodes...
+        {{ t("movies.section.loadingEpisodes") }}
       </p>
       <p v-else-if="episodesState === 'error'" class="movies-detail-section__muted" role="alert">
-        Could not load episodes.
+        {{ t("movies.error.episodes") }}
       </p>
       <p
         v-else-if="seasonDetail !== null && seasonDetail.episodes.length === 0"
         class="movies-detail-section__muted"
       >
-        No episodes listed.
+        {{ t("movies.section.noEpisodes") }}
       </p>
 
       <EpisodeList

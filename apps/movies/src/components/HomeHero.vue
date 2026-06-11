@@ -4,6 +4,7 @@ import { computed, toRef } from "vue";
 import { ChevronRight } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSummary } from "../moviesApi";
 import { useHomeHeroCarousel } from "../composables/useHomeHeroCarousel";
 
@@ -17,6 +18,7 @@ const emit = defineEmits<{
   "open-detail": [movie: MovieSummary];
 }>();
 
+const { t } = useMoviesI18n();
 const { activeIndex, isDesktopDragging, setActiveIndex, setDesktopHeroRef, setMobileHeroRef } =
   useHomeHeroCarousel(toRef(props, "featured"));
 
@@ -37,7 +39,9 @@ function heroMetaLabel(movie: MovieSummary): string {
 }
 
 function heroCardAriaLabel(movie: MovieSummary, index: number): string {
-  return `${index === activeIndex.value ? "Open" : "Activate"} ${movie.name}`;
+  return index === activeIndex.value
+    ? t("movies.home.hero.openTitle", { title: movie.name })
+    : t("movies.home.hero.activateTitle", { title: movie.name });
 }
 
 function openHero(movie: MovieSummary): void {
@@ -89,7 +93,11 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <section v-if="activeHero" class="movies-home__hero" aria-label="Featured titles">
+  <section
+    v-if="activeHero"
+    class="movies-home__hero"
+    :aria-label="t('movies.home.hero.ariaLabel')"
+  >
     <img
       v-if="heroBackdropUrl(activeHero)"
       class="movies-home__hero-backdrop"
@@ -101,12 +109,12 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
 
     <div class="movies-home__hero-desktop">
       <div class="movies-home__hero-copy">
-        <p class="movies-home__hero-eyebrow">Trending this week</p>
+        <p class="movies-home__hero-eyebrow">{{ t("movies.home.hero.eyebrow") }}</p>
         <h1>
           <button
             type="button"
             class="movies-home__hero-title-button"
-            :aria-label="`Open ${activeHero.name}`"
+            :aria-label="t('movies.home.hero.openTitle', { title: activeHero.name })"
             @click="openHero(activeHero)"
           >
             {{ activeHero.name }}
@@ -124,10 +132,10 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             variant="secondary"
             size="sm"
             :icon-end="ChevronRight"
-            :aria-label="`Open ${activeHero.name}`"
+            :aria-label="t('movies.home.hero.openTitle', { title: activeHero.name })"
             @click="openHero(activeHero)"
           >
-            Details
+            {{ t("movies.action.details") }}
           </Button>
         </div>
       </div>
@@ -137,7 +145,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
           :ref="setDesktopHeroRef"
           class="movies-home__hero-loop"
           :class="{ 'movies-home__hero-loop--dragging': isDesktopDragging }"
-          aria-label="Featured title loop"
+          :aria-label="t('movies.home.hero.loopAriaLabel')"
           aria-roledescription="carousel"
           tabindex="0"
           @keydown="changeHeroByKeydown"
@@ -184,7 +192,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
       <div
         :ref="setMobileHeroRef"
         class="movies-home__hero-slider"
-        aria-label="Featured title slider"
+        :aria-label="t('movies.home.hero.sliderAriaLabel')"
         aria-roledescription="carousel"
         tabindex="0"
         @keydown="changeHeroByKeydown"
@@ -201,7 +209,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             <button
               type="button"
               class="movies-home__hero-card"
-              :aria-label="`Open ${movie.name}`"
+              :aria-label="t('movies.home.hero.openTitle', { title: movie.name })"
               @click="openHero(movie)"
             >
               <span class="movies-home__hero-poster-wrap">
@@ -226,7 +234,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
       </div>
 
       <div class="movies-home__hero-copy">
-        <p class="movies-home__hero-eyebrow">Trending this week</p>
+        <p class="movies-home__hero-eyebrow">{{ t("movies.home.hero.eyebrow") }}</p>
         <h1>
           <span class="movies-home__hero-title-text">{{ activeHero.name }}</span>
         </h1>
@@ -239,10 +247,10 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             variant="secondary"
             size="sm"
             :icon-end="ChevronRight"
-            :aria-label="`Open ${activeHero.name}`"
+            :aria-label="t('movies.home.hero.openTitle', { title: activeHero.name })"
             @click="openHero(activeHero)"
           >
-            Details
+            {{ t("movies.action.details") }}
           </Button>
         </div>
       </div>

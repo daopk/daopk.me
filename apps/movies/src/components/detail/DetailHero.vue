@@ -5,6 +5,8 @@ import { Play } from "@daopk/icons";
 
 import type { MovieDetail } from "../../moviesApi";
 import type { MoviesPlaybackProgressEntry } from "../../moviesPlaybackProgress";
+import { mediaLabel } from "../../i18n/labels";
+import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import { detailMetaLabel } from "./detailFormatters";
 
 interface DetailHeroProps {
@@ -20,10 +22,14 @@ defineEmits<{
   watch: [];
 }>();
 
-const detailMeta = computed(() => detailMetaLabel(props.detail));
+const { t } = useMoviesI18n();
+const detailMeta = computed(() => detailMetaLabel(props.detail, t));
 const canWatch = computed(() => props.detail.mediaType === "movie" && props.detail.play !== null);
 const playButtonLabel = computed(
-  () => `${props.resumeProgress === null ? "Play" : "Continue"} ${props.detail.name}`,
+  () =>
+    `${props.resumeProgress === null ? t("movies.action.play") : t("movies.action.continue")} ${
+      props.detail.name
+    }`,
 );
 </script>
 
@@ -56,7 +62,9 @@ const playButtonLabel = computed(
           <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
         </span>
         <div class="movies-detail-hero__copy">
-          <p class="movies-detail-hero__eyebrow">TMDB {{ detail.mediaType }}</p>
+          <p class="movies-detail-hero__eyebrow">
+            {{ t("movies.tmdbMedia", { media: mediaLabel(detail.mediaType, t, "singular") }) }}
+          </p>
           <h1>{{ detail.name }}</h1>
           <p v-if="detail.originName" class="movies-detail-hero__origin">
             {{ detail.originName }}

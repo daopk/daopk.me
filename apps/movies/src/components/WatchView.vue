@@ -12,6 +12,8 @@ import {
   episodeMetaLabel,
   seasonLabel,
 } from "./detail/detailFormatters";
+import { mediaLabel } from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
   fetchMovieDetail,
   fetchMovieEpisode,
@@ -47,6 +49,7 @@ const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
+const { t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const play = computed<MoviePlayInfo | null>(() => {
@@ -58,10 +61,10 @@ const play = computed<MoviePlayInfo | null>(() => {
 });
 const title = computed(() => {
   if (props.target.kind === "movie") {
-    return movieDetail.value?.name ?? "Movie";
+    return movieDetail.value?.name ?? mediaLabel("movie", t, "singular");
   }
 
-  return episodeDetail.value?.episode.name ?? "Episode";
+  return episodeDetail.value?.episode.name ?? t("movies.section.episode");
 });
 const posterUrl = computed(() => {
   if (props.target.kind === "movie") {
@@ -93,10 +96,10 @@ const episodeInfo = computed(() => {
 
   const episode = currentEpisodeDetail.episode;
   return {
-    episodeLabel: formatEpisodeLabel(episode),
-    meta: episodeMetaLabel(episode),
+    episodeLabel: formatEpisodeLabel(episode, t),
+    meta: episodeMetaLabel(episode, t),
     overview: episode.overview,
-    seasonLabel: seasonLabel(currentEpisodeDetail.season),
+    seasonLabel: seasonLabel(currentEpisodeDetail.season, t),
     seriesName: currentEpisodeDetail.series.name,
     title: episode.name,
   };
@@ -135,7 +138,12 @@ const nextEpisodeTarget = computed<MovieEpisodeTarget | null>(() => {
 });
 const nextEpisodeLabel = computed(() => {
   const episode = nextEpisode.value;
-  return episode === null ? "" : `Next episode: ${formatEpisodeLabel(episode)} - ${episode.name}`;
+  return episode === null
+    ? ""
+    : t("movies.player.nextEpisode", {
+        episode: formatEpisodeLabel(episode, t),
+        title: episode.name,
+      });
 });
 
 watch(
@@ -205,20 +213,20 @@ defineExpose({
       v-else-if="state === 'error'"
       class="movies-watch__status"
       role="alert"
-      title="Could not load playback"
-      description="Go back and try another title."
+      :title="t('movies.error.playback.title')"
+      :description="t('movies.error.playback.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <EmptyState
       v-else-if="play === null"
       class="movies-watch__status"
       role="alert"
-      title="Playback unavailable"
-      description="Go back and try another title."
+      :title="t('movies.error.playbackUnavailable.title')"
+      :description="t('movies.error.playback.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <article v-else class="movies-watch__content">
@@ -239,7 +247,7 @@ defineExpose({
       <section
         v-if="episodeInfo !== null"
         class="movies-watch__episode-info"
-        aria-label="Now playing episode"
+        :aria-label="t('movies.nowPlayingEpisode.ariaLabel')"
       >
         <p class="movies-watch__episode-eyebrow">
           {{ episodeInfo.seriesName }} · {{ episodeInfo.seasonLabel }}

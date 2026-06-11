@@ -7,6 +7,7 @@ import { ArrowLeft } from "@daopk/icons";
 
 import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import { fetchMoviePerson, type MoviePersonDetail, type MovieSummary } from "../moviesApi";
 
 type LoadState = "loading" | "ready" | "error";
@@ -24,6 +25,7 @@ defineEmits<{
 
 const person = ref<MoviePersonDetail | null>(null);
 const state = ref<LoadState>("loading");
+const { t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const subtitle = computed(() =>
@@ -70,10 +72,10 @@ async function loadPerson(): Promise<void> {
       v-else-if="state === 'error'"
       class="movies-person__status"
       role="alert"
-      title="Could not load person"
-      description="Go back and try another cast member."
+      :title="t('movies.error.person.title')"
+      :description="t('movies.error.person.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">Back</Button>
+      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
     </EmptyState>
 
     <article v-else-if="person" class="movies-person__content">
@@ -98,7 +100,7 @@ async function loadPerson(): Promise<void> {
       </header>
 
       <section v-if="person.facts.length > 0" class="movies-person__section">
-        <h2>Details</h2>
+        <h2>{{ t("movies.section.details") }}</h2>
         <dl class="movies-person__facts">
           <div v-for="fact in person.facts" :key="fact.label">
             <dt>{{ fact.label }}</dt>
@@ -108,12 +110,12 @@ async function loadPerson(): Promise<void> {
       </section>
 
       <section v-if="person.biography" class="movies-person__section">
-        <h2>Biography</h2>
+        <h2>{{ t("movies.person.biography") }}</h2>
         <p class="movies-person__biography">{{ person.biography }}</p>
       </section>
 
       <section v-if="person.knownFor.length > 0" class="movies-person__section">
-        <h2>Known For</h2>
+        <h2>{{ t("movies.person.knownFor") }}</h2>
         <ul class="movies-person__grid">
           <li v-for="movie in person.knownFor" :key="movie.id">
             <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
@@ -122,7 +124,7 @@ async function loadPerson(): Promise<void> {
       </section>
 
       <section v-if="person.credits.length > 0" class="movies-person__section">
-        <h2>Credits</h2>
+        <h2>{{ t("movies.person.credits") }}</h2>
         <ul class="movies-person__grid">
           <li v-for="movie in person.credits" :key="movie.id">
             <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />

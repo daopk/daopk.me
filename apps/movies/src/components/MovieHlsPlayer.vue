@@ -31,6 +31,8 @@ import {
   createMoviesPlaybackProgressStore,
   isResumableMoviePlaybackTime,
 } from "../moviesPlaybackProgress";
+import type { MoviesTranslationKey } from "../i18n";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MoviePlayInfo } from "../moviesApi";
 import { createMoviesHlsConfig, type HlsPlaybackAdMarker } from "../hls/hlsAdSkip";
 
@@ -59,6 +61,12 @@ type WebKitPresentationMode = "fullscreen" | "inline" | "picture-in-picture";
 type ShowControlsOptions = {
   readonly force?: boolean;
 };
+type PlaybackErrorKey = Extract<
+  MoviesTranslationKey,
+  | "movies.player.error.startFailed"
+  | "movies.player.error.streamFailed"
+  | "movies.player.error.unsupported"
+>;
 
 interface WebKitFullscreenDocument extends Document {
   readonly webkitFullscreenElement?: Element | null;
@@ -110,7 +118,7 @@ const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
 const videoElement = ref<HTMLVideoElement | null>(null);
 const selectedSourceIndex = ref(0);
-const playbackError = ref("");
+const playbackErrorKey = ref<PlaybackErrorKey | "">("");
 const hlsLevels = ref<readonly HlsQualityLevel[]>([]);
 const selectedQualityLevel = ref(-1);
 const currentLevel = ref(-1);
@@ -143,6 +151,7 @@ let suppressControlsRevealUntilMs = 0;
 let lastProgressPersistedAtMs = 0;
 let resumeProgressApplied = false;
 
+const { t } = useMoviesI18n();
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 
 const sourceOptions = computed(() =>
@@ -192,7 +201,7 @@ const hasSettingsMenu = computed(() => true);
 const selectedSourceLabel = computed(
   () =>
     sourceOptions.value.find((source) => source.index === selectedSourceIndex.value)?.label ??
-    "Source",
+    t("movies.player.source"),
 );
 const selectedQualityLabel = computed(() => {
   if (!hasQualityMenu.value) {
@@ -201,13 +210,15 @@ const selectedQualityLabel = computed(() => {
 
   if (selectedQualityLevel.value === -1) {
     return currentLevel.value >= 0
-      ? `Auto (${qualityLabel(hlsLevels.value[currentLevel.value], currentLevel.value)})`
-      : "Auto";
+      ? t("movies.player.autoQuality", {
+          quality: qualityLabel(hlsLevels.value[currentLevel.value], currentLevel.value),
+        })
+      : t("movies.player.auto");
   }
 
   return (
     qualityOptions.value.find((option) => option.value === selectedQualityLevel.value)?.label ??
-    "Auto"
+    t("movies.player.auto")
   );
 });
 const selectedPlaybackSpeedStatus = computed(() =>
@@ -229,20 +240,29 @@ const seekMax = computed(() => Math.max(1, Math.round(duration.value)));
 const displayTime = computed(() => (seeking.value ? seekPosition.value : currentTime.value));
 const seekValueText = computed(() =>
   hasDuration.value
-    ? `${formatTime(seekPosition.value)} of ${formatTime(duration.value)}`
+    ? t("movies.player.seekValue", {
+        duration: formatTime(duration.value),
+        time: formatTime(seekPosition.value),
+      })
     : formatTime(seekPosition.value),
 );
 const volumeSliderValue = computed(() => Math.round(volume.value * 100));
 const mutedOrSilent = computed(() => muted.value || volume.value <= 0);
 const muteIcon = computed(() => (mutedOrSilent.value ? VolumeX : Volume2));
-const muteLabel = computed(() => (mutedOrSilent.value ? "Unmute" : "Mute"));
+const muteLabel = computed(() =>
+  mutedOrSilent.value ? t("movies.player.unmute") : t("movies.player.mute"),
+);
 const fullscreenIcon = computed(() => (fullscreen.value ? Minimize2 : Maximize2));
-const fullscreenLabel = computed(() => (fullscreen.value ? "Exit fullscreen" : "Enter fullscreen"));
+const fullscreenLabel = computed(() =>
+  fullscreen.value ? t("movies.player.fullscreen.exit") : t("movies.player.fullscreen.enter"),
+);
 const pictureInPictureIcon = computed(() =>
   pictureInPicture.value ? PictureInPicture : PictureInPicture2,
 );
 const pictureInPictureLabel = computed(() =>
-  pictureInPicture.value ? "Exit picture-in-picture" : "Enter picture-in-picture",
+  pictureInPicture.value
+    ? t("movies.player.pictureInPicture.exit")
+    : t("movies.player.pictureInPicture.enter"),
 );
 const nextEpisodeButtonLabel = computed(() => props.nextEpisodeLabel.trim());
 const showNextEpisodeButton = computed(() => nextEpisodeButtonLabel.value.length > 0);
@@ -266,6 +286,9 @@ const adMarkersBackground = computed(() =>
 );
 const seekPointerPreviewText = computed(() =>
   seekPointerPreview.value === null ? "" : formatTime(seekPointerPreview.value.seconds),
+);
+const playbackError = computed(() =>
+  playbackErrorKey.value === "" ? "" : t(playbackErrorKey.value),
 );
 
 watch(
@@ -331,7 +354,7 @@ function destroyHls(): void {
 }
 
 function resetPlaybackState(): void {
-  playbackError.value = "";
+  clearPlaybackError();
   hlsLevels.value = [];
   selectedQualityLevel.value = -1;
   currentLevel.value = -1;
@@ -418,7 +441,7 @@ async function attachSource(options: { autoplay: boolean } = { autoplay: false }
     return;
   }
 
-  playbackError.value = "This browser cannot play this stream.";
+  setPlaybackError("movies.player.error.unsupported");
 }
 
 function onHlsManifestParsed(_event: string, data: ManifestParsedData): void {
@@ -431,7 +454,7 @@ function onHlsManifestParsed(_event: string, data: ManifestParsedData): void {
 
 function onHlsError(_event: string, data: ErrorData): void {
   if (data.fatal) {
-    playbackError.value = "Could not play this stream.";
+    setPlaybackError("movies.player.error.streamFailed");
     waiting.value = false;
     destroyHls();
     showControls({ force: true });
@@ -454,7 +477,7 @@ async function playVideo(options: { ignoreBlocked?: boolean } = {}): Promise<voi
     scheduleAutoHideControls();
   } catch {
     if (!options.ignoreBlocked) {
-      playbackError.value = "Playback could not start.";
+      setPlaybackError("movies.player.error.startFailed");
     }
     playing.value = false;
     controlsVisible.value = true;
@@ -737,7 +760,7 @@ function onVideoEnded(): void {
 }
 
 function onVideoError(): void {
-  playbackError.value = "Could not play this stream.";
+  setPlaybackError("movies.player.error.streamFailed");
   waiting.value = false;
   suppressControlsRevealUntilMs = 0;
   showControls({ force: true });
@@ -1496,7 +1519,7 @@ function formatTime(totalSeconds: number): string {
 
 function qualityLabel(level: HlsQualityLevel | undefined, index: number): string {
   if (level === undefined) {
-    return `Quality ${index + 1}`;
+    return qualityFallbackLabel(index);
   }
 
   if (level.height > 0) {
@@ -1507,11 +1530,27 @@ function qualityLabel(level: HlsQualityLevel | undefined, index: number): string
     return `${Math.round(level.bitrate / 1000)} kbps`;
   }
 
-  return `Quality ${index + 1}`;
+  return qualityFallbackLabel(index);
 }
 
 function speedLabel(speed: number): string {
   return `${speed}x`;
+}
+
+function sourceFallbackLabel(index: number): string {
+  return t("movies.player.sourceFallback", { number: index + 1 });
+}
+
+function qualityFallbackLabel(index: number): string {
+  return t("movies.player.qualityFallback", { number: index + 1 });
+}
+
+function setPlaybackError(key: PlaybackErrorKey): void {
+  playbackErrorKey.value = key;
+}
+
+function clearPlaybackError(): void {
+  playbackErrorKey.value = "";
 }
 
 function adMarkerTrackBackground(
@@ -1554,7 +1593,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
         'movies-hls-player__stage--fullscreen': fullscreen,
       }"
       tabindex="0"
-      :aria-label="`${title} player`"
+      :aria-label="t('movies.player.ariaLabel', { title })"
       @keydown.capture="onStageKeydownCapture"
       @keydown="onStageKeydown"
       @click="onPlayerSurfaceClick"
@@ -1598,7 +1637,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
         v-if="showCenterPlay"
         type="button"
         class="movies-hls-player__center-play"
-        aria-label="Play"
+        :aria-label="t('movies.action.play')"
         @click="onCenterPlayClick"
         @dblclick="onCenterPlayDoubleClick"
       >
@@ -1606,7 +1645,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
       </button>
 
       <div v-if="showSpinner" class="movies-hls-player__spinner" role="status" aria-live="polite">
-        <span>Loading video</span>
+        <span>{{ t("movies.player.loadingVideo") }}</span>
       </div>
 
       <p v-if="playbackError" class="movies-hls-player__error" role="alert">
@@ -1640,7 +1679,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
           <IconButton
             class="movies-hls-player__button movies-hls-player__back-button"
             :icon="ChevronLeft"
-            label="Back"
+            :label="t('movies.action.back')"
             size="sm"
             variant="subtle"
             @click="emit('back')"
@@ -1660,7 +1699,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
         class="movies-hls-player__controls"
         :class="{ 'movies-hls-player__controls--hidden': controlsHidden }"
         :style="controlsStyle"
-        aria-label="Playback controls"
+        :aria-label="t('movies.player.controls.ariaLabel')"
         @focusin="
           controlsFocused = true;
           showControls();
@@ -1701,7 +1740,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
               :max="seekMax"
               :step="1"
               :disabled="!hasDuration || playbackError.length > 0"
-              aria-label="Seek"
+              :aria-label="t('movies.player.seek')"
               :aria-valuetext="seekValueText"
               @focusout="cancelSeekPreview"
               @keydown="onSeekKeydown"
@@ -1741,7 +1780,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
                 :max="100"
                 :step="1"
                 :disabled="playbackError.length > 0"
-                aria-label="Volume"
+                :aria-label="t('movies.player.volume')"
                 :aria-valuetext="`${volumeSliderValue}%`"
                 @update:model-value="setVolumeFromSlider"
                 @commit="setVolumeFromSlider"
@@ -1780,32 +1819,34 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
               <IconButton
                 class="movies-hls-player__button"
                 :icon="MoreHorizontal"
-                label="Playback settings"
+                :label="t('movies.player.settings')"
                 size="sm"
                 variant="subtle"
               />
             </template>
             <template #items>
               <DropdownMenuLabel v-if="sourceOptions.length > 1" class="ds-dropdown-menu__label">
-                Source
+                {{ t("movies.player.source") }}
               </DropdownMenuLabel>
               <DropdownMenuRadioGroup v-if="sourceOptions.length > 1" v-model="sourceSelectValue">
                 <DropdownMenuRadioItem
                   v-for="source in sourceOptions"
                   :key="source.index"
                   :value="String(source.index)"
-                  :text-value="source.label || `Source ${source.index + 1}`"
+                  :text-value="source.label || sourceFallbackLabel(source.index)"
                 >
                   <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
                     <Check aria-hidden="true" />
                   </DropdownMenuItemIndicator>
-                  {{ source.label || `Source ${source.index + 1}` }}
+                  {{ source.label || sourceFallbackLabel(source.index) }}
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
 
               <DropdownMenuSeparator v-if="sourceOptions.length > 1" />
 
-              <DropdownMenuLabel class="ds-dropdown-menu__label"> Speed </DropdownMenuLabel>
+              <DropdownMenuLabel class="ds-dropdown-menu__label">
+                {{ t("movies.player.speed") }}
+              </DropdownMenuLabel>
               <DropdownMenuRadioGroup v-model="playbackSpeedSelectValue">
                 <DropdownMenuRadioItem
                   v-for="speed in PLAYBACK_SPEED_OPTIONS"
@@ -1823,14 +1864,14 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
               <DropdownMenuSeparator v-if="hasQualityMenu" />
 
               <DropdownMenuLabel v-if="hasQualityMenu" class="ds-dropdown-menu__label">
-                Quality
+                {{ t("movies.player.quality") }}
               </DropdownMenuLabel>
               <DropdownMenuRadioGroup v-if="hasQualityMenu" v-model="qualitySelectValue">
-                <DropdownMenuRadioItem value="-1" text-value="Auto">
+                <DropdownMenuRadioItem value="-1" :text-value="t('movies.player.auto')">
                   <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
                     <Check aria-hidden="true" />
                   </DropdownMenuItemIndicator>
-                  Auto
+                  {{ t("movies.player.auto") }}
                 </DropdownMenuRadioItem>
                 <DropdownMenuRadioItem
                   v-for="quality in qualityOptions"

@@ -7,11 +7,18 @@ import { Button } from "@daopk/ui";
 
 import MovieCard from "./MovieCard.vue";
 import {
+  catalogMediaOptions,
+  countryLabel,
+  genreLabel,
+  localizedListTitleForQuery,
+  searchMediaTabs as localizedSearchMediaTabs,
+  sortLabel,
+} from "../i18n/labels";
+import { useMoviesI18n } from "../i18n/useMoviesI18n";
+import {
   DEFAULT_MOVIES_LIST_LIMIT,
   fetchMoviesFilters,
   fetchMoviesList,
-  listTitleForQuery,
-  SEARCH_MEDIA_LABELS,
   type MovieMediaType,
   type MovieSummary,
   type MoviesFiltersResult,
@@ -24,14 +31,6 @@ import {
 type LoadState = "idle" | "loading" | "ready" | "error";
 type FilterLoadState = "idle" | "loading" | "ready" | "error";
 
-const CATALOG_MEDIA_OPTIONS: readonly {
-  readonly label: string;
-  readonly value: MoviesSearchMedia;
-}[] = [
-  { label: "All", value: "all" },
-  { label: "Movies", value: "movie" },
-  { label: "TV Shows", value: "tv" },
-];
 const POPULAR_COUNTRY_CODES = [
   "VN",
   "US",
@@ -59,6 +58,7 @@ const emit = defineEmits<{
   "open-list": [query: MoviesListQuery];
 }>();
 
+const { t } = useMoviesI18n();
 const items = ref<readonly MovieSummary[]>([]);
 const pagination = ref<MoviesPagination | null>(null);
 const state = ref<LoadState>("idle");
@@ -78,11 +78,12 @@ const filtersAbortControllers: Record<MovieMediaType, AbortController | null> = 
   tv: null,
 };
 
-const title = computed(() => listTitleForQuery(props.query));
+const title = computed(() => localizedListTitleForQuery(props.query, t));
 const searchKeyword = computed(() => props.query.keyword?.trim() ?? "");
 const searchDraft = ref(searchKeyword.value);
 const activeSearchMedia = computed(() => props.query.media ?? "all");
-const searchMediaTabs = Object.entries(SEARCH_MEDIA_LABELS) as Array<[MoviesSearchMedia, string]>;
+const searchMediaOptions = computed(() => localizedSearchMediaTabs(t));
+const catalogMediaSelectOptions = computed(() => catalogMediaOptions(t));
 const isSearchList = computed(() => searchKeyword.value.length > 0);
 const catalogMedia = computed<MoviesSearchMedia>(() => catalogMediaForQuery(props.query));
 const combinedFilters = computed<MoviesFiltersResult | null>(() =>
@@ -428,7 +429,11 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
     <div class="movies-list__content">
       <header class="movies-list__header">
         <h1>{{ title }}</h1>
-        <div v-if="isSearchList" class="movies-list__search-panel" aria-label="Search results">
+        <div
+          v-if="isSearchList"
+          class="movies-list__search-panel"
+          :aria-label="t('movies.search.results.ariaLabel')"
+        >
           <form
             class="movies-list__search-form"
             role="search"
@@ -439,35 +444,39 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
               <input
                 v-model="searchDraft"
                 type="search"
-                aria-label="Keyword"
-                placeholder="Search titles"
+                :aria-label="t('movies.search.keyword.ariaLabel')"
+                :placeholder="t('movies.search.titlesPlaceholder')"
                 autocomplete="off"
                 @search="submitSearchKeyword"
               />
             </div>
           </form>
-          <div class="movies-list__tabs" aria-label="Search media type">
+          <div class="movies-list__tabs" :aria-label="t('movies.search.mediaType.ariaLabel')">
             <Button
-              v-for="[media, label] in searchMediaTabs"
-              :key="media"
+              v-for="option in searchMediaOptions"
+              :key="option.value"
               size="md"
-              :variant="activeSearchMedia === media ? 'primary' : 'secondary'"
-              @click="$emit('open-list', mediaQuery(media))"
+              :variant="activeSearchMedia === option.value ? 'primary' : 'secondary'"
+              @click="$emit('open-list', mediaQuery(option.value))"
             >
-              {{ label }}
+              {{ option.label }}
             </Button>
           </div>
         </div>
-        <div v-else class="movies-list__filters" aria-label="Catalog filters">
+        <div
+          v-else
+          class="movies-list__filters"
+          :aria-label="t('movies.filters.catalog.ariaLabel')"
+        >
           <label class="movies-list__filter-field">
-            <span>Type</span>
+            <span>{{ t("movies.filters.type") }}</span>
             <select
               :value="catalogMedia"
-              aria-label="Type"
+              :aria-label="t('movies.filters.type')"
               @change="setCatalogMedia(($event.target as HTMLSelectElement).value)"
             >
               <option
-                v-for="option in CATALOG_MEDIA_OPTIONS"
+                v-for="option in catalogMediaSelectOptions"
                 :key="option.value"
                 :value="option.value"
               >
@@ -477,56 +486,56 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
           </label>
 
           <label class="movies-list__filter-field">
-            <span>Genre</span>
+            <span>{{ t("movies.filters.genre") }}</span>
             <select
               ref="genreSelect"
               :value="activeGenreValue"
-              aria-label="Genre"
+              :aria-label="t('movies.filters.genre')"
               :disabled="currentFilterState === 'loading' || currentFilterState === 'error'"
               @change="setGenre(($event.target as HTMLSelectElement).value)"
             >
-              <option value="">All genres</option>
+              <option value="">{{ t("movies.filters.allGenres") }}</option>
               <option
                 v-for="genre in currentFilters?.genres ?? []"
                 :key="genre.id"
                 :value="genre.id"
               >
-                {{ genre.name }}
+                {{ genreLabel(genre, t) }}
               </option>
             </select>
           </label>
 
           <label class="movies-list__filter-field">
-            <span>Country</span>
+            <span>{{ t("movies.filters.country") }}</span>
             <select
               ref="countrySelect"
               :value="activeCountry"
-              aria-label="Country"
+              :aria-label="t('movies.filters.country')"
               :disabled="currentFilterState === 'loading' || currentFilterState === 'error'"
               @change="setCountry(($event.target as HTMLSelectElement).value)"
             >
-              <option value="">All countries</option>
+              <option value="">{{ t("movies.filters.allCountries") }}</option>
               <option v-for="country in popularCountries" :key="country.code" :value="country.code">
-                {{ country.name }}
+                {{ countryLabel(country, t) }}
               </option>
             </select>
           </label>
 
           <label class="movies-list__filter-field">
-            <span>Sort</span>
+            <span>{{ t("movies.filters.sort") }}</span>
             <select
               :value="activeSort"
-              aria-label="Sort"
+              :aria-label="t('movies.filters.sort')"
               @change="setSort(($event.target as HTMLSelectElement).value)"
             >
-              <option value="popular">Popular</option>
-              <option value="newest">Newest</option>
-              <option value="top-rated">Top Rated</option>
+              <option value="popular">{{ sortLabel("popular", t) }}</option>
+              <option value="newest">{{ sortLabel("newest", t) }}</option>
+              <option value="top-rated">{{ sortLabel("top-rated", t) }}</option>
             </select>
           </label>
         </div>
         <StatusBanner v-if="!isSearchList && currentFilterState === 'error'" tone="warning">
-          Could not load filters. You can still browse the default list.
+          {{ t("movies.error.filters") }}
         </StatusBanner>
       </header>
 
@@ -536,16 +545,16 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
         aria-live="polite"
       >
         <div v-if="loadingInitial" class="movies-list__loading">
-          <Spinner size="lg" label="Loading Movies" />
+          <Spinner size="lg" :label="t('movies.loading.movies')" />
         </div>
         <StatusBanner v-else-if="state === 'error'" tone="error" role="alert">
-          Could not load titles. Try again.
+          {{ t("movies.error.listTitles") }}
         </StatusBanner>
 
         <EmptyState
           v-else-if="state === 'ready' && items.length === 0"
-          title="No titles found"
-          description="Try another keyword or filter."
+          :title="t('movies.empty.noTitles.title')"
+          :description="t('movies.empty.noTitles.description')"
         />
 
         <template v-else>
@@ -563,7 +572,7 @@ function uniqueBy<T>(items: readonly T[], keyForItem: (item: T) => string): read
               :loading="state === 'loading'"
               @click="loadMore"
             >
-              Load more
+              {{ t("movies.action.loadMore") }}
             </Button>
           </div>
         </template>
