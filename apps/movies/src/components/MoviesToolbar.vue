@@ -153,6 +153,24 @@ function selectMedia(media: MovieMediaType): void {
         :title="t('movies.action.home')"
         @click="$emit('home')"
       />
+      <button
+        type="button"
+        class="movies-toolbar__history-menu-button"
+        :aria-label="mediaLabel('movie', t)"
+        :title="mediaLabel('movie', t)"
+        @click="selectMedia('movie')"
+      >
+        <Film class="movies-toolbar__history-menu-icon" aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        class="movies-toolbar__history-menu-button"
+        :aria-label="mediaLabel('tv', t)"
+        :title="mediaLabel('tv', t)"
+        @click="selectMedia('tv')"
+      >
+        <Tv class="movies-toolbar__history-menu-icon" aria-hidden="true" />
+      </button>
     </nav>
 
     <nav class="movies-toolbar__catalog" :aria-label="t('movies.catalog.ariaLabel')">
@@ -279,18 +297,47 @@ function selectMedia(media: MovieMediaType): void {
   gap: var(--space-2xs);
   justify-self: start;
   min-block-size: var(--control-height-md);
-  padding: 0 var(--space-2xs);
+  padding: 0 var(--space-xs);
 }
 
-.movies-toolbar__history :deep(.ds-kit-icon-button) {
+.movies-toolbar__history :deep(.ds-kit-icon-button),
+.movies-toolbar__history-menu-button {
   border-radius: var(--radius-full);
   color: color-mix(in srgb, var(--color-fg) 74%, transparent);
 }
 
 .movies-toolbar__history :deep(.ds-kit-icon-button:hover),
-.movies-toolbar__history :deep(.ds-kit-icon-button:focus-visible) {
+.movies-toolbar__history :deep(.ds-kit-icon-button:focus-visible),
+.movies-toolbar__history-menu-button:hover,
+.movies-toolbar__history-menu-button:focus-visible {
   background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
   color: var(--color-fg);
+}
+
+.movies-toolbar__history-menu-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  block-size: var(--control-height-sm);
+  cursor: pointer;
+  display: none;
+  flex: 0 0 var(--control-height-sm);
+  inline-size: var(--control-height-sm);
+  justify-content: center;
+  padding: 0;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.movies-toolbar__history-menu-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.movies-toolbar__history-menu-icon {
+  block-size: 14px;
+  inline-size: 14px;
 }
 
 .movies-toolbar__catalog {
@@ -388,30 +435,34 @@ function selectMedia(media: MovieMediaType): void {
   .movies-toolbar {
     align-items: center;
     gap: var(--space-xs);
-    grid-template-areas: "history catalog actions";
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "history actions";
+    grid-template-columns: minmax(0, 1fr) auto;
     padding-block-end: var(--space-xs);
     padding-block-start: calc(var(--space-xs) + var(--mobile-shell-app-safe-area-top, 0px));
   }
 
   .movies-toolbar--has-close {
-    grid-template-areas: "history catalog actions";
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "history actions";
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .movies-toolbar__history {
     grid-area: history;
     min-inline-size: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .movies-toolbar__history::-webkit-scrollbar {
+    display: none;
+  }
+
+  .movies-toolbar__history-menu-button {
+    display: inline-flex;
   }
 
   .movies-toolbar__catalog {
-    grid-area: catalog;
-    justify-content: flex-start;
-    justify-self: stretch;
-  }
-
-  .movies-toolbar__menu-button {
-    max-inline-size: 220px;
+    display: none;
   }
 
   .movies-toolbar__actions {
@@ -423,33 +474,17 @@ function selectMedia(media: MovieMediaType): void {
 @media (max-width: 520px) {
   .movies-toolbar {
     gap: var(--space-2xs);
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     padding-inline-end: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-right, 0px));
     padding-inline-start: calc(var(--space-sm) + var(--mobile-shell-app-safe-area-left, 0px));
   }
 
   .movies-toolbar--has-close {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .movies-toolbar__history {
     gap: 0;
-  }
-
-  .movies-toolbar__catalog {
-    gap: var(--space-2xs);
-    justify-content: center;
-  }
-
-  .movies-toolbar__menu-button {
-    inline-size: var(--control-height-md);
-    justify-content: center;
-    max-inline-size: var(--control-height-md);
-    padding: 0;
-  }
-
-  .movies-toolbar__menu-button span {
-    display: none;
   }
 
   .movies-toolbar__actions {
@@ -458,7 +493,8 @@ function selectMedia(media: MovieMediaType): void {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .movies-toolbar {
+  .movies-toolbar,
+  .movies-toolbar__history-menu-button {
     transition: none;
   }
 }

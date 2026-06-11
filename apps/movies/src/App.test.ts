@@ -1525,7 +1525,7 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
   });
 
-  it("replaces the toolbar title with history and Home navigation buttons", async () => {
+  it("keeps Home and mobile catalog icons in the toolbar history cluster", async () => {
     const wrapper = mount(App);
     await settle();
 
@@ -1535,6 +1535,13 @@ describe("Movies app", () => {
     const homeButton = () => toolbarHistory.get('button[aria-label="Home"]');
 
     expect(toolbarHistory.text()).not.toContain("Movies");
+    expect(
+      toolbarHistory.findAll("button").map((button) => button.attributes("aria-label")),
+    ).toEqual(["Back", "Forward", "Home", "Movies", "TV Shows"]);
+    expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
+      "Movies",
+      "TV Shows",
+    ]);
     expect(backButton().attributes("disabled")).toBeDefined();
     expect(forwardButton().attributes("disabled")).toBeDefined();
     expect(homeButton().attributes("disabled")).toBeDefined();
