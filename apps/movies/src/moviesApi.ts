@@ -212,6 +212,83 @@ export interface MoviesRowGroupConfig {
   readonly title: string;
 }
 
+function staticGenre(id: number, name: string): MoviesFilterGenre {
+  return { id, name, slug: movieSlugFromText(name) };
+}
+
+const STATIC_FILTER_COUNTRIES: readonly MoviesFilterCountry[] = [
+  { code: "VN", name: "Vietnam" },
+  { code: "US", name: "United States of America" },
+  { code: "KR", name: "South Korea" },
+  { code: "JP", name: "Japan" },
+  { code: "CN", name: "China" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "FR", name: "France" },
+  { code: "DE", name: "Germany" },
+  { code: "IN", name: "India" },
+  { code: "TH", name: "Thailand" },
+  { code: "HK", name: "Hong Kong" },
+  { code: "TW", name: "Taiwan" },
+];
+
+const STATIC_FILTER_SORT_OPTIONS: readonly MoviesFilterSortOption[] = [
+  { label: "Popular", value: "popular" },
+  { label: "Newest", value: "newest" },
+  { label: "Top Rated", value: "top-rated" },
+];
+
+export const STATIC_MOVIES_FILTERS: Readonly<Record<MovieMediaType, MoviesFiltersResult>> = {
+  movie: {
+    countries: STATIC_FILTER_COUNTRIES,
+    genres: [
+      staticGenre(28, "Action"),
+      staticGenre(12, "Adventure"),
+      staticGenre(16, "Animation"),
+      staticGenre(35, "Comedy"),
+      staticGenre(80, "Crime"),
+      staticGenre(99, "Documentary"),
+      staticGenre(18, "Drama"),
+      staticGenre(10751, "Family"),
+      staticGenre(14, "Fantasy"),
+      staticGenre(36, "History"),
+      staticGenre(27, "Horror"),
+      staticGenre(10402, "Music"),
+      staticGenre(9648, "Mystery"),
+      staticGenre(10749, "Romance"),
+      staticGenre(878, "Science Fiction"),
+      staticGenre(10770, "TV Movie"),
+      staticGenre(53, "Thriller"),
+      staticGenre(10752, "War"),
+      staticGenre(37, "Western"),
+    ],
+    media: "movie",
+    sortOptions: STATIC_FILTER_SORT_OPTIONS,
+  },
+  tv: {
+    countries: STATIC_FILTER_COUNTRIES,
+    genres: [
+      staticGenre(10759, "Action & Adventure"),
+      staticGenre(16, "Animation"),
+      staticGenre(35, "Comedy"),
+      staticGenre(80, "Crime"),
+      staticGenre(99, "Documentary"),
+      staticGenre(18, "Drama"),
+      staticGenre(10751, "Family"),
+      staticGenre(10762, "Kids"),
+      staticGenre(9648, "Mystery"),
+      staticGenre(10763, "News"),
+      staticGenre(10764, "Reality"),
+      staticGenre(10765, "Sci-Fi & Fantasy"),
+      staticGenre(10766, "Soap"),
+      staticGenre(10767, "Talk"),
+      staticGenre(10768, "War & Politics"),
+      staticGenre(37, "Western"),
+    ],
+    media: "tv",
+    sortOptions: STATIC_FILTER_SORT_OPTIONS,
+  },
+};
+
 export const HOME_DISCOVERY_GROUPS: readonly MoviesRowGroupConfig[] = [
   {
     defaultPeriod: "week",
@@ -474,46 +551,6 @@ function movieSummaryList(value: unknown): readonly MovieSummary[] {
   return Array.isArray(value)
     ? value.map(movieSummaryFromEntry).filter((entry): entry is MovieSummary => entry !== null)
     : [];
-}
-
-function filterGenreFromEntry(entry: unknown): MoviesFilterGenre | null {
-  if (!isRecord(entry)) {
-    return null;
-  }
-  const id = asPositiveInteger(entry.id);
-  const name = asNonEmptyString(entry.name);
-  if (id === null || name === null) {
-    return null;
-  }
-  return {
-    id,
-    name,
-    slug: asNonEmptyString(entry.slug) ?? movieSlugFromText(name),
-  };
-}
-
-function filterCountryFromEntry(entry: unknown): MoviesFilterCountry | null {
-  if (!isRecord(entry)) {
-    return null;
-  }
-  const code = asNonEmptyString(entry.code)?.toUpperCase();
-  const name = asNonEmptyString(entry.name);
-  if (code === undefined || code === null || !/^[A-Z]{2}$/.test(code) || name === null) {
-    return null;
-  }
-  return { code, name };
-}
-
-function filterSortOptionFromEntry(entry: unknown): MoviesFilterSortOption | null {
-  if (!isRecord(entry)) {
-    return null;
-  }
-  const value = entry.value;
-  const label = asNonEmptyString(entry.label);
-  if (label === null || (value !== "popular" && value !== "newest" && value !== "top-rated")) {
-    return null;
-  }
-  return { label, value };
 }
 
 function playSourceFromEntry(entry: unknown): MoviePlaySource | null {
@@ -818,39 +855,6 @@ export function moviesListFromPayload(
   };
 }
 
-export function moviesFiltersFromPayload(
-  payload: unknown,
-  fallbackMedia: MovieMediaType,
-): MoviesFiltersResult {
-  if (!isRecord(payload)) {
-    return {
-      countries: [],
-      genres: [],
-      media: fallbackMedia,
-      sortOptions: [],
-    };
-  }
-
-  const media = mediaTypeFromValue(payload.media) ?? fallbackMedia;
-  const genres = Array.isArray(payload.genres)
-    ? payload.genres
-        .map(filterGenreFromEntry)
-        .filter((entry): entry is MoviesFilterGenre => entry !== null)
-    : [];
-  const countries = Array.isArray(payload.countries)
-    ? payload.countries
-        .map(filterCountryFromEntry)
-        .filter((entry): entry is MoviesFilterCountry => entry !== null)
-    : [];
-  const sortOptions = Array.isArray(payload.sortOptions)
-    ? payload.sortOptions
-        .map(filterSortOptionFromEntry)
-        .filter((entry): entry is MoviesFilterSortOption => entry !== null)
-    : [];
-
-  return { countries, genres, media, sortOptions };
-}
-
 export function buildMoviesListUrl(query: MoviesListQuery = {}): string {
   const page = Math.max(1, query.page ?? DEFAULT_PAGE);
   const limit = Math.max(
@@ -893,12 +897,6 @@ export function buildMoviesListUrl(query: MoviesListQuery = {}): string {
   if (query.kind === undefined && query.sort !== undefined) {
     url.searchParams.set("sort", query.sort);
   }
-  return urlToFetchString(url);
-}
-
-export function buildMoviesFiltersUrl(media: MovieMediaType = "movie"): string {
-  const url = publicApiSearchUrl("/public/movies/filters");
-  url.searchParams.set("media", media);
   return urlToFetchString(url);
 }
 
@@ -1035,10 +1033,9 @@ function releaseTimestamp(movie: MovieSummary): number {
 
 export async function fetchMoviesFilters(
   media: MovieMediaType = "movie",
-  options: { signal?: AbortSignal } = {},
+  _options: { signal?: AbortSignal } = {},
 ): Promise<MoviesFiltersResult> {
-  const payload = await fetchJson(buildMoviesFiltersUrl(media), { signal: options.signal });
-  return moviesFiltersFromPayload(payload, media);
+  return STATIC_MOVIES_FILTERS[media];
 }
 
 export async function fetchMovieDetail(

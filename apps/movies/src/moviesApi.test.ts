@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildMoviesFiltersUrl,
   buildMoviePersonUrl,
   buildMovieSeasonUrl,
   buildMoviesListUrl,
@@ -10,7 +9,6 @@ import {
   fetchMoviesList,
   movieDetailFromPayload,
   movieEpisodeDetailFromParts,
-  moviesFiltersFromPayload,
   moviePersonFromPayload,
   movieSeasonFromPayload,
   moviesListFromPayload,
@@ -83,9 +81,6 @@ describe("moviesApi", () => {
     const personUrl = new URL(buildMoviePersonUrl(819), "https://daopk.test");
     expect(personUrl.pathname).toBe("/public/movies/person/819");
 
-    const filtersUrl = new URL(buildMoviesFiltersUrl("tv"), "https://daopk.test");
-    expect(filtersUrl.pathname).toBe("/public/movies/filters");
-    expect(filtersUrl.searchParams.get("media")).toBe("tv");
   });
 
   it("normalizes app-ready TMDB list payloads", () => {
@@ -208,67 +203,19 @@ describe("moviesApi", () => {
     });
   });
 
-  it("normalizes and fetches Movies filter metadata", async () => {
-    const result = moviesFiltersFromPayload(
-      {
-        countries: [
-          { code: "KR", name: "South Korea" },
-          { code: "bad", name: "Ignored" },
-          { code: "US", name: "United States of America" },
-        ],
-        genres: [
-          { id: 28, name: "Action", slug: "action" },
-          { id: 0, name: "Ignored" },
-          { id: 18, name: "Drama" },
-        ],
-        media: "movie",
-        sortOptions: [
-          { label: "Popular", value: "popular" },
-          { label: "Ignored", value: "rating" },
-          { label: "Newest", value: "newest" },
-        ],
-      },
-      "tv",
-    );
-
-    expect(result).toEqual({
-      countries: [
-        { code: "KR", name: "South Korea" },
-        { code: "US", name: "United States of America" },
-      ],
-      genres: [
-        { id: 28, name: "Action", slug: "action" },
-        { id: 18, name: "Drama", slug: "drama" },
-      ],
-      media: "movie",
-      sortOptions: [
-        { label: "Popular", value: "popular" },
-        { label: "Newest", value: "newest" },
-      ],
-    });
-
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
-      const url = new URL(String(input), "https://daopk.test");
-      expect(url.pathname).toBe("/public/movies/filters");
-      expect(url.searchParams.get("media")).toBe("tv");
-      return new Response(
-        JSON.stringify({
-          countries: [{ code: "US", name: "United States of America" }],
-          genres: [{ id: 99, name: "Documentary" }],
-          media: "tv",
-          sortOptions: [{ label: "Popular", value: "popular" }],
-        }),
-        { headers: { "Content-Type": "application/json" } },
-      );
-    });
+  it("returns static Movies filter metadata without fetching", async () => {
+    const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
 
     await expect(fetchMoviesFilters("tv")).resolves.toMatchObject({
-      countries: [{ code: "US", name: "United States of America" }],
-      genres: [{ id: 99, name: "Documentary" }],
+      countries: expect.arrayContaining([{ code: "US", name: "United States of America" }]),
+      genres: expect.arrayContaining([
+        { id: 99, name: "Documentary", slug: "documentary" },
+        { id: 10759, name: "Action & Adventure", slug: "action-adventure" },
+      ]),
       media: "tv",
     });
-    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("normalizes detail payloads and keeps playback dormant", () => {
