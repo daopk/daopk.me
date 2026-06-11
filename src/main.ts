@@ -30,20 +30,19 @@ app.use(createPinia());
 
 const kernel = bootstrapKernel();
 
-kernel.apps.register(finderManifest);
+kernel.apps.register(finderManifest, { source: "system" });
 
-// `notes`, `browser`, `editor`, `pdf-viewer`, `photos`, `blog`, `clock`, and
-// `calendar` are first-party apps published independently of the
-// shell; they are registered by `firstPartyAppsPhase` (from the catalog in
-// prod, from their workspace packages in dev) rather than bundled here.
+// External first-party apps are registered by `firstPartyAppsPhase` (from the
+// catalog in prod, from app-owned manifests + workspace packages in dev) rather
+// than bundled here.
 
 kernel.apps.register(terminalManifest);
 
-kernel.apps.register(settingsManifest);
+kernel.apps.register(settingsManifest, { source: "system" });
 
 kernel.apps.register(appStoreManifest);
 
-kernel.apps.register(trashManifest);
+kernel.apps.register(trashManifest, { source: "system" });
 
 // Dev-only component gallery. The DEV gate + dynamic import keep it out of
 // production bundles; the launcher reacts to `app.registered`, so registering

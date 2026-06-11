@@ -260,7 +260,7 @@ async function updateApp(app: AppManifest): Promise<void> {
   setUpdating(app.id, true);
   const restartSnapshots = restartSnapshotsForApp(app.id);
   try {
-    kernel.apps.register(manifest);
+    kernel.apps.register(manifest, { source: "external" });
     await waitForProcessKills(restartSnapshots);
     launchRestartedApp(app.id, restartSnapshots);
   } catch (error) {

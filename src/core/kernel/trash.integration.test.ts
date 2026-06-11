@@ -44,7 +44,10 @@ function deleteDatabase(name: string): Promise<void> {
 }
 
 async function launchApp(id: string, category: AppManifest["category"]): Promise<string> {
-  kernel.apps.register(makeManifest(id, category));
+  kernel.apps.register(
+    makeManifest(id, category),
+    category === "system" ? { source: "system" } : undefined,
+  );
   return (await kernel.apps.launch(id)).id;
 }
 

@@ -14,23 +14,30 @@ describe("buildFirstPartyPreviewCatalog", () => {
     expect(catalog.version).toBe(1);
     expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
     expect(ids).not.toContain("_shared");
-    expect(catalog.apps.find((app) => app.id === "html-in-canvas")).toEqual({
-      id: "html-in-canvas",
-      version: "1.0.0",
-      build: 0,
-      entry: "/apps/html-in-canvas/1.0.0+0/html-in-canvas.js",
-    });
+    expect(catalog.apps.find((app) => app.id === "html-in-canvas")).toEqual(
+      expect.objectContaining({
+        id: "html-in-canvas",
+        version: "1.0.0",
+        build: 0,
+        entry: "/apps/html-in-canvas/1.0.0+0/html-in-canvas.js",
+        manifest: expect.objectContaining({ id: "html-in-canvas", name: "Canvas Demos" }),
+      }),
+    );
 
-    expect(catalog.apps.find((app) => app.id === "notes")).toEqual({
-      id: "notes",
-      version: "1.0.1",
-      build: 0,
-      entry: "/apps/notes/1.0.1+0/notes.js",
-    });
+    expect(catalog.apps.find((app) => app.id === "notes")).toEqual(
+      expect.objectContaining({
+        id: "notes",
+        version: "1.0.1",
+        build: 0,
+        entry: "/apps/notes/1.0.1+0/notes.js",
+        manifest: expect.objectContaining({ id: "notes", name: "Notes" }),
+      }),
+    );
 
     for (const app of catalog.apps) {
       expect(app.build).toBe(0);
       expect(app.entry).toBe(`/apps/${app.id}/${app.version}+0/${app.id}.js`);
+      expect(app.manifest).toEqual(expect.objectContaining({ id: app.id }));
     }
   });
 });

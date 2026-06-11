@@ -1,14 +1,27 @@
 import type { AppHandle, AppLifecycleEvent, AppManifest } from "~/types/app";
+import type { AppRegistrationSource } from "~/types/kernel";
 
 export class AppRegistry {
   readonly manifests = new Map<string, AppManifest>();
 
-  upsertManifest(manifest: AppManifest): void {
+  private readonly systemAppIds = new Set<string>();
+
+  upsertManifest(manifest: AppManifest, options: { source?: AppRegistrationSource } = {}): void {
     this.manifests.set(manifest.id, manifest);
+    if (options.source === "system") {
+      this.systemAppIds.add(manifest.id);
+    } else {
+      this.systemAppIds.delete(manifest.id);
+    }
   }
 
   unregister(id: string): void {
     this.manifests.delete(id);
+    this.systemAppIds.delete(id);
+  }
+
+  isSystemApp(id: string): boolean {
+    return this.systemAppIds.has(id);
   }
 }
 

@@ -1,13 +1,14 @@
 // Merge per-app catalog-entry fragments into the first-party app catalog.
 //
 // The catalog (`/apps/index.json`, served from R2) maps every published app id
-// to its current immutable, release-pinned module URL. A publish only rebuilds
-// the apps that changed, so we MUST preserve the entries of the apps that did
-// not: read the current catalog, upsert the changed entries, write it back.
+// to its current serializable manifest and immutable, release-pinned module
+// URL. A publish only rebuilds the apps that changed, so we MUST preserve the
+// entries of the apps that did not: read the current catalog, upsert the
+// changed entries, write it back.
 //
 // Usage: node scripts/update-apps-catalog.mjs <currentCatalog> <entriesDir> <outFile>
 //   currentCatalog  existing catalog JSON (missing/empty => start fresh)
-//   entriesDir      dir of `{ id, version, build, revision, entry }` fragments (recursed)
+//   entriesDir      dir of `{ id, version, build, revision, entry, manifest }` fragments (recursed)
 //   outFile         merged catalog destination
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -56,6 +57,16 @@ function coerceBuild(value) {
   return null;
 }
 
+function coerceManifest(value, id) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== "object" || value.id !== id) {
+    return null;
+  }
+  return value;
+}
+
 function coerceEntry(value) {
   if (
     value === null ||
@@ -70,6 +81,10 @@ function coerceEntry(value) {
   if (build === null) {
     return null;
   }
+  const manifest = coerceManifest(value.manifest, value.id);
+  if (manifest === null) {
+    return null;
+  }
   return {
     id: value.id,
     version: value.version,
@@ -78,6 +93,7 @@ function coerceEntry(value) {
       ? { revision: value.revision }
       : {}),
     entry: value.entry,
+    ...(manifest === undefined ? {} : { manifest }),
   };
 }
 

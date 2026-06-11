@@ -226,8 +226,14 @@ export interface KernelLifecycleCoordinatorFacade {
   on(_phase: LifecyclePhase, _handleId: string, _callback: () => void): () => void;
 }
 
+export type AppRegistrationSource = "system" | "external";
+
+export interface KernelAppsRegisterOptions {
+  readonly source?: AppRegistrationSource;
+}
+
 export interface KernelAppsFacade {
-  register(manifest: AppManifest): void;
+  register(manifest: AppManifest, options?: KernelAppsRegisterOptions): void;
   launch(id: string, args?: Readonly<Record<string, unknown>>): Promise<AppHandle>;
   unregister(id: string): void;
   list(filter?: { category?: AppManifest["category"] }): AppManifest[];

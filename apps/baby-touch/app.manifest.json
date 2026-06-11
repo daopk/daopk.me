@@ -1,0 +1,11 @@
+{
+  "id": "baby-touch",
+  "name": "Baby Touch",
+  "icon": "BabyTouchAppIcon",
+  "category": "media",
+  "singleton": true,
+  "permissions": ["storage.write"],
+  "defaultWindow": { "width": 760, "height": 560, "centered": true },
+  "chrome": { "mobile": { "titlebar": "hidden", "edgeSwipe": "disabled" } },
+  "keywords": ["baby", "touch", "sensory", "animals", "toy", "cause effect"]
+}

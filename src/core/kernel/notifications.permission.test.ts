@@ -80,7 +80,7 @@ describe("kernel.notifications.enqueue permission gate (M3.5 contract)", () => {
   });
 
   it("system app: auto-grants without prompting", async () => {
-    kernel.apps.register(makeManifest("system-toasts", "system"));
+    kernel.apps.register(makeManifest("system-toasts", "system"), { source: "system" });
 
     const requests: unknown[] = [];
     const stopReq = kernel.events.on("permission.requested", (p) => {

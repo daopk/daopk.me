@@ -120,7 +120,9 @@ describe("kernel.search (integration)", () => {
   });
 
   it("updates VFS search results after write and remove events", async () => {
-    kernel.apps.register(app({ id: "search-vfs-writer", category: "system" }));
+    kernel.apps.register(app({ id: "search-vfs-writer", category: "system" }), {
+      source: "system",
+    });
     const handle = await kernel.apps.launch("search-vfs-writer");
     const path = `/home/search-${Date.now()}.md`;
 

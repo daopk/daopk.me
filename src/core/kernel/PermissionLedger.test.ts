@@ -5,7 +5,7 @@ import {
   type PermissionLedgerEmitter,
   type PermissionLedgerStore,
 } from "./PermissionLedger";
-import type { AppManifest, AppPermission } from "~/types/app";
+import type { AppPermission } from "~/types/app";
 import type { PersistedPermissionDecision } from "~/types/permissions";
 
 vi.mock("~/core/debug", () => ({
@@ -62,25 +62,13 @@ function makeEmitter(): PermissionLedgerEmitter & {
   return { emit, events };
 }
 
-function makeManifest(id: string, category: AppManifest["category"]): AppManifest {
-  return {
-    id,
-    name: id,
-    icon: "icon-default",
-    category,
-    permissions: [],
-    surfaces: ["desktop"],
-    entry: () => Promise.resolve({ default: { template: "<div />" } }) as never,
-  } as unknown as AppManifest;
-}
-
 describe("PermissionLedger (M3.5)", () => {
   describe("system auto-grant", () => {
     it("resolves synchronously without consulting the store", async () => {
       const store = makeStore();
       const emitter = makeEmitter();
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("system-toasts", "system")],
+        isSystemApp: (manifestId) => manifestId === "system-toasts",
         store,
         events: emitter,
       });
@@ -105,11 +93,11 @@ describe("PermissionLedger (M3.5)", () => {
       ]);
     });
 
-    it("does NOT auto-grant non-system apps even if they're built-in-looking", async () => {
+    it("does NOT auto-grant apps that are not registered as system apps", async () => {
       const store = makeStore();
       const emitter = makeEmitter();
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -131,7 +119,7 @@ describe("PermissionLedger (M3.5)", () => {
       store.set("rss-reader", "notifications.post", true);
 
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -149,7 +137,7 @@ describe("PermissionLedger (M3.5)", () => {
       store.set("rss-reader", "notifications.post", false);
 
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -167,7 +155,7 @@ describe("PermissionLedger (M3.5)", () => {
       const emitter = makeEmitter();
       let nextId = 0;
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
         mintRequestId: () => `req-${++nextId}`,
@@ -208,7 +196,7 @@ describe("PermissionLedger (M3.5)", () => {
       const store = makeStore();
       const emitter = makeEmitter();
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
         mintRequestId: () => "req-1",
@@ -232,7 +220,7 @@ describe("PermissionLedger (M3.5)", () => {
       const store = makeStore();
       const emitter = makeEmitter();
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -247,7 +235,7 @@ describe("PermissionLedger (M3.5)", () => {
       const emitter = makeEmitter();
       let nextId = 0;
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
         mintRequestId: () => `req-${++nextId}`,
@@ -284,7 +272,7 @@ describe("PermissionLedger (M3.5)", () => {
       store.set("rss-reader", "notifications.post", true);
 
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -303,7 +291,7 @@ describe("PermissionLedger (M3.5)", () => {
       const store = makeStore();
       const emitter = makeEmitter();
       const ledger = new PermissionLedger({
-        listApps: () => [],
+        isSystemApp: () => false,
         store,
         events: emitter,
       });
@@ -318,7 +306,7 @@ describe("PermissionLedger (M3.5)", () => {
       store.set("rss-reader", "notifications.post", true);
 
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: emitter,
         mintRequestId: () => "req-1",
@@ -342,7 +330,7 @@ describe("PermissionLedger (M3.5)", () => {
     it("delegates to store.list (single-manifest filter)", () => {
       const store = makeStore();
       const ledger = new PermissionLedger({
-        listApps: () => [],
+        isSystemApp: () => false,
         store,
         events: makeEmitter(),
       });
@@ -358,7 +346,7 @@ describe("PermissionLedger (M3.5)", () => {
     it("resolves every pending request as a one-shot deny and clears the map", async () => {
       const store = makeStore();
       const ledger = new PermissionLedger({
-        listApps: () => [makeManifest("rss-reader", "productivity")],
+        isSystemApp: () => false,
         store,
         events: makeEmitter(),
         mintRequestId: () => "req-1",

@@ -169,12 +169,18 @@ jobs:
           APP="$APP" VERSION="$version" BUILD="$build" REVISION="$revision" ENTRY="/apps/$APP/$release/$entry_file" node -e '
             const fs = require("node:fs");
             const build = Number(process.env.BUILD);
+            const manifestPath = `apps/${process.env.APP}/app.manifest.json`;
+            const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+            if (manifest.id !== process.env.APP) {
+              throw new Error(`Manifest id ${manifest.id} does not match ${process.env.APP}.`);
+            }
             const entry = {
               id: process.env.APP,
               version: process.env.VERSION,
               build,
               revision: process.env.REVISION,
               entry: process.env.ENTRY,
+              manifest,
             };
             fs.writeFileSync(`catalog-entries/${process.env.APP}.json`, JSON.stringify(entry));
           '

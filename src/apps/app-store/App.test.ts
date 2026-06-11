@@ -13,6 +13,29 @@ const IconStub = defineComponent({
   render: () => h("span", { class: "icon-stub" }),
 });
 
+function catalogManifest(
+  id: string,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const names: Record<string, string> = {
+    browser: "Browser",
+    notes: "Notes",
+    photos: "Photos",
+  };
+  const icons: Record<string, string> = {
+    browser: "BrowserAppIcon",
+    notes: "NotesAppIcon",
+    photos: "PhotosAppIcon",
+  };
+  return {
+    id,
+    name: names[id] ?? id,
+    icon: icons[id] ?? "NotesAppIcon",
+    category: id === "photos" ? "media" : "productivity",
+    ...overrides,
+  };
+}
+
 function manifest(overrides: Partial<AppManifest> & { id: string; name: string }): AppManifest {
   return {
     version: "1.0.0",
@@ -187,17 +210,20 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 7,
           revision: "abc1234",
-          entry: "/public/apps/notes/1.0.1+7/notes.js",
+          entry: "/apps/notes/1.0.1+7/notes.js",
+          manifest: catalogManifest("notes"),
         },
         {
           id: "photos",
           version: "0.9.0",
-          entry: "/public/apps/photos/0.9.0/photos.js",
+          entry: "/apps/photos/0.9.0/photos.js",
+          manifest: catalogManifest("photos"),
         },
         {
           id: "browser",
           version: "1.0.0",
-          entry: "/public/apps/browser/1.0.0/browser.js",
+          entry: "/apps/browser/1.0.0/browser.js",
+          manifest: catalogManifest("browser"),
         },
       ],
     });
@@ -226,7 +252,8 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 124,
           revision: "def5678",
-          entry: "/public/apps/notes/1.0.1+124/notes.js",
+          entry: "/apps/notes/1.0.1+124/notes.js",
+          manifest: catalogManifest("notes"),
         },
       ],
     });
@@ -250,17 +277,20 @@ describe("App Store", () => {
         {
           id: "notes",
           version: "1.0.0",
-          entry: "/public/apps/notes/1.0.0/notes.js",
+          entry: "/apps/notes/1.0.0/notes.js",
+          manifest: catalogManifest("notes"),
         },
         {
           id: "photos",
           version: "0.9.0",
-          entry: "/public/apps/photos/0.9.0/photos.js",
+          entry: "/apps/photos/0.9.0/photos.js",
+          manifest: catalogManifest("photos"),
         },
         {
           id: "browser",
           version: "next",
-          entry: "/public/apps/browser/next/browser.js",
+          entry: "/apps/browser/next/browser.js",
+          manifest: catalogManifest("browser"),
         },
       ],
     });
@@ -300,7 +330,8 @@ describe("App Store", () => {
           version: "1.0.1",
           build: 42,
           revision: "abc1234",
-          entry: "/public/apps/notes/1.0.1+42/notes.js",
+          entry: "/apps/notes/1.0.1+42/notes.js",
+          manifest: catalogManifest("notes"),
         },
       ],
     });
@@ -328,6 +359,7 @@ describe("App Store", () => {
         build: 42,
         revision: "abc1234",
       }),
+      { source: "external" },
     );
     expect(kill).toHaveBeenCalledWith("h-notes", "kernel");
     expect(emit).toHaveBeenCalledWith("app.launch.requested", {

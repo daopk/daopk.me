@@ -1,0 +1,20 @@
+{
+  "id": "pdf-viewer",
+  "name": "PDF Viewer",
+  "icon": "PdfViewerAppIcon",
+  "category": "productivity",
+  "singleton": false,
+  "permissions": ["vfs.read"],
+  "defaultWindow": { "width": 1040, "height": 720, "centered": true },
+  "keywords": ["pdf", "document", "reader", "viewer", "vfs"],
+  "previews": [
+    {
+      "id": "pdf-viewer:file-preview",
+      "title": "PDF preview",
+      "surfaces": ["finder.panel"],
+      "priority": 100,
+      "exportName": "PdfFilePreview",
+      "match": "pdf-file"
+    }
+  ]
+}

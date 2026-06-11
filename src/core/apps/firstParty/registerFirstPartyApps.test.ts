@@ -3,27 +3,33 @@ import { defineAsyncComponent, defineComponent, h, nextTick, type Component } fr
 import { flushPromises, mount } from "@vue/test-utils";
 
 import type { AppManifest } from "~/types/app";
-import type { Kernel } from "~/types/kernel";
+import type { Kernel, KernelAppsRegisterOptions } from "~/types/kernel";
 
-import type { FirstPartyAppDescriptor } from "./types";
+import type { FirstPartyCatalogAppManifest } from "./types";
 
 vi.mock("~/core/debug", () => ({ debugWarn: vi.fn(), debugLog: vi.fn() }));
 
-// A single rostered app whose published module exposes the app component as
-// `default` plus a named widget export — exactly the shape a real
-// `import("@daopk-app/<id>")` produces. Components are created inside the mock
-// factories to dodge the `vi.mock` hoisting trap (factories run before
-// top-level consts initialise).
-vi.mock("./registry", async () => {
-  const { defineComponent: dc } = await import("vue");
+vi.mock("./registry", () => {
+  const ids = ["notes"];
   return {
-    FIRST_PARTY_APPS: [
-      {
+    FIRST_PARTY_APP_ID_LIST: ids,
+    FIRST_PARTY_APP_IDS: new Set(ids),
+    isFirstPartyAppId: (id: string) => ids.includes(id),
+  };
+});
+
+vi.mock("./devManifests", () => ({
+  FIRST_PARTY_DEV_CATALOG_ENTRIES: [
+    {
+      id: "notes",
+      version: "1.0.1",
+      build: 0,
+      entry: "/apps/notes/1.0.1+0/notes.js",
+      manifest: {
         id: "notes",
         name: "Notes",
-        icon: dc({ name: "StubIcon", template: "<svg />" }),
+        icon: "NotesAppIcon",
         category: "productivity",
-        version: "0.0.0-dev",
         widgets: [
           {
             id: "notes.recent",
@@ -39,13 +45,13 @@ vi.mock("./registry", async () => {
             title: "Note Preview",
             surfaces: ["finder.panel"],
             exportName: "NotePreview",
-            match: () => ({ args: { path: "/home/notes/a.md" } }),
+            match: "pdf-file",
           },
         ],
       },
-    ],
-  };
-});
+    },
+  ],
+}));
 
 vi.mock("./devEntries", async () => {
   const { defineComponent: dc } = await import("vue");
@@ -72,16 +78,18 @@ vi.mock("./devEntries", async () => {
 
 import {
   firstPartyCatalogEntryToAppManifest,
-  firstPartyDescriptorToAppManifest,
+  firstPartyCatalogManifestToAppManifest,
   registerFirstPartyApps,
 } from "./registerFirstPartyApps";
 
-function fakeKernel(registered: AppManifest[]): Kernel {
+function fakeKernel(
+  registered: Array<{ manifest: AppManifest; options?: KernelAppsRegisterOptions }>,
+): Kernel {
   return {
     apps: {
-      list: () => registered,
-      register: (manifest: AppManifest) => {
-        registered.push(manifest);
+      list: () => registered.map((entry) => entry.manifest),
+      register: (manifest: AppManifest, options?: KernelAppsRegisterOptions) => {
+        registered.push({ manifest, options });
       },
       launch: vi.fn(),
       unregister: vi.fn(),
@@ -92,9 +100,7 @@ function fakeKernel(registered: AppManifest[]): Kernel {
 /**
  * Drive a manifest/widget `component` loader through `defineAsyncComponent` —
  * the exact path `AppMount` and every widget surface use — and return the
- * resolved HTML. This reproduces the production failure mode: a loader that
- * resolves to a plain `{ default }` object (missing the ESM flag) is treated
- * as the component itself and renders an empty comment instead of the app.
+ * resolved HTML.
  */
 async function renderViaAsyncComponent(
   loader: () => Promise<{ default: Component }>,
@@ -107,53 +113,51 @@ async function renderViaAsyncComponent(
 }
 
 describe("registerFirstPartyApps (dev lane)", () => {
-  let registered: AppManifest[];
+  let registered: Array<{ manifest: AppManifest; options?: KernelAppsRegisterOptions }>;
 
   beforeEach(async () => {
     registered = [];
     await registerFirstPartyApps(fakeKernel(registered));
   });
 
+  it("registers dev catalog apps as external apps", () => {
+    expect(registered).toHaveLength(1);
+    expect(registered[0].manifest.id).toBe("notes");
+    expect(registered[0].manifest.version).toBe("1.0.1");
+    expect(registered[0].options).toEqual({ source: "external" });
+  });
+
   it("builds an app loader that defineAsyncComponent unwraps to the default export", async () => {
-    const manifest = registered.find((entry) => entry.id === "notes");
+    const manifest = registered.find((entry) => entry.manifest.id === "notes")?.manifest;
     expect(manifest).toBeDefined();
 
-    // Regression guard: the resolved record must be ESM-flagged so Vue unwraps
-    // `.default`. A bare `{ default }` object silently renders nothing in prod.
     const resolved = await manifest!.component();
     expect((resolved as { __esModule?: boolean }).__esModule).toBe(true);
 
     expect(await renderViaAsyncComponent(manifest!.component)).toContain("app-root-stub");
   });
 
-  it("builds a widget loader from the named export, also ESM-unwrappable", async () => {
-    const widget = registered.find((entry) => entry.id === "notes")?.widgets?.[0];
+  it("builds widget and preview loaders from named exports", async () => {
+    const manifest = registered.find((entry) => entry.manifest.id === "notes")?.manifest;
+    const widget = manifest?.widgets?.[0];
+    const preview = manifest?.previews?.[0];
     expect(widget).toBeDefined();
-
-    const resolved = await widget!.component();
-    expect((resolved as { __esModule?: boolean }).__esModule).toBe(true);
-
-    expect(await renderViaAsyncComponent(widget!.component)).toContain("widget-stub");
-  });
-
-  it("builds a preview loader from the named export without changing the catalog shape", async () => {
-    const preview = registered.find((entry) => entry.id === "notes")?.previews?.[0];
     expect(preview).toBeDefined();
+
+    expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(widget!.component)).toContain("widget-stub");
+
     expect(preview?.manifestId).toBe("notes");
-
-    const resolved = await preview!.component();
-    expect((resolved as { __esModule?: boolean }).__esModule).toBe(true);
-
+    expect(((await preview!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(preview!.component)).toContain("preview-stub");
   });
 
   it("reuses the manifest builder with ESM-wrapped app and widget loaders", async () => {
-    const descriptor: FirstPartyAppDescriptor = {
+    const catalogManifest: FirstPartyCatalogAppManifest = {
       id: "probe",
       name: "Probe",
-      icon: defineComponent({ name: "ProbeIcon", template: "<svg />" }),
+      icon: "NotesAppIcon",
       category: "dev",
-      version: "0.0.0",
       chrome: { mobile: { titlebar: "hidden" } },
       widgets: [
         {
@@ -168,14 +172,14 @@ describe("registerFirstPartyApps (dev lane)", () => {
         {
           id: "probe:preview",
           title: "Probe Preview",
-          surfaces: ["blog.embed"],
+          surfaces: ["finder.panel"],
           exportName: "ProbePreview",
-          match: () => ({ args: { url: "https://example.com" } }),
+          match: "pdf-file",
         },
       ],
     };
-    const manifest = firstPartyDescriptorToAppManifest(
-      descriptor,
+    const manifest = firstPartyCatalogManifestToAppManifest(
+      catalogManifest,
       async () => ({
         default: defineComponent({
           name: "ProbeApp",
@@ -220,7 +224,13 @@ describe("registerFirstPartyApps (dev lane)", () => {
       version: "1.2.3",
       build: 42,
       revision: "abc1234",
-      entry: "/public/apps/notes/1.2.3+42/notes.js",
+      entry: "/apps/notes/1.2.3+42/notes.js",
+      manifest: {
+        id: "notes",
+        name: "Notes",
+        icon: "NotesAppIcon",
+        category: "productivity",
+      },
     });
 
     expect(manifest).toEqual(
@@ -231,5 +241,16 @@ describe("registerFirstPartyApps (dev lane)", () => {
         revision: "abc1234",
       }),
     );
+  });
+
+  it("skips legacy catalog entries that do not carry a manifest", () => {
+    expect(
+      firstPartyCatalogEntryToAppManifest({
+        id: "notes",
+        version: "1.2.3",
+        build: 42,
+        entry: "/apps/notes/1.2.3+42/notes.js",
+      }),
+    ).toBeNull();
   });
 });

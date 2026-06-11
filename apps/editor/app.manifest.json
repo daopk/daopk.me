@@ -1,0 +1,10 @@
+{
+  "id": "editor",
+  "name": "Editor",
+  "icon": "EditorAppIcon",
+  "category": "productivity",
+  "singleton": false,
+  "permissions": ["vfs.read", "vfs.write"],
+  "defaultWindow": { "width": 900, "height": 620, "centered": true },
+  "keywords": ["editor", "text", "markdown", "write", "notes", "vfs"]
+}

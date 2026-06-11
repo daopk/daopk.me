@@ -2,9 +2,10 @@ import type { FirstPartyModuleLoader } from "./registerFirstPartyApps";
 
 /**
  * Dev-only loaders: in `pnpm dev` there is no catalog/R2, so first-party apps
- * load straight from their workspace packages (full HMR, normal source maps).
- * Each loader returns the app's module namespace, so the host can resolve both
- * the default export (the app component) and any named widget exports.
+ * load code straight from their workspace packages (full HMR, normal source
+ * maps), while `devManifests.ts` imports each app-owned manifest JSON. Each
+ * loader returns the app's module namespace, so the host can resolve the default
+ * export plus any named widget/preview exports named by the manifest.
  *
  * This module is imported ONLY behind an `import.meta.env.DEV` gate
  * (registerFirstPartyApps.ts), so the workspace app packages are tree-shaken

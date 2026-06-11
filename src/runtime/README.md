@@ -1,9 +1,9 @@
 # Host runtime SDK (`@daopk/sdk`)
 
 This folder exposes the shared runtime that independently-published first-party
-apps reuse. The shell owns app identity, permissions, icons, and catalog
-validation; the app packages under `apps/<id>` ship only their Vue modules and
-import the host runtime at launch.
+apps reuse. App packages under `apps/<id>` own serializable app metadata in
+`app.manifest.json` and ship Vue modules; the shell owns the first-party id
+allowlist, schema validation, icon-key resolution, and platform policy.
 
 Sharing one runtime instance keeps `provide` / `inject`, reactivity, and
 `useKernel()` working across the host/app boundary. Two Vue copies, or two
@@ -21,14 +21,25 @@ copies of an injection-key symbol, silently break injection.
 - The build-only `externalRuntimeImportMap` plugin injects an import map into
   `index.html` so bare imports like `vue`, `@daopk/sdk`, and `@daopk/kit`
   resolve to those host chunks.
-- First-party catalog entries point to same-origin, release-pinned modules under
-  `/apps/<id>/<version+build>/...`. When a module imports the shared surfaces,
-  it gets the same instances the shell already uses.
+- First-party catalog entries include the app manifest and point to same-origin,
+  release-pinned modules under `/apps/<id>/<version+build>/...`. When a module
+  imports the shared surfaces, it gets the same instances the shell already
+  uses.
 
 ## First-Party App Packages
 
-Each package in `apps/<id>` builds a single ES module and marks shared runtime
-surfaces as Rollup externals:
+Each package in `apps/<id>` owns an `app.manifest.json`, builds a single ES
+module, and marks shared runtime surfaces as Rollup externals:
+
+```json
+{
+  "id": "notes",
+  "name": "Notes",
+  "icon": "NotesAppIcon",
+  "category": "productivity",
+  "permissions": ["vfs.read", "vfs.write"]
+}
+```
 
 ```ts
 // apps/<id>/vite.config.ts
@@ -58,9 +69,9 @@ In development, the shell loads workspace packages directly through
 `firstPartyAppsPhase`, so HMR stays simple and no import map is needed.
 
 In preview and production, the shell fetches `/apps/index.json`, validates each
-same-origin catalog entry, registers the matching first-party descriptor, and
-loads the published module only when the user launches the app or mounts one of
-its widgets. The import map is injected only during `vite build`, so runtime
+same-origin catalog entry and manifest, resolves serializable icon/matcher keys,
+and loads the published module only when the user launches the app or mounts one
+of its widgets. The import map is injected only during `vite build`, so runtime
 composition should be verified with `pnpm build` plus `pnpm preview`.
 
 ## Verification Checklist

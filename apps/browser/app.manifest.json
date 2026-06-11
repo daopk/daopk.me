@@ -1,0 +1,9 @@
+{
+  "id": "browser",
+  "name": "Browser",
+  "icon": "BrowserAppIcon",
+  "category": "productivity",
+  "singleton": false,
+  "defaultWindow": { "width": 980, "height": 640, "centered": true },
+  "keywords": ["web", "internet", "browser", "url", "site", "iframe"]
+}

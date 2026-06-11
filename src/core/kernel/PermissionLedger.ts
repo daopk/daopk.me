@@ -1,5 +1,5 @@
 import { debugWarn } from "~/core/debug";
-import type { AppManifest, AppPermission } from "~/types/app";
+import type { AppPermission } from "~/types/app";
 import type {
   PermissionDecision,
   PermissionLedgerEntry,
@@ -37,7 +37,7 @@ export interface PermissionLedgerEmitter {
 }
 
 export interface PermissionLedgerDeps {
-  listApps(): readonly AppManifest[];
+  isSystemApp(manifestId: string): boolean;
   store: PermissionLedgerStore;
   events: PermissionLedgerEmitter;
   mintRequestId?: () => string;
@@ -71,8 +71,7 @@ export class PermissionLedger {
   ): Promise<PermissionDecision> {
     const source = options?.source ?? "app";
 
-    const manifest = this.deps.listApps().find((m) => m.id === manifestId);
-    if (manifest?.category === "system") {
+    if (this.deps.isSystemApp(manifestId)) {
       this.deps.events.emit("permission.granted", {
         manifestId,
         permission,

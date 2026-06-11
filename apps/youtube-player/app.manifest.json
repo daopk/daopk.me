@@ -1,0 +1,19 @@
+{
+  "id": "youtube-player",
+  "name": "YouTube Player",
+  "icon": "YoutubePlayerAppIcon",
+  "category": "media",
+  "singleton": false,
+  "defaultWindow": { "width": 960, "height": 540, "centered": true },
+  "keywords": ["youtube", "video", "player", "media", "embed"],
+  "previews": [
+    {
+      "id": "youtube-player:video-preview",
+      "title": "YouTube video",
+      "surfaces": ["blog.embed"],
+      "priority": 100,
+      "exportName": "YouTubeVideoPreview",
+      "match": "youtube-url"
+    }
+  ]
+}

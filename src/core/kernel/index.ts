@@ -86,7 +86,7 @@ const telemetryInternal = new TelemetryBus({
 });
 
 const permissionsInternal = new PermissionLedger({
-  listApps: () => [...registryCatalog.manifests.values()],
+  isSystemApp: (manifestId) => registryCatalog.isSystemApp(manifestId),
   store: {
     get: (manifestId, permission) => usePermissionStore(requirePinia()).get(manifestId, permission),
     set: (manifestId, permission, granted) =>
@@ -531,8 +531,8 @@ function buildKernel(): Kernel {
     boot: bootState,
 
     apps: {
-      register(manifest) {
-        registryCatalog.upsertManifest(manifest);
+      register(manifest, options) {
+        registryCatalog.upsertManifest(manifest, options);
         registerAppPreviews({
           disposers: appPreviewDisposers,
           manifest,

@@ -1,0 +1,17 @@
+{
+  "id": "movies",
+  "name": "Movies",
+  "icon": "MoviesAppIcon",
+  "category": "media",
+  "singleton": true,
+  "permissions": ["network.fetch"],
+  "defaultWindow": {
+    "width": 1120,
+    "height": 720,
+    "minWidth": 640,
+    "minHeight": 520,
+    "centered": true
+  },
+  "chrome": { "mobile": { "titlebar": "hidden", "edgeSwipe": "disabled" } },
+  "keywords": ["movies", "tmdb", "film", "tv", "series", "media"]
+}

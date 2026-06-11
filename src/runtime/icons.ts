@@ -5,8 +5,9 @@
  * apps reuse the host's already-bundled per-icon components instead of
  * shipping their own icon copies.
  *
- * App-identity icons (the fluent-color launcher icons) intentionally stay in
- * the host registry, not here — only the in-app lucide glyphs are shared.
+ * App identity manifests carry serializable fluent-color icon keys. The host
+ * resolves those keys internally; this runtime surface stays focused on in-app
+ * lucide glyphs shared by independently-published app modules.
  *
  * See `src/runtime/kit.ts` for the build-entry / `preserveEntrySignatures`
  * rationale.

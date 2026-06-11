@@ -12,6 +12,7 @@ export interface FirstPartyPreviewCatalogEntry {
   readonly version: string;
   readonly build: number;
   readonly entry: string;
+  readonly manifest: unknown;
 }
 
 export interface FirstPartyPreviewCatalog {
@@ -40,8 +41,12 @@ export async function buildFirstPartyPreviewCatalog(
     }
 
     let rawPackageJson: string;
+    let rawManifestJson: string;
     try {
-      rawPackageJson = await readFile(join(appsRoot, dir.name, "package.json"), "utf8");
+      [rawPackageJson, rawManifestJson] = await Promise.all([
+        readFile(join(appsRoot, dir.name, "package.json"), "utf8"),
+        readFile(join(appsRoot, dir.name, "app.manifest.json"), "utf8"),
+      ]);
     } catch (error) {
       if (isMissingFileError(error)) {
         continue;
@@ -50,7 +55,12 @@ export async function buildFirstPartyPreviewCatalog(
     }
 
     const packageJson = JSON.parse(rawPackageJson) as { version?: unknown };
-    if (typeof packageJson.version !== "string" || packageJson.version.length === 0) {
+    const manifest = JSON.parse(rawManifestJson) as { id?: unknown };
+    if (
+      typeof packageJson.version !== "string" ||
+      packageJson.version.length === 0 ||
+      manifest.id !== dir.name
+    ) {
       continue;
     }
 
@@ -60,6 +70,7 @@ export async function buildFirstPartyPreviewCatalog(
       version: packageJson.version,
       build: PREVIEW_BUILD,
       entry: `/apps/${dir.name}/${release}/${dir.name}.js`,
+      manifest,
     });
   }
 

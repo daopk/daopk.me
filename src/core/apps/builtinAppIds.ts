@@ -1,26 +1,16 @@
+import { FIRST_PARTY_APP_ID_LIST } from "~/core/apps/firstParty/registry";
+
 /**
  * Reserved ids owned by shell-bundled system apps and independently-published
- * first-party apps. Keep in sync with the manifests registered in `src/main.ts`
- * and the first-party roster in `src/core/apps/firstParty/registry.ts`.
+ * first-party apps. External first-party ids are sourced from the catalog
+ * allowlist; shell-bundled ids are listed here.
  */
 export const BUILTIN_APP_IDS: ReadonlySet<string> = new Set([
-  "baby-touch",
-  "blog",
-  "browser",
-  "calendar",
-  "clock",
-  "editor",
+  ...FIRST_PARTY_APP_ID_LIST,
   "finder",
-  "html-in-canvas",
-  "movies",
-  // first-party, published independently (see firstParty/registry.ts)
-  "notes",
-  "pdf-viewer",
-  "photos",
   "settings",
   "terminal",
   "trash",
-  "youtube-player",
   // Reserved for the first-party App Store (registered in a later phase).
   "app-store",
 ]);
