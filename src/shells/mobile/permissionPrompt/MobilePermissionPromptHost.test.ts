@@ -75,8 +75,11 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     await flushAndPaint();
 
     const dialog = document.body.querySelector('[role="dialog"]');
+    const overlay = document.body.querySelector(".ds-dialog__overlay");
     expect(dialog).not.toBeNull();
     expect(dialog?.className).toContain("ds-dialog__content--sheet");
+    expect(dialog?.className).toContain("ds-dialog__content--system");
+    expect(overlay?.className).toContain("ds-dialog__overlay--system");
 
     const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
     buttons.find((b) => b.textContent?.trim() === "Don't allow")!.click();

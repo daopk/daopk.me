@@ -27,12 +27,17 @@
 
   /* ContextMenu — wallpaper widget right-click +
      future menubar / dock / window-titlebar context menus. Sits one
-     band above the dialog content so a context menu opened over a
-     dialog (e.g. a permission prompt) paints on top of the dialog's
-     overlay + content. reka-ui's ContextMenuPortal portals into
-     <body>; the `.ds-context-menu` rule below applies this z-index
-     to the portaled content directly. */
+     band above app dialog content so menus opened over app dialogs
+     paint on top. System dialogs use the higher permission prompt
+     band below so security/privacy prompts stay actionable. */
   --context-menu-z: 1700;
+
+  /* Permission prompts — system-modal band above app dialogs and
+     context menus. App-owned dialogs can trigger permission checks
+     during their own mounted lifecycle, so these prompts must not be
+     trapped underneath the requesting app's modal surface. */
+  --permission-dialog-overlay-z: 1800;
+  --permission-dialog-content-z: 1801;
 
   --dock-bg: var(--menubar-bg-translucent);
   --dock-blur: var(--menubar-blur);

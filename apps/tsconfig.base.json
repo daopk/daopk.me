@@ -21,6 +21,7 @@
       "@daopk/kit": ["../src/runtime/kit.ts"],
       "@daopk/ui": ["../src/runtime/ui.ts"],
       "@daopk/icons": ["../src/runtime/icons.ts"],
+      "@daopk/files": ["../src/runtime/files.ts"],
       "@daopk/markdown": ["../src/runtime/markdown.ts"],
       "@daopk/content": ["../src/runtime/content.ts"],
       "@daopk/comments": ["../src/runtime/comments.ts"],

@@ -81,6 +81,7 @@ const actions = computed(() => resolvedOrder.value.map((id) => ({ id, ...actionC
     :title="headline"
     :description="description"
     :variant="variant"
+    layer="system"
     :dismissible="false"
   >
     <div

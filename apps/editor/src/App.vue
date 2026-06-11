@@ -8,14 +8,21 @@ import {
   IconButton,
   ScrollArea,
   Spinner,
-  StatusBanner,
   Textarea,
-  TextInput,
 } from "@daopk/kit";
 import { Button, Dialog, DialogActions } from "@daopk/ui";
 import { createMarkdownRenderer, type MarkdownRenderer } from "@daopk/markdown";
 import { FileText, FolderOpen, RefreshCw, Save } from "@daopk/icons";
-import { AppContextInjectionKey, useKernel, useVfs } from "@daopk/sdk";
+import { VfsFilePickerDialog } from "@daopk/files";
+import {
+  AppContextInjectionKey,
+  dirname,
+  isEditableVfsTextFile,
+  normalizeVfsPath,
+  useKernel,
+  useVfs,
+  type VfsDirEntry,
+} from "@daopk/sdk";
 
 import { useEditor } from "./useEditor";
 
@@ -26,10 +33,13 @@ const kernel = useKernel();
 const vfs = useVfs();
 const editor = useEditor({ vfs });
 
-const pathInput = ref("");
 const textareaRef = ref<{ focus: (options?: FocusOptions) => void } | null>(null);
 const discardDialogOpen = ref(false);
 const pendingDiscardAction = ref<PendingDiscardAction | null>(null);
+const filePickerOpen = ref(false);
+const filePickerInitialPath = ref("/home");
+const filePickerPermissionPending = ref(false);
+const filePickerPermissionError = ref<string | null>(null);
 const previewHtml = ref("");
 const previewLoading = ref(false);
 const previewMessage = ref("");
@@ -59,6 +69,12 @@ const statusText = computed(() => {
   if (editor.error.value !== null) {
     return editor.error.value;
   }
+  if (filePickerPermissionError.value !== null) {
+    return filePickerPermissionError.value;
+  }
+  if (filePickerPermissionPending.value) {
+    return "Waiting for file access permission...";
+  }
   if (editor.status.value === "loading") {
     return "Opening...";
   }
@@ -83,8 +99,6 @@ const statusText = computed(() => {
 
   return "Ready.";
 });
-
-const statusIsError = computed(() => editor.error.value !== null);
 
 void openInitialPath();
 
@@ -117,7 +131,6 @@ async function openInitialPath(): Promise<void> {
     return;
   }
 
-  pathInput.value = initialPath;
   await openNow(initialPath);
   if (editor.currentPath.value === null) {
     emitDocumentPath(null);
@@ -187,8 +200,56 @@ async function renderPreview(): Promise<void> {
   }
 }
 
-function requestOpen(): void {
-  requestOpenPath(pathInput.value);
+async function openFilePicker(): Promise<void> {
+  if (filePickerPermissionPending.value) {
+    return;
+  }
+
+  filePickerPermissionError.value = null;
+  if (ctx === null) {
+    filePickerPermissionError.value = "Editor cannot request file access right now.";
+    return;
+  }
+
+  filePickerPermissionPending.value = true;
+  try {
+    const decision = await kernel.permissions.request(ctx.manifestId, "vfs.read", {
+      source: "app",
+    });
+    if (!decision.granted) {
+      filePickerPermissionError.value = "Editor needs file access before browsing.";
+      return;
+    }
+    if (!decision.persisted && decision.reason !== "system-auto-grant") {
+      filePickerPermissionError.value = "Choose Allow and remember to browse files.";
+      return;
+    }
+  } catch {
+    filePickerPermissionError.value = "Editor could not request file access.";
+    return;
+  } finally {
+    filePickerPermissionPending.value = false;
+  }
+
+  filePickerInitialPath.value = initialPickerPath();
+  filePickerOpen.value = true;
+}
+
+function initialPickerPath(): string {
+  if (editor.currentPath.value !== null) {
+    return dirname(normalizeVfsPath(editor.currentPath.value));
+  }
+
+  return "/home";
+}
+
+function acceptEditorFile(entry: VfsDirEntry): boolean {
+  return entry.kind === "file" && isEditableVfsTextFile(entry);
+}
+
+function onFilePickerConfirm(path: string): void {
+  filePickerOpen.value = false;
+  requestOpenPath(path);
 }
 
 function requestOpenPath(path: string): void {
@@ -197,6 +258,7 @@ function requestOpenPath(path: string): void {
     return;
   }
 
+  filePickerPermissionError.value = null;
   if (editor.dirty.value) {
     pendingDiscardAction.value = { kind: "open", path: nextPath };
     discardDialogOpen.value = true;
@@ -212,7 +274,6 @@ async function openNow(path: string): Promise<void> {
     return;
   }
 
-  pathInput.value = editor.currentPath.value ?? path;
   await nextTick();
   textareaRef.value?.focus({ preventScroll: true });
 }
@@ -266,29 +327,15 @@ function onKeydown(event: KeyboardEvent): void {
 
 <template>
   <AppFrame class="editor" layout="flex-column" aria-label="Editor" @keydown="onKeydown">
-    <AppToolbar class="editor__toolbar" wrap>
-      <form class="editor__path-form" @submit.prevent="requestOpen">
-        <label class="editor__path-label" for="editor-path">Path</label>
-        <TextInput
-          id="editor-path"
-          v-model="pathInput"
-          class="editor__path-input"
-          autocomplete="off"
-          autocapitalize="off"
-          autocorrect="off"
-          spellcheck="false"
-          placeholder="/home/note.md"
-          :disabled="editor.loading.value || editor.saving.value"
-        />
-        <Button
-          type="submit"
-          size="sm"
-          :icon-start="FolderOpen"
-          :disabled="editor.loading.value || editor.saving.value"
-        >
-          Open
-        </Button>
-      </form>
+    <AppToolbar v-if="editor.currentPath.value !== null" class="editor__toolbar" wrap>
+      <IconButton
+        class="editor__browse-button"
+        size="sm"
+        label="Browse files"
+        :icon="FolderOpen"
+        :disabled="editor.loading.value || editor.saving.value || filePickerPermissionPending"
+        @click="void openFilePicker()"
+      />
 
       <template #end>
         <div class="editor__actions">
@@ -323,13 +370,24 @@ function onKeydown(event: KeyboardEvent): void {
       </template>
     </AppToolbar>
 
-    <StatusBanner class="editor__status" :tone="statusIsError ? 'error' : 'info'">
+    <p class="editor__sr-status" role="status" aria-live="polite" aria-atomic="true">
       {{ statusText }}
-    </StatusBanner>
+    </p>
 
     <main class="editor__body" :class="editorClasses">
-      <EmptyState v-if="editor.currentPath.value === null" class="editor__empty">
-        No file open.
+      <EmptyState
+        v-if="editor.currentPath.value === null"
+        class="editor__empty"
+        title="No file open."
+      >
+        <Button
+          variant="primary"
+          :icon-start="FolderOpen"
+          :disabled="filePickerPermissionPending"
+          @click="void openFilePicker()"
+        >
+          Open
+        </Button>
       </EmptyState>
       <Textarea
         v-else
@@ -353,6 +411,15 @@ function onKeydown(event: KeyboardEvent): void {
         <div v-else class="editor__preview-content" v-html="previewHtml" />
       </ScrollArea>
     </main>
+
+    <VfsFilePickerDialog
+      v-model:open="filePickerOpen"
+      :initial-path="filePickerInitialPath"
+      title="Open File"
+      confirm-label="Open"
+      :accept="acceptEditorFile"
+      @confirm="onFilePickerConfirm"
+    />
 
     <Dialog
       v-model:open="discardDialogOpen"
@@ -391,23 +458,8 @@ function onKeydown(event: KeyboardEvent): void {
   padding: var(--space-xs) var(--space-sm);
 }
 
-.editor__path-form {
-  align-items: center;
-  display: flex;
-  flex: 1 1 auto;
-  gap: var(--space-xs);
-  min-inline-size: 0;
-}
-
-.editor__path-label {
-  color: var(--color-fg-muted);
+.editor__browse-button {
   flex: 0 0 auto;
-  font-size: var(--font-size-xs);
-}
-
-.editor__path-input {
-  flex: 1 1 auto;
-  min-inline-size: 120px;
 }
 
 .editor__textarea:focus-visible {
@@ -422,20 +474,15 @@ function onKeydown(event: KeyboardEvent): void {
   gap: var(--space-xs);
 }
 
-.editor__status {
-  border-block-end: 1px solid var(--color-border);
-  color: var(--color-fg-muted);
-  flex: 0 0 auto;
-  font-size: var(--font-size-xs);
-  min-block-size: 30px;
+.editor__sr-status {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  inline-size: 1px;
+  margin: -1px;
   overflow: hidden;
-  padding: var(--space-xs) var(--space-md);
-  text-overflow: ellipsis;
+  padding: 0;
+  position: absolute;
   white-space: nowrap;
-}
-
-.editor__status--error {
-  color: var(--color-error-soft);
 }
 
 .editor__body {
@@ -530,8 +577,7 @@ function onKeydown(event: KeyboardEvent): void {
     flex-direction: column;
   }
 
-  .editor__actions,
-  .editor__path-form {
+  .editor__actions {
     inline-size: 100%;
   }
 

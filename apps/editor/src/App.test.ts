@@ -1,18 +1,23 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   AppContextInjectionKey,
+  basename,
   dirname,
   KernelInjectionKey,
   normalizeVfsPath,
   VfsError,
   type AppContext,
   type Kernel,
+  type VfsDirEntry,
   type VfsStat,
 } from "@daopk/sdk";
 
 import App from "./App.vue";
+
+type MountedEditor = ReturnType<typeof mount>;
+type ButtonWrapper = ReturnType<MountedEditor["find"]>;
 
 vi.mock("@daopk/markdown", () => ({
   createMarkdownRenderer: vi.fn(async () => ({
@@ -29,6 +34,11 @@ interface FakeNode {
   mimeType?: string;
 }
 
+interface FakeKernelOptions {
+  readPermissionGranted?: boolean;
+  readPermissionPersisted?: boolean;
+}
+
 function stat(path: string, node: FakeNode): VfsStat {
   return {
     path: normalizeVfsPath(path),
@@ -41,8 +51,37 @@ function stat(path: string, node: FakeNode): VfsStat {
   };
 }
 
-function makeKernel(seed: Record<string, FakeNode>): Kernel {
-  const nodes = { ...seed };
+function entry(path: string, node: FakeNode): VfsDirEntry {
+  const normalized = normalizeVfsPath(path);
+  return {
+    name: basename(normalized),
+    path: normalized,
+    kind: node.kind,
+    size: node.text?.length ?? 0,
+    updatedAt: 0,
+    readonly: node.readonly === true,
+    ...(node.mimeType === undefined ? {} : { mimeType: node.mimeType }),
+  };
+}
+
+function isDirectChildPath(parent: string, candidate: string): boolean {
+  if (parent === candidate) {
+    return false;
+  }
+
+  const prefix = parent === "/" ? "/" : `${parent}/`;
+  if (!candidate.startsWith(prefix)) {
+    return false;
+  }
+
+  const rest = candidate.slice(prefix.length);
+  return rest.length > 0 && !rest.includes("/");
+}
+
+function makeKernel(seed: Record<string, FakeNode>, options: FakeKernelOptions = {}): Kernel {
+  const nodes = Object.fromEntries(
+    Object.entries(seed).map(([path, node]) => [normalizeVfsPath(path), node] as const),
+  );
   const listeners = new Map<string, Set<(payload: Record<string, unknown>) => void>>();
 
   function emit(channel: string, payload: Record<string, unknown>): void {
@@ -66,17 +105,46 @@ function makeKernel(seed: Record<string, FakeNode>): Kernel {
       once: vi.fn(() => () => undefined),
       off: vi.fn(),
     },
+    permissions: {
+      request: vi.fn(async () => {
+        const persisted = options.readPermissionPersisted ?? true;
+        return {
+          granted: options.readPermissionGranted ?? true,
+          persisted,
+          reason: persisted ? "cached" : "user",
+        };
+      }),
+      respond: vi.fn(() => true),
+      revoke: vi.fn(() => false),
+      list: vi.fn(() => []),
+    },
     vfs: {
       stat: vi.fn(async (path: string) => {
-        const node = nodes[path];
+        const normalized = normalizeVfsPath(path);
+        const node = nodes[normalized];
         if (node === undefined) {
-          throw new VfsError("NOT_FOUND", `Path not found: ${path}`, { path });
+          throw new VfsError("NOT_FOUND", `Path not found: ${normalized}`, { path: normalized });
         }
-        return stat(path, node);
+        return stat(normalized, node);
       }),
-      list: vi.fn(async () => []),
+      list: vi.fn(async (path: string) => {
+        const normalized = normalizeVfsPath(path);
+        const node = nodes[normalized];
+        if (node === undefined) {
+          throw new VfsError("NOT_FOUND", `Path not found: ${normalized}`, { path: normalized });
+        }
+        if (node.kind !== "directory") {
+          throw new VfsError("NOT_DIRECTORY", `Path is not a directory: ${normalized}`, {
+            path: normalized,
+          });
+        }
+
+        return Object.entries(nodes)
+          .filter(([candidate]) => isDirectChildPath(normalized, candidate))
+          .map(([candidate, child]) => entry(candidate, child));
+      }),
       read: vi.fn(async () => null),
-      readText: vi.fn(async (path: string) => nodes[path]?.text ?? ""),
+      readText: vi.fn(async (path: string) => nodes[normalizeVfsPath(path)]?.text ?? ""),
       write: vi.fn(async () => null),
       writeText: vi.fn(async (path: string, text: string, options = {}) => {
         const normalized = normalizeVfsPath(path);
@@ -101,7 +169,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
   });
 }
 
-function mountEditor(kernel: Kernel, context: AppContext = makeContext()) {
+function mountEditor(kernel: Kernel, context: AppContext = makeContext()): MountedEditor {
   return mount(App, {
     attachTo: document.body,
     global: {
@@ -113,13 +181,56 @@ function mountEditor(kernel: Kernel, context: AppContext = makeContext()) {
   });
 }
 
-function buttonByText(wrapper: ReturnType<typeof mount>, text: string) {
+function buttonByText(wrapper: MountedEditor, text: string): ButtonWrapper;
+function buttonByText(
+  wrapper: MountedEditor,
+  text: string,
+  options: { required: false },
+): ButtonWrapper | undefined;
+function buttonByText(wrapper: MountedEditor, text: string, options: { required?: boolean } = {}) {
   const button = wrapper.findAll("button").find((node) => node.text().includes(text));
   if (button === undefined) {
+    if (options.required === false) {
+      return undefined;
+    }
     throw new Error(`Button not found: ${text}`);
   }
   return button;
 }
+
+function dialogButtonByText(text: string): HTMLButtonElement {
+  const dialog = document.body.querySelector('[role="dialog"]');
+  if (dialog === null) {
+    throw new Error("Dialog not found");
+  }
+
+  const button = Array.from(dialog.querySelectorAll<HTMLButtonElement>("button")).find((node) =>
+    node.textContent?.includes(text),
+  );
+  if (button === undefined) {
+    throw new Error(`Dialog button not found: ${text}`);
+  }
+  return button;
+}
+
+function optionByText(text: string): HTMLElement {
+  const option = Array.from(document.body.querySelectorAll<HTMLElement>('[role="option"]')).find(
+    (node) => node.textContent?.includes(text),
+  );
+  if (option === undefined) {
+    throw new Error(`Option not found: ${text}`);
+  }
+  return option;
+}
+
+async function flushUi(): Promise<void> {
+  await flushPromises();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+afterEach(() => {
+  document.body.innerHTML = "";
+});
 
 describe("Editor App.vue", () => {
   it("opens with no file selected", () => {
@@ -127,6 +238,15 @@ describe("Editor App.vue", () => {
     const wrapper = mountEditor(kernel);
 
     expect(wrapper.text()).toContain("No file open.");
+    expect(wrapper.find(".editor__toolbar").exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="Browse files"]').exists()).toBe(false);
+    expect(wrapper.find(".editor__status").exists()).toBe(false);
+    expect(wrapper.find(".editor__sr-status").attributes("aria-live")).toBe("polite");
+    expect(wrapper.find("#editor-path").exists()).toBe(false);
+    expect(buttonByText(wrapper, "Open").exists()).toBe(true);
+    expect(buttonByText(wrapper, "Save", { required: false })).toBeUndefined();
+    expect(buttonByText(wrapper, "Revert", { required: false })).toBeUndefined();
+    expect(wrapper.find('button[aria-label="Toggle Markdown preview"]').exists()).toBe(false);
     expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
       manifestId: "editor",
       handleId: "editor-handle",
@@ -145,6 +265,8 @@ describe("Editor App.vue", () => {
 
     await flushPromises();
 
+    expect(wrapper.find(".editor__toolbar").exists()).toBe(true);
+    expect(wrapper.find('button[aria-label="Browse files"]').exists()).toBe(true);
     expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("# Hello");
     expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/note.md", {
       handleId: "editor-handle",
@@ -163,23 +285,109 @@ describe("Editor App.vue", () => {
     wrapper.unmount();
   });
 
-  it("opens a path from the toolbar", async () => {
+  it("opens a file selected from the Browse picker", async () => {
     const kernel = makeKernel({
       "/home": { kind: "directory" },
-      "/home/log.txt": { kind: "file", text: "hello", mimeType: "text/plain" },
+      "/home/current.md": { kind: "file", text: "# Current", mimeType: "text/markdown" },
+      "/home/next.txt": { kind: "file", text: "next", mimeType: "text/plain" },
+      "/home/photo.png": { kind: "file", text: "png", mimeType: "image/png" },
     });
+    const wrapper = mountEditor(kernel, makeContext({ path: "/home/current.md" }));
+
+    await flushUi();
+    await wrapper.find('button[aria-label="Browse files"]').trigger("click");
+    await flushUi();
+
+    expect(kernel.permissions.request).toHaveBeenCalledWith("editor", "vfs.read", {
+      source: "app",
+    });
+    expect(optionByText("photo.png").getAttribute("aria-disabled")).toBe("true");
+    optionByText("next.txt").click();
+    await flushUi();
+    dialogButtonByText("Open").click();
+    await flushUi();
+
+    expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("next");
+    expect(kernel.vfs.readText).toHaveBeenCalledWith("/home/next.txt", {
+      handleId: "editor-handle",
+    });
+
+    wrapper.unmount();
+  });
+
+  it("keeps the Browse picker closed when read permission is denied", async () => {
+    const kernel = makeKernel(
+      {
+        "/home": { kind: "directory" },
+        "/home/note.txt": { kind: "file", text: "note", mimeType: "text/plain" },
+      },
+      { readPermissionGranted: false },
+    );
     const wrapper = mountEditor(kernel);
 
-    await wrapper.find("#editor-path").setValue("/home/log.txt");
-    await wrapper.find("form").trigger("submit");
-    await flushPromises();
+    await buttonByText(wrapper, "Open").trigger("click");
+    await flushUi();
 
-    expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("hello");
-    expect(kernel.events.emit).toHaveBeenCalledWith("app.document.changed", {
-      manifestId: "editor",
-      handleId: "editor-handle",
-      path: "/home/log.txt",
+    expect(kernel.permissions.request).toHaveBeenCalledWith("editor", "vfs.read", {
+      source: "app",
     });
+    expect(document.body.textContent).not.toContain("Open File");
+    expect(wrapper.text()).toContain("Editor needs file access before browsing.");
+    expect(kernel.vfs.list).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("keeps the Browse picker closed after one-time read permission", async () => {
+    const kernel = makeKernel(
+      {
+        "/home": { kind: "directory" },
+        "/home/note.txt": { kind: "file", text: "note", mimeType: "text/plain" },
+      },
+      { readPermissionPersisted: false },
+    );
+    const wrapper = mountEditor(kernel);
+
+    await buttonByText(wrapper, "Open").trigger("click");
+    await flushUi();
+
+    expect(kernel.permissions.request).toHaveBeenCalledWith("editor", "vfs.read", {
+      source: "app",
+    });
+    expect(document.body.textContent).not.toContain("Open File");
+    expect(wrapper.text()).toContain("Choose Allow and remember to browse files.");
+    expect(kernel.vfs.list).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("keeps the discard flow when Browse selects another file with dirty changes", async () => {
+    const wrapper = mountEditor(
+      makeKernel({
+        "/home": { kind: "directory" },
+        "/home/a.txt": { kind: "file", text: "A", mimeType: "text/plain" },
+        "/home/b.txt": { kind: "file", text: "B", mimeType: "text/plain" },
+      }),
+      makeContext({ path: "/home/a.txt" }),
+    );
+
+    await flushUi();
+    await wrapper.find("textarea").setValue("dirty");
+    await wrapper.find('button[aria-label="Browse files"]').trigger("click");
+    await flushUi();
+
+    optionByText("b.txt").click();
+    await flushUi();
+    dialogButtonByText("Open").click();
+    await flushUi();
+
+    expect(document.body.textContent).toContain("Discard changes?");
+    expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("dirty");
+
+    dialogButtonByText("Discard").click();
+    await flushUi();
+
+    expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("B");
 
     wrapper.unmount();
   });

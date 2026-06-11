@@ -16,6 +16,8 @@ interface DialogProps {
   /** Optional description — wires `aria-describedby` when present. */
   description?: string;
   variant?: "modal" | "sheet";
+  size?: "sm" | "lg";
+  layer?: "default" | "system";
   portalTo?: string | HTMLElement;
   scope?: "viewport" | "container";
   modal?: boolean;
@@ -30,6 +32,8 @@ interface DialogProps {
 const props = withDefaults(defineProps<DialogProps>(), {
   description: undefined,
   variant: "modal",
+  size: "sm",
+  layer: "default",
   portalTo: "body",
   scope: "viewport",
   modal: true,
@@ -73,18 +77,31 @@ function onOverlayPointerDown(): void {
       <DialogOverlay
         v-if="modal"
         class="ds-dialog__overlay"
-        :class="[`ds-dialog__overlay--${variant}`, `ds-dialog__overlay--${scope}`]"
+        :class="[
+          `ds-dialog__overlay--${variant}`,
+          `ds-dialog__overlay--${scope}`,
+          `ds-dialog__overlay--${layer}`,
+        ]"
       />
       <div
         v-else-if="open"
         class="ds-dialog__overlay"
-        :class="[`ds-dialog__overlay--${variant}`, `ds-dialog__overlay--${scope}`]"
+        :class="[
+          `ds-dialog__overlay--${variant}`,
+          `ds-dialog__overlay--${scope}`,
+          `ds-dialog__overlay--${layer}`,
+        ]"
         aria-hidden="true"
         @pointerdown="onOverlayPointerDown"
       />
       <DialogContent
         class="ds-dialog__content"
-        :class="[`ds-dialog__content--${variant}`, `ds-dialog__content--${scope}`]"
+        :class="[
+          `ds-dialog__content--${variant}`,
+          `ds-dialog__content--${scope}`,
+          `ds-dialog__content--${size}`,
+          `ds-dialog__content--${layer}`,
+        ]"
         v-bind="contentA11yAttrs"
         @interact-outside="onInteractOutside"
         @escape-key-down="onEscapeKeyDown"
@@ -103,8 +120,15 @@ function onOverlayPointerDown(): void {
 .ds-dialog__overlay {
   background-color: color-mix(in oklab, var(--color-bg) 60%, transparent);
   inset: 0;
-  z-index: var(--dialog-overlay-z);
   animation: ds-dialog-overlay-in 160ms var(--ease) both;
+}
+
+.ds-dialog__overlay--default {
+  z-index: var(--dialog-overlay-z);
+}
+
+.ds-dialog__overlay--system {
+  z-index: var(--permission-dialog-overlay-z);
 }
 
 .ds-dialog__overlay--viewport {
@@ -123,13 +147,20 @@ function onOverlayPointerDown(): void {
   background-color: var(--color-bg-elevated);
   box-shadow: var(--shadow-lg);
   color: var(--color-fg);
-  z-index: var(--dialog-content-z);
   outline: none;
 
   &:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
+}
+
+.ds-dialog__content--default {
+  z-index: var(--dialog-content-z);
+}
+
+.ds-dialog__content--system {
+  z-index: var(--permission-dialog-content-z);
 }
 
 .ds-dialog__content--viewport {
@@ -143,7 +174,6 @@ function onOverlayPointerDown(): void {
 .ds-dialog__content--modal {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  inline-size: min(420px, calc(100vw - 32px));
   inset-block-start: 50%;
   inset-inline-start: 50%;
   padding: var(--space-lg);
@@ -151,8 +181,20 @@ function onOverlayPointerDown(): void {
   animation: ds-dialog-modal-in 180ms var(--ease) both;
 }
 
-.ds-dialog__content--modal.ds-dialog__content--container {
+.ds-dialog__content--modal.ds-dialog__content--sm {
+  inline-size: min(420px, calc(100vw - 32px));
+}
+
+.ds-dialog__content--modal.ds-dialog__content--lg {
+  inline-size: min(720px, calc(100vw - 32px));
+}
+
+.ds-dialog__content--modal.ds-dialog__content--sm.ds-dialog__content--container {
   inline-size: min(420px, calc(100% - 32px));
+}
+
+.ds-dialog__content--modal.ds-dialog__content--lg.ds-dialog__content--container {
+  inline-size: min(720px, calc(100% - 32px));
 }
 
 .ds-dialog__content--sheet {

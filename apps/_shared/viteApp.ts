@@ -24,6 +24,7 @@ export const HOST_RUNTIME_EXTERNALS = [
   "@daopk/kit",
   "@daopk/ui",
   "@daopk/icons",
+  "@daopk/files",
   "@daopk/markdown",
   "@daopk/content",
   "@daopk/comments",

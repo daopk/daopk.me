@@ -33,8 +33,31 @@ describe("Dialog", () => {
 
     expect(dialog).not.toBeNull();
     expect(dialog?.classList.contains("ds-dialog__content--viewport")).toBe(true);
+    expect(dialog?.classList.contains("ds-dialog__content--default")).toBe(true);
     expect(overlay).not.toBeNull();
     expect(overlay?.classList.contains("ds-dialog__overlay--viewport")).toBe(true);
+    expect(overlay?.classList.contains("ds-dialog__overlay--default")).toBe(true);
+  });
+
+  it("can render on the system modal layer", async () => {
+    mount(Dialog, {
+      attachTo: document.body,
+      props: {
+        open: true,
+        title: "System dialog",
+        layer: "system",
+      },
+      slots: {
+        default: "<p>Body</p>",
+      },
+    });
+    await flushReka();
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    const overlay = document.body.querySelector(".ds-dialog__overlay");
+
+    expect(dialog?.classList.contains("ds-dialog__content--system")).toBe(true);
+    expect(overlay?.classList.contains("ds-dialog__overlay--system")).toBe(true);
   });
 
   it("can portal a non-modal dialog into a container without locking body pointer events", async () => {

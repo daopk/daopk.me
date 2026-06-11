@@ -6,6 +6,8 @@ import "~/assets/scss/base.scss";
 // Standalone first-party apps import @daopk/kit through the import map; preload
 // the kit once so Vite links its scoped component CSS with the shell HTML.
 import "~/runtime/kit";
+// Same CSS-loading contract for shared file UI consumed by external apps.
+import "~/runtime/files";
 
 import App from "~/App.vue";
 import { appStoreManifest } from "~/apps/app-store";
