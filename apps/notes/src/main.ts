@@ -7,3 +7,5 @@
  * instance, injection keys, and design system.
  */
 export { default } from "./App.vue";
+export { createDesktopNote } from "./desktopActions";
+export { default as NotesDesktopLayer } from "./NotesDesktopLayer.vue";

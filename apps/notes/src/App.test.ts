@@ -235,11 +235,13 @@ function menuItems(): HTMLElement[] {
 
 describe("Notes App.vue", () => {
   beforeEach(() => {
+    localStorage.clear();
     resizeCallbacks.length = 0;
   });
 
   afterEach(() => {
     document.body.innerHTML = "";
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -527,10 +529,34 @@ describe("Notes App.vue", () => {
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open",
       "Duplicate",
+      "Pin to Desktop",
       "Reveal in Finder",
       "Delete...",
     ]);
     expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
+
+    wrapper.unmount();
+  });
+
+  it("pins a note to the desktop from its context menu", async () => {
+    const kernel = makeKernel({
+      [NOTES_ROOT]: { kind: "directory" },
+      "/home/notes/a.md": {
+        kind: "file",
+        text: "# Alpha\n\nA body",
+        mimeType: NOTES_MIME_TYPE,
+        updatedAt: 1,
+      },
+    });
+    const wrapper = mountNotes(kernel);
+
+    await flushPromises();
+    dispatchContextMenu(wrapper.get(".notes__note-button").element);
+    await flushReka();
+    menuItems()[2]!.click();
+    await flushReka();
+
+    expect(localStorage.getItem("notes-desktop:pinned")).toContain("/home/notes/a.md");
 
     wrapper.unmount();
   });
@@ -582,7 +608,7 @@ describe("Notes App.vue", () => {
     await flushPromises();
     dispatchContextMenu(wrapper.get(".notes__note-button").element);
     await flushReka();
-    menuItems()[2]!.click();
+    menuItems()[3]!.click();
     await flushReka();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
@@ -615,7 +641,7 @@ describe("Notes App.vue", () => {
     await flushPromises();
     dispatchContextMenu(wrapper.findAll(".notes__note-button")[0]!.element);
     await flushReka();
-    menuItems()[3]!.click();
+    menuItems()[4]!.click();
     await flushReka();
 
     expect(kernel.trash.moveToTrash).not.toHaveBeenCalled();

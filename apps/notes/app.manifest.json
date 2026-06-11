@@ -6,5 +6,25 @@
   "singleton": true,
   "permissions": ["vfs.read", "vfs.write"],
   "defaultWindow": { "width": 920, "height": 620, "centered": true },
-  "keywords": ["notes", "markdown", "writing", "drafts", "journal", "vfs"]
+  "keywords": ["notes", "markdown", "writing", "drafts", "journal", "vfs"],
+  "desktop": {
+    "contextMenu": [
+      {
+        "id": "notes:new-desktop-note",
+        "label": "New Note",
+        "surface": "desktop:background",
+        "group": "create",
+        "order": 0,
+        "exportName": "createDesktopNote"
+      }
+    ],
+    "renderers": [
+      {
+        "id": "notes:desktop-layer",
+        "surface": "desktop:wallpaper",
+        "order": 0,
+        "exportName": "NotesDesktopLayer"
+      }
+    ]
+  }
 }

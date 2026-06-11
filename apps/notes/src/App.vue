@@ -35,6 +35,7 @@ import {
   type NoteListItem,
   type NotesStatus,
 } from "./useNotes";
+import { usePinnedDesktopNotes } from "./usePinnedDesktopNotes";
 
 const COMPACT_BREAKPOINT = 620;
 
@@ -45,6 +46,7 @@ interface AppFrameRef {
 const kernel = useKernel();
 const appContext = inject(AppContextInjectionKey, null);
 const vfs = useVfs();
+const pinnedNotes = usePinnedDesktopNotes();
 const notes = useNotes({
   vfs: {
     ...vfs,
@@ -122,6 +124,9 @@ useResizeObserver(rootElement, ([entry]) => {
 });
 
 onMounted(() => {
+  if (!pinnedNotes.isHydrated()) {
+    pinnedNotes.hydrate();
+  }
   void loadInitialNotes();
 });
 
@@ -206,6 +211,10 @@ function revealNoteInFinder(note: NoteListItem): void {
     source: "menu",
     args: { path: NOTES_ROOT, reveal: note.path },
   });
+}
+
+function pinNoteToDesktop(note: NoteListItem): void {
+  pinnedNotes.pin(note.path);
 }
 
 function requestDeleteNote(note: NoteListItem): void {
@@ -323,6 +332,7 @@ function labelForStatus(status: NotesStatus): string {
               <ContextMenuItem :disabled="noteMutationDisabled" @select="duplicateNote(note)">
                 Duplicate
               </ContextMenuItem>
+              <ContextMenuItem @select="pinNoteToDesktop(note)">Pin to Desktop</ContextMenuItem>
               <ContextMenuItem @select="revealNoteInFinder(note)">Reveal in Finder</ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem :disabled="noteMutationDisabled" @select="requestDeleteNote(note)">
