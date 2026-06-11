@@ -7,6 +7,8 @@ import { isFirstPartyAppId } from "./registry";
 import type {
   FirstPartyCatalog,
   FirstPartyCatalogAppManifest,
+  FirstPartyCatalogDesktopContextMenuDescriptor,
+  FirstPartyCatalogDesktopRendererDescriptor,
   FirstPartyCatalogEntry,
   FirstPartyCatalogPreviewDescriptor,
   FirstPartyCatalogWidgetDescriptor,
@@ -14,6 +16,7 @@ import type {
 
 import type { AppPermission, WindowDefaults } from "~/types/app";
 import type { AppPreviewSurface } from "~/types/preview";
+import type { DesktopContextMenuSurface, DesktopRendererSurface } from "~/types/desktop";
 import type { ShellId } from "~/types/shell";
 import type { WidgetDefaultPlacement, WidgetSize, WidgetSurface } from "~/types/widget";
 
@@ -40,6 +43,8 @@ const WIDGET_SURFACES = new Set<WidgetSurface>([
 ]);
 const WIDGET_SIZES = new Set<WidgetSize>(["sm", "md", "lg"]);
 const PREVIEW_SURFACES = new Set<AppPreviewSurface>(["blog.embed", "finder.panel"]);
+const DESKTOP_CONTEXT_MENU_SURFACES = new Set<DesktopContextMenuSurface>(["desktop:background"]);
+const DESKTOP_RENDERER_SURFACES = new Set<DesktopRendererSurface>(["desktop:wallpaper"]);
 
 export type FirstPartyCatalogFetchResult =
   | { ok: true; catalog: FirstPartyCatalog }
@@ -307,6 +312,111 @@ function coercePreview(input: unknown): FirstPartyCatalogPreviewDescriptor | nul
   };
 }
 
+function coerceDesktopContextMenuItem(
+  input: unknown,
+): FirstPartyCatalogDesktopContextMenuDescriptor | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+  const { id, label, surface, group, exportName } = input;
+  if (
+    typeof id !== "string" ||
+    id.length === 0 ||
+    typeof label !== "string" ||
+    label.length === 0 ||
+    typeof surface !== "string" ||
+    !DESKTOP_CONTEXT_MENU_SURFACES.has(surface as DesktopContextMenuSurface) ||
+    (group !== undefined && (typeof group !== "string" || group.length === 0)) ||
+    typeof exportName !== "string" ||
+    exportName.length === 0
+  ) {
+    return null;
+  }
+
+  const order = optionalNumber(input.order);
+  if (order === null) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+    surface: surface as DesktopContextMenuSurface,
+    ...(group === undefined ? {} : { group }),
+    ...(order === undefined ? {} : { order }),
+    exportName,
+  };
+}
+
+function coerceDesktopRenderer(input: unknown): FirstPartyCatalogDesktopRendererDescriptor | null {
+  if (!isRecord(input)) {
+    return null;
+  }
+  const { id, surface, exportName } = input;
+  if (
+    typeof id !== "string" ||
+    id.length === 0 ||
+    typeof surface !== "string" ||
+    !DESKTOP_RENDERER_SURFACES.has(surface as DesktopRendererSurface) ||
+    typeof exportName !== "string" ||
+    exportName.length === 0
+  ) {
+    return null;
+  }
+
+  const order = optionalNumber(input.order);
+  if (order === null) {
+    return null;
+  }
+
+  return {
+    id,
+    surface: surface as DesktopRendererSurface,
+    ...(order === undefined ? {} : { order }),
+    exportName,
+  };
+}
+
+function coerceDesktop(value: unknown): FirstPartyCatalogAppManifest["desktop"] | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const contextMenu =
+    value.contextMenu === undefined
+      ? undefined
+      : Array.isArray(value.contextMenu)
+        ? value.contextMenu.map(coerceDesktopContextMenuItem)
+        : null;
+  const renderers =
+    value.renderers === undefined
+      ? undefined
+      : Array.isArray(value.renderers)
+        ? value.renderers.map(coerceDesktopRenderer)
+        : null;
+
+  if (
+    contextMenu === null ||
+    renderers === null ||
+    contextMenu?.some((item) => item === null) ||
+    renderers?.some((renderer) => renderer === null)
+  ) {
+    return null;
+  }
+
+  return {
+    ...(contextMenu === undefined
+      ? {}
+      : { contextMenu: contextMenu as FirstPartyCatalogDesktopContextMenuDescriptor[] }),
+    ...(renderers === undefined
+      ? {}
+      : { renderers: renderers as FirstPartyCatalogDesktopRendererDescriptor[] }),
+  };
+}
+
 function coerceManifest(input: unknown, entryId: string): FirstPartyCatalogAppManifest | null {
   if (!isRecord(input)) {
     return null;
@@ -353,6 +463,7 @@ function coerceManifest(input: unknown, entryId: string): FirstPartyCatalogAppMa
       : Array.isArray(input.previews)
         ? input.previews.map(coercePreview)
         : null;
+  const desktop = coerceDesktop(input.desktop);
 
   if (
     singleton === null ||
@@ -366,6 +477,7 @@ function coerceManifest(input: unknown, entryId: string): FirstPartyCatalogAppMa
     settings === null ||
     widgets === null ||
     previews === null ||
+    desktop === null ||
     widgets?.some((widget) => widget === null) ||
     previews?.some((preview) => preview === null)
   ) {
@@ -390,6 +502,7 @@ function coerceManifest(input: unknown, entryId: string): FirstPartyCatalogAppMa
     ...(previews === undefined
       ? {}
       : { previews: previews as FirstPartyCatalogPreviewDescriptor[] }),
+    ...(desktop === undefined ? {} : { desktop }),
   };
 }
 

@@ -48,6 +48,23 @@ vi.mock("./devManifests", () => ({
             match: "pdf-file",
           },
         ],
+        desktop: {
+          contextMenu: [
+            {
+              id: "notes:new-desktop-note",
+              label: "New Note",
+              surface: "desktop:background",
+              exportName: "createDesktopNote",
+            },
+          ],
+          renderers: [
+            {
+              id: "notes:desktop-layer",
+              surface: "desktop:wallpaper",
+              exportName: "NotesDesktopLayer",
+            },
+          ],
+        },
       },
     },
   ],
@@ -70,6 +87,11 @@ vi.mock("./devEntries", async () => {
           NotePreview: dc({
             name: "NotePreview",
             template: '<div class="preview-stub">preview content</div>',
+          }),
+          createDesktopNote: vi.fn(),
+          NotesDesktopLayer: dc({
+            name: "NotesDesktopLayer",
+            template: '<div class="desktop-layer-stub">desktop layer</div>',
           }),
         }),
     },
@@ -137,12 +159,16 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(await renderViaAsyncComponent(manifest!.component)).toContain("app-root-stub");
   });
 
-  it("builds widget and preview loaders from named exports", async () => {
+  it("builds widget, preview, and desktop contribution loaders from named exports", async () => {
     const manifest = registered.find((entry) => entry.manifest.id === "notes")?.manifest;
     const widget = manifest?.widgets?.[0];
     const preview = manifest?.previews?.[0];
+    const contextMenuItem = manifest?.desktop?.contextMenu?.[0];
+    const renderer = manifest?.desktop?.renderers?.[0];
     expect(widget).toBeDefined();
     expect(preview).toBeDefined();
+    expect(contextMenuItem).toBeDefined();
+    expect(renderer).toBeDefined();
 
     expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(widget!.component)).toContain("widget-stub");
@@ -150,6 +176,10 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(preview?.manifestId).toBe("notes");
     expect(((await preview!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(preview!.component)).toContain("preview-stub");
+
+    expect(typeof (await contextMenuItem!.action())).toBe("function");
+    expect(((await renderer!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(renderer!.component)).toContain("desktop layer");
   });
 
   it("reuses the manifest builder with ESM-wrapped app and widget loaders", async () => {
@@ -177,7 +207,25 @@ describe("registerFirstPartyApps (dev lane)", () => {
           match: "pdf-file",
         },
       ],
+      desktop: {
+        contextMenu: [
+          {
+            id: "probe:new",
+            label: "New Probe",
+            surface: "desktop:background",
+            exportName: "createProbe",
+          },
+        ],
+        renderers: [
+          {
+            id: "probe:desktop-layer",
+            surface: "desktop:wallpaper",
+            exportName: "ProbeDesktopLayer",
+          },
+        ],
+      },
     };
+    const createProbe = vi.fn();
     const manifest = firstPartyCatalogManifestToAppManifest(
       catalogManifest,
       async () => ({
@@ -192,6 +240,11 @@ describe("registerFirstPartyApps (dev lane)", () => {
         ProbePreview: defineComponent({
           name: "ProbePreview",
           template: '<div class="probe-preview">probe preview</div>',
+        }),
+        createProbe,
+        ProbeDesktopLayer: defineComponent({
+          name: "ProbeDesktopLayer",
+          template: '<div class="probe-desktop-layer">probe desktop</div>',
         }),
       }),
       "1.2.3",
@@ -216,6 +269,15 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(preview?.manifestId).toBe("probe");
     expect(((await preview!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(preview!.component)).toContain("probe-preview");
+
+    const contextMenuItem = manifest.desktop?.contextMenu?.[0];
+    expect(contextMenuItem).toBeDefined();
+    expect(await contextMenuItem!.action()).toBe(createProbe);
+
+    const renderer = manifest.desktop?.renderers?.[0];
+    expect(renderer).toBeDefined();
+    expect(((await renderer!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
+    expect(await renderViaAsyncComponent(renderer!.component)).toContain("probe desktop");
   });
 
   it("carries catalog build metadata into the runtime manifest", () => {

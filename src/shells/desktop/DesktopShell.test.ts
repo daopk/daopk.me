@@ -13,6 +13,7 @@ describe("DesktopShell template structure (M3.7 follow-up)", () => {
           Dock: { template: '<div data-shell-child="dock" />' },
           DesktopContextMenuLayer: { template: '<div data-shell-child="context-menu" />' },
           DesktopWidgetLayer: { template: '<div data-shell-child="widget-layer" />' },
+          DesktopRenderLayer: { template: '<div data-shell-child="render-layer" />' },
           DesktopWidgetGallery: { template: '<div data-shell-child="widget-gallery" />' },
           WindowHost: { template: '<div data-shell-child="window-host" />' },
           SpotlightHost: { template: '<div data-shell-child="spotlight" />' },
@@ -32,18 +33,23 @@ describe("DesktopShell template structure (M3.7 follow-up)", () => {
     expect(widgetLayer.exists()).toBe(true);
   });
 
-  it("renders DesktopWidgetLayer BEFORE WindowHost inside .desktop-stage", () => {
+  it("renders DesktopWidgetLayer and DesktopRenderLayer BEFORE WindowHost inside .desktop-stage", () => {
     const wrapper = mountShell();
 
     const stage = wrapper.find("main.desktop-stage");
     const stageChildren = Array.from(stage.element.children) as HTMLElement[];
 
     const layerIdx = stageChildren.findIndex((el) => el.dataset.shellChild === "widget-layer");
+    const renderLayerIdx = stageChildren.findIndex(
+      (el) => el.dataset.shellChild === "render-layer",
+    );
     const windowHostIdx = stageChildren.findIndex((el) => el.dataset.shellChild === "window-host");
 
     expect(layerIdx).toBeGreaterThanOrEqual(0);
+    expect(renderLayerIdx).toBeGreaterThanOrEqual(0);
     expect(windowHostIdx).toBeGreaterThanOrEqual(0);
     expect(layerIdx).toBeLessThan(windowHostIdx);
+    expect(renderLayerIdx).toBeLessThan(windowHostIdx);
   });
 
   it("renders the desktop context-menu layer before widgets and windows", () => {
@@ -54,10 +60,15 @@ describe("DesktopShell template structure (M3.7 follow-up)", () => {
 
     const contextIdx = stageChildren.findIndex((el) => el.dataset.shellChild === "context-menu");
     const layerIdx = stageChildren.findIndex((el) => el.dataset.shellChild === "widget-layer");
+    const renderLayerIdx = stageChildren.findIndex(
+      (el) => el.dataset.shellChild === "render-layer",
+    );
     const windowHostIdx = stageChildren.findIndex((el) => el.dataset.shellChild === "window-host");
 
     expect(contextIdx).toBeGreaterThanOrEqual(0);
     expect(contextIdx).toBeLessThan(layerIdx);
+    expect(layerIdx).toBeLessThan(renderLayerIdx);
+    expect(renderLayerIdx).toBeLessThan(windowHostIdx);
     expect(contextIdx).toBeLessThan(windowHostIdx);
   });
 

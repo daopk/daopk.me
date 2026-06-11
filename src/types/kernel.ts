@@ -5,6 +5,7 @@ import type { VfsDirEntry, VfsNodeKind, VfsStat } from "~/core/vfs";
 import { KernelInjectionKey as rawKernelInjectionKey } from "~/runtime/injectionKeys";
 import type { AppHandle, AppManifest, AppPermission } from "~/types/app";
 import type { CommandSource, KernelCommandsFacade } from "~/types/command";
+import type { KernelDesktopFacade } from "~/types/desktop";
 import type {
   PermissionDecision,
   PermissionLedgerEntry,
@@ -143,6 +144,10 @@ declare global {
     "widget.unregistered": { id: string };
     "preview.registered": { id: string };
     "preview.unregistered": { id: string };
+    "desktop.context-menu.registered": { id: string };
+    "desktop.context-menu.unregistered": { id: string };
+    "desktop.renderer.registered": { id: string };
+    "desktop.renderer.unregistered": { id: string };
     "widget.gallery.open.requested": {
       source: CommandSource;
     };
@@ -393,6 +398,7 @@ export interface Kernel {
   readonly search: KernelSearchFacade;
   readonly widgets: KernelWidgetsFacade;
   readonly previews: KernelPreviewsFacade;
+  readonly desktop: KernelDesktopFacade;
   readonly wallpapers: KernelWallpapersFacade;
 }
 

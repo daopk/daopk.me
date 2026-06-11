@@ -5,6 +5,7 @@ import Dock from "./dock/Dock.vue";
 import DesktopContextMenuLayer from "./contextMenu/DesktopContextMenuLayer.vue";
 import MenuBar from "./menubar/MenuBar.vue";
 import PermissionPromptHost from "./permissionPrompt/PermissionPromptHost.vue";
+import DesktopRenderLayer from "./renderLayer/DesktopRenderLayer.vue";
 import SpotlightHost from "./spotlight/SpotlightHost.vue";
 import DesktopWidgetGallery from "./widgetGallery/DesktopWidgetGallery.vue";
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
@@ -25,6 +26,7 @@ useDesktopBrowserZoomGuard(shellRef);
     <main class="desktop-stage" aria-label="Desktop workspace">
       <DesktopContextMenuLayer />
       <DesktopWidgetLayer />
+      <DesktopRenderLayer />
       <WindowHost />
     </main>
     <!--

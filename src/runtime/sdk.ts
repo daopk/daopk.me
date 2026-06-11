@@ -168,6 +168,18 @@ export type {
   TranslationParams,
 } from "~/core/i18n";
 export type {
+  AppDesktopManifest,
+  DesktopContextMenuAction,
+  DesktopContextMenuActionContext,
+  DesktopContextMenuItemManifest,
+  DesktopContextMenuSurface,
+  DesktopPoint,
+  DesktopRendererComponentProps,
+  DesktopRendererManifest,
+  DesktopRendererSurface,
+  KernelDesktopFacade,
+} from "~/types/desktop";
+export type {
   AppPreviewComponentProps,
   AppPreviewInput,
   AppPreviewListFilter,

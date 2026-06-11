@@ -11,6 +11,10 @@ import { debugLog, debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
 import { AppRegistry } from "~/core/kernel/AppRegistry";
 import { CommandRegistry } from "~/core/kernel/CommandRegistry";
+import {
+  DesktopContextMenuRegistry,
+  DesktopRendererRegistry,
+} from "~/core/kernel/DesktopContributionRegistry";
 import { registerBuiltinCommands } from "~/core/kernel/builtinCommands";
 import { EventBus } from "~/core/kernel/EventBus";
 import { Lifecycle } from "~/core/kernel/Lifecycle";
@@ -27,7 +31,9 @@ import {
 } from "~/core/kernel/kernelVfs";
 import {
   disposeAppPreviews,
+  disposeAppDesktopContributions,
   disposeAppWidgets,
+  registerAppDesktopContributions,
   registerAppPreviews,
   registerAppWidgets,
   seedBuiltinWallpapers,
@@ -66,8 +72,11 @@ const commandsCatalog = new CommandRegistry();
 const wallpapersCatalog = new WallpaperRegistry();
 const widgetsCatalog = new WidgetRegistry();
 const previewsCatalog = new PreviewRegistry();
+const desktopContextMenuCatalog = new DesktopContextMenuRegistry();
+const desktopRendererCatalog = new DesktopRendererRegistry();
 const appWidgetDisposers = new Map<string, Array<() => void>>();
 const appPreviewDisposers = new Map<string, Array<() => void>>();
+const appDesktopContributionDisposers = new Map<string, Array<() => void>>();
 const lifecycleInternal = new Lifecycle();
 const processesInternal = new ProcessTable();
 const pendingProcessKills = new Map<string, Promise<void>>();
@@ -357,8 +366,11 @@ function buildKernel(): Kernel {
       wallpapersCatalog.__resetForTests();
       widgetsCatalog.__resetForTests();
       previewsCatalog.__resetForTests();
+      desktopContextMenuCatalog.__resetForTests();
+      desktopRendererCatalog.__resetForTests();
       appWidgetDisposers.clear();
       appPreviewDisposers.clear();
+      appDesktopContributionDisposers.clear();
 
       stopBuiltinCommands?.();
 
@@ -565,6 +577,23 @@ function buildKernel(): Kernel {
           },
           widgets: kernel.widgets,
         });
+        registerAppDesktopContributions({
+          contextMenu: kernel.desktop.contextMenu,
+          disposers: appDesktopContributionDisposers,
+          manifest,
+          onDisposeError: (error) => {
+            debugWarn("[kernel]", "app desktop contribution disposer failed", manifest.id, error);
+          },
+          onInvalidNamespace: (contributionId) => {
+            debugWarn(
+              "[kernel]",
+              "skipping app desktop contribution with invalid namespace",
+              manifest.id,
+              contributionId,
+            );
+          },
+          renderers: kernel.desktop.renderers,
+        });
         bus.emit("app.registered", { id: manifest.id });
       },
 
@@ -637,6 +666,9 @@ function buildKernel(): Kernel {
         });
         disposeAppWidgets(appWidgetDisposers, manifestId, (error) => {
           debugWarn("[kernel]", "app widget disposer failed", manifestId, error);
+        });
+        disposeAppDesktopContributions(appDesktopContributionDisposers, manifestId, (error) => {
+          debugWarn("[kernel]", "app desktop contribution disposer failed", manifestId, error);
         });
         registryCatalog.unregister(manifestId);
         if (hadEntry) {
@@ -992,6 +1024,70 @@ function buildKernel(): Kernel {
 
       resolve(input, filter) {
         return previewsCatalog.resolve(input, filter);
+      },
+    },
+
+    desktop: {
+      contextMenu: {
+        register(item) {
+          const dispose = desktopContextMenuCatalog.register(item);
+
+          bus.emit("desktop.context-menu.registered", { id: item.id });
+
+          return (): void => {
+            const current = desktopContextMenuCatalog.get(item.id);
+            if (current === item) {
+              dispose();
+              bus.emit("desktop.context-menu.unregistered", { id: item.id });
+            }
+          };
+        },
+
+        unregister(id) {
+          const removed = desktopContextMenuCatalog.unregister(id);
+          if (removed) {
+            bus.emit("desktop.context-menu.unregistered", { id });
+          }
+        },
+
+        list(filter) {
+          return desktopContextMenuCatalog.list(filter);
+        },
+
+        get(id) {
+          return desktopContextMenuCatalog.get(id);
+        },
+      },
+
+      renderers: {
+        register(renderer) {
+          const dispose = desktopRendererCatalog.register(renderer);
+
+          bus.emit("desktop.renderer.registered", { id: renderer.id });
+
+          return (): void => {
+            const current = desktopRendererCatalog.get(renderer.id);
+            if (current === renderer) {
+              dispose();
+              bus.emit("desktop.renderer.unregistered", { id: renderer.id });
+            }
+          };
+        },
+
+        unregister(id) {
+          const removed = desktopRendererCatalog.unregister(id);
+          if (removed) {
+            bus.emit("desktop.renderer.unregistered", { id });
+          }
+        },
+
+        list(filter) {
+          return desktopRendererCatalog.list(filter);
+        },
+
+        get(id) {
+          return desktopRendererCatalog.get(id);
+        },
       },
     },
 

@@ -7,6 +7,12 @@ import type {
 import type { AppPreviewProvider, AppPreviewSurface } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
 import type {
+  DesktopContextMenuItemManifest,
+  DesktopContextMenuSurface,
+  DesktopRendererManifest,
+  DesktopRendererSurface,
+} from "~/types/desktop";
+import type {
   WidgetDefaultPlacement,
   WidgetManifest,
   WidgetSize,
@@ -41,6 +47,29 @@ export interface FirstPartyCatalogPreviewDescriptor {
   readonly match: FirstPartyPreviewMatcherKey;
 }
 
+export interface FirstPartyCatalogDesktopContextMenuDescriptor {
+  readonly id: string;
+  readonly label: string;
+  readonly surface: DesktopContextMenuSurface;
+  readonly group?: string;
+  readonly order?: number;
+  /** Named export in the app entry module that is this action function. */
+  readonly exportName: string;
+}
+
+export interface FirstPartyCatalogDesktopRendererDescriptor {
+  readonly id: string;
+  readonly surface: DesktopRendererSurface;
+  readonly order?: number;
+  /** Named export in the app entry module that is this renderer component. */
+  readonly exportName: string;
+}
+
+export interface FirstPartyCatalogDesktopManifest {
+  readonly contextMenu?: readonly FirstPartyCatalogDesktopContextMenuDescriptor[];
+  readonly renderers?: readonly FirstPartyCatalogDesktopRendererDescriptor[];
+}
+
 export interface FirstPartyCatalogAppManifest {
   readonly id: string;
   readonly name: string;
@@ -57,6 +86,7 @@ export interface FirstPartyCatalogAppManifest {
   readonly settings?: AppSettingsManifest;
   readonly widgets?: readonly FirstPartyCatalogWidgetDescriptor[];
   readonly previews?: readonly FirstPartyCatalogPreviewDescriptor[];
+  readonly desktop?: FirstPartyCatalogDesktopManifest;
 }
 
 /** One published app in the catalog: manifest metadata + immutable module URL. */
@@ -95,3 +125,15 @@ export type FirstPartyRuntimePreviewDescriptor = Omit<
   "exportName" | "match"
 > &
   Pick<AppPreviewProvider, "component" | "match">;
+
+export type FirstPartyRuntimeDesktopContextMenuDescriptor = Omit<
+  FirstPartyCatalogDesktopContextMenuDescriptor,
+  "exportName"
+> &
+  Pick<DesktopContextMenuItemManifest, "action">;
+
+export type FirstPartyRuntimeDesktopRendererDescriptor = Omit<
+  FirstPartyCatalogDesktopRendererDescriptor,
+  "exportName"
+> &
+  Pick<DesktopRendererManifest, "component">;

@@ -48,7 +48,7 @@ function appIntent(
     urlIntent === undefined
       ? args
       : {
-          ...(args ?? {}),
+          ...args,
           urlIntent,
         };
 

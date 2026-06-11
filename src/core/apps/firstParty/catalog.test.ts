@@ -116,6 +116,43 @@ describe("first-party catalog coercion", () => {
     ]);
   });
 
+  it("keeps validated desktop contribution descriptors", () => {
+    const desktop = {
+      contextMenu: [
+        {
+          id: "notes:new-desktop-note",
+          label: "New Note",
+          surface: "desktop:background",
+          group: "create",
+          order: 0,
+          exportName: "createDesktopNote",
+        },
+      ],
+      renderers: [
+        {
+          id: "notes:desktop-layer",
+          surface: "desktop:wallpaper",
+          order: 0,
+          exportName: "NotesDesktopLayer",
+        },
+      ],
+    };
+
+    expect(
+      coerceFirstPartyCatalog({
+        apps: [
+          {
+            id: "notes",
+            version: "1.0.1",
+            build: 1,
+            entry: "/apps/notes/1.0.1+1/notes.js",
+            manifest: { ...notesManifest, desktop },
+          },
+        ],
+      }).apps[0]?.manifest?.desktop,
+    ).toEqual(desktop);
+  });
+
   it("drops entries whose id is not in the first-party allowlist", () => {
     expect(
       coerceFirstPartyCatalog({
@@ -163,6 +200,29 @@ describe("first-party catalog coercion", () => {
             exportName: "Widget",
           },
         ],
+      },
+      {
+        desktop: {
+          contextMenu: [
+            {
+              id: "notes:new",
+              label: "New",
+              surface: "desktop:window",
+              exportName: "createDesktopNote",
+            },
+          ],
+        },
+      },
+      {
+        desktop: {
+          renderers: [
+            {
+              id: "notes:renderer",
+              surface: "desktop:dock",
+              exportName: "NotesDesktopLayer",
+            },
+          ],
+        },
       },
     ];
 

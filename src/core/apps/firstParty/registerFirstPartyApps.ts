@@ -1,6 +1,11 @@
 import { debugWarn } from "~/core/debug";
 
 import type { AppManifest } from "~/types/app";
+import type {
+  DesktopContextMenuAction,
+  DesktopContextMenuItemManifest,
+  DesktopRendererManifest,
+} from "~/types/desktop";
 import type { Kernel } from "~/types/kernel";
 import type { AppPreviewProvider } from "~/types/preview";
 import type { WidgetManifest } from "~/types/widget";
@@ -12,6 +17,8 @@ import { resolveFirstPartyPreviewMatcher } from "./previewMatchers";
 import { FIRST_PARTY_APP_ID_LIST } from "./registry";
 import type {
   FirstPartyCatalogAppManifest,
+  FirstPartyCatalogDesktopContextMenuDescriptor,
+  FirstPartyCatalogDesktopRendererDescriptor,
   FirstPartyCatalogEntry,
   FirstPartyCatalogPreviewDescriptor,
   FirstPartyCatalogWidgetDescriptor,
@@ -60,6 +67,28 @@ function toPreviewProvider(
   };
 }
 
+function toDesktopContextMenuItem(
+  descriptor: FirstPartyCatalogDesktopContextMenuDescriptor,
+  load: FirstPartyModuleLoader,
+): DesktopContextMenuItemManifest {
+  const { exportName, ...rest } = descriptor;
+  return {
+    ...rest,
+    action: () => load().then((module) => module[exportName] as DesktopContextMenuAction),
+  };
+}
+
+function toDesktopRenderer(
+  descriptor: FirstPartyCatalogDesktopRendererDescriptor,
+  load: FirstPartyModuleLoader,
+): DesktopRendererManifest {
+  const { exportName, ...rest } = descriptor;
+  return {
+    ...rest,
+    component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
+  };
+}
+
 export function firstPartyCatalogManifestToAppManifest(
   catalogManifest: FirstPartyCatalogAppManifest,
   load: FirstPartyModuleLoader,
@@ -100,6 +129,24 @@ export function firstPartyCatalogManifestToAppManifest(
     manifest.previews = catalogManifest.previews.map((preview) =>
       toPreviewProvider(catalogManifest.id, preview, load),
     );
+  }
+  if (catalogManifest.desktop !== undefined) {
+    manifest.desktop = {
+      ...(catalogManifest.desktop.contextMenu === undefined
+        ? {}
+        : {
+            contextMenu: catalogManifest.desktop.contextMenu.map((item) =>
+              toDesktopContextMenuItem(item, load),
+            ),
+          }),
+      ...(catalogManifest.desktop.renderers === undefined
+        ? {}
+        : {
+            renderers: catalogManifest.desktop.renderers.map((renderer) =>
+              toDesktopRenderer(renderer, load),
+            ),
+          }),
+    };
   }
 
   return manifest;

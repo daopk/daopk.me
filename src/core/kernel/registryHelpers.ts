@@ -1,4 +1,10 @@
 import type { AppManifest } from "~/types/app";
+import type {
+  DesktopContextMenuItemManifest,
+  DesktopRendererManifest,
+  KernelDesktopContextMenuFacade,
+  KernelDesktopRenderersFacade,
+} from "~/types/desktop";
 import type { AppPreviewProvider, KernelPreviewsFacade } from "~/types/preview";
 import type { KernelWallpapersFacade } from "~/types/wallpaper";
 import type { KernelWidgetsFacade, WidgetManifest } from "~/types/widget";
@@ -80,6 +86,84 @@ export function disposeAppPreviews(
     } catch (error) {
       onError?.(error);
     }
+  }
+}
+
+export function disposeAppDesktopContributions(
+  disposers: Map<string, Array<() => void>>,
+  manifestId: string,
+  onError?: (error: unknown) => void,
+): void {
+  const disposersForApp = disposers.get(manifestId);
+  if (!disposersForApp) {
+    return;
+  }
+  disposers.delete(manifestId);
+  for (const dispose of disposersForApp) {
+    try {
+      dispose();
+    } catch (error) {
+      onError?.(error);
+    }
+  }
+}
+
+export function registerAppDesktopContributions({
+  contextMenu,
+  disposers,
+  manifest,
+  onDisposeError,
+  onInvalidNamespace,
+  renderers,
+}: {
+  readonly disposers: Map<string, Array<() => void>>;
+  readonly onDisposeError?: (error: unknown) => void;
+  readonly onInvalidNamespace?: (contributionId: string) => void;
+  readonly manifest: AppManifest;
+  readonly contextMenu: KernelDesktopContextMenuFacade;
+  readonly renderers: KernelDesktopRenderersFacade;
+}): void {
+  disposeAppDesktopContributions(disposers, manifest.id, onDisposeError);
+
+  const desktop = manifest.desktop;
+  if (
+    desktop === undefined ||
+    ((desktop.contextMenu?.length ?? 0) === 0 && (desktop.renderers?.length ?? 0) === 0)
+  ) {
+    return;
+  }
+
+  const namespace = `${manifest.id}:`;
+  const nextDisposers: Array<() => void> = [];
+
+  for (const item of desktop.contextMenu ?? []) {
+    if (!item.id.startsWith(namespace)) {
+      onInvalidNamespace?.(item.id);
+      continue;
+    }
+
+    const appItem: DesktopContextMenuItemManifest = {
+      ...item,
+      manifestId: manifest.id,
+    };
+    nextDisposers.push(contextMenu.register(appItem));
+  }
+
+  for (const renderer of desktop.renderers ?? []) {
+    if (!renderer.id.startsWith(namespace)) {
+      onInvalidNamespace?.(renderer.id);
+      continue;
+    }
+
+    const appRenderer: DesktopRendererManifest = {
+      ...renderer,
+      manifestId: manifest.id,
+    };
+    nextDisposers.push(renderers.register(appRenderer));
+  }
+
+  if (nextDisposers.length > 0) {
+    disposers.set(manifest.id, nextDisposers);
   }
 }
 

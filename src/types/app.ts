@@ -5,6 +5,7 @@ import {
   AppContextInjectionKey as rawAppContextInjectionKey,
 } from "~/runtime/injectionKeys";
 import type { AppPreviewProvider } from "~/types/preview";
+import type { AppDesktopManifest } from "~/types/desktop";
 import type { ShellId } from "~/types/shell";
 import type { WidgetManifest } from "~/types/widget";
 
@@ -81,6 +82,7 @@ export interface AppManifest {
   keywords?: string[];
   settings?: AppSettingsManifest;
   previews?: readonly AppPreviewProvider[];
+  desktop?: AppDesktopManifest;
 }
 
 export interface AppContext {
