@@ -3,8 +3,8 @@ allowBuilds:
   esbuild: true
   sharp: true
   vue-demi: false
-  # workerd ships wrangler's local dev runtime; deploys don't need its binary,
-  # so skip the heavy postinstall download.
+  # workerd ships wrangler's local runtime; R2 publish workflows do not need
+  # its binary, so skip the heavy postinstall download.
   workerd: false
 packages:
   - .

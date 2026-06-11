@@ -3,9 +3,8 @@ name: Publish blog
 # Adding/editing/removing a post is just committing markdown under blog/.
 # This workflow rebuilds the publish bundle (runtime index.json + raw .md +
 # prerendered SEO HTML + sitemap) and uploads it to the Cloudflare R2 bucket the
-# Worker serves from. It does NOT deploy the app: Cloudflare's own build is
-# configured to ignore blog/, so app deploys and content publishing stay
-# decoupled and never deploy twice.
+# public API reads from. It does NOT deploy the shell; content publishing and
+# shell image deploys stay decoupled and never deploy twice.
 on:
   push:
     branches: [main]

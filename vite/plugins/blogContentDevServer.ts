@@ -9,11 +9,10 @@ import type { Connect, PluginOption } from "vite";
 import { requestUpstreamUrl, type UpstreamHttpResponse } from "./upstreamHttpClient";
 
 /**
- * In production the Worker serves `/_worker/blog/*` from R2. Vite has neither,
- * so this plugin serves the same paths from the local `blog/` folder during
- * `dev` and `preview`. Post markdown stays local, while published thumbnail
- * metadata/images are reused when available so local post detail covers match
- * production without regenerating images.
+ * Production blog content is exposed by the public API from R2. Some published
+ * thumbnail metadata still contains legacy `/_worker/blog/*` URLs, so this
+ * plugin serves those paths from local `blog/` and `blog-dist/` data during
+ * `dev` and `preview`, proxying missing thumbnails to daopk.me when needed.
  */
 export interface DevBlogPost {
   slug: string;

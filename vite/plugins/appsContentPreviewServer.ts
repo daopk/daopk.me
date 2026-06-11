@@ -83,12 +83,12 @@ export async function buildFirstPartyPreviewCatalog(
 }
 
 /**
- * In production the Worker serves the first-party app catalog (`/apps/index.json`)
- * and release-pinned modules (`/apps/<id>/<version+build>/<file>`) from R2. Vite has
- * neither, so this plugin synthesizes the catalog from each app package.json
- * and serves modules from each app's local `apps/<id>/dist/` build. This makes
- * the production load path (catalog fetch → versioned `import()`) testable
- * under `npm run preview` without a deploy or committed catalog artifact.
+ * In production the public API exposes the first-party app catalog and
+ * release-pinned modules from R2. Vite has neither, so this plugin synthesizes
+ * the catalog from each app package.json and serves modules from each app's
+ * local `apps/<id>/dist/` build. This makes the production load path (catalog
+ * fetch → versioned `import()`) testable under `npm run preview` without a
+ * deploy or committed catalog artifact.
  *
  * PREVIEW-ONLY: in `dev` the first-party loader imports each app straight from
  * its workspace package (HMR), so Vite already serves the real source at
@@ -133,8 +133,8 @@ export function appsContentPreviewServer(): PluginOption {
       void (async () => {
         try {
           // Local dev/preview ignores the release segment — there is only one
-          // built copy per app at apps/<id>/dist/. R2 serves the real
-          // release-pinned URLs in production.
+          // built copy per app at apps/<id>/dist/. The public API serves the
+          // real release-pinned R2 URLs in production.
           const bytes = await readFile(join(appsRoot, id, "dist", file));
           res.setHeader("Content-Type", contentTypeFor(file));
           res.end(bytes);

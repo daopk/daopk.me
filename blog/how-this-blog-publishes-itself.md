@@ -12,7 +12,7 @@ So I changed it. A post is now just a markdown file in the repo under `blog/`. W
 
 At runtime the blog reads the list of posts and each post's content on demand, from the same origin, and caches them in an in-browser virtual file system. Repeat visits load instantly, and a post you have already opened still works offline.
 
-Crawlers and link previews are not left behind: the Worker serves a fully prerendered HTML version to bots, so the SEO side keeps working even though the app itself loads content dynamically.
+Crawlers and link previews are not left behind: the Nginx routing layer sends bot requests to the API for a fully prerendered HTML version, so the SEO side keeps working even though the app itself loads content dynamically.
 
 The part I like most is the separation. The app and the writing now live on two independent tracks - I can ship code without thinking about posts, and write posts without waiting on a build. Hopefully that nudges me to write here a little more often.
 

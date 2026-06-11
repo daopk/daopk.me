@@ -2,12 +2,10 @@ name: Publish apps
 
 # Building or updating a first-party app is just committing to apps/<id>/.
 # This workflow builds ONLY the changed app packages, uploads their immutable,
-# release-pinned ES modules to the Cloudflare R2 bucket the Worker serves under
-# /public/apps/*, and updates the catalog (/public/apps/index.json) to point at
-# the new versions. It does NOT deploy the shell: configure Cloudflare's own build to
-# IGNORE apps/** (dashboard -> Workers Build -> "Build watch paths", exclude
-# `apps/**`, exactly as blog/ is excluded) so app publishes and shell deploys
-# stay on independent tracks and never deploy twice.
+# release-pinned ES modules to the Cloudflare R2 bucket that the public API
+# exposes under /public/apps/*, and updates the catalog (/public/apps/index.json)
+# to point at the new versions. It does NOT deploy the shell; the shell image has
+# its own deploy workflow so app publishes and shell deploys stay independent.
 #
 # Immutability contract: a module URL is /apps/<id>/<version+build>/<id>.js and
 # is cached `immutable`. The package.json "version" is the manual, user-facing

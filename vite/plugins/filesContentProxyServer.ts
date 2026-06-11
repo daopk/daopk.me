@@ -112,9 +112,9 @@ async function proxyFilesRequest(
 }
 
 /**
- * Production serves `/_worker/files/*` from the Worker/R2 bucket. In local Vite
- * dev and preview there is no R2 binding, so proxy the same-origin path to
- * daopk.me.
+ * Production files are exposed by the public API from R2. This keeps legacy
+ * `/_worker/files/*` URLs usable in local Vite dev/preview by proxying the
+ * same-origin path to daopk.me.
  */
 export function filesContentProxyServer(): PluginOption {
   const middleware: Connect.NextHandleFunction = (req, res, next) => {
