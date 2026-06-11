@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 
 import AuthGate from "~/components/auth/AuthGate.vue";
 import { clearActiveProfileSession, getActiveProfileSession } from "~/core/profile/ProfileSession";
@@ -136,6 +137,30 @@ describe("AuthGate", () => {
     expect(wrapper.find(".auth-gate__surface").exists()).toBe(false);
     expect(findButtonByText(wrapper, "Unlock")).toBeUndefined();
     expect(wrapper.emitted("authenticated")).toBeUndefined();
+  });
+
+  it("shows the update screen while an app update is installing before refreshing", async () => {
+    const store = new ProfileStore();
+    store.add(profile);
+    store.markGlobalImported();
+    store.dispose();
+    const update = vi.fn(() => new Promise<void>(() => undefined));
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+
+    const wrapper = mount(AuthGate);
+    await flushPromises();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain("Updating WebOS");
+    expect(wrapper.text()).toContain("Applying the newest web version.");
+    expect(wrapper.find(".auth-gate__surface").exists()).toBe(false);
+    expect(findButtonByText(wrapper, "Unlock")).toBeUndefined();
+    expect(wrapper.emitted("authenticated")).toBeUndefined();
+
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+    await nextTick();
+
+    expect(update).toHaveBeenCalledTimes(1);
   });
 
   it("does not auto-create a guest account while an app update is pending", async () => {

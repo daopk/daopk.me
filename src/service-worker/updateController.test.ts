@@ -29,6 +29,33 @@ describe("serviceWorkerUpdateController", () => {
     expect(serviceWorkerUpdateController.hasSettingsAttention.value).toBe(true);
   });
 
+  it("shows an installing update before the refresh action is available", () => {
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+
+    expect(serviceWorkerUpdateController.state.value).toEqual({ kind: "update-installing" });
+    expect(serviceWorkerUpdateController.hasSettingsAttention.value).toBe(false);
+  });
+
+  it("moves from installing to update available when the worker is waiting", () => {
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+    serviceWorkerUpdateController.notifyUpdateAvailable(vi.fn(async () => undefined));
+
+    expect(serviceWorkerUpdateController.state.value).toEqual({
+      kind: "update-available",
+      refreshing: false,
+    });
+    expect(serviceWorkerUpdateController.hasSettingsAttention.value).toBe(true);
+  });
+
+  it("clears an installing update that becomes redundant", () => {
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+
+    serviceWorkerUpdateController.clearUpdateInstalling();
+
+    expect(serviceWorkerUpdateController.state.value).toEqual({ kind: "idle" });
+    expect(serviceWorkerUpdateController.hasSettingsAttention.value).toBe(false);
+  });
+
   it("dismiss hides the update state and clears Settings attention", () => {
     serviceWorkerUpdateController.notifyUpdateAvailable(vi.fn(async () => undefined));
 
@@ -223,6 +250,19 @@ describe("serviceWorkerUpdateController", () => {
     expect(serviceWorkerUpdateController.checkState.value).toEqual({ kind: "idle" });
   });
 
+  it("manual check does not report up to date after discovering an installing update", async () => {
+    serviceWorkerUpdateController.setUpdateChecker(
+      vi.fn(async () => {
+        serviceWorkerUpdateController.notifyUpdateInstalling();
+      }),
+    );
+
+    await serviceWorkerUpdateController.checkForUpdate();
+
+    expect(serviceWorkerUpdateController.state.value).toEqual({ kind: "update-installing" });
+    expect(serviceWorkerUpdateController.checkState.value).toEqual({ kind: "idle" });
+  });
+
   it("offline-ready auto-dismisses without Settings attention", () => {
     serviceWorkerUpdateController.notifyOfflineReady();
 
@@ -235,6 +275,10 @@ describe("serviceWorkerUpdateController", () => {
   });
 
   it("offline-ready does not override visible update or error states", async () => {
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+    serviceWorkerUpdateController.notifyOfflineReady();
+    expect(serviceWorkerUpdateController.state.value).toEqual({ kind: "update-installing" });
+
     serviceWorkerUpdateController.notifyUpdateAvailable(vi.fn(async () => undefined));
     serviceWorkerUpdateController.notifyOfflineReady();
     expect(serviceWorkerUpdateController.state.value).toEqual({

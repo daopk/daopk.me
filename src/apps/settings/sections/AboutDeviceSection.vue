@@ -37,6 +37,7 @@ const buildTime = computed((): string => {
 const isUpdateRefreshing = computed(
   () => updateState.value.kind === "update-available" && updateState.value.refreshing,
 );
+const isUpdateInstalling = computed(() => updateState.value.kind === "update-installing");
 const isCheckingForUpdates = computed(() => updateCheckState.value.kind === "checking");
 const updateButtonVariant = computed<"primary" | "secondary">(() =>
   updateState.value.kind === "update-available" || updateState.value.kind === "refresh-error"
@@ -46,6 +47,10 @@ const updateButtonVariant = computed<"primary" | "secondary">(() =>
 const updateButtonLabel = computed((): string => {
   if (updateState.value.kind === "refresh-error") {
     return "Try again";
+  }
+
+  if (updateState.value.kind === "update-installing") {
+    return "Updating...";
   }
 
   if (updateState.value.kind === "update-available") {
@@ -59,7 +64,10 @@ const updateButtonLabel = computed((): string => {
   return "Check for updates";
 });
 const softwareUpdateTone = computed<"muted" | "success" | "warning" | "danger">(() => {
-  if (updateState.value.kind === "update-available") {
+  if (
+    updateState.value.kind === "update-installing" ||
+    updateState.value.kind === "update-available"
+  ) {
     return "warning";
   }
 
@@ -88,6 +96,8 @@ const softwareUpdateBadgeTone = computed<"neutral" | "accent" | "success" | "dan
 });
 const softwareUpdateStatus = computed((): string => {
   switch (updateState.value.kind) {
+    case "update-installing":
+      return "Downloading update...";
     case "update-available":
       return updateState.value.refreshing ? "Applying update..." : "Update available";
     case "refresh-error":
@@ -114,6 +124,10 @@ const softwareUpdateStatus = computed((): string => {
 const showSoftwareUpdateStatus = computed(() => softwareUpdateStatus.value.length > 0);
 
 function runSoftwareUpdateAction(): void {
+  if (updateState.value.kind === "update-installing") {
+    return;
+  }
+
   if (updateState.value.kind === "update-available" || updateState.value.kind === "refresh-error") {
     void serviceWorkerUpdateController.refresh();
     return;
@@ -172,7 +186,8 @@ function runSoftwareUpdateAction(): void {
         size="sm"
         :variant="updateButtonVariant"
         :icon-start="RefreshIcon"
-        :loading="isCheckingForUpdates || isUpdateRefreshing"
+        :disabled="isUpdateInstalling"
+        :loading="isCheckingForUpdates || isUpdateRefreshing || isUpdateInstalling"
         @click="runSoftwareUpdateAction"
       >
         {{ updateButtonLabel }}

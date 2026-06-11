@@ -25,7 +25,11 @@ export interface AppServiceWorkerRegistrationOptions {
   readonly reload?: AppServiceWorkerReloader;
   readonly updateController?: Pick<
     ServiceWorkerUpdateController,
-    "notifyOfflineReady" | "notifyUpdateAvailable" | "setUpdateChecker"
+    | "clearUpdateInstalling"
+    | "notifyOfflineReady"
+    | "notifyUpdateAvailable"
+    | "notifyUpdateInstalling"
+    | "setUpdateChecker"
   >;
 }
 
@@ -53,11 +57,57 @@ export function registerAppServiceWorker(
   try {
     let registrationRef: ServiceWorkerRegistration | undefined;
     let updateServiceWorker: AppServiceWorkerUpdateAction | undefined;
+    const watchedInstallingWorkers = new WeakSet<ServiceWorker>();
+
+    const applyPendingUpdate = (): Promise<void> =>
+      updateServiceWorker?.(true) ?? Promise.resolve();
 
     const notifyUpdateAvailable = (): void => {
-      updateController.notifyUpdateAvailable(
-        () => updateServiceWorker?.(true) ?? Promise.resolve(),
-      );
+      updateController.notifyUpdateAvailable(applyPendingUpdate);
+    };
+
+    const watchInstallingWorker = (
+      registration: ServiceWorkerRegistration,
+      worker: ServiceWorker | null,
+    ): void => {
+      if (registration.active === null || worker === null || watchedInstallingWorkers.has(worker)) {
+        return;
+      }
+
+      watchedInstallingWorkers.add(worker);
+      updateController.notifyUpdateInstalling();
+
+      const syncInstallingState = (): void => {
+        if (registration.waiting !== null) {
+          notifyUpdateAvailable();
+          return;
+        }
+
+        if (worker.state === "redundant" || worker.state === "activated") {
+          updateController.clearUpdateInstalling();
+        }
+      };
+
+      worker.addEventListener("statechange", syncInstallingState);
+      syncInstallingState();
+    };
+
+    const watchRegistrationUpdates = (
+      registration: ServiceWorkerRegistration | undefined,
+    ): void => {
+      if (registration === undefined) {
+        return;
+      }
+
+      if (registration.active !== null && registration.waiting !== null) {
+        notifyUpdateAvailable();
+      }
+
+      watchInstallingWorker(registration, registration.installing);
+
+      registration.addEventListener("updatefound", () => {
+        watchInstallingWorker(registration, registration.installing);
+      });
     };
 
     updateServiceWorker = registrar({
@@ -72,6 +122,7 @@ export function registerAppServiceWorker(
       },
       onRegisteredSW: (_scriptUrl, registration) => {
         registrationRef = registration;
+        watchRegistrationUpdates(registration);
         updateController.setUpdateChecker(async () => {
           if (registrationRef === undefined) {
             throw new Error("No service worker registration is available yet.");

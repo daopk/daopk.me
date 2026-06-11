@@ -16,9 +16,15 @@ export function useAuthAutoUpdate(enabled: Readonly<Ref<boolean>>): AuthAutoUpda
   const visible = computed(
     () =>
       enabled.value &&
-      (state.value.kind === "update-available" || state.value.kind === "refresh-error"),
+      (state.value.kind === "update-installing" ||
+        state.value.kind === "update-available" ||
+        state.value.kind === "refresh-error"),
   );
-  const updating = computed(() => enabled.value && state.value.kind === "update-available");
+  const updating = computed(
+    () =>
+      enabled.value &&
+      (state.value.kind === "update-installing" || state.value.kind === "update-available"),
+  );
   const failed = computed(() => enabled.value && state.value.kind === "refresh-error");
   const errorMessage = computed(() =>
     state.value.kind === "refresh-error" ? state.value.message : "",

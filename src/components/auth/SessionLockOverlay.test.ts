@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { shallowRef, type ShallowRef } from "vue";
+import { nextTick, shallowRef, type ShallowRef } from "vue";
 
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
@@ -114,6 +114,28 @@ describe("SessionLockOverlay", () => {
     expect(document.body.textContent).toContain("Updating WebOS");
     expect(document.body.textContent).toContain("Applying the newest web version.");
     expect(document.body.querySelector(".session-lock__actions")).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it("shows the update screen while an app update is installing before refreshing", async () => {
+    const update = vi.fn(() => new Promise<void>(() => undefined));
+    serviceWorkerUpdateController.notifyUpdateInstalling();
+    const { kernel, unlock } = makeKernel();
+
+    const wrapper = mountOverlay(kernel);
+    await flushPromises();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(unlock).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("Updating WebOS");
+    expect(document.body.textContent).toContain("Applying the newest web version.");
+    expect(document.body.querySelector(".session-lock__actions")).toBeNull();
+
+    serviceWorkerUpdateController.notifyUpdateAvailable(update);
+    await nextTick();
+
+    expect(update).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });

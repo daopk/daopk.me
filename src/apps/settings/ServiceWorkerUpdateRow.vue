@@ -16,6 +16,8 @@ const isRefreshing = computed(
 
 const title = computed(() => {
   switch (state.value.kind) {
+    case "update-installing":
+      return "Updating";
     case "update-available":
       return "Update available";
     case "refresh-error":
@@ -31,6 +33,8 @@ const title = computed(() => {
 
 const body = computed(() => {
   switch (state.value.kind) {
+    case "update-installing":
+      return "Downloading the latest version.";
     case "update-available":
       return "Refresh to use the latest version.";
     case "refresh-error":

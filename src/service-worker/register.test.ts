@@ -24,13 +24,104 @@ const serviceWorkerNavigator = { serviceWorker: {} };
 
 function makeUpdateController(): Pick<
   ServiceWorkerUpdateController,
-  "notifyOfflineReady" | "notifyUpdateAvailable" | "setUpdateChecker"
+  | "clearUpdateInstalling"
+  | "notifyOfflineReady"
+  | "notifyUpdateAvailable"
+  | "notifyUpdateInstalling"
+  | "setUpdateChecker"
 > {
   return {
+    clearUpdateInstalling: vi.fn(),
     notifyOfflineReady: vi.fn(),
     notifyUpdateAvailable: vi.fn(),
+    notifyUpdateInstalling: vi.fn(),
     setUpdateChecker: vi.fn(),
   };
+}
+
+type MockServiceWorker = ServiceWorker & {
+  state: ServiceWorkerState;
+  dispatchStateChange(): void;
+};
+
+type MockServiceWorkerRegistration = ServiceWorkerRegistration & {
+  active: ServiceWorker | null;
+  installing: ServiceWorker | null;
+  waiting: ServiceWorker | null;
+  dispatchUpdateFound(): void;
+};
+
+function dispatchMockEvent(
+  target: EventTarget,
+  listeners: Set<EventListenerOrEventListenerObject>,
+  type: string,
+): void {
+  const event = new Event(type);
+
+  for (const listener of listeners) {
+    if (typeof listener === "function") {
+      listener.call(target, event);
+      continue;
+    }
+
+    listener.handleEvent(event);
+  }
+}
+
+function makeServiceWorker(state: ServiceWorkerState = "installing"): MockServiceWorker {
+  const listeners = new Set<EventListenerOrEventListenerObject>();
+  const worker = {
+    state,
+    addEventListener: vi.fn((type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === "statechange") {
+        listeners.add(listener);
+      }
+    }),
+    removeEventListener: vi.fn((type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === "statechange") {
+        listeners.delete(listener);
+      }
+    }),
+    dispatchStateChange: () => dispatchMockEvent(worker, listeners, "statechange"),
+  } as unknown as MockServiceWorker;
+
+  return worker;
+}
+
+function makeServiceWorkerRegistration(
+  options: {
+    active?: ServiceWorker | null;
+    installing?: ServiceWorker | null;
+    waiting?: ServiceWorker | null;
+    update?: () => Promise<unknown>;
+  } = {},
+): MockServiceWorkerRegistration {
+  const listeners = new Set<EventListenerOrEventListenerObject>();
+  const active = "active" in options ? (options.active ?? null) : ({} as ServiceWorker);
+  const installing = "installing" in options ? (options.installing ?? null) : null;
+  const waiting = "waiting" in options ? (options.waiting ?? null) : null;
+  const registration = {
+    active,
+    installing,
+    waiting,
+    update: vi.fn(async () => {
+      await options.update?.();
+      return registration;
+    }),
+    addEventListener: vi.fn((type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === "updatefound") {
+        listeners.add(listener);
+      }
+    }),
+    removeEventListener: vi.fn((type: string, listener: EventListenerOrEventListenerObject) => {
+      if (type === "updatefound") {
+        listeners.delete(listener);
+      }
+    }),
+    dispatchUpdateFound: () => dispatchMockEvent(registration, listeners, "updatefound"),
+  } as unknown as MockServiceWorkerRegistration;
+
+  return registration;
 }
 
 describe("service worker registration", () => {
@@ -115,12 +206,18 @@ describe("service worker registration", () => {
     const update = vi.fn(async () => undefined);
     const updateController: Pick<
       ServiceWorkerUpdateController,
-      "notifyOfflineReady" | "notifyUpdateAvailable" | "setUpdateChecker"
+      | "clearUpdateInstalling"
+      | "notifyOfflineReady"
+      | "notifyUpdateAvailable"
+      | "notifyUpdateInstalling"
+      | "setUpdateChecker"
     > = {
+      clearUpdateInstalling: vi.fn(),
       notifyOfflineReady: vi.fn(),
       notifyUpdateAvailable: vi.fn((action) => {
         capturedUpdateAction = action;
       }),
+      notifyUpdateInstalling: vi.fn(),
       setUpdateChecker: vi.fn(),
     };
     const register: AppServiceWorkerRegistrar = vi.fn((options) => {
@@ -150,16 +247,19 @@ describe("service worker registration", () => {
   it("wires manual update checks to the service worker registration", async () => {
     let capturedOptions: RegisterSWOptions | undefined;
     let capturedCheck: (() => Promise<void>) | undefined;
-    const registration = {
-      waiting: null,
-      update: vi.fn(async () => registration),
-    } as unknown as ServiceWorkerRegistration;
+    const registration = makeServiceWorkerRegistration({ waiting: null });
     const updateController: Pick<
       ServiceWorkerUpdateController,
-      "notifyOfflineReady" | "notifyUpdateAvailable" | "setUpdateChecker"
+      | "clearUpdateInstalling"
+      | "notifyOfflineReady"
+      | "notifyUpdateAvailable"
+      | "notifyUpdateInstalling"
+      | "setUpdateChecker"
     > = {
+      clearUpdateInstalling: vi.fn(),
       notifyOfflineReady: vi.fn(),
       notifyUpdateAvailable: vi.fn(),
+      notifyUpdateInstalling: vi.fn(),
       setUpdateChecker: vi.fn((check) => {
         capturedCheck = check;
       }),
@@ -188,22 +288,24 @@ describe("service worker registration", () => {
   it("manual update checks surface a waiting worker", async () => {
     let capturedOptions: RegisterSWOptions | undefined;
     let capturedCheck: (() => Promise<void>) | undefined;
-    let waitingWorker: ServiceWorker | null = null;
-    const registration = {
-      get waiting() {
-        return waitingWorker;
+    let registration: MockServiceWorkerRegistration;
+    registration = makeServiceWorkerRegistration({
+      update: async () => {
+        registration.waiting = {} as ServiceWorker;
       },
-      update: vi.fn(async () => {
-        waitingWorker = {} as ServiceWorker;
-        return registration;
-      }),
-    } as unknown as ServiceWorkerRegistration;
+    });
     const updateController: Pick<
       ServiceWorkerUpdateController,
-      "notifyOfflineReady" | "notifyUpdateAvailable" | "setUpdateChecker"
+      | "clearUpdateInstalling"
+      | "notifyOfflineReady"
+      | "notifyUpdateAvailable"
+      | "notifyUpdateInstalling"
+      | "setUpdateChecker"
     > = {
+      clearUpdateInstalling: vi.fn(),
       notifyOfflineReady: vi.fn(),
       notifyUpdateAvailable: vi.fn(),
+      notifyUpdateInstalling: vi.fn(),
       setUpdateChecker: vi.fn((check) => {
         capturedCheck = check;
       }),
@@ -226,6 +328,122 @@ describe("service worker registration", () => {
 
     expect(registration.update).toHaveBeenCalledTimes(1);
     expect(updateController.notifyUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks an active registration as installing when updatefound exposes a worker", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const worker = makeServiceWorker("installing");
+    const registration = makeServiceWorkerRegistration({ installing: null, waiting: null });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    registration.installing = worker;
+    registration.dispatchUpdateFound();
+
+    expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
+    expect(updateController.notifyUpdateAvailable).not.toHaveBeenCalled();
+
+    registration.waiting = worker;
+    worker.state = "installed";
+    worker.dispatchStateChange();
+
+    expect(updateController.notifyUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not surface updatefound during the first service worker install", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const worker = makeServiceWorker("installing");
+    const registration = makeServiceWorkerRegistration({
+      active: null,
+      installing: worker,
+      waiting: null,
+    });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    registration.dispatchUpdateFound();
+    worker.dispatchStateChange();
+
+    expect(updateController.notifyUpdateInstalling).not.toHaveBeenCalled();
+    expect(updateController.notifyUpdateAvailable).not.toHaveBeenCalled();
+  });
+
+  it("surfaces workers that are already installing or waiting when registration completes", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const installingWorker = makeServiceWorker("installing");
+    const registration = makeServiceWorkerRegistration({ installing: installingWorker });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+
+    expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
+
+    registration.waiting = installingWorker;
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+
+    expect(updateController.notifyUpdateAvailable).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the installing state when the discovered worker becomes redundant", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const worker = makeServiceWorker("installing");
+    const registration = makeServiceWorkerRegistration({ installing: worker, waiting: null });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    worker.state = "redundant";
+    worker.dispatchStateChange();
+
+    expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
+    expect(updateController.clearUpdateInstalling).toHaveBeenCalledTimes(1);
   });
 
   it("marks offline ready through the injected update controller", () => {

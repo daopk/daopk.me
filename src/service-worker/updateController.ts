@@ -3,6 +3,7 @@ import { computed, readonly, ref, type ComputedRef, type Ref } from "vue";
 export type ServiceWorkerUpdateState =
   | { kind: "idle" }
   | { kind: "offline-ready" }
+  | { kind: "update-installing" }
   | { kind: "update-available"; refreshing: boolean }
   | { kind: "refresh-error"; message: string };
 
@@ -19,6 +20,8 @@ export interface ServiceWorkerUpdateController {
   readonly checkState: Readonly<Ref<ServiceWorkerUpdateCheckState>>;
   readonly hasSettingsAttention: Readonly<ComputedRef<boolean>>;
   notifyOfflineReady(): void;
+  notifyUpdateInstalling(): void;
+  clearUpdateInstalling(): void;
   notifyUpdateAvailable(update: () => Promise<void>): void;
   setUpdateChecker(checker: ServiceWorkerUpdateChecker | undefined): void;
   checkForUpdate(): Promise<void>;
@@ -57,6 +60,14 @@ function setIdle(): void {
   stateRef.value = { kind: "idle" };
 }
 
+function hasDiscoveredUpdate(): boolean {
+  return (
+    stateRef.value.kind === "update-installing" ||
+    stateRef.value.kind === "update-available" ||
+    stateRef.value.kind === "refresh-error"
+  );
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -75,7 +86,7 @@ export const serviceWorkerUpdateController: ServiceWorkerUpdateController = {
   hasSettingsAttention,
 
   notifyOfflineReady(): void {
-    if (stateRef.value.kind === "update-available" || stateRef.value.kind === "refresh-error") {
+    if (hasDiscoveredUpdate()) {
       return;
     }
 
@@ -89,7 +100,36 @@ export const serviceWorkerUpdateController: ServiceWorkerUpdateController = {
     }, OFFLINE_READY_VISIBLE_MS);
   },
 
+  notifyUpdateInstalling(): void {
+    if (stateRef.value.kind === "update-installing") {
+      return;
+    }
+
+    clearOfflineReadyTimer();
+    updateGeneration += 1;
+    updateCallback = undefined;
+    refreshPromise = undefined;
+    checkStateRef.value = { kind: "idle" };
+    stateRef.value = { kind: "update-installing" };
+  },
+
+  clearUpdateInstalling(): void {
+    if (stateRef.value.kind !== "update-installing") {
+      return;
+    }
+
+    updateGeneration += 1;
+    updateCallback = undefined;
+    refreshPromise = undefined;
+    checkStateRef.value = { kind: "idle" };
+    setIdle();
+  },
+
   notifyUpdateAvailable(update): void {
+    if (stateRef.value.kind === "update-available" && updateCallback === update) {
+      return;
+    }
+
     clearOfflineReadyTimer();
     updateGeneration += 1;
     updateCallback = update;
@@ -107,7 +147,7 @@ export const serviceWorkerUpdateController: ServiceWorkerUpdateController = {
       return checkPromise ?? Promise.resolve();
     }
 
-    if (stateRef.value.kind === "update-available" || stateRef.value.kind === "refresh-error") {
+    if (hasDiscoveredUpdate()) {
       checkStateRef.value = { kind: "idle" };
       return Promise.resolve();
     }
