@@ -25,7 +25,7 @@ defineEmits<{
 
 const person = ref<MoviePersonDetail | null>(null);
 const state = ref<LoadState>("loading");
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const subtitle = computed(() =>
@@ -33,7 +33,7 @@ const subtitle = computed(() =>
 );
 
 watch(
-  () => props.tmdbId,
+  () => [props.tmdbId, locale.value] as const,
   () => {
     void loadPerson();
   },

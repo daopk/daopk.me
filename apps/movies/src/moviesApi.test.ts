@@ -5,18 +5,24 @@ import {
   buildMovieSeasonUrl,
   buildMoviesListUrl,
   DEFAULT_MOVIES_LIST_LIMIT,
+  fetchMovieDetail,
   fetchMoviesFilters,
   fetchMoviesList,
+  fetchMoviePerson,
+  fetchMovieSeason,
+  moviesApiLanguageForLocale,
   movieDetailFromPayload,
   movieEpisodeDetailFromParts,
   moviePersonFromPayload,
   movieSeasonFromPayload,
   moviesListFromPayload,
+  setMoviesApiLocale,
   tmdbImageUrl,
 } from "./moviesApi";
 
 describe("moviesApi", () => {
   afterEach(() => {
+    setMoviesApiLocale("en");
     vi.unstubAllGlobals();
   });
 
@@ -80,7 +86,6 @@ describe("moviesApi", () => {
 
     const personUrl = new URL(buildMoviePersonUrl(819), "https://daopk.test");
     expect(personUrl.pathname).toBe("/public/movies/person/819");
-
   });
 
   it("normalizes app-ready TMDB list payloads", () => {
@@ -151,6 +156,71 @@ describe("moviesApi", () => {
 
     expect(fetch).toHaveBeenCalledOnce();
     expect(result.pagination.totalItemsPerPage).toBe(7);
+  });
+
+  it("adds the current Movies locale language to public API requests", async () => {
+    const urls: URL[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "https://daopk.test");
+      urls.push(url);
+
+      if (url.pathname === "/public/movies/list") {
+        return new Response(JSON.stringify({ items: [], pagination: {} }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (url.pathname === "/public/movies/detail/movie/550") {
+        return new Response(
+          JSON.stringify({
+            mediaType: "movie",
+            name: "Fight Club VN",
+            releaseDate: "1999-10-15",
+            slug: "fight-club-vn",
+            tmdbId: 550,
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.pathname === "/public/movies/season/1399/1") {
+        return new Response(
+          JSON.stringify({
+            episodes: [],
+            name: "Mùa 1",
+            seasonNumber: 1,
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      if (url.pathname === "/public/movies/person/819") {
+        return new Response(
+          JSON.stringify({
+            name: "Edward Norton",
+            tmdbId: 819,
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      throw new Error(`Unexpected URL: ${url.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetch);
+    setMoviesApiLocale("vi");
+
+    await fetchMoviesList({ kind: "trending-movie" });
+    await fetchMovieDetail("movie", 550);
+    await fetchMovieSeason(1399, 1);
+    await fetchMoviePerson(819);
+
+    expect(moviesApiLanguageForLocale("vi")).toBe("vi-VN");
+    expect(urls.map((url) => [url.pathname, url.searchParams.get("language")])).toEqual([
+      ["/public/movies/list", "vi-VN"],
+      ["/public/movies/detail/movie/550", "vi-VN"],
+      ["/public/movies/season/1399/1", "vi-VN"],
+      ["/public/movies/person/819", "vi-VN"],
+    ]);
   });
 
   it("fetches All catalog lists by combining movie and TV pages", async () => {

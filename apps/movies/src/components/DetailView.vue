@@ -44,14 +44,14 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
 const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
 
 const progressKey = computed(() => moviePlaybackProgressKey(props.tmdbId));
 
 watch(
-  () => [props.mediaType, props.tmdbId] as const,
+  () => [props.mediaType, props.tmdbId, locale.value] as const,
   () => {
     void loadDetail();
   },

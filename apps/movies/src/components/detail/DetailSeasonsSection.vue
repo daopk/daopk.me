@@ -29,7 +29,7 @@ const selectedSeason = ref("");
 const seasonDetail = ref<MovieSeasonDetail | null>(null);
 const episodesState = ref<EpisodesState>("idle");
 const episodesSection = ref<HTMLElement | null>(null);
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const orderedSeasons = computed(() =>
@@ -67,7 +67,7 @@ watch(
 );
 
 watch(
-  () => [props.tmdbId, selectedSeasonNumber.value] as const,
+  () => [props.tmdbId, selectedSeasonNumber.value, locale.value] as const,
   ([, seasonNumber]) => {
     void loadSeason(seasonNumber);
   },

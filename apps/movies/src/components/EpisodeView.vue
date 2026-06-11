@@ -44,7 +44,7 @@ const emit = defineEmits<{
 
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const state = ref<LoadState>("loading");
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const detail = computed(() => episodeDetail.value?.series ?? null);
@@ -80,7 +80,7 @@ const facts = computed(() => {
 });
 
 watch(
-  () => [props.tmdbId, props.seasonNumber, props.episodeNumber] as const,
+  () => [props.tmdbId, props.seasonNumber, props.episodeNumber, locale.value] as const,
   () => {
     void loadEpisode();
   },

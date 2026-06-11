@@ -58,7 +58,7 @@ const emit = defineEmits<{
   "open-list": [query: MoviesListQuery];
 }>();
 
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 const items = ref<readonly MovieSummary[]>([]);
 const pagination = ref<MoviesPagination | null>(null);
 const state = ref<LoadState>("idle");
@@ -151,7 +151,7 @@ watch(
 );
 
 watch(
-  () => props.query,
+  () => [props.query, locale.value] as const,
   () => {
     void loadFirstPage();
   },

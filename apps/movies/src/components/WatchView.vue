@@ -49,7 +49,7 @@ const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const play = computed<MoviePlayInfo | null>(() => {
@@ -147,7 +147,7 @@ const nextEpisodeLabel = computed(() => {
 });
 
 watch(
-  () => props.target,
+  () => [props.target, locale.value] as const,
   () => {
     void loadTarget();
   },

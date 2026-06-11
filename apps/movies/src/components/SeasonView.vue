@@ -39,7 +39,7 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const season = ref<MovieSeasonDetail | null>(null);
 const state = ref<LoadState>("loading");
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 
 const heroImageUrl = computed(
@@ -64,7 +64,7 @@ const meta = computed(() => {
 });
 
 watch(
-  () => [props.tmdbId, props.seasonNumber] as const,
+  () => [props.tmdbId, props.seasonNumber, locale.value] as const,
   () => {
     void loadSeason();
   },

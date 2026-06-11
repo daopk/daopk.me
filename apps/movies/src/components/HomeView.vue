@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 
 import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
 import { Button } from "@daopk/ui";
@@ -68,7 +68,7 @@ const emit = defineEmits<{
 
 const CONTINUE_WATCHING_LIMIT = 10;
 
-const { t } = useMoviesI18n();
+const { locale, t } = useMoviesI18n();
 const continueWatchingItems = ref<readonly ContinueWatchingItem[]>([]);
 const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
@@ -85,10 +85,14 @@ const hasFeatured = computed(() => featured.value.length > 0);
 const hasContinueWatching = computed(() => continueWatchingItems.value.length > 0);
 const hasHomeContent = hasFeatured;
 
-onMounted(() => {
-  void loadHome();
-  void loadContinueWatching();
-});
+watch(
+  locale,
+  () => {
+    void loadHome();
+    void loadContinueWatching();
+  },
+  { immediate: true },
+);
 
 onUnmounted(() => {
   abortController?.abort();

@@ -1,3 +1,5 @@
+import { browserPreferredLocale, type SupportedLocale } from "@daopk/sdk";
+
 import { movieSlugFromText } from "./utils/movieSlug";
 
 export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
@@ -411,12 +413,30 @@ export const SEARCH_MEDIA_LABELS: Record<MoviesSearchMedia, string> = {
 const DEFAULT_PAGE = 1;
 export const DEFAULT_MOVIES_LIST_LIMIT = 24;
 const MAX_MOVIES_LIST_LIMIT = 100;
+const MOVIES_API_LANGUAGE_BY_LOCALE = {
+  en: "en-US",
+  vi: "vi-VN",
+} as const satisfies Record<SupportedLocale, string>;
 const DEFAULT_PAGINATION: MoviesPagination = {
   totalItems: 0,
   totalItemsPerPage: 0,
   currentPage: 1,
   totalPages: 1,
 };
+
+let currentMoviesApiLocale: SupportedLocale | null = null;
+
+export function setMoviesApiLocale(locale: SupportedLocale): void {
+  currentMoviesApiLocale = locale;
+}
+
+export function moviesApiLanguageForLocale(locale: SupportedLocale): string {
+  return MOVIES_API_LANGUAGE_BY_LOCALE[locale];
+}
+
+function currentMoviesApiLanguage(): string {
+  return moviesApiLanguageForLocale(currentMoviesApiLocale ?? browserPreferredLocale());
+}
 
 function publicApiUrl(pathname: string): string {
   const configured = import.meta.env.VITE_PUBLIC_API_ORIGIN;
@@ -913,7 +933,7 @@ export function buildMoviePersonUrl(tmdbId: number): string {
 }
 
 async function fetchJson(url: string, options: { signal?: AbortSignal } = {}): Promise<unknown> {
-  const response = await fetch(url, {
+  const response = await fetch(urlWithMoviesApiLanguage(url), {
     signal: options.signal,
     headers: { Accept: "application/json" },
   });
@@ -1131,6 +1151,12 @@ function periodLabelForQuery(query: MoviesListQuery): string {
 
 function publicApiSearchUrl(pathname: string): URL {
   return new URL(publicApiUrl(pathname), "https://daopk.local");
+}
+
+function urlWithMoviesApiLanguage(urlValue: string): string {
+  const url = new URL(urlValue, "https://daopk.local");
+  url.searchParams.set("language", currentMoviesApiLanguage());
+  return urlToFetchString(url);
 }
 
 function urlToFetchString(url: URL): string {
