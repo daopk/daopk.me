@@ -1,5 +1,6 @@
 import type { PluginOption } from "vite";
 
+import { assetUrlForBase } from "../publicAssetBase";
 import { EXTERNAL_RUNTIME_ENTRIES } from "../runtimeEntries";
 
 type RuntimeBundle = Record<string, { type: string; name?: string }>;
@@ -25,9 +26,14 @@ function findChunkFileByName(bundle: RuntimeBundle, chunkName: string): string |
  * src/runtime/README.md.
  */
 export function externalRuntimeImportMap(): PluginOption {
+  let resolvedBase = "/";
+
   return {
     name: "daopk-external-runtime-importmap",
     apply: "build",
+    configResolved(config) {
+      resolvedBase = config.base;
+    },
     transformIndexHtml: {
       order: "post",
       handler(html, ctx) {
@@ -46,8 +52,8 @@ export function externalRuntimeImportMap(): PluginOption {
             );
             return html;
           }
-          imports[specifier] = `/${file}`;
-          preloads.push(`/${file}`);
+          imports[specifier] = assetUrlForBase(file, resolvedBase);
+          preloads.push(assetUrlForBase(file, resolvedBase));
         }
 
         return {
@@ -70,3 +76,5 @@ export function externalRuntimeImportMap(): PluginOption {
     },
   };
 }
+
+export { assetUrlForBase };

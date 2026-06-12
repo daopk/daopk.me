@@ -1,7 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig, mergeConfig } from "vitest/config";
 
-import viteConfig from "./vite.config";
+import { createViteConfig } from "./vite.config";
 
 // Merge with `vite.config.ts` so plugins (vue), aliases, and any other shared
 // build options live in exactly one place. This file only owns test-specific
@@ -16,7 +16,7 @@ import viteConfig from "./vite.config";
 // to satisfy the new typings.
 export default mergeConfig(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  viteConfig as any,
+  createViteConfig("serve") as any,
   defineConfig({
     test: {
       globals: false,

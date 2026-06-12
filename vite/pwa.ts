@@ -1,6 +1,8 @@
 import type { PluginOption } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { assetUrlForBase, resolvePublicAssetBase } from "./publicAssetBase";
+
 /**
  * The shell PWA: a `generateSW` service worker that precaches the shell bundle
  * only. First-party app modules live OUTSIDE the precache (they ship from R2,
@@ -8,7 +10,12 @@ import { VitePWA } from "vite-plugin-pwa";
  * manifest; `runtimeCaching` gives launched apps offline support instead.
  */
 export function pwaPlugin(): PluginOption {
+  const assetBase = resolvePublicAssetBase("build");
+  const assetModifyURLPrefix =
+    assetBase === "/" ? undefined : { "assets/": assetUrlForBase("assets/", assetBase) };
+
   return VitePWA({
+    buildBase: "/",
     devOptions: {
       enabled: false,
     },
@@ -53,6 +60,7 @@ export function pwaPlugin(): PluginOption {
       // security headers in browser caches.
       dontCacheBustURLsMatching: undefined,
       globPatterns: ["index.html", "favicon.ico", "assets/**/*.{js,css}"],
+      ...(assetModifyURLPrefix === undefined ? {} : { modifyURLPrefix: assetModifyURLPrefix }),
       navigateFallback: "index.html",
       // First-party app modules live OUTSIDE the precache (they ship from R2,
       // not dist/), which is the whole point: republishing an app never

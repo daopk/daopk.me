@@ -17,11 +17,72 @@ jobs:
       packages: write
 
     env:
+      DAOPK_PUBLIC_ASSET_BASE_URL: https://cdn.daopk.me/
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
+      R2_ASSETS_BUCKET: daopk-assets
 
     steps:
       - uses: actions/checkout@v6.0.3
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Resolve build metadata
+        id: build-meta
+        run: echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shell assets
+        env:
+          DAOPK_BUILD_TIME: ${{ steps.build-meta.outputs.build_time }}
+        run: pnpm build
+
+      - name: Upload hashed assets to R2
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          uploaded=0
+          for file in dist/assets/**/*; do
+            [ -f "$file" ] || continue
+            key="${file#dist/}"
+            case "$file" in
+              *.js)    content_type="text/javascript;charset=utf-8" ;;
+              *.css)   content_type="text/css;charset=utf-8" ;;
+              *.map)   content_type="application/json;charset=utf-8" ;;
+              *.png)   content_type="image/png" ;;
+              *.jpg)   content_type="image/jpeg" ;;
+              *.jpeg)  content_type="image/jpeg" ;;
+              *.webp)  content_type="image/webp" ;;
+              *.gif)   content_type="image/gif" ;;
+              *.svg)   content_type="image/svg+xml" ;;
+              *.woff2) content_type="font/woff2" ;;
+              *)       content_type="application/octet-stream" ;;
+            esac
+            echo "Uploading $key ($content_type)"
+            pnpm exec wrangler r2 object put "$R2_ASSETS_BUCKET/$key" \
+              --file "$file" \
+              --content-type "$content_type" \
+              --cache-control "public, max-age=31536000, immutable" \
+              --remote
+            uploaded=$((uploaded + 1))
+          done
+
+          echo "Uploaded $uploaded hashed asset(s) to R2 bucket '$R2_ASSETS_BUCKET'."
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4.2.0
@@ -40,6 +101,9 @@ jobs:
           DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
+          build-args: |
+            DAOPK_BUILD_TIME=${{ steps.build-meta.outputs.build_time }}
+            DAOPK_PUBLIC_ASSET_BASE_URL=${{ env.DAOPK_PUBLIC_ASSET_BASE_URL }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
