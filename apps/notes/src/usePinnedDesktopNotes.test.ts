@@ -21,12 +21,35 @@ describe("usePinnedDesktopNotes", () => {
     store.move("/home/notes/a.md", 96, 120);
     store.raise("/home/notes/a.md");
 
-    expect(store.notes.value).toEqual([{ path: "/home/notes/a.md", x: 96, y: 120, z: 2 }]);
+    expect(store.notes.value).toEqual([
+      { path: "/home/notes/a.md", x: 96, y: 120, z: 2, color: "yellow" },
+    ]);
 
     store.dispose();
     store.hydrate();
 
-    expect(store.notes.value).toEqual([{ path: "/home/notes/a.md", x: 96, y: 120, z: 2 }]);
+    expect(store.notes.value).toEqual([
+      { path: "/home/notes/a.md", x: 96, y: 120, z: 2, color: "yellow" },
+    ]);
+  });
+
+  it("persists desktop note color changes", () => {
+    const store = usePinnedDesktopNotes();
+    store.hydrate();
+
+    store.pin("/home/notes/a.md");
+    store.setColor("/home/notes/a.md", "blue");
+
+    expect(store.notes.value).toEqual([
+      { path: "/home/notes/a.md", x: 32, y: 32, z: 1, color: "blue" },
+    ]);
+
+    store.dispose();
+    store.hydrate();
+
+    expect(store.notes.value).toEqual([
+      { path: "/home/notes/a.md", x: 32, y: 32, z: 1, color: "blue" },
+    ]);
   });
 
   it("unpins notes by normalized path", () => {

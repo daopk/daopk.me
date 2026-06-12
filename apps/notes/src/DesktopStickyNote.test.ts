@@ -79,6 +79,39 @@ function mountSticky(note: PinnedDesktopNote, kernel: Kernel) {
   });
 }
 
+function dispatchContextMenu(target: Element): void {
+  const ev = new Event("contextmenu", { bubbles: true, cancelable: true });
+  Object.defineProperties(ev, {
+    clientX: { value: 12 },
+    clientY: { value: 24 },
+    button: { value: 2 },
+  });
+  target.dispatchEvent(ev);
+}
+
+function pointerEvent(
+  type: string,
+  init: { button?: number; clientX?: number; clientY?: number } = {},
+): PointerEvent {
+  const ev = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent;
+  Object.defineProperties(ev, {
+    button: { value: init.button ?? 0 },
+    clientX: { value: init.clientX ?? 0 },
+    clientY: { value: init.clientY ?? 0 },
+  });
+  return ev;
+}
+
+async function flushReka(): Promise<void> {
+  await nextTick();
+  await nextTick();
+  await flushPromises();
+}
+
+function menuItems(): HTMLElement[] {
+  return Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+}
+
 describe("DesktopStickyNote", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -96,7 +129,13 @@ describe("DesktopStickyNote", () => {
 
   it("loads markdown and autosaves direct desktop edits", async () => {
     const { kernel } = makeKernel();
-    const note: PinnedDesktopNote = { path: "/home/notes/a.md", x: 10, y: 20, z: 1 };
+    const note: PinnedDesktopNote = {
+      path: "/home/notes/a.md",
+      x: 10,
+      y: 20,
+      z: 1,
+      color: "yellow",
+    };
     const wrapper = mountSticky(note, kernel);
 
     await flushPromises();
@@ -120,6 +159,73 @@ describe("DesktopStickyNote", () => {
         mimeType: NOTES_MIME_TYPE,
       },
     );
+
+    wrapper.unmount();
+  });
+
+  it("moves the desktop note when dragging from the title", async () => {
+    const { kernel } = makeKernel();
+    const store = usePinnedDesktopNotes();
+    store.hydrate();
+    store.pin("/home/notes/a.md", { x: 32, y: 48 });
+    const note = store.notes.value[0]!;
+    const wrapper = mountSticky(note, kernel);
+
+    await flushPromises();
+    wrapper
+      .get(".desktop-sticky-note__title")
+      .element.dispatchEvent(pointerEvent("pointerdown", { clientX: 20, clientY: 30 }));
+    document.dispatchEvent(pointerEvent("pointermove", { clientX: 86, clientY: 72 }));
+    document.dispatchEvent(pointerEvent("pointerup", { clientX: 86, clientY: 72 }));
+    await nextTick();
+
+    expect(store.notes.value[0]).toMatchObject({ path: "/home/notes/a.md", x: 98, y: 90 });
+
+    wrapper.unmount();
+  });
+
+  it("still focuses the title for editing when clicking without dragging", async () => {
+    const { kernel } = makeKernel();
+    const note: PinnedDesktopNote = {
+      path: "/home/notes/a.md",
+      x: 10,
+      y: 20,
+      z: 1,
+      color: "yellow",
+    };
+    const wrapper = mountSticky(note, kernel);
+
+    await flushPromises();
+    const title = wrapper.get(".desktop-sticky-note__title").element as HTMLInputElement;
+    title.dispatchEvent(pointerEvent("pointerdown", { clientX: 20, clientY: 30 }));
+    document.dispatchEvent(pointerEvent("pointerup", { clientX: 20, clientY: 30 }));
+    await nextTick();
+
+    expect(document.activeElement).toBe(title);
+    expect(title.selectionStart).toBe(title.value.length);
+
+    wrapper.unmount();
+  });
+
+  it("changes note color from the first context-menu row", async () => {
+    const { kernel } = makeKernel();
+    const store = usePinnedDesktopNotes();
+    store.hydrate();
+    store.pin("/home/notes/a.md");
+    const note = store.notes.value[0]!;
+    const wrapper = mountSticky(note, kernel);
+
+    await flushPromises();
+    dispatchContextMenu(wrapper.get(".desktop-sticky-note").element);
+    await flushReka();
+
+    expect(menuItems()[0]?.classList.contains("desktop-sticky-note__color-dot")).toBe(true);
+    expect(menuItems()[5]?.textContent?.trim()).toBe("Open in Notes");
+
+    document.body.querySelector<HTMLElement>('[aria-label="Change note color to Blue"]')?.click();
+    await flushReka();
+
+    expect(store.notes.value[0]?.color).toBe("blue");
 
     wrapper.unmount();
   });

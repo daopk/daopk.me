@@ -2,11 +2,18 @@ import { ref, type Ref } from "vue";
 
 import { activeProfileKvNamespace, KVStore, normalizeVfsPath, type VfsPath } from "@daopk/sdk";
 
+export const PINNED_DESKTOP_NOTE_COLORS = ["yellow", "rose", "blue", "green", "purple"] as const;
+
+export type PinnedDesktopNoteColor = (typeof PINNED_DESKTOP_NOTE_COLORS)[number];
+
+export const DEFAULT_PINNED_DESKTOP_NOTE_COLOR: PinnedDesktopNoteColor = "yellow";
+
 export interface PinnedDesktopNote {
   readonly path: VfsPath;
   readonly x: number;
   readonly y: number;
   readonly z: number;
+  readonly color: PinnedDesktopNoteColor;
 }
 
 interface PinnedDesktopNotesState {
@@ -16,6 +23,7 @@ interface PinnedDesktopNotesState {
 export interface PinDesktopNoteOptions {
   readonly x?: number;
   readonly y?: number;
+  readonly color?: PinnedDesktopNoteColor;
 }
 
 export interface PinnedDesktopNotesStore {
@@ -26,6 +34,7 @@ export interface PinnedDesktopNotesStore {
   unpin(path: string): void;
   move(path: string, x: number, y: number): void;
   raise(path: string): void;
+  setColor(path: string, color: PinnedDesktopNoteColor): void;
   dispose(): void;
 }
 
@@ -33,11 +42,18 @@ const NOTES_DESKTOP_KV_NAMESPACE = "notes-desktop";
 const NOTES_DESKTOP_KV_PRIMARY_KEY = "pinned";
 const DEFAULT_X = 32;
 const DEFAULT_Y = 32;
+const PINNED_DESKTOP_NOTE_COLOR_SET = new Set<string>(PINNED_DESKTOP_NOTE_COLORS);
 
 function sanitizeCoordinate(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, Math.round(value))
     : fallback;
+}
+
+function sanitizeColor(value: unknown): PinnedDesktopNoteColor {
+  return typeof value === "string" && PINNED_DESKTOP_NOTE_COLOR_SET.has(value)
+    ? (value as PinnedDesktopNoteColor)
+    : DEFAULT_PINNED_DESKTOP_NOTE_COLOR;
 }
 
 function coerceState(value: unknown): PinnedDesktopNotesState {
@@ -66,6 +82,7 @@ function coerceState(value: unknown): PinnedDesktopNotesState {
         x: sanitizeCoordinate(candidate.x, DEFAULT_X),
         y: sanitizeCoordinate(candidate.y, DEFAULT_Y),
         z: sanitizeCoordinate(candidate.z, 1),
+        color: sanitizeColor(candidate.color),
       });
     } catch {
       continue;
@@ -127,6 +144,7 @@ function pin(path: string, options: PinDesktopNoteOptions = {}): VfsPath {
     x: sanitizeCoordinate(options.x, existing?.x ?? DEFAULT_X),
     y: sanitizeCoordinate(options.y, existing?.y ?? DEFAULT_Y),
     z,
+    color: options.color ?? existing?.color ?? DEFAULT_PINNED_DESKTOP_NOTE_COLOR,
   };
 
   notes.value = sortByZ([...notes.value.filter((note) => note.path !== normalized), next]);
@@ -189,6 +207,24 @@ function raise(path: string): void {
   }
 }
 
+function setColor(path: string, color: PinnedDesktopNoteColor): void {
+  ensureHydrated();
+  const normalized = normalizeVfsPath(path);
+  let changed = false;
+  notes.value = notes.value.map((note) => {
+    if (note.path !== normalized || note.color === color) {
+      return note;
+    }
+
+    changed = true;
+    return { ...note, color };
+  });
+
+  if (changed) {
+    persist();
+  }
+}
+
 function dispose(): void {
   kv?.dispose();
   kv = undefined;
@@ -203,6 +239,7 @@ export function usePinnedDesktopNotes(): PinnedDesktopNotesStore {
     unpin,
     move,
     raise,
+    setColor,
     dispose,
   };
 }
