@@ -288,10 +288,11 @@ describe("service worker registration", () => {
   it("manual update checks surface a waiting worker", async () => {
     let capturedOptions: RegisterSWOptions | undefined;
     let capturedCheck: (() => Promise<void>) | undefined;
+    const waitingWorker = makeServiceWorker("installed");
     let registration: MockServiceWorkerRegistration;
     registration = makeServiceWorkerRegistration({
       update: async () => {
-        registration.waiting = {} as ServiceWorker;
+        registration.waiting = waitingWorker;
       },
     });
     const updateController: Pick<
@@ -444,6 +445,66 @@ describe("service worker registration", () => {
 
     expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
     expect(updateController.clearUpdateInstalling).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads when the discovered update worker activates before the controlling callback", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const reload = vi.fn();
+    const worker = makeServiceWorker("installing");
+    const registration = makeServiceWorkerRegistration({ installing: worker, waiting: null });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      reload,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    worker.state = "activated";
+    worker.dispatchStateChange();
+    capturedOptions?.onNeedReload?.();
+
+    expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
+    expect(updateController.clearUpdateInstalling).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads when a waiting worker from registration activates before the controlling callback", () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const reload = vi.fn();
+    const worker = makeServiceWorker("installed");
+    const registration = makeServiceWorkerRegistration({ installing: null, waiting: worker });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      reload,
+      updateController,
+    });
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    worker.state = "activated";
+    worker.dispatchStateChange();
+    capturedOptions?.onNeedReload?.();
+
+    expect(updateController.notifyUpdateAvailable).toHaveBeenCalledTimes(1);
+    expect(updateController.notifyUpdateInstalling).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("marks offline ready through the injected update controller", () => {

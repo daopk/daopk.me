@@ -57,12 +57,52 @@ export function registerAppServiceWorker(
   try {
     let registrationRef: ServiceWorkerRegistration | undefined;
     let updateServiceWorker: AppServiceWorkerUpdateAction | undefined;
+    const watchedActivatedWorkers = new WeakSet<ServiceWorker>();
     const watchedInstallingWorkers = new WeakSet<ServiceWorker>();
+    let reloadRequested = false;
 
     const applyPendingUpdate = (): Promise<void> =>
       updateServiceWorker?.(true) ?? Promise.resolve();
 
+    const requestReload = (): void => {
+      if (reloadRequested) {
+        return;
+      }
+
+      reloadRequested = true;
+      reload();
+    };
+
+    const watchActivatedWorker = (
+      registration: ServiceWorkerRegistration | undefined,
+      worker: ServiceWorker | null,
+    ): void => {
+      if (
+        registration === undefined ||
+        registration.active === null ||
+        worker === null ||
+        watchedActivatedWorkers.has(worker)
+      ) {
+        return;
+      }
+
+      watchedActivatedWorkers.add(worker);
+
+      const syncActivatedState = (): void => {
+        if (worker.state !== "activated") {
+          return;
+        }
+
+        debugLog("[service-worker]", "activated before controlling event");
+        requestReload();
+      };
+
+      worker.addEventListener("statechange", syncActivatedState);
+      syncActivatedState();
+    };
+
     const notifyUpdateAvailable = (): void => {
+      watchActivatedWorker(registrationRef, registrationRef?.waiting ?? null);
       updateController.notifyUpdateAvailable(applyPendingUpdate);
     };
 
@@ -75,6 +115,7 @@ export function registerAppServiceWorker(
       }
 
       watchedInstallingWorkers.add(worker);
+      watchActivatedWorker(registration, worker);
       updateController.notifyUpdateInstalling();
 
       const syncInstallingState = (): void => {
@@ -83,7 +124,7 @@ export function registerAppServiceWorker(
           return;
         }
 
-        if (worker.state === "redundant" || worker.state === "activated") {
+        if (worker.state === "redundant") {
           updateController.clearUpdateInstalling();
         }
       };
@@ -142,7 +183,7 @@ export function registerAppServiceWorker(
       },
       onNeedReload: () => {
         debugLog("[service-worker]", "reload needed");
-        reload();
+        requestReload();
       },
       onRegisterError: (error) => {
         updateController.setUpdateChecker(undefined);
