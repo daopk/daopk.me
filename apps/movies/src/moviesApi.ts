@@ -424,6 +424,8 @@ const DEFAULT_PAGINATION: MoviesPagination = {
   totalPages: 1,
 };
 
+const PUBLIC_API_PATH_PREFIX = "/_api";
+
 let currentMoviesApiLocale: SupportedLocale | null = null;
 
 export function setMoviesApiLocale(locale: SupportedLocale): void {
@@ -439,10 +441,8 @@ function currentMoviesApiLanguage(): string {
 }
 
 function publicApiUrl(pathname: string): string {
-  const configured = import.meta.env.VITE_PUBLIC_API_ORIGIN;
-  const origin =
-    configured === undefined || configured.length === 0 ? "" : configured.replace(/\/+$/, "");
-  return `${origin}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+  const normalizedPathname = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${PUBLIC_API_PATH_PREFIX}${normalizedPathname}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

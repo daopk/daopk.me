@@ -41,8 +41,6 @@ jobs:
         with:
           context: .
           push: true
-          build-args: |
-            VITE_PUBLIC_API_ORIGIN=${{ vars.VITE_PUBLIC_API_ORIGIN }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}

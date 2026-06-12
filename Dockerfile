@@ -11,9 +11,6 @@ COPY . .
 
 RUN pnpm install --frozen-lockfile
 
-ARG VITE_PUBLIC_API_ORIGIN
-ENV VITE_PUBLIC_API_ORIGIN=$VITE_PUBLIC_API_ORIGIN
-
 RUN pnpm build
 
 FROM nginx:1.29-alpine

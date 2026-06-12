@@ -42,7 +42,7 @@ describe("moviesApi", () => {
       buildMoviesListUrl({ kind: "trending-tv", page: 2, period: "day" }),
       "https://daopk.test",
     );
-    expect(listUrl.pathname).toBe("/public/movies/list");
+    expect(listUrl.pathname).toBe("/_api/public/movies/list");
     expect(listUrl.searchParams.get("kind")).toBe("trending-tv");
     expect(listUrl.searchParams.get("page")).toBe("2");
     expect(listUrl.searchParams.get("limit")).toBe(String(DEFAULT_MOVIES_LIST_LIMIT));
@@ -53,7 +53,7 @@ describe("moviesApi", () => {
       buildMoviesListUrl({ country: "kr", genre: 18, media: "tv", sort: "newest" }),
       "https://daopk.test",
     );
-    expect(catalogUrl.pathname).toBe("/public/movies/list");
+    expect(catalogUrl.pathname).toBe("/_api/public/movies/list");
     expect(catalogUrl.searchParams.has("kind")).toBe(false);
     expect(catalogUrl.searchParams.get("media")).toBe("tv");
     expect(catalogUrl.searchParams.get("genre")).toBe("18");
@@ -61,14 +61,14 @@ describe("moviesApi", () => {
     expect(catalogUrl.searchParams.get("sort")).toBe("newest");
 
     const allCatalogUrl = new URL(buildMoviesListUrl({ media: "all" }), "https://daopk.test");
-    expect(allCatalogUrl.pathname).toBe("/public/movies/list");
+    expect(allCatalogUrl.pathname).toBe("/_api/public/movies/list");
     expect(allCatalogUrl.searchParams.get("media")).toBe("all");
 
     const searchUrl = new URL(
       buildMoviesListUrl({ keyword: "Fight Club", media: "movie" }),
       "https://daopk.test",
     );
-    expect(searchUrl.pathname).toBe("/public/movies/search");
+    expect(searchUrl.pathname).toBe("/_api/public/movies/search");
     expect(searchUrl.searchParams.get("query")).toBe("Fight Club");
     expect(searchUrl.searchParams.get("media")).toBe("movie");
     expect(searchUrl.searchParams.get("page")).toBe("1");
@@ -82,10 +82,10 @@ describe("moviesApi", () => {
     expect(cappedUrl.searchParams.get("limit")).toBe("100");
 
     const seasonUrl = new URL(buildMovieSeasonUrl(1399, 2), "https://daopk.test");
-    expect(seasonUrl.pathname).toBe("/public/movies/season/1399/2");
+    expect(seasonUrl.pathname).toBe("/_api/public/movies/season/1399/2");
 
     const personUrl = new URL(buildMoviePersonUrl(819), "https://daopk.test");
-    expect(personUrl.pathname).toBe("/public/movies/person/819");
+    expect(personUrl.pathname).toBe("/_api/public/movies/person/819");
   });
 
   it("normalizes app-ready TMDB list payloads", () => {
@@ -135,7 +135,7 @@ describe("moviesApi", () => {
   it("fetches Movies lists with limit and preserves API pagination", async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), "https://daopk.test");
-      expect(url.pathname).toBe("/public/movies/list");
+      expect(url.pathname).toBe("/_api/public/movies/list");
       expect(url.searchParams.get("limit")).toBe("24");
       return new Response(
         JSON.stringify({
@@ -164,13 +164,13 @@ describe("moviesApi", () => {
       const url = new URL(String(input), "https://daopk.test");
       urls.push(url);
 
-      if (url.pathname === "/public/movies/list") {
+      if (url.pathname === "/_api/public/movies/list") {
         return new Response(JSON.stringify({ items: [], pagination: {} }), {
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      if (url.pathname === "/public/movies/detail/movie/550") {
+      if (url.pathname === "/_api/public/movies/detail/movie/550") {
         return new Response(
           JSON.stringify({
             mediaType: "movie",
@@ -183,7 +183,7 @@ describe("moviesApi", () => {
         );
       }
 
-      if (url.pathname === "/public/movies/season/1399/1") {
+      if (url.pathname === "/_api/public/movies/season/1399/1") {
         return new Response(
           JSON.stringify({
             episodes: [],
@@ -194,7 +194,7 @@ describe("moviesApi", () => {
         );
       }
 
-      if (url.pathname === "/public/movies/person/819") {
+      if (url.pathname === "/_api/public/movies/person/819") {
         return new Response(
           JSON.stringify({
             name: "Edward Norton",
@@ -216,10 +216,10 @@ describe("moviesApi", () => {
 
     expect(moviesApiLanguageForLocale("vi")).toBe("vi-VN");
     expect(urls.map((url) => [url.pathname, url.searchParams.get("language")])).toEqual([
-      ["/public/movies/list", "vi-VN"],
-      ["/public/movies/detail/movie/550", "vi-VN"],
-      ["/public/movies/season/1399/1", "vi-VN"],
-      ["/public/movies/person/819", "vi-VN"],
+      ["/_api/public/movies/list", "vi-VN"],
+      ["/_api/public/movies/detail/movie/550", "vi-VN"],
+      ["/_api/public/movies/season/1399/1", "vi-VN"],
+      ["/_api/public/movies/person/819", "vi-VN"],
     ]);
   });
 
@@ -227,7 +227,7 @@ describe("moviesApi", () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), "https://daopk.test");
       const media = url.searchParams.get("media");
-      expect(url.pathname).toBe("/public/movies/list");
+      expect(url.pathname).toBe("/_api/public/movies/list");
       expect(url.searchParams.get("limit")).toBe("12");
       if (media === "movie") {
         return new Response(

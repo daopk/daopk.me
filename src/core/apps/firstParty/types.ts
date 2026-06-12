@@ -98,7 +98,7 @@ export interface FirstPartyCatalogEntry {
   readonly build: number;
   /** Optional short source revision for tracing the published bundle. */
   readonly revision?: string;
-  /** Release-pinned module URL, e.g. `/public/apps/notes/1.0.0+123/notes.js`. */
+  /** Release-pinned module URL, e.g. `/_api/public/apps/notes/1.0.0+123/notes.js`. */
   readonly entry: string;
   /**
    * Serializable app metadata. Optional only for legacy v1 catalog entries;
@@ -107,7 +107,7 @@ export interface FirstPartyCatalogEntry {
   readonly manifest?: FirstPartyCatalogAppManifest;
 }
 
-/** The `/public/apps/index.json` document: the dynamic id -> entry-URL mapping. */
+/** The `/_api/public/apps/index.json` document: the dynamic id -> entry-URL mapping. */
 export interface FirstPartyCatalog {
   readonly apps: readonly FirstPartyCatalogEntry[];
 }

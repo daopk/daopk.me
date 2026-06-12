@@ -1,8 +1,8 @@
+const PUBLIC_API_PATH_PREFIX = "/_api";
+
 function publicApiUrl(pathname: string): string {
-  const configured = import.meta.env.VITE_PUBLIC_API_ORIGIN;
-  const origin =
-    configured === undefined || configured.length === 0 ? "" : configured.replace(/\/+$/, "");
-  return `${origin}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
+  const normalizedPathname = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${PUBLIC_API_PATH_PREFIX}${normalizedPathname}`;
 }
 
 const PHOTOS_PUBLIC_PATH_PREFIX = "/public/photos";

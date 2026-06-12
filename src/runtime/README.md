@@ -92,12 +92,11 @@ const { locale, t } = useI18n();
 In development, the shell loads workspace packages directly through
 `firstPartyAppsPhase`, so HMR stays simple and no import map is needed.
 
-In preview and production, the shell fetches `/public/apps/index.json` from the
-configured public API, validates each catalog entry and manifest, resolves serializable
-icon/matcher keys, and loads the published module only when the user launches
-the app or mounts one of its widgets. The import map is injected only during
-`vite build`, so runtime composition should be verified with `pnpm build` plus
-`pnpm preview`.
+In preview and production, the shell fetches `/_api/public/apps/index.json`,
+validates each catalog entry and manifest, resolves serializable icon/matcher
+keys, and loads the published module only when the user launches the app or
+mounts one of its widgets. The import map is injected only during `vite build`,
+so runtime composition should be verified with `pnpm build` plus `pnpm preview`.
 
 ## Verification Checklist
 
@@ -106,7 +105,7 @@ the app or mounts one of its widgets. The import map is injected only during
    `@daopk/sdk`, `@daopk/kit`, and related facades at hashed `/assets/*`
    runtime chunks.
 3. Launch a first-party app from the App Store or shell and confirm the module
-   loads from its `/public/apps/<id>/...` catalog URL.
+   loads from its `/_api/public/apps/<id>/...` catalog URL.
 4. In DevTools Network, confirm one shared Vue runtime chunk is used by both the
    shell and launched app.
 5. Confirm `useKernel()`, `useVfs()`, and injected `AppContext` work inside the

@@ -1,7 +1,7 @@
 /**
  * First-party app ids that the shell will accept from the external app catalog.
  * App identity and capabilities live in each `apps/<id>/app.manifest.json` and
- * are published through the public API `/public/apps/index.json` catalog; this
+ * are published through the public API `/_api/public/apps/index.json` catalog; this
  * allowlist is the remaining shell-owned trust boundary for independently-
  * shipped apps.
  */

@@ -1,5 +1,5 @@
 import { debugWarn } from "~/core/debug";
-import { publicApiOrigin, publicApiUrl } from "~/core/publicApi";
+import { publicApiUrl } from "~/core/publicApi";
 
 import { isFirstPartyIconKey } from "./iconResolver";
 import { isFirstPartyPreviewMatcherKey } from "./previewMatchers";
@@ -55,8 +55,9 @@ export type FirstPartyCatalogFetchResult =
  * origin. First-party apps run in the trusted lane, so the catalog must never
  * point that lane at an arbitrary cross-origin URL.
  */
+const TRUSTED_PUBLIC_API_ORIGIN = "https://daopk.me";
 const ENTRY_PATH_PATTERN =
-  /^\/(?:public\/)?apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
+  /^\/(?:(?:_api\/)?public\/)?apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -547,29 +548,34 @@ function coerceEntry(input: unknown): FirstPartyCatalogEntry | null {
 }
 
 function isTrustedEntryUrl(entry: string, id: string): boolean {
-  const configuredOrigin = publicApiOrigin();
-  const pathname = entry.startsWith("/") ? entry : absoluteEntryPathname(entry, configuredOrigin);
+  const pathname = entry.startsWith("/") ? entry : absoluteEntryPathname(entry);
   if (pathname === null) {
     return false;
   }
 
   return (
     ENTRY_PATH_PATTERN.test(pathname) &&
-    (pathname.startsWith(`/apps/${id}/`) || pathname.startsWith(`/public/apps/${id}/`))
+    (pathname.startsWith(`/apps/${id}/`) ||
+      pathname.startsWith(`/public/apps/${id}/`) ||
+      pathname.startsWith(`/_api/public/apps/${id}/`))
   );
 }
 
-function absoluteEntryPathname(entry: string, configuredOrigin: string): string | null {
-  if (configuredOrigin.length === 0) {
-    return null;
-  }
-
+function absoluteEntryPathname(entry: string): string | null {
   try {
     const url = new URL(entry);
-    return url.origin === configuredOrigin ? url.pathname : null;
+    return isTrustedEntryOrigin(url.origin) ? url.pathname : null;
   } catch {
     return null;
   }
+}
+
+function isTrustedEntryOrigin(origin: string): boolean {
+  if (origin === TRUSTED_PUBLIC_API_ORIGIN) {
+    return true;
+  }
+
+  return globalThis.location?.origin === origin;
 }
 
 /** Validate + normalize an untrusted-shaped catalog document; drop bad entries. */

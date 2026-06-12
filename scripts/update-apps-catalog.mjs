@@ -1,7 +1,7 @@
 // Merge per-app catalog-entry fragments into the first-party app catalog.
 //
 // The catalog (`index.json` in the apps R2 bucket, served by the public API at
-// `/public/apps/index.json`) maps every published app id to its current
+// `/_api/public/apps/index.json`) maps every published app id to its current
 // serializable manifest and immutable, release-pinned module URL. A publish only
 // rebuilds the apps that changed, so we MUST preserve the entries of the apps
 // that did not: read the current catalog, upsert the changed entries, write it

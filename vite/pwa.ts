@@ -58,7 +58,7 @@ export function pwaPlugin(): PluginOption {
       // not dist/), which is the whole point: republishing an app never
       // changes the shell's precache manifest. These two rules give launched
       // apps offline support without coupling them to a shell update.
-      navigateFallbackDenylist: [/^\/apps\//],
+      navigateFallbackDenylist: [/^\/apps\//, /^\/_api(?:\/|$)/],
       runtimeCaching: [
         {
           // Catalog: revalidate so a republished app is picked up next boot,
@@ -82,7 +82,9 @@ export function pwaPlugin(): PluginOption {
           },
         },
         {
-          urlPattern: /\.(?:png|jpg|jpeg|webp|gif|svg|ico)$/i,
+          urlPattern: ({ url }) =>
+            !url.pathname.startsWith("/_api/") &&
+            /\.(?:png|jpg|jpeg|webp|gif|svg|ico)$/i.test(url.pathname),
           handler: "StaleWhileRevalidate",
           options: {
             cacheName: "daopk-me-images-v1",

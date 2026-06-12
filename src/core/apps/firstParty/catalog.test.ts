@@ -116,6 +116,67 @@ describe("first-party catalog coercion", () => {
     ]);
   });
 
+  it("accepts canonical _api app module URLs", () => {
+    expect(
+      coerceFirstPartyCatalog({
+        apps: [
+          {
+            id: "notes",
+            version: "1.0.1",
+            entry: "/_api/public/apps/notes/1.0.1/notes.js",
+            manifest: notesManifest,
+          },
+        ],
+      }).apps,
+    ).toEqual([
+      {
+        id: "notes",
+        version: "1.0.1",
+        build: 0,
+        entry: "/_api/public/apps/notes/1.0.1/notes.js",
+        manifest: notesManifest,
+      },
+    ]);
+  });
+
+  it("accepts production canonical app module URLs", () => {
+    expect(
+      coerceFirstPartyCatalog({
+        apps: [
+          {
+            id: "notes",
+            version: "1.0.1",
+            entry: "https://daopk.me/_api/public/apps/notes/1.0.1/notes.js",
+            manifest: notesManifest,
+          },
+        ],
+      }).apps,
+    ).toEqual([
+      {
+        id: "notes",
+        version: "1.0.1",
+        build: 0,
+        entry: "https://daopk.me/_api/public/apps/notes/1.0.1/notes.js",
+        manifest: notesManifest,
+      },
+    ]);
+  });
+
+  it("drops legacy api.daopk.me app module URLs", () => {
+    expect(
+      coerceFirstPartyCatalog({
+        apps: [
+          {
+            id: "notes",
+            version: "1.0.1",
+            entry: "https://api.daopk.me/public/apps/notes/1.0.1/notes.js",
+            manifest: notesManifest,
+          },
+        ],
+      }).apps,
+    ).toEqual([]);
+  });
+
   it("keeps validated desktop contribution descriptors", () => {
     const desktop = {
       contextMenu: [

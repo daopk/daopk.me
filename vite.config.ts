@@ -9,6 +9,7 @@ import { blogContentDevServer } from "./vite/plugins/blogContentDevServer";
 import { externalRuntimeImportMap } from "./vite/plugins/externalRuntimeImportMap";
 import { filesContentProxyServer } from "./vite/plugins/filesContentProxyServer";
 import { photosContentProxyServer } from "./vite/plugins/photosContentProxyServer";
+import { publicApiProxyServer } from "./vite/plugins/publicApiProxyServer";
 import { pwaPlugin } from "./vite/pwa";
 import { runtimeChunkInput, runtimeResolveAlias } from "./vite/runtimeEntries";
 
@@ -51,6 +52,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    publicApiProxyServer(),
     blogContentDevServer(),
     filesContentProxyServer(),
     photosContentProxyServer(),
