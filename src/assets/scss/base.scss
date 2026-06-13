@@ -1,61 +1,26 @@
 @use "sass:meta";
-@use "tokens";
 
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@include meta.load-css("reset");
 
-html,
-body {
-  block-size: 100vh;
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: manipulation;
+@layer reset, tokens, base, vendor, utilities;
+
+@layer reset {
+  @include meta.load-css("reset");
 }
 
-#app {
-  block-size: 100vh;
-  overflow: hidden;
+@layer tokens {
+  @include meta.load-css("tokens");
 }
 
-body {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
-  background-color: var(--color-bg);
-  color: var(--color-fg);
-  line-height: 1.4;
+@layer base {
+  @include meta.load-css("base/document");
+  @include meta.load-css("base/forms");
 }
 
-[data-theme="dark"] .shiki,
-[data-theme="dark"] .shiki span {
-  background-color: var(--shiki-dark-bg) !important;
-  color: var(--shiki-dark) !important;
-  font-style: var(--shiki-dark-font-style, inherit) !important;
-  font-weight: var(--shiki-dark-font-weight, inherit) !important;
-  text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
+@layer vendor {
+  @include meta.load-css("vendor/shiki");
 }
 
-html[data-shell="mobile"],
-html[data-shell="mobile"] body {
-  // iOS standalone paints the home-indicator safe area from the document canvas.
-  background-color: var(--mobile-shell-page-background-color, var(--color-bg));
-  background-image: var(--mobile-shell-page-background-image, none);
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
-@media (hover: none) and (pointer: coarse) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-
-  .spotlight__input {
-    font-size: 17px !important;
-  }
-
-  .notes__title-input {
-    font-size: 20px !important;
-  }
+@layer utilities {
+  @include meta.load-css("utilities/accessibility");
 }

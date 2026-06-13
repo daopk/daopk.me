@@ -1,0 +1,30 @@
+html,
+body {
+  block-size: 100vh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+#app {
+  block-size: 100vh;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+}
+
+html[data-shell="mobile"],
+html[data-shell="mobile"] body {
+  // iOS standalone paints the home-indicator safe area from the document canvas.
+  background-color: var(--mobile-shell-page-background-color, var(--color-bg));
+  background-image: var(--mobile-shell-page-background-image, none);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}

@@ -3,12 +3,38 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const tokensPath = resolve(process.cwd(), "src/assets/scss/_tokens.scss");
-const basePath = resolve(process.cwd(), "src/assets/scss/base.scss");
-const tokens = readFileSync(tokensPath, "utf8");
-const base = readFileSync(basePath, "utf8");
+const scssPath = resolve(process.cwd(), "src/assets/scss");
+const readScss = (path: string) => readFileSync(resolve(scssPath, path), "utf8");
+
+const tokens = [
+  "_tokens.scss",
+  "tokens/_foundation.scss",
+  "tokens/_chrome.scss",
+  "tokens/_theme.scss",
+  "tokens/_density.scss",
+]
+  .map(readScss)
+  .join("\n");
+
+const baseEntrypoint = readScss("base.scss");
+const base = [
+  "base.scss",
+  "base/_document.scss",
+  "base/_forms.scss",
+  "vendor/_shiki.scss",
+  "utilities/_accessibility.scss",
+]
+  .map(readScss)
+  .join("\n");
 
 describe("design tokens", () => {
+  it("loads global styles through named cascade layers", () => {
+    expect(baseEntrypoint).toContain("@layer reset, tokens, base, vendor, utilities;");
+    expect(baseEntrypoint).toContain('@include meta.load-css("tokens");');
+    expect(baseEntrypoint).toContain('@include meta.load-css("base/document");');
+    expect(baseEntrypoint).toContain('@include meta.load-css("vendor/shiki");');
+  });
+
   it("defines the typography scale anchored on --font-size-base", () => {
     for (const name of [
       "--font-size-xs",

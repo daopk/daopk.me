@@ -1,0 +1,19 @@
+/* Touch density — bump interactive control heights to the ~44px native floor
+   on coarse pointers. */
+@media (pointer: coarse) {
+  :root {
+    --control-height-sm: 36px;
+    --control-height-md: 44px;
+    --control-height-lg: 52px;
+  }
+}
+
+/* A forced-mobile shell (?shell=mobile sticky) or a coarse pointer on the
+   desktop shell also gets touch-sized controls. ShellHost writes these
+   attributes on <html>; the [data-*] specificity wins over the :root default. */
+:root[data-shell="mobile"],
+:root[data-pointer="coarse"] {
+  --control-height-sm: 36px;
+  --control-height-md: 44px;
+  --control-height-lg: 52px;
+}
