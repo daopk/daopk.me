@@ -1,0 +1,9 @@
+:root {
+  color-scheme: light dark;
+
+  --color-accent: #5a2d82;
+  --color-accent-fg: #ffffff;
+  --color-fg-on-accent: var(--color-accent-fg);
+  --color-accent-hover: color-mix(in srgb, var(--color-accent) 88%, black 12%);
+  --color-accent-sheen: #b794d6;
+}

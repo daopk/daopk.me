@@ -22,10 +22,10 @@ const { minute, datetime, date } = useClockNow();
   color: var(--color-fg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2, 4px);
+  gap: var(--space-xs);
   inline-size: 100%;
   justify-content: center;
-  padding: var(--space-3, 8px) var(--space-4, 12px);
+  padding: var(--space-sm) var(--space-md);
 }
 
 .clock-desktop-widget__time {

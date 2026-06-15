@@ -26,9 +26,10 @@ Rules of thumb:
 
 ## Tokens
 
-`src/assets/scss/_tokens.scss` is the single styling authority. Components must
-read these instead of hardcoding values. Never introduce raw hex outside
-`_tokens.scss` (`pnpm lint:tokens:audit` enforces this).
+`src/assets/scss/tokens/**` is the styling authority, loaded through
+`src/assets/scss/_tokens.scss`. Components must read these instead of
+hardcoding values. Never introduce raw hex outside token sources or documented
+app-owned palettes (`pnpm lint:tokens:audit` enforces this).
 
 | Group          | Tokens                                                                                                                                                                                                   |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,9 +37,9 @@ read these instead of hardcoding values. Never introduce raw hex outside
 | Weight         | `--font-weight-medium` `--font-weight-semibold` `--font-weight-bold`                                                                                                                                     |
 | Leading        | `--leading-tight` `--leading-snug` `--leading-normal` `--leading-relaxed`                                                                                                                                |
 | Control height | `--control-height-sm` `--control-height-md` `--control-height-lg` (touch-aware, see below)                                                                                                               |
-| Spacing        | `--space-2xs` `--space-xs` `--space-sm` `--space-md` `--space-lg` `--space-xl` (scaled by `--density-scale`)                                                                                             |
+| Spacing        | `--space-2xs` `--space-xs` `--space-sm` `--space-md` `--space-lg` `--space-xl` `--space-2xl` (scaled by `--density-scale`; do not add numeric aliases like `--space-2`)                                  |
 | Radius         | `--radius-sm` `--radius-md` `--radius-lg` `--radius-full`                                                                                                                                                |
-| Color          | `--color-bg*`, `--color-fg` / `--color-fg-muted` / `--color-fg-subtle`, `--color-border`, `--color-accent*`, `--color-error*`, `--color-success`                                                         |
+| Color          | `--color-bg*`, `--color-fg` / `--color-fg-muted` / `--color-fg-subtle`, `--color-border`, `--color-accent*`, `--color-fg-on-accent`, `--color-error*`, `--color-success`                                 |
 | Motion         | `--duration-fast` `--duration-base` `--ease`                                                                                                                                                             |
 
 ## Density & touch
@@ -51,8 +52,8 @@ per-call props:
 - Coarse pointer **or** the mobile shell: bumped to `sm 36 · md 44 · lg 52`
   (the ~44px native floor).
 
-`ShellHost` writes `data-shell` / `data-pointer` on `<html>`, and `_tokens.scss`
-raises the control-height tokens via `@media (pointer: coarse)` and
+`ShellHost` writes `data-shell` / `data-pointer` on `<html>`, and the density
+token partial raises the control-height tokens via `@media (pointer: coarse)` and
 `:root[data-shell="mobile"]`. Bind interactive heights to `--control-height-*`
 (inputs use `--control-height-md`) rather than fixed pixels. For controls that
 must keep a small visual size on touch (e.g. `Switch`, `Checkbox`), expand the

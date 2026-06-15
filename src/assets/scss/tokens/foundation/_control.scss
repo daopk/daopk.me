@@ -1,0 +1,11 @@
+:root {
+  /* Control sizing - desktop/pointer defaults. Touch shells bump these to the
+     ~44px native floor through the density overrides, so the same control is
+     compact for a mouse and comfortable for a finger without per-call props. */
+  --control-height-sm: 28px;
+  --control-height-md: 32px;
+  --control-height-lg: 40px;
+
+  --spotlight-z: 1500;
+  --spotlight-scrim: rgb(0 0 0 / 0.18);
+}

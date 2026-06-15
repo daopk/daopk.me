@@ -155,7 +155,7 @@ watch(
 }
 
 .photos__lightbox-title {
-  color: var(--color-fg-on-accent, #fff);
+  color: var(--color-fg-on-accent);
   font-size: var(--font-size-sm);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -163,7 +163,7 @@ watch(
 }
 
 .photos__lightbox-close {
-  color: var(--color-fg-on-accent, #fff);
+  color: var(--color-fg-on-accent);
   flex: 0 0 auto;
 }
 

@@ -118,7 +118,7 @@ defineExpose({ openSpotlight, closeSpotlight });
   justify-content: center;
   pointer-events: none;
   position: absolute;
-  z-index: var(--spotlight-z, 1500);
+  z-index: var(--spotlight-z);
 }
 
 .mobile-spotlight-host__peek-pill {

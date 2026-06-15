@@ -6,9 +6,27 @@ import { describe, expect, it } from "vitest";
 const scssPath = resolve(process.cwd(), "src/assets/scss");
 const readScss = (path: string) => readFileSync(resolve(scssPath, path), "utf8");
 
+const foundationEntrypoint = readScss("tokens/_foundation.scss");
+const foundationPartials = [
+  "tokens/foundation/_color.scss",
+  "tokens/foundation/_spacing.scss",
+  "tokens/foundation/_radius.scss",
+  "tokens/foundation/_typography.scss",
+  "tokens/foundation/_motion.scss",
+  "tokens/foundation/_control.scss",
+]
+  .map(readScss)
+  .join("\n");
+
 const tokens = [
   "_tokens.scss",
   "tokens/_foundation.scss",
+  "tokens/foundation/_color.scss",
+  "tokens/foundation/_spacing.scss",
+  "tokens/foundation/_radius.scss",
+  "tokens/foundation/_typography.scss",
+  "tokens/foundation/_motion.scss",
+  "tokens/foundation/_control.scss",
   "tokens/_chrome.scss",
   "tokens/_theme.scss",
   "tokens/_density.scss",
@@ -33,6 +51,12 @@ describe("design tokens", () => {
     expect(baseEntrypoint).toContain('@include meta.load-css("tokens");');
     expect(baseEntrypoint).toContain('@include meta.load-css("base/document");');
     expect(baseEntrypoint).toContain('@include meta.load-css("vendor/shiki");');
+  });
+
+  it("keeps foundation tokens split behind a stable entrypoint", () => {
+    for (const name of ["color", "spacing", "radius", "typography", "motion", "control"]) {
+      expect(foundationEntrypoint).toContain(`@forward "foundation/${name}";`);
+    }
   });
 
   it("defines the typography scale anchored on --font-size-base", () => {
@@ -75,9 +99,27 @@ describe("design tokens", () => {
     expect(tokens).not.toMatch(/--color-accent-hover:\s*#[0-9a-f]{3,8}\b/i);
   });
 
-  it("defines radius-full and space-2xs helpers", () => {
+  it("defines radius and spacing helpers", () => {
     expect(tokens).toContain("--radius-full:");
     expect(tokens).toContain("--space-2xs:");
+    expect(tokens).toContain("--space-2xl:");
+    expect(tokens).not.toMatch(/--space-[0-9]+:/);
+  });
+
+  it("defines app-facing semantic foundation tokens", () => {
+    expect(tokens).toContain("--color-fg-on-accent:");
+    expect(tokens).toContain("--spotlight-z:");
+    expect(tokens).toContain("--spotlight-scrim:");
+  });
+
+  it("defines shared motion tokens in foundation rather than per theme", () => {
+    expect(foundationPartials).toContain("--duration-fast: 120ms;");
+    expect(foundationPartials).toContain("--duration-base: 380ms;");
+    expect(foundationPartials).toContain("--ease:");
+
+    const theme = readScss("tokens/_theme.scss");
+    expect(theme).not.toContain("--duration-fast:");
+    expect(theme).not.toContain("--duration-base:");
   });
 
   it("defines lightweight mobile home icon tokens", () => {

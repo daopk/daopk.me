@@ -356,7 +356,7 @@ const motionTransition = computed(() => {
 <style scoped lang="scss">
 .spotlight {
   align-items: flex-start;
-  background: var(--spotlight-scrim, rgb(0 0 0 / 0.18));
+  background: var(--spotlight-scrim);
   block-size: 100%;
   display: flex;
   inline-size: 100%;
@@ -364,7 +364,7 @@ const motionTransition = computed(() => {
   justify-content: center;
   padding-block-start: 12vh;
   position: fixed;
-  z-index: var(--spotlight-z, 1500);
+  z-index: var(--spotlight-z);
 }
 
 .spotlight__panel {
