@@ -1,10 +1,13 @@
-import type { AppHandle, AppLifecycleEvent, AppManifest } from "~/types/app";
+import { isFirstPartyAppId } from "~/core/apps/firstParty/registry";
+import type { AppHandle, AppLifecycleEvent, AppManifest, AppPermission } from "~/types/app";
 import type { AppRegistrationSource } from "~/types/kernel";
 
 export class AppRegistry {
   readonly manifests = new Map<string, AppManifest>();
 
   private readonly systemAppIds = new Set<string>();
+
+  private readonly firstPartyAppIds = new Set<string>();
 
   upsertManifest(manifest: AppManifest, options: { source?: AppRegistrationSource } = {}): void {
     this.manifests.set(manifest.id, manifest);
@@ -13,15 +16,30 @@ export class AppRegistry {
     } else {
       this.systemAppIds.delete(manifest.id);
     }
+
+    if (options.source === "external" && isFirstPartyAppId(manifest.id)) {
+      this.firstPartyAppIds.add(manifest.id);
+    } else {
+      this.firstPartyAppIds.delete(manifest.id);
+    }
   }
 
   unregister(id: string): void {
     this.manifests.delete(id);
     this.systemAppIds.delete(id);
+    this.firstPartyAppIds.delete(id);
   }
 
   isSystemApp(id: string): boolean {
     return this.systemAppIds.has(id);
+  }
+
+  hasFirstPartyDefaultGrant(id: string, permission: AppPermission): boolean {
+    if (!this.firstPartyAppIds.has(id)) {
+      return false;
+    }
+
+    return this.manifests.get(id)?.permissions?.includes(permission) === true;
   }
 }
 

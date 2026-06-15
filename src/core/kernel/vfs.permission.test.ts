@@ -7,6 +7,7 @@ import "fake-indexeddb/auto";
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import type { VfsStat } from "~/core/vfs";
 import type { AppManifest, AppPermission } from "~/types/app";
+import type { AppRegistrationSource } from "~/types/kernel";
 
 import { kernel } from "./index";
 
@@ -18,14 +19,22 @@ vi.mock("~/core/debug", () => ({
 const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
 let pathCounter = 0;
 
-function makeManifest(id: string, category: AppManifest["category"]): AppManifest {
-  return {
+function makeManifest(
+  id: string,
+  category: AppManifest["category"],
+  permissions?: readonly AppPermission[],
+): AppManifest {
+  const manifest: AppManifest = {
     id,
     name: id,
     icon: StubIcon,
     category,
     component: () => Promise.resolve({ default: StubIcon }),
   };
+  if (permissions !== undefined) {
+    manifest.permissions = [...permissions];
+  }
+  return manifest;
 }
 
 function uniquePath(name: string): string {
@@ -33,10 +42,15 @@ function uniquePath(name: string): string {
   return `/home/vfs-permission-${Date.now()}-${pathCounter}-${name}`;
 }
 
-async function launchApp(id: string, category: AppManifest["category"]): Promise<string> {
+async function launchApp(
+  id: string,
+  category: AppManifest["category"],
+  options: { source?: AppRegistrationSource; permissions?: readonly AppPermission[] } = {},
+): Promise<string> {
+  const source = options.source ?? (category === "system" ? "system" : undefined);
   kernel.apps.register(
-    makeManifest(id, category),
-    category === "system" ? { source: "system" } : undefined,
+    makeManifest(id, category, options.permissions),
+    source === undefined ? undefined : { source },
   );
   return (await kernel.apps.launch(id)).id;
 }
@@ -73,6 +87,67 @@ describe("kernel.vfs permission gate", () => {
     );
     await expect(kernel.vfs.readText(path, { handleId })).resolves.toBe("hello");
     expect(requests).toEqual([]);
+    stop();
+  });
+
+  it("first-party external apps auto-grant declared read and write without prompting", async () => {
+    const handleId = await launchApp("notes", "productivity", {
+      source: "external",
+      permissions: ["vfs.read", "vfs.write"],
+    });
+    const requests: unknown[] = [];
+    const stop = kernel.events.on("permission.requested", (payload) => {
+      requests.push(payload);
+    });
+    const path = uniquePath("first-party.txt");
+
+    await expect(kernel.vfs.writeText(path, "trusted", { handleId })).resolves.toEqual(
+      expect.objectContaining({ path }),
+    );
+    await expect(kernel.vfs.readText(path, { handleId })).resolves.toBe("trusted");
+
+    expect(requests).toEqual([]);
+    expect(usePermissionStore().list({ manifestId: "notes" })).toEqual([]);
+    stop();
+  });
+
+  it("persisted denial blocks a first-party external default grant", async () => {
+    const path = uniquePath("first-party-denied.txt");
+    await seedText(path, "blocked");
+    const handleId = await launchApp("notes", "productivity", {
+      source: "external",
+      permissions: ["vfs.read"],
+    });
+    usePermissionStore().set("notes", "vfs.read", false);
+
+    const requests: unknown[] = [];
+    const stop = kernel.events.on("permission.requested", (payload) => {
+      requests.push(payload);
+    });
+
+    await expect(kernel.vfs.readText(path, { handleId })).resolves.toBeNull();
+    expect(requests).toEqual([]);
+    stop();
+  });
+
+  it("an allowlisted app id still prompts when it is not registered as external", async () => {
+    const path = uniquePath("not-external.txt");
+    await seedText(path, "needs prompt");
+    const handleId = await launchApp("notes", "productivity", {
+      permissions: ["vfs.read"],
+    });
+
+    const seen: Array<{ requestId: string; permission: AppPermission }> = [];
+    const stop = kernel.events.on("permission.requested", (payload) => {
+      seen.push({ requestId: payload.requestId, permission: payload.permission });
+    });
+
+    const pending = kernel.vfs.readText(path, { handleId });
+    await Promise.resolve();
+    expect(seen).toEqual([{ requestId: expect.any(String), permission: "vfs.read" }]);
+
+    kernel.permissions.respond(seen[0].requestId, { granted: true, persist: false });
+    await expect(pending).resolves.toBe("needs prompt");
     stop();
   });
 

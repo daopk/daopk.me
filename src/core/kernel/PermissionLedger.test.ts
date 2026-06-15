@@ -149,6 +149,92 @@ describe("PermissionLedger (M3.5)", () => {
     });
   });
 
+  describe("first-party default grants", () => {
+    it("auto-grants declared first-party permissions without prompting or persisting", async () => {
+      const store = makeStore();
+      const emitter = makeEmitter();
+      const ledger = new PermissionLedger({
+        isSystemApp: () => false,
+        hasFirstPartyDefaultGrant: (manifestId, permission) =>
+          manifestId === "notes" && permission === "vfs.read",
+        store,
+        events: emitter,
+      });
+
+      const decision = await ledger.request("notes", "vfs.read");
+
+      expect(decision).toEqual({
+        granted: true,
+        persisted: false,
+        reason: "first-party-default-grant",
+      });
+      expect(store.__raw.size).toBe(0);
+      expect(emitter.events).toEqual([
+        {
+          channel: "permission.granted",
+          payload: {
+            manifestId: "notes",
+            permission: "vfs.read",
+            persisted: false,
+          },
+        },
+      ]);
+    });
+
+    it("honors a persisted denial before the first-party default grant", async () => {
+      const store = makeStore();
+      const emitter = makeEmitter();
+      store.set("notes", "vfs.read", false);
+      const ledger = new PermissionLedger({
+        isSystemApp: () => false,
+        hasFirstPartyDefaultGrant: (manifestId, permission) =>
+          manifestId === "notes" && permission === "vfs.read",
+        store,
+        events: emitter,
+      });
+
+      const decision = await ledger.request("notes", "vfs.read");
+
+      expect(decision).toEqual({
+        granted: false,
+        persisted: true,
+        reason: "cached",
+      });
+      expect(emitter.events.map((e) => e.channel)).toEqual(["permission.denied"]);
+    });
+
+    it("prompts when a first-party app requests an undeclared permission", async () => {
+      const store = makeStore();
+      const emitter = makeEmitter();
+      const ledger = new PermissionLedger({
+        isSystemApp: () => false,
+        hasFirstPartyDefaultGrant: (manifestId, permission) =>
+          manifestId === "notes" && permission === "vfs.read",
+        store,
+        events: emitter,
+        mintRequestId: () => "req-1",
+      });
+
+      const pending = ledger.request("notes", "vfs.write");
+      await Promise.resolve();
+
+      expect(emitter.events).toEqual([
+        {
+          channel: "permission.requested",
+          payload: {
+            requestId: "req-1",
+            manifestId: "notes",
+            permission: "vfs.write",
+            source: "app",
+          },
+        },
+      ]);
+
+      ledger.respond("req-1", { granted: false, persist: false });
+      await expect(pending).resolves.toMatchObject({ granted: false, reason: "user" });
+    });
+  });
+
   describe("fresh prompt + respond", () => {
     it("emits permission.requested, parks the promise, resolves on respond (persist)", async () => {
       const store = makeStore();

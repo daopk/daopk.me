@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, markRaw, type Component } from "vue";
 
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
-import type { AppManifest } from "~/types/app";
+import type { AppManifest, AppPermission } from "~/types/app";
 
 import { kernel } from "./index";
 
@@ -14,14 +14,22 @@ vi.mock("~/core/debug", () => ({
 
 const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
 
-function makeManifest(id: string, category: AppManifest["category"]): AppManifest {
-  return {
+function makeManifest(
+  id: string,
+  category: AppManifest["category"],
+  permissions?: readonly AppPermission[],
+): AppManifest {
+  const manifest: AppManifest = {
     id,
     name: id,
     icon: StubIcon,
     category,
     component: () => Promise.resolve({ default: StubIcon }),
   };
+  if (permissions !== undefined) {
+    manifest.permissions = [...permissions];
+  }
+  return manifest;
 }
 
 describe("kernel.notifications.enqueue permission gate (M3.5 contract)", () => {
@@ -94,6 +102,27 @@ describe("kernel.notifications.enqueue permission gate (M3.5 contract)", () => {
 
     expect(requests).toEqual([]);
     expect(typeof id).toBe("string");
+    stopReq();
+  });
+
+  it("first-party external app with declared notifications auto-grants without prompting", async () => {
+    kernel.apps.register(makeManifest("notes", "productivity", ["notifications.post"]), {
+      source: "external",
+    });
+
+    const requests: unknown[] = [];
+    const stopReq = kernel.events.on("permission.requested", (p) => {
+      requests.push(p);
+    });
+
+    const id = await kernel.notifications.enqueue(
+      { title: "first-party update" },
+      { manifestId: "notes" },
+    );
+
+    expect(requests).toEqual([]);
+    expect(typeof id).toBe("string");
+    expect(usePermissionStore().list({ manifestId: "notes" })).toEqual([]);
     stopReq();
   });
 

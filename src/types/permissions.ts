@@ -12,7 +12,13 @@ export interface PermissionRequest {
 export interface PermissionDecision {
   readonly granted: boolean;
   readonly persisted: boolean;
-  readonly reason: "user" | "user-remembered" | "cached" | "system-auto-grant" | "revoked";
+  readonly reason:
+    | "user"
+    | "user-remembered"
+    | "cached"
+    | "system-auto-grant"
+    | "first-party-default-grant"
+    | "revoked";
 }
 
 export interface PersistedPermissionDecision {

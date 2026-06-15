@@ -38,6 +38,7 @@ export interface PermissionLedgerEmitter {
 
 export interface PermissionLedgerDeps {
   isSystemApp(manifestId: string): boolean;
+  hasFirstPartyDefaultGrant?(manifestId: string, permission: AppPermission): boolean;
   store: PermissionLedgerStore;
   events: PermissionLedgerEmitter;
   mintRequestId?: () => string;
@@ -95,6 +96,19 @@ export class PermissionLedger {
         granted: cached.granted,
         persisted: true,
         reason: "cached",
+      };
+    }
+
+    if (this.deps.hasFirstPartyDefaultGrant?.(manifestId, permission) === true) {
+      this.deps.events.emit("permission.granted", {
+        manifestId,
+        permission,
+        persisted: false,
+      });
+      return {
+        granted: true,
+        persisted: false,
+        reason: "first-party-default-grant",
       };
     }
 

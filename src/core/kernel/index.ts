@@ -96,6 +96,8 @@ const telemetryInternal = new TelemetryBus({
 
 const permissionsInternal = new PermissionLedger({
   isSystemApp: (manifestId) => registryCatalog.isSystemApp(manifestId),
+  hasFirstPartyDefaultGrant: (manifestId, permission) =>
+    registryCatalog.hasFirstPartyDefaultGrant(manifestId, permission),
   store: {
     get: (manifestId, permission) => usePermissionStore(requirePinia()).get(manifestId, permission),
     set: (manifestId, permission, granted) =>
