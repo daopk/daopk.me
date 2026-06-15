@@ -35,9 +35,12 @@ withDefaults(defineProps<ButtonProps>(), {
       disabled && !loading && 'ds-button--disabled',
     ]"
   >
-    <component :is="iconStart" v-if="iconStart" class="ds-button__icon" aria-hidden="true" />
+    <span v-if="loading" class="ds-button__spinner" role="status" aria-label="Loading">
+      <span class="ds-button__spinner-ring" aria-hidden="true" />
+    </span>
+    <component :is="iconStart" v-else-if="iconStart" class="ds-button__icon" aria-hidden="true" />
     <slot />
-    <component :is="iconEnd" v-if="iconEnd" class="ds-button__icon" aria-hidden="true" />
+    <component :is="iconEnd" v-if="iconEnd && !loading" class="ds-button__icon" aria-hidden="true" />
   </button>
 </template>
 
@@ -64,6 +67,24 @@ withDefaults(defineProps<ButtonProps>(), {
 .ds-button__icon {
   block-size: 14px;
   inline-size: 14px;
+}
+
+.ds-button__spinner {
+  block-size: 14px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  inline-size: 14px;
+}
+
+.ds-button__spinner-ring {
+  animation: ds-button-spinner-spin 0.7s linear infinite;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-block-start-color: currentColor;
+  border-radius: var(--radius-full);
+  border-style: solid;
+  border-width: 2px;
+  block-size: 100%;
+  inline-size: 100%;
 }
 
 .ds-button--sm {
@@ -128,7 +149,7 @@ withDefaults(defineProps<ButtonProps>(), {
 
 .ds-button--loading {
   cursor: progress;
-  opacity: 0.6;
+  opacity: 0.86;
 }
 
 .ds-button--disabled {
@@ -139,6 +160,16 @@ withDefaults(defineProps<ButtonProps>(), {
 @media (prefers-reduced-motion: reduce) {
   .ds-button {
     transition: none;
+  }
+
+  .ds-button__spinner-ring {
+    animation-duration: 1.4s;
+  }
+}
+
+@keyframes ds-button-spinner-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

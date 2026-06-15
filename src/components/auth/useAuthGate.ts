@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 import everestDesktopUrl from "~/assets/wallpapers/everest-desktop.webp";
 import everestPhoneUrl from "~/assets/wallpapers/everest-phone.webp";
@@ -107,6 +107,23 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     return "Passkey operation failed.";
   }
 
+  async function waitForBusyFeedback(): Promise<void> {
+    await nextTick();
+
+    if (import.meta.env.MODE === "test") {
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      if (typeof window.requestAnimationFrame !== "function") {
+        window.setTimeout(resolve, 0);
+        return;
+      }
+
+      window.requestAnimationFrame(() => resolve());
+    });
+  }
+
   async function importGlobalDataIfNeeded(
     profileId: string,
     encryptionKey?: CryptoKey,
@@ -148,11 +165,13 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     busy.value = true;
     errorMessage.value = "";
     status.value = "Creating profile";
+    await waitForBusyFeedback();
 
     const wasFirstProfile = profiles.value.length === 0;
     const profileId = store.createId();
     const name = displayName.value.trim() || "Local Profile";
     let createdProfileId: string | null = null;
+    let authenticated = false;
 
     try {
       const created = await passkeys.createProfilePasskey({ profileId, displayName: name });
@@ -165,15 +184,18 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
       store.setLastActive(created.profile.id);
       setActiveProfileSession(created.session);
       onAuthenticated();
+      authenticated = true;
     } catch (error: unknown) {
       errorMessage.value = describeError(error);
     } finally {
-      busy.value = false;
-      status.value = "";
-      refreshProfiles();
-      if (createdProfileId && errorMessage.value) {
-        selectedProfileId.value = createdProfileId;
-        mode.value = "unlock";
+      if (!authenticated) {
+        busy.value = false;
+        status.value = "";
+        refreshProfiles();
+        if (createdProfileId && errorMessage.value) {
+          selectedProfileId.value = createdProfileId;
+          mode.value = "unlock";
+        }
       }
     }
   }
@@ -192,11 +214,13 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     busy.value = true;
     errorMessage.value = "";
     status.value = "Creating guest";
+    await waitForBusyFeedback();
 
     const wasFirstProfile = profiles.value.length === 0;
     const name = rawName.trim() || "Guest";
     const profile = createGuestRecord(name);
     let createdProfileId: string | null = null;
+    let authenticated = false;
 
     try {
       store.add(profile);
@@ -205,7 +229,7 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
         throw new Error("Guest account could not be created.");
       }
       if (storedGuest.id !== profile.id) {
-        await openGuestProfile(storedGuest);
+        authenticated = await openGuestProfile(storedGuest);
         return;
       }
       createdProfileId = storedGuest.id;
@@ -216,15 +240,18 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
       store.setLastActive(storedGuest.id);
       setActiveProfileSession(sessionForGuest(storedGuest));
       onAuthenticated();
+      authenticated = true;
     } catch (error: unknown) {
       errorMessage.value = describeError(error);
     } finally {
-      busy.value = false;
-      status.value = "";
-      refreshProfiles();
-      if (createdProfileId && errorMessage.value) {
-        selectedProfileId.value = createdProfileId;
-        mode.value = "unlock";
+      if (!authenticated) {
+        busy.value = false;
+        status.value = "";
+        refreshProfiles();
+        if (createdProfileId && errorMessage.value) {
+          selectedProfileId.value = createdProfileId;
+          mode.value = "unlock";
+        }
       }
     }
   }
@@ -272,38 +299,50 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     busy.value = true;
     errorMessage.value = "";
     status.value = "Unlocking";
+    await waitForBusyFeedback();
 
+    let authenticated = false;
     try {
       const session = await passkeys.unlockProfile(profile);
       await importGlobalDataIfNeeded(profile.id, session.encryptionKey);
       store.setLastActive(profile.id);
       setActiveProfileSession(session);
       onAuthenticated();
+      authenticated = true;
     } catch (error: unknown) {
       errorMessage.value = describeError(error);
     } finally {
-      busy.value = false;
-      status.value = "";
-      refreshProfiles();
+      if (!authenticated) {
+        busy.value = false;
+        status.value = "";
+        refreshProfiles();
+      }
     }
   }
 
-  async function openGuestProfile(profile: GuestProfileRecord): Promise<void> {
+  async function openGuestProfile(profile: GuestProfileRecord): Promise<boolean> {
     busy.value = true;
     errorMessage.value = "";
     status.value = "Opening guest";
+    await waitForBusyFeedback();
 
+    let authenticated = false;
     try {
       await importGlobalDataIfNeeded(profile.id);
       store.setLastActive(profile.id);
       setActiveProfileSession(sessionForGuest(profile));
       onAuthenticated();
+      authenticated = true;
+      return true;
     } catch (error: unknown) {
       errorMessage.value = describeError(error);
+      return false;
     } finally {
-      busy.value = false;
-      status.value = "";
-      refreshProfiles();
+      if (!authenticated) {
+        busy.value = false;
+        status.value = "";
+        refreshProfiles();
+      }
     }
   }
 

@@ -317,7 +317,15 @@ describe("AuthGate", () => {
 
     expect(wrapper.text()).toContain("Guest account");
 
-    await findButtonByText(wrapper, "Open guest")?.trigger("click");
+    const openGuestButton = findButtonByText(wrapper, "Open guest");
+    expect(openGuestButton).toBeDefined();
+
+    await openGuestButton!.trigger("click");
+    await nextTick();
+
+    expect(openGuestButton!.classes()).toContain("ds-button--loading");
+    expect((openGuestButton!.element as HTMLButtonElement).disabled).toBe(true);
+
     await flushPromises();
 
     expect(mocks.unlockProfile).not.toHaveBeenCalled();

@@ -69,6 +69,20 @@ describe("Button (M2b Phase 3 / Commit H)", () => {
     expect(clicks).toBe(0);
   });
 
+  it("renders a spinner instead of decorative icons while loading", () => {
+    const Star = { template: '<svg data-testid="icon-star"/>' };
+    const Arrow = { template: '<svg data-testid="icon-arrow"/>' };
+    const wrapper = mount(Button, {
+      props: { iconStart: Star, iconEnd: Arrow, loading: true },
+      slots: { default: "Save" },
+    });
+
+    expect(wrapper.find(".ds-button__spinner").exists()).toBe(true);
+    expect(wrapper.find("[data-testid='icon-star']").exists()).toBe(false);
+    expect(wrapper.find("[data-testid='icon-arrow']").exists()).toBe(false);
+    expect(wrapper.text()).toBe("Save");
+  });
+
   it("disabled sets disabled + the disabled modifier (without aria-busy)", () => {
     const wrapper = mount(Button, { props: { disabled: true } });
     expect(wrapper.attributes("aria-busy")).toBeUndefined();
