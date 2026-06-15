@@ -16,6 +16,7 @@ export function pwaPlugin(): PluginOption {
 
   return VitePWA({
     buildBase: "/",
+    scope: "/",
     devOptions: {
       enabled: false,
     },
