@@ -20,7 +20,7 @@
     "typecheck:test": "vue-tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage --pool=forks"
   },
   "dependencies": {
     "@iconify-icons/lucide": "^1.2.135",

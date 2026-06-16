@@ -21,6 +21,9 @@ export default mergeConfig(
     test: {
       globals: false,
       environment: "happy-dom",
+      // The suite is many small files; VM workers avoid most process/env
+      // startup overhead while preserving per-file isolation.
+      pool: "vmThreads",
       include: ["src/**/*.test.ts", "tests/**/*.test.ts", "apps/*/src/**/*.test.ts"],
       coverage: {
         provider: "v8",

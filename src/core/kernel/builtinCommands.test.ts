@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { buildBuiltinCommands, registerBuiltinCommands } from "./builtinCommands";
+import { CommandRegistry } from "./CommandRegistry";
 import type { CommandContext, CommandManifest } from "~/types/command";
 import type { Kernel } from "~/types/kernel";
 
@@ -82,6 +83,17 @@ function findCommand(kernel: Kernel, id: string): CommandManifest {
     throw new Error(`Built-in command not found: ${id}`);
   }
   return command;
+}
+
+function makeRegistryBackedKernel(): Kernel {
+  const registry = new CommandRegistry();
+
+  return {
+    commands: {
+      register: registry.register.bind(registry),
+      list: registry.list.bind(registry),
+    },
+  } as unknown as Kernel;
 }
 
 describe("builtinCommands — manifest catalog (M2a.2)", () => {
@@ -378,10 +390,9 @@ describe("registerBuiltinCommands — wiring (M2a.2)", () => {
   });
 });
 
-describe("kernel built-ins — integration via kernel.commands.list (M2a.2)", () => {
-  // visible via list() after init. We do NOT call init() here (theme manager
-  it("registerBuiltinCommands against the real kernel surfaces all ids in list()", async () => {
-    const { kernel } = await import("./index");
+describe("kernel built-ins — CommandRegistry integration (M2a.2)", () => {
+  it("registerBuiltinCommands surfaces all ids through a registry-backed command facade", () => {
+    const kernel = makeRegistryBackedKernel();
 
     const dispose = registerBuiltinCommands(kernel);
 

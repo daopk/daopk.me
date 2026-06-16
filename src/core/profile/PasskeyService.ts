@@ -2,6 +2,7 @@ import {
   base64UrlToBytes,
   bytesToBase64Url,
   concatBytes,
+  isArrayBuffer,
   randomBytes,
   toUint8Array,
   utf8Decode,
@@ -122,7 +123,7 @@ export class PasskeyService {
 
     const publicKey = response.getPublicKey?.();
     const publicKeyAlg = response.getPublicKeyAlgorithm?.();
-    if (!(publicKey instanceof ArrayBuffer) || typeof publicKeyAlg !== "number") {
+    if (!isArrayBuffer(publicKey) || typeof publicKeyAlg !== "number") {
       throw new ProfileAuthError(
         "UNSUPPORTED_KEY",
         "This browser cannot expose the new passkey public key.",
@@ -133,8 +134,7 @@ export class PasskeyService {
     const prfOutput = extensionResults.prf?.enabled
       ? extensionResults.prf.results?.first
       : undefined;
-    const encryptionKey =
-      prfOutput instanceof ArrayBuffer ? await importAesKey(prfOutput) : undefined;
+    const encryptionKey = isArrayBuffer(prfOutput) ? await importAesKey(prfOutput) : undefined;
     const encryption = encryptionKey ? "prf-aes-gcm-v1" : "none";
 
     const transports = (response.getTransports?.() ?? []).filter(
@@ -215,8 +215,7 @@ export class PasskeyService {
 
     const extensionResults = publicKeyCredential.getClientExtensionResults() as PrfResults;
     const prfOutput = extensionResults.prf?.results?.first;
-    const encryptionKey =
-      prfOutput instanceof ArrayBuffer ? await importAesKey(prfOutput) : undefined;
+    const encryptionKey = isArrayBuffer(prfOutput) ? await importAesKey(prfOutput) : undefined;
 
     if (needsPrf && !encryptionKey) {
       throw new ProfileAuthError(
@@ -269,7 +268,7 @@ function assertPublicKeyCredential(credential: Credential | null): PublicKeyCred
     credential === null ||
     credential.type !== "public-key" ||
     !("rawId" in credential) ||
-    !(credential.rawId instanceof ArrayBuffer)
+    !isArrayBuffer(credential.rawId)
   ) {
     throw new ProfileAuthError("INVALID_CREDENTIAL", "Expected a public key credential.");
   }
@@ -279,7 +278,7 @@ function assertPublicKeyCredential(credential: Credential | null): PublicKeyCred
 function assertAttestationResponse(
   response: AuthenticatorResponse,
 ): AuthenticatorAttestationResponse {
-  if (!("attestationObject" in response) || !(response.clientDataJSON instanceof ArrayBuffer)) {
+  if (!("attestationObject" in response) || !isArrayBuffer(response.clientDataJSON)) {
     throw new ProfileAuthError("INVALID_CREDENTIAL", "Expected an attestation response.");
   }
   return response as AuthenticatorAttestationResponse;
@@ -289,7 +288,7 @@ function assertAssertionResponse(response: AuthenticatorResponse): Authenticator
   if (
     !("authenticatorData" in response) ||
     !("signature" in response) ||
-    !(response.clientDataJSON instanceof ArrayBuffer)
+    !isArrayBuffer(response.clientDataJSON)
   ) {
     throw new ProfileAuthError("INVALID_CREDENTIAL", "Expected an assertion response.");
   }

@@ -10,9 +10,19 @@ const debugMock = vi.hoisted(() => ({
   debugWarn: vi.fn(),
 }));
 
+const mainThreadMock = vi.hoisted(() => ({
+  createMainThreadMarkdownRenderer: vi.fn(() => ({
+    ready: Promise.resolve(),
+    render: vi.fn(async (source: string) => ({ html: `<main>${source}</main>` })),
+    dispose: vi.fn(),
+  })),
+}));
+
 vi.mock("~/core/markdown/MarkdownWorkerAdapter", () => workerMock);
 
 vi.mock("~/core/debug", () => debugMock);
+
+vi.mock("~/core/markdown/MainThreadMarkdownRenderer", () => mainThreadMock);
 
 import { createMarkdownRenderer } from "~/core/markdown/createMarkdownRenderer";
 
@@ -54,8 +64,9 @@ describe("createMarkdownRenderer", () => {
 
     expect(workerRenderer.dispose).toHaveBeenCalledTimes(1);
     await expect(renderer.render("# Fallback")).resolves.toEqual({
-      html: expect.stringContaining("<h1>Fallback</h1>"),
+      html: "<main># Fallback</main>",
     });
+    expect(mainThreadMock.createMainThreadMarkdownRenderer).toHaveBeenCalledTimes(1);
     expect(debugMock.debugWarn).toHaveBeenCalledWith(
       "[markdown]",
       "worker renderer unavailable; falling back to main thread",
@@ -79,9 +90,10 @@ describe("createMarkdownRenderer", () => {
     const renderer = await createMarkdownRenderer();
 
     await expect(renderer.render("# Recovered")).resolves.toEqual({
-      html: expect.stringContaining("<h1>Recovered</h1>"),
+      html: "<main># Recovered</main>",
     });
     expect(workerRenderer.dispose).toHaveBeenCalledTimes(1);
+    expect(mainThreadMock.createMainThreadMarkdownRenderer).toHaveBeenCalledTimes(1);
     expect(debugMock.debugWarn).toHaveBeenCalledWith(
       "[markdown]",
       "worker render failed; falling back to main thread",
@@ -89,9 +101,10 @@ describe("createMarkdownRenderer", () => {
     );
 
     await expect(renderer.render("# Still fallback")).resolves.toEqual({
-      html: expect.stringContaining("<h1>Still fallback</h1>"),
+      html: "<main># Still fallback</main>",
     });
     expect(workerRenderer.render).toHaveBeenCalledTimes(1);
+    expect(mainThreadMock.createMainThreadMarkdownRenderer).toHaveBeenCalledTimes(1);
 
     renderer.dispose();
   });

@@ -52,10 +52,12 @@ function mountPager(props: Record<string, unknown> = {}): {
     },
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (scrollEl as any).scrollTo = (opts: { left: number }): void => {
-    scrollLeft = opts.left;
-  };
+  Object.defineProperty(scrollEl, "scrollTo", {
+    configurable: true,
+    value: (opts: { left: number }): void => {
+      scrollLeft = opts.left;
+    },
+  });
 
   return {
     wrapper,

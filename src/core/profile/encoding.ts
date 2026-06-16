@@ -1,5 +1,9 @@
 const TEXT_DECODER = new TextDecoder();
 
+export function isArrayBuffer(value: unknown): value is ArrayBuffer {
+  return Object.prototype.toString.call(value) === "[object ArrayBuffer]";
+}
+
 export function utf8Decode(bytes: BufferSource): string {
   return TEXT_DECODER.decode(bytes);
 }
@@ -11,10 +15,7 @@ export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
 }
 
 export function bytesToBase64Url(bytes: BufferSource): string {
-  const view =
-    bytes instanceof ArrayBuffer
-      ? new Uint8Array(bytes)
-      : new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const view = toUint8Array(bytes);
   let binary = "";
   for (const byte of view) {
     binary += String.fromCharCode(byte);
@@ -47,9 +48,11 @@ export function concatBytes(...chunks: Uint8Array[]): Uint8Array<ArrayBuffer> {
 }
 
 export function toUint8Array(value: BufferSource): Uint8Array<ArrayBuffer> {
-  if (value instanceof ArrayBuffer) {
+  if (isArrayBuffer(value)) {
     return new Uint8Array(value);
   }
 
-  return new Uint8Array(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength));
+  const out = new Uint8Array(new ArrayBuffer(value.byteLength));
+  out.set(new Uint8Array(value.buffer, value.byteOffset, value.byteLength));
+  return out;
 }
