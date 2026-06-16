@@ -12,7 +12,6 @@ export const FIRST_PARTY_APP_ID_LIST = [
   "calendar",
   "clock",
   "editor",
-  "html-in-canvas",
   "movies",
   "notes",
   "pdf-viewer",

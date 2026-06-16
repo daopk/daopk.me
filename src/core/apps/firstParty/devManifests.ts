@@ -10,8 +10,6 @@ import clockManifest from "../../../../apps/clock/app.manifest.json";
 import clockPackage from "../../../../apps/clock/package.json";
 import editorManifest from "../../../../apps/editor/app.manifest.json";
 import editorPackage from "../../../../apps/editor/package.json";
-import htmlInCanvasManifest from "../../../../apps/html-in-canvas/app.manifest.json";
-import htmlInCanvasPackage from "../../../../apps/html-in-canvas/package.json";
 import moviesManifest from "../../../../apps/movies/app.manifest.json";
 import moviesPackage from "../../../../apps/movies/package.json";
 import notesManifest from "../../../../apps/notes/app.manifest.json";
@@ -46,7 +44,6 @@ export const FIRST_PARTY_DEV_CATALOG_ENTRIES: readonly FirstPartyCatalogEntry[] 
   devEntry("calendar", calendarPackage.version, calendarManifest),
   devEntry("clock", clockPackage.version, clockManifest),
   devEntry("editor", editorPackage.version, editorManifest),
-  devEntry("html-in-canvas", htmlInCanvasPackage.version, htmlInCanvasManifest),
   devEntry("movies", moviesPackage.version, moviesManifest),
   devEntry("notes", notesPackage.version, notesManifest),
   devEntry("pdf-viewer", pdfViewerPackage.version, pdfViewerManifest),

@@ -14,15 +14,7 @@ describe("buildFirstPartyPreviewCatalog", () => {
     expect(catalog.version).toBe(1);
     expect(ids).toEqual([...ids].sort((a, b) => a.localeCompare(b)));
     expect(ids).not.toContain("_shared");
-    expect(catalog.apps.find((app) => app.id === "html-in-canvas")).toEqual(
-      expect.objectContaining({
-        id: "html-in-canvas",
-        version: "1.0.0",
-        build: 0,
-        entry: "/apps/html-in-canvas/1.0.0+0/html-in-canvas.js",
-        manifest: expect.objectContaining({ id: "html-in-canvas", name: "Canvas Demos" }),
-      }),
-    );
+    expect(ids).not.toContain("html-in-canvas");
 
     expect(catalog.apps.find((app) => app.id === "notes")).toEqual(
       expect.objectContaining({
