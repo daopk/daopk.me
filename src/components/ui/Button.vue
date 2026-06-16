@@ -40,7 +40,12 @@ withDefaults(defineProps<ButtonProps>(), {
     </span>
     <component :is="iconStart" v-else-if="iconStart" class="ds-button__icon" aria-hidden="true" />
     <slot />
-    <component :is="iconEnd" v-if="iconEnd && !loading" class="ds-button__icon" aria-hidden="true" />
+    <component
+      :is="iconEnd"
+      v-if="iconEnd && !loading"
+      class="ds-button__icon"
+      aria-hidden="true"
+    />
   </button>
 </template>
 
