@@ -37,7 +37,6 @@ function devEntry(id: string, version: string, manifest: unknown): FirstPartyCat
  * Dev-only catalog data. The app packages own the manifest JSON; the host
  * imports it only in dev so HMR can register apps without fetching R2.
  */
-// fallow-ignore-next-line unused-export
 export const FIRST_PARTY_DEV_CATALOG_ENTRIES: readonly FirstPartyCatalogEntry[] = [
   devEntry("baby-touch", babyTouchPackage.version, babyTouchManifest),
   devEntry("blog", blogPackage.version, blogManifest),

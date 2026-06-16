@@ -53,7 +53,6 @@ const SEARCH_URL = "https://www.google.com/search?igu=1";
 
 export const BROWSER_HOME_URL = "https://www.google.com/webhp?igu=1";
 
-// fallow-ignore-next-line unused-export
 export const BROWSER_QUICK_LINKS: readonly BrowserQuickLink[] = [
   { label: "Google", url: BROWSER_HOME_URL, iconLabel: "G" },
   { label: "Wikipedia", url: "https://www.wikipedia.org/", iconLabel: "W" },

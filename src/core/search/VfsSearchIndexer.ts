@@ -66,7 +66,6 @@ export class VfsSearchIndexer {
     this.snippetChars = options.snippetChars ?? DEFAULT_SNIPPET_CHARS;
   }
 
-  // fallow-ignore-next-line unused-class-member
   async crawl(): Promise<SearchIndexedDoc[]> {
     const docs: SearchIndexedDoc[] = [];
 
@@ -103,7 +102,6 @@ export class VfsSearchIndexer {
     return docs.sort((a, b) => (a.rawId < b.rawId ? -1 : a.rawId > b.rawId ? 1 : 0));
   }
 
-  // fallow-ignore-next-line unused-class-member
   subscribe(sink: VfsSearchIndexSink): () => void {
     return this.events.on("vfs.changed", (payload) => {
       void this.handleChange(payload, sink);

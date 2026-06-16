@@ -5,7 +5,6 @@ import type { ShellId } from "~/types/shell";
 let stickyConsumed = false;
 let stickyBootstrap: ShellId | undefined;
 
-// fallow-ignore-next-line unused-export
 export function parseShellQueryOverride(search: string): ShellId | undefined {
   const trimmed = search.trim();
   if (!trimmed) {

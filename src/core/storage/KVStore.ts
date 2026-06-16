@@ -260,7 +260,6 @@ export class KVStore<T = unknown> {
     this.writeRaw(physical, raw, options);
   }
 
-  // fallow-ignore-next-line unused-class-member
   remove(key: string): void {
     this.removeRaw(this.scopedKey(key));
   }

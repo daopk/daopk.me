@@ -60,7 +60,6 @@ export function episodeMetaLabel(episode: MovieSeasonEpisode, t?: MoviesTranslat
     .join(" · ");
 }
 
-// fallow-ignore-next-line unused-export
 export function personMetaLabel(person: MoviePersonCredit, t?: MoviesTranslate): string {
   return [person.role, episodeCountLabel(person.episodeCount, t)].filter(Boolean).join(" · ");
 }

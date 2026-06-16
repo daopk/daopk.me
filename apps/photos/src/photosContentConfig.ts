@@ -52,13 +52,10 @@ export function photosIndexUrl(base: string = PHOTOS_CONTENT_BASE): string {
  * Thumbnail widths the API is allowed to generate. The grid renders the 1x size
  * and lets the browser pick the 2x variant on high-density displays.
  */
-// fallow-ignore-next-line unused-export
 export const PHOTO_THUMB_WIDTH = 400;
-// fallow-ignore-next-line unused-export
 export const PHOTO_THUMB_WIDTH_2X = 800;
 
 /** Public URL for a width-constrained variant the API resizes + caches. */
-// fallow-ignore-next-line unused-export
 export function photoThumbUrl(
   key: string,
   width: number,
