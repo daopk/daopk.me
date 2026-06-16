@@ -40,10 +40,6 @@ export class DesktopContextMenuRegistry {
     return this.slots.delete(id);
   }
 
-  has(id: string): boolean {
-    return this.slots.has(id);
-  }
-
   get(id: string): DesktopContextMenuItemManifest | undefined {
     return this.slots.get(id)?.manifest;
   }
@@ -88,10 +84,6 @@ export class DesktopRendererRegistry {
 
   unregister(id: string): boolean {
     return this.slots.delete(id);
-  }
-
-  has(id: string): boolean {
-    return this.slots.has(id);
   }
 
   get(id: string): DesktopRendererManifest | undefined {

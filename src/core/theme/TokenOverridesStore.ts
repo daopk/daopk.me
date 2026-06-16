@@ -10,7 +10,7 @@ import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
 
 const PERSIST_DEBOUNCE_MS = 250;
 
-export interface TokenOverridesHydrateHooks {
+interface TokenOverridesHydrateHooks {
   onTokensChanged?: (changedKeys: readonly string[]) => void;
   /** Cross-tab `storage` event — kernel emits `tokens.synced` downstream. */
   onStorageSynced?: () => void;

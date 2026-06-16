@@ -4,13 +4,7 @@ import type { MarkdownPreviewRequest, MarkdownRenderResult } from "~/core/markdo
 export type { MarkdownPreviewRequest, MarkdownRenderResult } from "~/core/markdown/MarkdownTypes";
 export {
   createMarkdownProcessor,
-  hasFencedCode,
-  markdownSanitizeSchema,
-  normalizeCodeLanguage,
   readFencedCodeLanguages,
-  rehypeNormalizeCodeLang,
-  rehypeSafeUrls,
-  remarkPreviewDirectives,
   sanitizeMarkdownUrl,
 } from "~/core/markdown/MarkdownProcessor";
 

@@ -54,7 +54,7 @@ export function canUseSearchWorker(): boolean {
   return typeof Worker !== "undefined";
 }
 
-export function createDefaultSearchWorkerClient(): SearchWorkerClient {
+function createDefaultSearchWorkerClient(): SearchWorkerClient {
   const worker = new Worker(new URL("../../workers/search.worker.ts", import.meta.url), {
     name: "daopk-search-index",
     type: "module",

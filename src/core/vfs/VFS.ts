@@ -79,6 +79,7 @@ export class VFS {
     return true;
   }
 
+  // fallow-ignore-next-line unused-class-member
   mounts(): readonly VfsMount[] {
     return this.mountTable.slice();
   }
@@ -165,6 +166,7 @@ export class VFS {
     await resolved.mount.adapter.remove(resolved.adapterPath, options);
   }
 
+  // fallow-ignore-next-line unused-class-member
   dispose(): void {
     for (const mount of this.mountTable) {
       mount.adapter.dispose?.();

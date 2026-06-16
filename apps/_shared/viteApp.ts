@@ -18,7 +18,7 @@ import { defineConfig, type Plugin, type UserConfig } from "vite";
  */
 
 /** Bare specifiers resolved to the host at runtime via the import map. */
-export const HOST_RUNTIME_EXTERNALS = [
+const HOST_RUNTIME_EXTERNALS = [
   "vue",
   "@daopk/sdk",
   "@daopk/kit",

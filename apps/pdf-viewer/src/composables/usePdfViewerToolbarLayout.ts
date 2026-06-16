@@ -10,7 +10,7 @@ import {
   type WatchSource,
 } from "vue";
 
-export const PDF_VIEWER_TOOLBAR_ACTION_IDS = ["open", "zoom", "fit", "rotate", "download"] as const;
+const PDF_VIEWER_TOOLBAR_ACTION_IDS = ["open", "zoom", "fit", "rotate", "download"] as const;
 
 export type PdfViewerToolbarActionId = (typeof PDF_VIEWER_TOOLBAR_ACTION_IDS)[number];
 

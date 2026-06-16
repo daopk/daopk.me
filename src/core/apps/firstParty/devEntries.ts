@@ -12,6 +12,7 @@ import type { FirstPartyModuleLoader } from "./registerFirstPartyApps";
  * out of the production shell bundle — matching the `_kit-gallery` dev pattern
  * in `src/main.ts`.
  */
+// fallow-ignore-next-line unused-export
 export const FIRST_PARTY_DEV_ENTRIES: Record<string, FirstPartyModuleLoader> = {
   "baby-touch": () => import("@daopk-app/baby-touch"),
   notes: () => import("@daopk-app/notes"),

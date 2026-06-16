@@ -79,7 +79,7 @@ export type MoviesDeepLink =
     }
   | { readonly name: "person"; readonly slug?: string; readonly tmdbId: number };
 
-export function normalizeMoviesListQuery(query: MoviesListQuery): MoviesListQuery {
+function normalizeMoviesListQuery(query: MoviesListQuery): MoviesListQuery {
   return {
     ...query,
     limit: query.limit ?? DEFAULT_MOVIES_LIST_LIMIT,

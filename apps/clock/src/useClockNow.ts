@@ -36,7 +36,7 @@ export function toLocalIsoSecond(date: Date): string {
   )}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
 }
 
-export function formatClockMinute(date: Date): string {
+function formatClockMinute(date: Date): string {
   return clockFormatter.format(date);
 }
 
@@ -44,7 +44,7 @@ export function formatClockSecond(date: Date): string {
   return clockWithSecondsFormatter.format(date);
 }
 
-export function formatClockDate(date: Date): string {
+function formatClockDate(date: Date): string {
   return dateFormatter.format(date);
 }
 

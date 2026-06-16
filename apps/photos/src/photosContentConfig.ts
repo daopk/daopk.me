@@ -23,7 +23,7 @@ function isAbsoluteUrl(value: string): boolean {
  * API enumerates that bucket and serves both the generated index and the image
  * bytes under `/public/photos/*`.
  */
-export const PHOTOS_INDEX_FILENAME = "index.json";
+const PHOTOS_INDEX_FILENAME = "index.json";
 
 /** Public API namespace mapped to the R2 photos bucket. */
 export const PHOTOS_CONTENT_BASE = publicApiUrl("/public/photos");
@@ -52,10 +52,13 @@ export function photosIndexUrl(base: string = PHOTOS_CONTENT_BASE): string {
  * Thumbnail widths the API is allowed to generate. The grid renders the 1x size
  * and lets the browser pick the 2x variant on high-density displays.
  */
+// fallow-ignore-next-line unused-export
 export const PHOTO_THUMB_WIDTH = 400;
+// fallow-ignore-next-line unused-export
 export const PHOTO_THUMB_WIDTH_2X = 800;
 
 /** Public URL for a width-constrained variant the API resizes + caches. */
+// fallow-ignore-next-line unused-export
 export function photoThumbUrl(
   key: string,
   width: number,

@@ -66,7 +66,7 @@ export function searchDocId(kind: SearchKind, id: string): string {
   return `${kind}:${id}`;
 }
 
-export function vfsSearchDocId(path: string): string {
+function vfsSearchDocId(path: string): string {
   return searchDocId("vfs", path);
 }
 

@@ -53,7 +53,7 @@ function coerceState(candidate: unknown): SpotlightState {
   return { entries: cleaned.slice(0, SPOTLIGHT_RECENTS_CAP) };
 }
 
-export interface SpotlightRecentsHydrateHooks {
+interface SpotlightRecentsHydrateHooks {
   onChanged?: () => void;
   onStorageSynced?: () => void;
   storageNamespace?: string;

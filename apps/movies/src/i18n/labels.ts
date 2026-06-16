@@ -3,7 +3,6 @@ import type { TranslationParams } from "@daopk/sdk";
 import type {
   MoviesFilterCountry,
   MoviesFilterGenre,
-  MoviesFilterSortOption,
   MoviesListKind,
   MoviesListPeriod,
   MoviesListQuery,
@@ -152,10 +151,6 @@ export function sortLabel(sort: MoviesListSort, t?: OptionalTranslate): string {
   return moviesText(t, SORT_LABEL_KEYS[sort], SORT_FALLBACKS[sort]);
 }
 
-export function sortOptionLabel(option: MoviesFilterSortOption, t?: OptionalTranslate): string {
-  return sortLabel(option.value, t);
-}
-
 export function catalogMediaOptions(t?: OptionalTranslate): readonly {
   readonly label: string;
   readonly value: MoviesSearchMedia;
@@ -178,13 +173,13 @@ export function searchMediaTabs(t?: OptionalTranslate): readonly {
   ];
 }
 
-export function periodLabel(period: MoviesListPeriod, t?: OptionalTranslate): string {
+function periodLabel(period: MoviesListPeriod, t?: OptionalTranslate): string {
   return period === "day"
     ? moviesText(t, "movies.period.day", "Day")
     : moviesText(t, "movies.period.week", "Week");
 }
 
-export function listKindLabel(kind: MoviesListKind, t?: OptionalTranslate): string {
+function listKindLabel(kind: MoviesListKind, t?: OptionalTranslate): string {
   return kind === "trending-tv"
     ? moviesText(t, "movies.kind.trendingTv", "Trending TV")
     : moviesText(t, "movies.kind.trendingMovie", "Trending Movies");

@@ -18,7 +18,7 @@ import {
   type VfsPath,
 } from "~/core/vfs/path";
 
-export interface RemoteHTTPIndexEntry {
+interface RemoteHTTPIndexEntry {
   readonly key: string;
   readonly kind?: "file" | "directory";
   readonly url?: string;

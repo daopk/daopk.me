@@ -66,10 +66,6 @@ export class ProcessTable {
     this.singletonByManifestId.set(manifestId, handle);
   }
 
-  unregisterSingletonBridge(manifestId: string): void {
-    this.singletonByManifestId.delete(manifestId);
-  }
-
   getSingletonFromManifest(manifestId: string): AppHandle | undefined {
     const handle = this.singletonByManifestId.get(manifestId);
     const record = handle ? this.processes.get(handle.id) : undefined;

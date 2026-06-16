@@ -19,10 +19,25 @@
     // Shared app build helpers are imported by app Vite configs but are not a
     // workspace package; this also silences Fallow's workspace diagnostic.
     "apps/_shared",
-    // Loaded from src/assets/scss/base.scss via Sass meta.load-css("reset").
+    // Loaded from src/assets/scss/base.scss via Sass meta.load-css/@forward.
     "src/assets/scss/_reset.scss",
+    "src/assets/scss/_tokens.scss",
+    "src/assets/scss/base/**/*.scss",
+    "src/assets/scss/tokens/**/*.scss",
+    "src/assets/scss/utilities/**/*.scss",
+    "src/assets/scss/vendor/**/*.scss",
     // Preserve the old Knip behavior until app Sass tracing is re-verified.
     "apps/*/src/styles/**/*.scss",
+  ],
+
+  "usedClassMembers": [
+    // Adapter and facade classes satisfy structural contracts; consumers often
+    // call these through interface-typed values.
+    { "implements": "VfsAdapter", "members": ["readonly", "stat", "walk", "mkdir", "remove"] },
+    { "implements": "KernelEventsFacade", "members": ["once"] },
+    // Structured error codes are part of the public error shape.
+    { "extends": "Error", "members": ["code"] },
+    { "extends": "JobAbortedError", "members": ["code"] },
   ],
 
   "ignoreDependencies": [

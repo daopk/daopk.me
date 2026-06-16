@@ -66,7 +66,7 @@ export function currentProfileSessionSnapshot(): ProfileSessionSnapshot {
   return snapshotOf(session);
 }
 
-export function requireActiveProfileSession(): ActiveProfileSession {
+function requireActiveProfileSession(): ActiveProfileSession {
   const session = activeSession.value;
   if (!session) {
     throw new Error("Kernel.init() requires an unlocked local profile.");

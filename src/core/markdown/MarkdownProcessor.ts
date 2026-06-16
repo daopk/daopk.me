@@ -66,7 +66,7 @@ const CODE_LANGUAGE_ALIASES = new Map([
   ["ts", "typescript"],
 ]);
 
-export const markdownSanitizeSchema: SanitizeSchema = {
+const markdownSanitizeSchema: SanitizeSchema = {
   allowComments: false,
   allowDoctypes: false,
   ancestors: {
@@ -180,7 +180,7 @@ export function readFencedCodeLanguages(source: string): string[] {
   return [...languages].filter((language) => language !== "text");
 }
 
-export function rehypeSafeUrls() {
+function rehypeSafeUrls() {
   return (tree: HastNode): void => {
     visitElements(tree, (node) => {
       if (node.tagName === "a") {
@@ -192,7 +192,7 @@ export function rehypeSafeUrls() {
   };
 }
 
-export function rehypeNormalizeCodeLang() {
+function rehypeNormalizeCodeLang() {
   return (tree: HastNode): void => {
     visitElements(tree, (node) => {
       if (node.tagName !== "code") {
@@ -214,7 +214,7 @@ export function rehypeNormalizeCodeLang() {
   };
 }
 
-export function remarkPreviewDirectives(previews: MarkdownPreviewRequest[]) {
+function remarkPreviewDirectives(previews: MarkdownPreviewRequest[]) {
   return (tree: unknown): void => {
     visitMdast(tree as MdastNode, (node) => {
       if (node.type !== "leafDirective" || node.name !== "preview") {
@@ -266,7 +266,7 @@ export function createMarkdownProcessor(options: MarkdownProcessorOptions = {}) 
   return processor.use(rehypeStringify);
 }
 
-export function normalizeCodeLanguage(language: string): string {
+function normalizeCodeLanguage(language: string): string {
   const normalized = language.trim().toLowerCase();
   const alias = CODE_LANGUAGE_ALIASES.get(normalized) ?? normalized;
 

@@ -9,7 +9,6 @@ import {
 } from "./generated/fluentColor";
 
 export type { FluentColorIconName };
-export { BabyTouchAppIcon };
 
 function createFluentIcon(name: FluentColorIconName, componentName: string): Component {
   return createPaletteIcon(fluentColorIconData[name], componentName);
@@ -18,20 +17,20 @@ function createFluentIcon(name: FluentColorIconName, componentName: string): Com
 export const FLUENT_COLOR_ICON_NAMES = fluentColorIconNames;
 
 export const BlogAppIcon = createFluentIcon("document-text-24", "FluentBlogAppIcon");
-export const BrowserAppIcon = createFluentIcon("globe-24", "FluentBrowserAppIcon");
-export const CalendarAppIcon = createFluentIcon("calendar-32", "FluentCalendarAppIcon");
-export const ClockAppIcon = createFluentIcon("clock-32", "FluentClockAppIcon");
+const BrowserAppIcon = createFluentIcon("globe-24", "FluentBrowserAppIcon");
+const CalendarAppIcon = createFluentIcon("calendar-32", "FluentCalendarAppIcon");
+const ClockAppIcon = createFluentIcon("clock-32", "FluentClockAppIcon");
 export const CloudFolderIcon = createFluentIcon("cloud-24", "FluentCloudFolderIcon");
 export const FinderAppIcon = createFluentIcon("document-folder-24", "FluentFinderAppIcon");
 export const EditorAppIcon = createFluentIcon("edit-32", "FluentEditorAppIcon");
 export const NotesAppIcon = createFluentIcon("notebook-32", "FluentNotesAppIcon");
-export const PhotosAppIcon = createFluentIcon("image-24", "FluentPhotosAppIcon");
+const PhotosAppIcon = createFluentIcon("image-24", "FluentPhotosAppIcon");
 export const PdfViewerAppIcon = createFluentIcon("document-32", "FluentPdfViewerAppIcon");
 export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminalAppIcon");
 export const SettingsAppIcon = createFluentIcon("settings-32", "FluentSettingsAppIcon");
 export const TemplateAppIcon = createFluentIcon("apps-32", "FluentTemplateAppIcon");
 export const AppStoreAppIcon = createFluentIcon("apps-list-detail-24", "FluentAppStoreAppIcon");
-export const MoviesAppIcon = createPaletteIcon(
+const MoviesAppIcon = createPaletteIcon(
   {
     width: 32,
     height: 32,
@@ -39,7 +38,7 @@ export const MoviesAppIcon = createPaletteIcon(
   },
   "FluentMoviesAppIcon",
 );
-export const YoutubePlayerAppIcon = createPaletteIcon(
+const YoutubePlayerAppIcon = createPaletteIcon(
   {
     width: 32,
     height: 32,

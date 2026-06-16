@@ -12,10 +12,6 @@ export * from "~/core/storage/index";
 export * from "~/core/telemetry/index";
 export * from "~/core/theme/index";
 
-// Intentionally not exported from the public barrel yet:
-
 export function bootstrapKernel(): Kernel {
   return kernelSingleton;
 }
-
-export { kernelSingleton as kernel };

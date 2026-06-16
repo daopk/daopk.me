@@ -19,7 +19,7 @@ export interface WidgetGridRect {
   h: number;
 }
 
-export type WidgetScopedEnabledState = Record<WidgetShellScope, Record<string, boolean>>;
+type WidgetScopedEnabledState = Record<WidgetShellScope, Record<string, boolean>>;
 
 interface WidgetPlacementState {
   placements: Record<string, WidgetPlacement>;
@@ -31,7 +31,7 @@ interface WidgetPlacementCoerceResult {
   migrated: boolean;
 }
 
-export interface WidgetPlacementHydrateOptions {
+interface WidgetPlacementHydrateOptions {
   storageNamespace?: string;
 }
 

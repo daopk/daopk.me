@@ -8,7 +8,7 @@ import { formatMonthLabel, weekdayLabelsForWeekStart } from "../utils/calendarLa
 import type { UseCalendarBindings } from "../useCalendar";
 import type { CalendarSettingsBindings } from "../useCalendarSettings";
 
-export type CalendarPane = "calendar" | "settings";
+type CalendarPane = "calendar" | "settings";
 
 interface AppSettingsRequest {
   readonly manifestId: string;

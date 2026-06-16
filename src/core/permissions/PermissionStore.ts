@@ -15,7 +15,7 @@ interface PermissionPersistedState {
   decisions: PersistedPermissionState;
 }
 
-export interface PermissionStoreHydrateOptions {
+interface PermissionStoreHydrateOptions {
   storageNamespace?: string;
 }
 

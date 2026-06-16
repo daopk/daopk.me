@@ -1,7 +1,5 @@
 import type { Kernel } from "~/types/kernel";
 
-export type { BootStatus } from "~/types/kernel";
-
 export interface BootPhase {
   readonly id: string;
   readonly label: string;

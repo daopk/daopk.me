@@ -4,20 +4,10 @@ import type {
   AppSettingsManifest,
   WindowDefaults,
 } from "~/types/app";
-import type { AppPreviewProvider, AppPreviewSurface } from "~/types/preview";
+import type { AppPreviewSurface } from "~/types/preview";
 import type { ShellId } from "~/types/shell";
-import type {
-  DesktopContextMenuItemManifest,
-  DesktopContextMenuSurface,
-  DesktopRendererManifest,
-  DesktopRendererSurface,
-} from "~/types/desktop";
-import type {
-  WidgetDefaultPlacement,
-  WidgetManifest,
-  WidgetSize,
-  WidgetSurface,
-} from "~/types/widget";
+import type { DesktopContextMenuSurface, DesktopRendererSurface } from "~/types/desktop";
+import type { WidgetDefaultPlacement, WidgetSize, WidgetSurface } from "~/types/widget";
 
 import type { FirstPartyIconKey } from "./iconResolver";
 import type { FirstPartyPreviewMatcherKey } from "./previewMatchers";
@@ -111,29 +101,3 @@ export interface FirstPartyCatalogEntry {
 export interface FirstPartyCatalog {
   readonly apps: readonly FirstPartyCatalogEntry[];
 }
-
-export type FirstPartyRuntimeWidgetDescriptor = Omit<
-  FirstPartyCatalogWidgetDescriptor,
-  "exportName" | "icon"
-> &
-  Pick<WidgetManifest, "component"> & {
-    readonly icon?: WidgetManifest["icon"];
-  };
-
-export type FirstPartyRuntimePreviewDescriptor = Omit<
-  FirstPartyCatalogPreviewDescriptor,
-  "exportName" | "match"
-> &
-  Pick<AppPreviewProvider, "component" | "match">;
-
-export type FirstPartyRuntimeDesktopContextMenuDescriptor = Omit<
-  FirstPartyCatalogDesktopContextMenuDescriptor,
-  "exportName"
-> &
-  Pick<DesktopContextMenuItemManifest, "action">;
-
-export type FirstPartyRuntimeDesktopRendererDescriptor = Omit<
-  FirstPartyCatalogDesktopRendererDescriptor,
-  "exportName"
-> &
-  Pick<DesktopRendererManifest, "component">;

@@ -70,7 +70,7 @@ export function toRpcError(error: unknown): RpcSerializedError {
   };
 }
 
-export function fromRpcError(serialized: RpcSerializedError): RpcRemoteError {
+function fromRpcError(serialized: RpcSerializedError): RpcRemoteError {
   return new RpcRemoteError(serialized);
 }
 

@@ -2,9 +2,8 @@ import { browserPreferredLocale, type SupportedLocale } from "@daopk/sdk";
 
 import { movieSlugFromText } from "./utils/movieSlug";
 
-export const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
+const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
-export type MoviesViewName = "home" | "list" | "detail" | "episode" | "person";
 export type MovieMediaType = "movie" | "tv";
 export type MoviesSearchMedia = "all" | MovieMediaType;
 export type MoviesListPeriod = "day" | "week";
@@ -239,7 +238,7 @@ const STATIC_FILTER_SORT_OPTIONS: readonly MoviesFilterSortOption[] = [
   { label: "Top Rated", value: "top-rated" },
 ];
 
-export const STATIC_MOVIES_FILTERS: Readonly<Record<MovieMediaType, MoviesFiltersResult>> = {
+const STATIC_MOVIES_FILTERS: Readonly<Record<MovieMediaType, MoviesFiltersResult>> = {
   movie: {
     countries: STATIC_FILTER_COUNTRIES,
     genres: [
@@ -398,17 +397,6 @@ export const HOME_DISCOVERY_GROUPS: readonly MoviesRowGroupConfig[] = [
     title: "Genres",
   },
 ];
-
-export const LIST_KIND_LABELS: Record<MoviesListKind, string> = {
-  "trending-movie": "Trending Movies",
-  "trending-tv": "Trending TV",
-};
-
-export const SEARCH_MEDIA_LABELS: Record<MoviesSearchMedia, string> = {
-  all: "All",
-  movie: "Movies",
-  tv: "TV",
-};
 
 const DEFAULT_PAGE = 1;
 export const DEFAULT_MOVIES_LIST_LIMIT = 24;
@@ -696,7 +684,7 @@ export function tmdbImageUrl(value: unknown, size = "w500"): string {
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 }
 
-export function movieSummaryFromEntry(entry: unknown): MovieSummary | null {
+function movieSummaryFromEntry(entry: unknown): MovieSummary | null {
   if (!isRecord(entry)) {
     return null;
   }
@@ -943,15 +931,6 @@ async function fetchJson(url: string, options: { signal?: AbortSignal } = {}): P
   return response.json();
 }
 
-export async function fetchLatestMovies(
-  options: { page?: number; limit?: number; signal?: AbortSignal } = {},
-): Promise<MoviesListResult> {
-  return fetchMoviesList(
-    { kind: "trending-movie", limit: options.limit, page: options.page, period: "week" },
-    { signal: options.signal },
-  );
-}
-
 export async function fetchMoviesList(
   query: MoviesListQuery,
   options: { signal?: AbortSignal } = {},
@@ -1118,35 +1097,6 @@ export async function fetchMovieEpisode(
     throw new Error("Movie episode response was not usable.");
   }
   return episode;
-}
-
-export function listTitleForQuery(query: MoviesListQuery): string {
-  const keyword = query.keyword?.trim();
-  if (keyword !== undefined && keyword.length > 0) {
-    const media = query.media ?? "all";
-    return media === "all"
-      ? `Search: ${keyword}`
-      : `Search ${SEARCH_MEDIA_LABELS[media]}: ${keyword}`;
-  }
-  if (query.kind !== undefined) {
-    const period = periodLabelForQuery(query);
-    return period.length > 0
-      ? `${LIST_KIND_LABELS[query.kind]} · ${period}`
-      : LIST_KIND_LABELS[query.kind];
-  }
-  const title = query.media === "all" ? "All Titles" : query.media === "tv" ? "TV Shows" : "Movies";
-  const filters = [query.genreName, query.countryName ?? query.country]
-    .map((value) => value?.trim() ?? "")
-    .filter((value) => value.length > 0);
-  return filters.length > 0 ? `${title} · ${filters.join(" · ")}` : title;
-}
-
-function periodLabelForQuery(query: MoviesListQuery): string {
-  if (query.kind === "trending-movie" || query.kind === "trending-tv") {
-    return query.period === "day" ? "Day" : "Week";
-  }
-
-  return "";
 }
 
 function publicApiSearchUrl(pathname: string): URL {

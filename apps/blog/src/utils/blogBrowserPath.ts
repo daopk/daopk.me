@@ -1,6 +1,6 @@
 import { isBlogPostSlug } from "@daopk/content";
 
-export function replaceBrowserPath(pathname: string): void {
+function replaceBrowserPath(pathname: string): void {
   if (typeof window === "undefined") {
     return;
   }

@@ -89,7 +89,7 @@ const DEFAULT_MIN_REPLACEMENT_AD_SEGMENTS = 2;
 const HASHED_SEGMENT_SEQUENCE_PATH_PATTERN = /^\/v\d+\/[a-f0-9]{16,}\/segment_\d+\.ts$/i;
 const CONVERTED_OVERLAY_SEGMENT_PATH_PATTERN = /(?:^|\/)convertv\d+\/[^/]+\.ts$/i;
 
-export const hashedSegmentSequenceReplacementRule: HlsAdReplacementRule = {
+const hashedSegmentSequenceReplacementRule: HlsAdReplacementRule = {
   id: "hashed-segment-sequence-replacement",
   matchesSegment: (segment, context) => {
     const pathname = segmentUriPathname(segment.uri, context.playlistUrl);
@@ -100,7 +100,7 @@ export const hashedSegmentSequenceReplacementRule: HlsAdReplacementRule = {
   minSegmentCount: DEFAULT_MIN_REPLACEMENT_AD_SEGMENTS,
 };
 
-export const convertedPathOverlayMarkerRule: HlsAdMarkerRule = {
+const convertedPathOverlayMarkerRule: HlsAdMarkerRule = {
   id: "converted-path-overlay",
   kind: "overlay",
   matchesSegment: (segment, context) => {

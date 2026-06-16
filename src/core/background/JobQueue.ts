@@ -114,14 +114,6 @@ export class JobQueue {
     return this.queued.length;
   }
 
-  get activeCount(): number {
-    return this.active.size;
-  }
-
-  get isDisposed(): boolean {
-    return this.disposed;
-  }
-
   enqueue<T>(runner: JobRunner<T>, options: JobOptions = {}): JobHandle<T> {
     const id = `job-${++this.nextId}`;
 

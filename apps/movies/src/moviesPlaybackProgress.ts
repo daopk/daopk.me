@@ -1,9 +1,9 @@
 import { activeProfileKvNamespace, KVStore } from "@daopk/sdk";
 
-export const MOVIES_PLAYBACK_PROGRESS_KV_NAMESPACE = "movies";
+const MOVIES_PLAYBACK_PROGRESS_KV_NAMESPACE = "movies";
 export const MOVIES_PLAYBACK_PROGRESS_KV_KEY = "playback-progress";
-export const MOVIES_PLAYBACK_PROGRESS_MIN_RESUME_SECONDS = 5;
-export const MOVIES_PLAYBACK_PROGRESS_NEAR_END_SECONDS = 15;
+const MOVIES_PLAYBACK_PROGRESS_MIN_RESUME_SECONDS = 5;
+const MOVIES_PLAYBACK_PROGRESS_NEAR_END_SECONDS = 15;
 
 const MOVIES_PLAYBACK_PROGRESS_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 180;
 const MOVIES_PLAYBACK_PROGRESS_MAX_ENTRIES = 200;
@@ -199,7 +199,7 @@ export function createMoviesPlaybackProgressStore(
   };
 }
 
-export function coerceMoviesPlaybackProgress(candidate: unknown, nowMs = Date.now()): CoerceResult {
+function coerceMoviesPlaybackProgress(candidate: unknown, nowMs = Date.now()): CoerceResult {
   if (!isRecord(candidate) || !isRecord(candidate.entries)) {
     return { changed: candidate !== null, state: EMPTY_STATE };
   }

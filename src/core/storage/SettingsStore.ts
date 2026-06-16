@@ -52,7 +52,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   mobileWallpaperActiveId: DEFAULT_WALLPAPER_ID,
 };
 
-export interface SettingsHydrateHooks {
+interface SettingsHydrateHooks {
   onSettingsChanged?: (key: keyof SettingsState) => void;
   /** Cross-tab KV notification — emits `settings.synced` downstream. */
 

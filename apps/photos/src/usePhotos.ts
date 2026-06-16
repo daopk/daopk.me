@@ -4,7 +4,7 @@ import { debugWarn } from "@daopk/sdk";
 
 import { photosContentUrl, photosIndexUrl } from "./photosContentConfig";
 
-export type PhotosStatus = "idle" | "loading" | "ready" | "empty" | "error";
+type PhotosStatus = "idle" | "loading" | "ready" | "empty" | "error";
 
 export interface Photo {
   readonly key: string;
@@ -46,7 +46,7 @@ export function photoFromEntry(entry: unknown): Photo | null {
 }
 
 /** Fetch + parse the gallery index served by the public API. */
-export async function fetchPhotosIndex(): Promise<readonly Photo[]> {
+async function fetchPhotosIndex(): Promise<readonly Photo[]> {
   const response = await fetch(photosIndexUrl(), { headers: { Accept: "application/json" } });
   if (!response.ok) {
     throw new Error(`Failed to load photos index (${response.status}).`);

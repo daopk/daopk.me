@@ -751,7 +751,7 @@ export function usePdfViewer({
   };
 }
 
-export function createPdfJsAdapter(): PdfViewerAdapter {
+function createPdfJsAdapter(): PdfViewerAdapter {
   return {
     async loadDocument(bytes: Uint8Array): Promise<PdfLoadingTaskLike> {
       const [pdfjs, worker] = await Promise.all([

@@ -6,7 +6,7 @@ export interface TelemetryBusOptions {
   now?: () => number;
 }
 
-export class NoopTelemetryTransport implements TelemetryTransport {
+class NoopTelemetryTransport implements TelemetryTransport {
   send(_envelope: TelemetryEnvelope): void {
     void _envelope;
   }

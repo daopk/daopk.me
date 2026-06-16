@@ -26,7 +26,7 @@ export function canUseMarkdownWorker(): boolean {
   return typeof Worker !== "undefined";
 }
 
-export function createDefaultMarkdownWorkerClient(): MarkdownWorkerClient {
+function createDefaultMarkdownWorkerClient(): MarkdownWorkerClient {
   const worker = new Worker(new URL("../../workers/markdown.worker.ts", import.meta.url), {
     name: "daopk-markdown-pipeline",
     type: "module",

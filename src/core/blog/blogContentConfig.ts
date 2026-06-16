@@ -7,7 +7,7 @@ import { publicApiUrl } from "~/core/publicApi";
  * generated `index.json` manifest) to a Cloudflare R2 bucket, and the public
  * API serves the raw content under `/public/blog/*`.
  */
-export const BLOG_INDEX_FILENAME = "index.json";
+const BLOG_INDEX_FILENAME = "index.json";
 
 /** Public API namespace mapped to the R2 blog bucket. */
 export const BLOG_CONTENT_BASE = publicApiUrl("/public/blog");

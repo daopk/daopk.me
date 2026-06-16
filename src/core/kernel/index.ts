@@ -164,10 +164,6 @@ const trashInternal = new TrashManager({
 
 export const kernel: Kernel = buildKernel();
 
-export { AppLaunchError, CommandDuplicateError, CommandNotFoundError } from "~/core/kernel/errors";
-
-export type { AppLaunchErrorCode } from "~/core/kernel/errors";
-
 type ProcessKillReason = "user" | "shell" | "kernel";
 
 async function killAllProcessesAndWait(): Promise<void> {

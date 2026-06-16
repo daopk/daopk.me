@@ -22,7 +22,7 @@ export interface AppUrlLaunchIntent {
 
 export type AppUrlIntent = AppUrlLaunchIntent | { kind: "none" };
 
-export interface AppUrlIntentMetadata {
+interface AppUrlIntentMetadata {
   readonly canonicalPath: string;
   readonly localeHint?: "vi";
   readonly originalPath: string;
