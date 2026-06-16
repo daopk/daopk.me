@@ -2,7 +2,7 @@
   "id": "blog",
   "name": "Blog",
   "icon": "BlogAppIcon",
-  "category": "system",
+  "category": "productivity",
   "permissions": ["vfs.read", "vfs.write", "network.fetch"],
   "defaultWindow": { "width": 720, "height": 520, "centered": true },
   "keywords": ["blog", "post", "writing", "article", "markdown"]
