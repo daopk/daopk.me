@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { GiscusComments, type CommentTarget } from "@daopk/comments";
 import { EmptyState, StatusBanner } from "@daopk/kit";
 import { PreviewHost } from "@daopk/kit";
 import type { AppPreviewInput } from "@daopk/sdk";
@@ -10,7 +9,6 @@ import type { BlogPostContentBlock, BlogPostStatus } from "../composables/useBlo
 type BlogPostCover = NonNullable<BlogIndexPost["thumbnail"]>;
 
 defineProps<{
-  readonly commentTarget: CommentTarget | null;
   readonly cover: BlogPostCover | null;
   readonly contentBlocks: readonly BlogPostContentBlock[];
   readonly loadFailed: boolean;
@@ -56,8 +54,7 @@ function previewInput(url: string): AppPreviewInput {
         />
       </template>
     </div>
-    <GiscusComments v-if="commentTarget !== null" class="blog__comments" :target="commentTarget" />
-    <StatusBanner v-else-if="status === 'loading'" class="blog__status" aria-live="polite">
+    <StatusBanner v-if="status === 'loading'" class="blog__status" aria-live="polite">
       Loading post...
     </StatusBanner>
     <EmptyState

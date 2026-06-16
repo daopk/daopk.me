@@ -34,11 +34,6 @@ export const EXTERNAL_RUNTIME_ENTRIES = [
     chunkName: "daopk-content-runtime",
     entry: "src/runtime/content.ts",
   },
-  {
-    specifier: "@daopk/comments",
-    chunkName: "daopk-comments-runtime",
-    entry: "src/runtime/comments.ts",
-  },
 ] as const;
 
 // Repo root resolved from this file's location (`vite/` -> repo root).

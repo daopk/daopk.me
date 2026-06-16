@@ -130,15 +130,6 @@ async function waitForIndexItems(wrapper: VueWrapper, timeoutMs = 1500): Promise
   );
 }
 
-function commentsFrameUrl(wrapper: VueWrapper): URL {
-  const src = wrapper.find(".comments iframe.giscus-frame").attributes("src");
-  if (src === undefined) {
-    throw new Error("comments frame was not rendered");
-  }
-
-  return new URL(src);
-}
-
 const blogContext: AppContext = Object.freeze({
   manifestId: "blog",
   handleId: "h-blog-test",
@@ -315,9 +306,7 @@ New body`,
     expect(coverImage.attributes("width")).toBe("1024");
     expect(coverImage.attributes("height")).toBe("576");
     expect(wrapper.find(".blog__post-shell").element.firstElementChild).toBe(cover.element);
-    expect(wrapper.find(".comments").exists()).toBe(true);
-    expect(commentsFrameUrl(wrapper).searchParams.get("term")).toBe("blog:new-post");
-    expect(commentsFrameUrl(wrapper).searchParams.get("categoryId")).toBe("DIC_kwDOSsA4Cs4C-vzm");
+    expect(wrapper.find(".comments").exists()).toBe(false);
 
     await wrapper.find(".blog__back").trigger("click");
     await waitForIndex(wrapper);
@@ -328,7 +317,7 @@ New body`,
     expect(wrapper.find(".comments").exists()).toBe(false);
   });
 
-  it("keeps comments hidden until the post is ready", async () => {
+  it("does not render comments when the post is ready", async () => {
     const pendingPost = deferred<Response>();
     vi.stubGlobal(
       "fetch",
@@ -348,8 +337,7 @@ New body`,
     pendingPost.resolve(new Response("# Field Notes\n\nNetwork body", { status: 200 }));
     await waitForContent(wrapper);
 
-    expect(wrapper.find(".comments").exists()).toBe(true);
-    expect(commentsFrameUrl(wrapper).searchParams.get("term")).toBe("blog:field-notes");
+    expect(wrapper.find(".comments").exists()).toBe(false);
   });
 
   it("replaces the URL for blog.open.requested events with valid slugs", async () => {
