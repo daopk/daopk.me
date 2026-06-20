@@ -1,5 +1,5 @@
 import { getActivePinia } from "pinia";
-import { reactive, toRef, watch } from "vue";
+import { reactive, watch } from "vue";
 
 import type { CommandContext } from "~/types/command";
 import type { ResolvedTheme } from "~/types/theme";
@@ -17,6 +17,11 @@ import {
 } from "~/core/kernel/DesktopContributionRegistry";
 import { registerBuiltinCommands } from "~/core/kernel/builtinCommands";
 import { EventBus } from "~/core/kernel/EventBus";
+import {
+  createRegistryFacades,
+  createSettingsFacade,
+  createThemeFacade,
+} from "~/core/kernel/facades";
 import { Lifecycle } from "~/core/kernel/Lifecycle";
 import { PermissionLedger } from "~/core/kernel/PermissionLedger";
 import { PreviewRegistry } from "~/core/kernel/PreviewRegistry";
@@ -33,7 +38,6 @@ import {
   disposeAppPreviews,
   disposeAppDesktopContributions,
   disposeAppWidgets,
-  makeRegistryFacade,
   registerAppDesktopContributions,
   registerAppPreviews,
   registerAppWidgets,
@@ -197,6 +201,15 @@ function finishProcessKill(processId: string, reason: ProcessKillReason): void {
 }
 
 function buildKernel(): Kernel {
+  const registryFacades = createRegistryFacades({
+    bus,
+    widgets: widgetsCatalog,
+    previews: previewsCatalog,
+    desktopContextMenu: desktopContextMenuCatalog,
+    desktopRenderers: desktopRendererCatalog,
+    wallpapers: wallpapersCatalog,
+  });
+
   return {
     async init(): Promise<void> {
       initPromise ??= (async (): Promise<void> => {
@@ -761,86 +774,7 @@ function buildKernel(): Kernel {
 
     events: bus,
 
-    settings: {
-      use<K extends keyof SettingsState>(key: K) {
-        return toRef(useSettingsStore(requirePinia()), key);
-      },
-
-      get<K extends keyof SettingsState>(key: K): SettingsState[K] {
-        return useSettingsStore(requirePinia())[key];
-      },
-
-      set<K extends keyof SettingsState>(key: K, value: SettingsState[K]): void {
-        const settings = useSettingsStore(requirePinia());
-
-        switch (key) {
-          case "locale":
-            settings.setLocale(value as SettingsState["locale"]);
-
-            return;
-
-          case "localeMode":
-            settings.setLocaleMode(value as SettingsState["localeMode"]);
-
-            return;
-
-          case "theme":
-            settings.setTheme(value as SettingsState["theme"]);
-
-            return;
-
-          case "shellOverride":
-            settings.setShellOverride(value as SettingsState["shellOverride"]);
-
-            return;
-
-          case "reduceMotion":
-            settings.$patch({ reduceMotion: value as SettingsState["reduceMotion"] });
-
-            bus.emit("settings.changed", { key: "reduceMotion" });
-
-            return;
-
-          case "dockAutoHide":
-            settings.setDockAutoHide(value as SettingsState["dockAutoHide"]);
-
-            return;
-
-          case "dockPinnedAppIds":
-            settings.setDockPinnedAppIds(value as SettingsState["dockPinnedAppIds"]);
-
-            return;
-
-          case "telemetryEnabled":
-            settings.$patch({ telemetryEnabled: value as SettingsState["telemetryEnabled"] });
-
-            bus.emit("settings.changed", { key: "telemetryEnabled" });
-
-            return;
-
-          case "desktopWallpaperActiveId":
-            settings.setDesktopWallpaperActiveId(
-              value as SettingsState["desktopWallpaperActiveId"],
-            );
-
-            return;
-
-          case "mobileWallpaperActiveId":
-            settings.setMobileWallpaperActiveId(value as SettingsState["mobileWallpaperActiveId"]);
-
-            return;
-
-          case "bootCount":
-            throw new Error(
-              `kernel.settings.set('bootCount') — mutate via bootstrap / store.incrementBootCount() only.`,
-            );
-        }
-      },
-
-      reset(): void {
-        useSettingsStore(requirePinia()).reset();
-      },
-    },
+    settings: createSettingsFacade({ bus, requirePinia }),
 
     vfs: createKernelVfsFacade({
       bus,
@@ -873,63 +807,7 @@ function buildKernel(): Kernel {
       },
     },
 
-    theme: {
-      current(): ResolvedTheme {
-        if (!themeManager) {
-          throw new Error("kernel.theme.current() called before kernel.init()");
-        }
-
-        return themeManager.current();
-      },
-
-      setTheme(name: SettingsState["theme"]): void {
-        if (!themeManager) {
-          throw new Error("kernel.theme.setTheme() called before kernel.init()");
-        }
-
-        themeManager.setTheme(name);
-      },
-
-      subscribe(listener: (theme: ResolvedTheme) => void): () => void {
-        if (!themeManager) {
-          throw new Error("kernel.theme.subscribe() called before kernel.init()");
-        }
-
-        return themeManager.subscribe(listener);
-      },
-
-      list() {
-        if (!themeManager) {
-          throw new Error("kernel.theme.list() called before kernel.init()");
-        }
-
-        return themeManager.list();
-      },
-
-      currentOverrides() {
-        if (!themeManager) {
-          throw new Error("kernel.theme.currentOverrides() called before kernel.init()");
-        }
-
-        return themeManager.currentOverrides();
-      },
-
-      setOverride(cssVar: string, value: string): void {
-        useTokenOverridesStore(requirePinia()).set(cssVar, value);
-      },
-
-      unsetOverride(cssVar: string): void {
-        useTokenOverridesStore(requirePinia()).unset(cssVar);
-      },
-
-      setOverrides(patch): void {
-        useTokenOverridesStore(requirePinia()).setMany({ ...patch });
-      },
-
-      resetOverrides(): void {
-        useTokenOverridesStore(requirePinia()).reset();
-      },
-    },
+    theme: createThemeFacade({ requirePinia, getThemeManager: () => themeManager }),
 
     shortcuts: {
       register(binding: string, handler: (event: KeyboardEvent) => void): () => void {
@@ -958,38 +836,7 @@ function buildKernel(): Kernel {
       },
     },
 
-    widgets: makeRegistryFacade(widgetsCatalog, {
-      onRegistered: (id) => bus.emit("widget.registered", { id }),
-      onUnregistered: (id) => bus.emit("widget.unregistered", { id }),
-    }),
-
-    previews: {
-      ...makeRegistryFacade(previewsCatalog, {
-        onRegistered: (id) => bus.emit("preview.registered", { id }),
-        onUnregistered: (id) => bus.emit("preview.unregistered", { id }),
-      }),
-
-      resolve(input, filter) {
-        return previewsCatalog.resolve(input, filter);
-      },
-    },
-
-    desktop: {
-      contextMenu: makeRegistryFacade(desktopContextMenuCatalog, {
-        onRegistered: (id) => bus.emit("desktop.context-menu.registered", { id }),
-        onUnregistered: (id) => bus.emit("desktop.context-menu.unregistered", { id }),
-      }),
-
-      renderers: makeRegistryFacade(desktopRendererCatalog, {
-        onRegistered: (id) => bus.emit("desktop.renderer.registered", { id }),
-        onUnregistered: (id) => bus.emit("desktop.renderer.unregistered", { id }),
-      }),
-    },
-
-    wallpapers: makeRegistryFacade(wallpapersCatalog, {
-      onRegistered: (id) => bus.emit("wallpaper.registered", { id }),
-      onUnregistered: (id) => bus.emit("wallpaper.unregistered", { id }),
-    }),
+    ...registryFacades,
 
     notifications: {
       // kernel-side permission gate. The contract is that
