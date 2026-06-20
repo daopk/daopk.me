@@ -30,7 +30,7 @@ export interface RegistryOptions<TEntry> {
  * - UPSERT on re-register that preserves the original insertion slot.
  * - Identity-checked disposers — a stale disposer never removes a replacement.
  * - Optional stable sort via `compare`.
- * - A test-only `__resetForTests` escape hatch.
+ * - A `clear()` lifecycle reset the kernel drives on teardown / re-init.
  *
  * Concrete registries extend this and layer their own `list(filter)` /
  * `resolve()` on top of the protected `entries()` snapshot.
@@ -87,13 +87,11 @@ export class Registry<TEntry> {
   }
 
   /**
-   * Test-only escape hatch for resetting the registry between test cases
-   * without spinning up a fresh kernel. Production code MUST NOT call this —
-   * registry teardown is the kernel's responsibility (managed via
-   * `kernel.dispose`). Resets the registration counter so id ordering after a
-   * reset is deterministic.
+   * Empties the registry and resets the registration counter. The kernel drives
+   * this on teardown / re-init (HMR + test cycles) so the next `init` starts
+   * from a clean catalog with deterministic id ordering.
    */
-  __resetForTests(): void {
+  clear(): void {
     this.slots.clear();
     this.nextRegistrationOrder = 0;
   }

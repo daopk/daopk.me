@@ -5,6 +5,19 @@ import type { ActiveProfileSession, ProfileSessionSnapshot } from "~/types/profi
 const activeSession = shallowRef<ActiveProfileSession | null>(null);
 const locked = shallowRef(false);
 
+/**
+ * Optional fallback consulted by {@link ensureActiveProfileSessionForKernel}
+ * when the kernel boots without an unlocked session. Production never installs
+ * one (boot requires a real unlocked profile); the test harness installs a
+ * deterministic profile here so kernel specs don't each have to seed one.
+ */
+type ProfileSessionFallback = () => ActiveProfileSession | null;
+let sessionFallback: ProfileSessionFallback | null = null;
+
+export function setProfileSessionFallback(fallback: ProfileSessionFallback | null): void {
+  sessionFallback = fallback;
+}
+
 function snapshotOf(session: ActiveProfileSession): ProfileSessionSnapshot {
   return {
     profileId: session.profileId,
@@ -80,17 +93,11 @@ export function ensureActiveProfileSessionForKernel(): ActiveProfileSession {
     return session;
   }
 
-  if (import.meta.env.MODE === "test") {
-    const testSession: ActiveProfileSession = {
-      profileId: "test-profile",
-      displayName: "Test Profile",
-      authMode: "passkey",
-      encryption: "none",
-      encrypted: false,
-    };
-    activeSession.value = testSession;
+  const fallback = sessionFallback?.() ?? null;
+  if (fallback) {
+    activeSession.value = fallback;
     locked.value = false;
-    return testSession;
+    return fallback;
   }
 
   return requireActiveProfileSession();

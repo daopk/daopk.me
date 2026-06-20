@@ -21,6 +21,9 @@ export default mergeConfig(
     test: {
       globals: false,
       environment: "happy-dom",
+      // Installs the kernel's profile-session fallback (the test profile the
+      // kernel used to self-inject under `MODE === "test"`).
+      setupFiles: ["./src/test/vitest.setup.ts"],
       // The suite is many small files; VM workers avoid most process/env
       // startup overhead while preserving per-file isolation.
       pool: "vmThreads",

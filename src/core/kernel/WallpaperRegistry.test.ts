@@ -165,13 +165,13 @@ describe("WallpaperRegistry — class (M3.4)", () => {
     });
   });
 
-  describe("__resetForTests", () => {
+  describe("clear", () => {
     it("clears the registry", () => {
       const registry = new WallpaperRegistry();
       registry.register(makeManifest("a"));
       registry.register(makeManifest("b"));
 
-      registry.__resetForTests();
+      registry.clear();
 
       expect(registry.list()).toHaveLength(0);
       expect(registry.has("a")).toBe(false);

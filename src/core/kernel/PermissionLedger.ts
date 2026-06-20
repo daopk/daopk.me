@@ -177,7 +177,12 @@ export class PermissionLedger {
     return this.deps.store.list(filter);
   }
 
-  __resetForTests(): void {
+  /**
+   * Resolves every in-flight permission request as a one-shot deny and clears
+   * the pending map. The kernel drives this on teardown so a dispose mid-prompt
+   * never leaves caller promises dangling.
+   */
+  cancelPendingRequests(): void {
     for (const entry of this.pending.values()) {
       entry.resolve({ granted: false, persisted: false, reason: "user" });
     }

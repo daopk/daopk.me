@@ -173,13 +173,13 @@ describe("WidgetRegistry — class (M3.4)", () => {
     });
   });
 
-  describe("__resetForTests", () => {
+  describe("clear", () => {
     it("clears the registry AND the registration counter (deterministic next id)", () => {
       const registry = new WidgetRegistry();
       registry.register(makeManifest("a"));
       registry.register(makeManifest("b"));
 
-      registry.__resetForTests();
+      registry.clear();
 
       expect(registry.list()).toHaveLength(0);
 

@@ -428,7 +428,7 @@ describe("PermissionLedger (M3.5)", () => {
     });
   });
 
-  describe("__resetForTests", () => {
+  describe("cancelPendingRequests", () => {
     it("resolves every pending request as a one-shot deny and clears the map", async () => {
       const store = makeStore();
       const ledger = new PermissionLedger({
@@ -441,7 +441,7 @@ describe("PermissionLedger (M3.5)", () => {
       const pending = ledger.request("rss-reader", "notifications.post");
       expect(ledger._pendingCountForTests).toBe(1);
 
-      ledger.__resetForTests();
+      ledger.cancelPendingRequests();
       expect(ledger._pendingCountForTests).toBe(0);
 
       const decision = await pending;

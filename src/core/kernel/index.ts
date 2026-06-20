@@ -332,7 +332,7 @@ function buildKernel(): Kernel {
         stopBuiltinCommands?.();
         stopBuiltinCommands = registerBuiltinCommands(kernel);
 
-        wallpapersCatalog.__resetForTests();
+        wallpapersCatalog.clear();
         seedBuiltinWallpapers(kernel.wallpapers, builtinWallpapers);
 
         searchAdapter?.dispose();
@@ -360,13 +360,12 @@ function buildKernel(): Kernel {
       searchAdapter?.dispose();
       searchAdapter = undefined;
 
-      // HMR / test cycles see empty catalogs at the next `init`
-      // teardown story.
-      wallpapersCatalog.__resetForTests();
-      widgetsCatalog.__resetForTests();
-      previewsCatalog.__resetForTests();
-      desktopContextMenuCatalog.__resetForTests();
-      desktopRendererCatalog.__resetForTests();
+      // HMR / test cycles see empty catalogs at the next `init`.
+      wallpapersCatalog.clear();
+      widgetsCatalog.clear();
+      previewsCatalog.clear();
+      desktopContextMenuCatalog.clear();
+      desktopRendererCatalog.clear();
       appWidgetDisposers.clear();
       appPreviewDisposers.clear();
       appDesktopContributionDisposers.clear();
@@ -398,9 +397,9 @@ function buildKernel(): Kernel {
         useSpotlightRecentsStore(pinia).dispose();
       }
 
-      // a kernel teardown mid-prompt doesn't leave caller promises
-      // Tests opt into this via `__resetForTests` directly; HMR /
-      permissionsInternal.__resetForTests();
+      // Resolve any in-flight permission prompts so a teardown mid-prompt
+      // doesn't leave caller promises dangling.
+      permissionsInternal.cancelPendingRequests();
       telemetryInternal.resetTransport();
       processesInternal.reset();
       pendingProcessKills.clear();
