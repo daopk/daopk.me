@@ -17,13 +17,15 @@ import {
   appFallbackBrowserPath,
   DEFAULT_BROWSER_TITLE,
   HOME_BROWSER_PATH,
-  normalizeAppBrowserPath,
-  replaceBrowserPath,
-  replaceBrowserTitle,
 } from "~/core/routing/appBrowserPaths";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
-import { normalizeVfsPath } from "~/core/vfs/path";
+import {
+  documentPathFor,
+  normalizeDocumentOpenPath,
+} from "~/shells/shared/documentOpenRouting";
+import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
+import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
 import type { AppManifest } from "~/types/app";
@@ -33,40 +35,31 @@ const nav = useMobileNavigation();
 const { titleFor } = useAppViewTitle();
 const homeLabelContrastStyle = useWallpaperLabelContrast("mobile");
 
-const disposeLaunchListener = kernel.events.on("app.launch.requested", (payload) => {
-  onLaunch(payload.manifestId, payload.args, payload.source);
-});
-
-const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
-  onSpawnNew(payload.manifestId, payload.args);
-});
-
-const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
-  void onEditorOpenRequested(payload.path);
-});
-
-const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested", (payload) => {
-  void onBlogPostOpenRequested(payload.path, payload.slug);
-});
-
-const disposePdfViewerOpenListener = kernel.events.on("pdf-viewer.open.requested", (payload) => {
-  void onPdfViewerOpenRequested(payload.path);
-});
-
-const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
-  nav.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
-});
-
-const disposeUrlChangedListener = kernel.events.on("app.url.changed", (payload) => {
-  nav.setBrowserPath(
-    payload.handleId,
-    payload.manifestId,
-    payload.path === null ? null : normalizeAppBrowserPath(payload.path),
-  );
-});
-
-const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
-  nav.removeByHandleId(handleId);
+useShellAppEventBridge({
+  launch: (manifestId, args, source) => {
+    onLaunch(manifestId, args, source);
+  },
+  spawnNew: (manifestId, args) => {
+    onSpawnNew(manifestId, args);
+  },
+  openEditor: (path) => {
+    void onEditorOpenRequested(path);
+  },
+  openBlogPost: (path, slug) => {
+    void onBlogPostOpenRequested(path, slug);
+  },
+  openPdfViewer: (path) => {
+    void onPdfViewerOpenRequested(path);
+  },
+  setDocumentPath: (handleId, manifestId, path) => {
+    nav.setDocumentPath(handleId, manifestId, path);
+  },
+  setBrowserPath: (handleId, manifestId, path) => {
+    nav.setBrowserPath(handleId, manifestId, path);
+  },
+  removeByHandleId: (handleId) => {
+    nav.removeByHandleId(handleId);
+  },
 });
 
 const showSwitcher = ref(false);
@@ -123,14 +116,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  disposeLaunchListener();
-  disposeSpawnNewListener();
-  disposeEditorOpenListener();
-  disposeBlogPostOpenListener();
-  disposePdfViewerOpenListener();
-  disposeDocumentChangedListener();
-  disposeUrlChangedListener();
-  disposeKilledListener();
   if (typeof window === "undefined") {
     return;
   }
@@ -157,17 +142,7 @@ watch(
   },
 );
 
-watch(activeBrowserPath, (path) => {
-  replaceBrowserPath(path);
-});
-
-watch(
-  activeBrowserTitle,
-  (title) => {
-    replaceBrowserTitle(title);
-  },
-  { immediate: true },
-);
+useShellBrowserChromeSync(activeBrowserPath, activeBrowserTitle);
 
 const lastLaunchedManifestId = ref<string | null>(null);
 
@@ -396,29 +371,7 @@ function normalizeEditorOpenPath(path: string): string | null {
 }
 
 function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  try {
-    return normalizeVfsPath(path);
-  } catch (error) {
-    debugWarn("[mobile-shell]", `${eventName} invalid path`, path, error);
-    return null;
-  }
-}
-
-function documentPathFor(frame: (typeof nav.stack)[number]): string | null | undefined {
-  if (frame.documentPath !== undefined) {
-    return frame.documentPath;
-  }
-
-  const launchPath = frame.args?.path;
-  if (typeof launchPath !== "string") {
-    return undefined;
-  }
-
-  try {
-    return normalizeVfsPath(launchPath);
-  } catch {
-    return undefined;
-  }
+  return normalizeDocumentOpenPath("[mobile-shell]", eventName, path);
 }
 
 function topmostEditorFrame(

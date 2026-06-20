@@ -13,12 +13,14 @@ import {
   appFallbackBrowserPath,
   DEFAULT_BROWSER_TITLE,
   HOME_BROWSER_PATH,
-  normalizeAppBrowserPath,
-  replaceBrowserPath,
-  replaceBrowserTitle,
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
-import { normalizeVfsPath } from "~/core/vfs/path";
+import {
+  documentPathFor,
+  normalizeDocumentOpenPath,
+} from "~/shells/shared/documentOpenRouting";
+import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
+import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
 import type { CommandContext } from "~/types/command";
 
@@ -183,40 +185,31 @@ watch(
   },
 );
 
-const disposeLaunchListener = kernel.events.on("app.launch.requested", (payload) => {
-  void onLaunchRequested(payload.manifestId, payload.args, payload.source);
-});
-
-const disposeSpawnNewListener = kernel.events.on("app.spawn.new", (payload) => {
-  void onSpawnNewRequested(payload.manifestId, payload.args);
-});
-
-const disposeEditorOpenListener = kernel.events.on("editor.open.requested", (payload) => {
-  void onEditorOpenRequested(payload.path);
-});
-
-const disposeBlogPostOpenListener = kernel.events.on("blog.post.open.requested", (payload) => {
-  void onBlogPostOpenRequested(payload.path, payload.slug);
-});
-
-const disposePdfViewerOpenListener = kernel.events.on("pdf-viewer.open.requested", (payload) => {
-  void onPdfViewerOpenRequested(payload.path);
-});
-
-const disposeDocumentChangedListener = kernel.events.on("app.document.changed", (payload) => {
-  windowManager.setDocumentPath(payload.handleId, payload.manifestId, payload.path);
-});
-
-const disposeUrlChangedListener = kernel.events.on("app.url.changed", (payload) => {
-  windowManager.setBrowserPath(
-    payload.handleId,
-    payload.manifestId,
-    payload.path === null ? null : normalizeAppBrowserPath(payload.path),
-  );
-});
-
-const disposeKilledListener = kernel.events.on("app.killed", ({ handleId }) => {
-  windowManager.removeByHandleId(handleId);
+useShellAppEventBridge({
+  launch: (manifestId, args, source) => {
+    void onLaunchRequested(manifestId, args, source);
+  },
+  spawnNew: (manifestId, args) => {
+    void onSpawnNewRequested(manifestId, args);
+  },
+  openEditor: (path) => {
+    void onEditorOpenRequested(path);
+  },
+  openBlogPost: (path, slug) => {
+    void onBlogPostOpenRequested(path, slug);
+  },
+  openPdfViewer: (path) => {
+    void onPdfViewerOpenRequested(path);
+  },
+  setDocumentPath: (handleId, manifestId, path) => {
+    windowManager.setDocumentPath(handleId, manifestId, path);
+  },
+  setBrowserPath: (handleId, manifestId, path) => {
+    windowManager.setBrowserPath(handleId, manifestId, path);
+  },
+  removeByHandleId: (handleId) => {
+    windowManager.removeByHandleId(handleId);
+  },
 });
 
 type DesktopWindowRecord = (typeof windowManager.windows)[number];
@@ -250,17 +243,7 @@ const focusedBrowserTitle = computed(() => {
   return appBrowserTitle(focusedWindowAppName(focusedWindow));
 });
 
-watch(focusedBrowserPath, (path) => {
-  replaceBrowserPath(path);
-});
-
-watch(
-  focusedBrowserTitle,
-  (title) => {
-    replaceBrowserTitle(title);
-  },
-  { immediate: true },
-);
+useShellBrowserChromeSync(focusedBrowserPath, focusedBrowserTitle);
 
 function shouldMaximizeLaunch(manifestId: string, source: AppLaunchSource): boolean {
   return manifestId === "blog" && source === "deeplink";
@@ -564,29 +547,7 @@ function normalizeEditorOpenPath(path: string): string | null {
 }
 
 function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  try {
-    return normalizeVfsPath(path);
-  } catch (error) {
-    debugWarn("[window-host]", `${eventName} invalid path`, path, error);
-    return null;
-  }
-}
-
-function documentPathFor(record: DesktopWindowRecord): string | null | undefined {
-  if (record.documentPath !== undefined) {
-    return record.documentPath;
-  }
-
-  const launchPath = record.args?.path;
-  if (typeof launchPath !== "string") {
-    return undefined;
-  }
-
-  try {
-    return normalizeVfsPath(launchPath);
-  } catch {
-    return undefined;
-  }
+  return normalizeDocumentOpenPath("[window-host]", eventName, path);
 }
 
 function topmostEditorWindow(
@@ -744,14 +705,6 @@ async function onSpawnNewRequested(
 }
 
 onBeforeUnmount(() => {
-  disposeLaunchListener();
-  disposeSpawnNewListener();
-  disposeEditorOpenListener();
-  disposeBlogPostOpenListener();
-  disposePdfViewerOpenListener();
-  disposeDocumentChangedListener();
-  disposeUrlChangedListener();
-  disposeKilledListener();
   for (const dispose of disposeWindowCommands) {
     dispose();
   }
