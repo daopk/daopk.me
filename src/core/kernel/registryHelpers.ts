@@ -10,6 +10,68 @@ import type { KernelWallpapersFacade } from "~/types/wallpaper";
 import type { KernelWidgetsFacade, WidgetManifest } from "~/types/widget";
 import type { Wallpaper } from "~/core/theme/wallpapers";
 
+interface FacadeBackedRegistry<TEntry, TFilter> {
+  register(entry: TEntry): () => void;
+  unregister(id: string): boolean;
+  get(id: string): TEntry | undefined;
+  list(filter?: TFilter): readonly TEntry[];
+}
+
+interface RegistryFacade<TEntry, TFilter> {
+  register(entry: TEntry): () => void;
+  unregister(id: string): void;
+  list(filter?: TFilter): readonly TEntry[];
+  get(id: string): TEntry | undefined;
+}
+
+/**
+ * Bridges a slot `Registry` to the kernel's public facade shape. Centralizes the
+ * register/unregister/list/get wrapper that every kernel catalog (widgets,
+ * previews, wallpapers, desktop contributions) used to copy verbatim:
+ *
+ * - `register` returns an identity-checked disposer that fires
+ *   `<x>.unregistered` exactly once and never removes a replacement.
+ * - `unregister` only emits when something was actually removed.
+ *
+ * Typed `bus.emit(...)` calls stay at the call site via the `onRegistered` /
+ * `onUnregistered` callbacks, so the helper itself carries no event-name typing.
+ */
+export function makeRegistryFacade<TEntry extends { readonly id: string }, TFilter>(
+  catalog: FacadeBackedRegistry<TEntry, TFilter>,
+  events: {
+    readonly onRegistered: (id: string) => void;
+    readonly onUnregistered: (id: string) => void;
+  },
+): RegistryFacade<TEntry, TFilter> {
+  return {
+    register(entry) {
+      const dispose = catalog.register(entry);
+      events.onRegistered(entry.id);
+
+      return (): void => {
+        if (catalog.get(entry.id) === entry) {
+          dispose();
+          events.onUnregistered(entry.id);
+        }
+      };
+    },
+
+    unregister(id) {
+      if (catalog.unregister(id)) {
+        events.onUnregistered(id);
+      }
+    },
+
+    list(filter) {
+      return catalog.list(filter);
+    },
+
+    get(id) {
+      return catalog.get(id);
+    },
+  };
+}
+
 export function disposeAppWidgets(
   disposers: Map<string, Array<() => void>>,
   manifestId: string,

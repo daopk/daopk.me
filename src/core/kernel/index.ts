@@ -33,6 +33,7 @@ import {
   disposeAppPreviews,
   disposeAppDesktopContributions,
   disposeAppWidgets,
+  makeRegistryFacade,
   registerAppDesktopContributions,
   registerAppPreviews,
   registerAppWidgets,
@@ -958,67 +959,16 @@ function buildKernel(): Kernel {
       },
     },
 
-    widgets: {
-      register(manifest) {
-        const dispose = widgetsCatalog.register(manifest);
-
-        bus.emit("widget.registered", { id: manifest.id });
-
-        return (): void => {
-          // disposer must be a no-op — otherwise it would silently
-          const current = widgetsCatalog.get(manifest.id);
-          if (current === manifest) {
-            dispose();
-            bus.emit("widget.unregistered", { id: manifest.id });
-          }
-        };
-      },
-
-      unregister(id) {
-        const removed = widgetsCatalog.unregister(id);
-        if (removed) {
-          bus.emit("widget.unregistered", { id });
-        }
-      },
-
-      list(filter) {
-        return widgetsCatalog.list(filter);
-      },
-
-      get(id) {
-        return widgetsCatalog.get(id);
-      },
-    },
+    widgets: makeRegistryFacade(widgetsCatalog, {
+      onRegistered: (id) => bus.emit("widget.registered", { id }),
+      onUnregistered: (id) => bus.emit("widget.unregistered", { id }),
+    }),
 
     previews: {
-      register(provider) {
-        const dispose = previewsCatalog.register(provider);
-
-        bus.emit("preview.registered", { id: provider.id });
-
-        return (): void => {
-          const current = previewsCatalog.get(provider.id);
-          if (current === provider) {
-            dispose();
-            bus.emit("preview.unregistered", { id: provider.id });
-          }
-        };
-      },
-
-      unregister(id) {
-        const removed = previewsCatalog.unregister(id);
-        if (removed) {
-          bus.emit("preview.unregistered", { id });
-        }
-      },
-
-      list(filter) {
-        return previewsCatalog.list(filter);
-      },
-
-      get(id) {
-        return previewsCatalog.get(id);
-      },
+      ...makeRegistryFacade(previewsCatalog, {
+        onRegistered: (id) => bus.emit("preview.registered", { id }),
+        onUnregistered: (id) => bus.emit("preview.unregistered", { id }),
+      }),
 
       resolve(input, filter) {
         return previewsCatalog.resolve(input, filter);
@@ -1026,101 +976,21 @@ function buildKernel(): Kernel {
     },
 
     desktop: {
-      contextMenu: {
-        register(item) {
-          const dispose = desktopContextMenuCatalog.register(item);
+      contextMenu: makeRegistryFacade(desktopContextMenuCatalog, {
+        onRegistered: (id) => bus.emit("desktop.context-menu.registered", { id }),
+        onUnregistered: (id) => bus.emit("desktop.context-menu.unregistered", { id }),
+      }),
 
-          bus.emit("desktop.context-menu.registered", { id: item.id });
-
-          return (): void => {
-            const current = desktopContextMenuCatalog.get(item.id);
-            if (current === item) {
-              dispose();
-              bus.emit("desktop.context-menu.unregistered", { id: item.id });
-            }
-          };
-        },
-
-        unregister(id) {
-          const removed = desktopContextMenuCatalog.unregister(id);
-          if (removed) {
-            bus.emit("desktop.context-menu.unregistered", { id });
-          }
-        },
-
-        list(filter) {
-          return desktopContextMenuCatalog.list(filter);
-        },
-
-        get(id) {
-          return desktopContextMenuCatalog.get(id);
-        },
-      },
-
-      renderers: {
-        register(renderer) {
-          const dispose = desktopRendererCatalog.register(renderer);
-
-          bus.emit("desktop.renderer.registered", { id: renderer.id });
-
-          return (): void => {
-            const current = desktopRendererCatalog.get(renderer.id);
-            if (current === renderer) {
-              dispose();
-              bus.emit("desktop.renderer.unregistered", { id: renderer.id });
-            }
-          };
-        },
-
-        unregister(id) {
-          const removed = desktopRendererCatalog.unregister(id);
-          if (removed) {
-            bus.emit("desktop.renderer.unregistered", { id });
-          }
-        },
-
-        list(filter) {
-          return desktopRendererCatalog.list(filter);
-        },
-
-        get(id) {
-          return desktopRendererCatalog.get(id);
-        },
-      },
+      renderers: makeRegistryFacade(desktopRendererCatalog, {
+        onRegistered: (id) => bus.emit("desktop.renderer.registered", { id }),
+        onUnregistered: (id) => bus.emit("desktop.renderer.unregistered", { id }),
+      }),
     },
 
-    wallpapers: {
-      register(manifest) {
-        const dispose = wallpapersCatalog.register(manifest);
-
-        bus.emit("wallpaper.registered", { id: manifest.id });
-
-        return (): void => {
-          // the replacement, so the stale disposer must be a no-op —
-          // bug under HMR re-register flows). The registry's
-          const current = wallpapersCatalog.get(manifest.id);
-          if (current === manifest) {
-            dispose();
-            bus.emit("wallpaper.unregistered", { id: manifest.id });
-          }
-        };
-      },
-
-      unregister(id) {
-        const removed = wallpapersCatalog.unregister(id);
-        if (removed) {
-          bus.emit("wallpaper.unregistered", { id });
-        }
-      },
-
-      list() {
-        return wallpapersCatalog.list();
-      },
-
-      get(id) {
-        return wallpapersCatalog.get(id);
-      },
-    },
+    wallpapers: makeRegistryFacade(wallpapersCatalog, {
+      onRegistered: (id) => bus.emit("wallpaper.registered", { id }),
+      onUnregistered: (id) => bus.emit("wallpaper.unregistered", { id }),
+    }),
 
     notifications: {
       // kernel-side permission gate. The contract is that

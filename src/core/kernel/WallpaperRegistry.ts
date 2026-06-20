@@ -1,3 +1,4 @@
+import { Registry } from "~/core/kernel/Registry";
 import type { WallpaperManifest } from "~/types/wallpaper";
 
 /**
@@ -23,10 +24,12 @@ export class WallpaperRegistryRejectionError extends Error {
   }
 }
 
-export class WallpaperRegistry {
-  private readonly manifests = new Map<string, WallpaperManifest>();
+export class WallpaperRegistry extends Registry<WallpaperManifest> {
+  constructor() {
+    super({ keyOf: (manifest) => manifest.id });
+  }
 
-  register(manifest: WallpaperManifest): () => void {
+  override register(manifest: WallpaperManifest): () => void {
     if ("userBlobKey" in manifest) {
       const probe = manifest as { userBlobKey?: unknown };
       if (probe.userBlobKey != null && probe.userBlobKey !== "") {
@@ -34,38 +37,10 @@ export class WallpaperRegistry {
       }
     }
 
-    this.manifests.set(manifest.id, manifest);
-
-    return (): void => {
-      if (this.manifests.get(manifest.id) === manifest) {
-        this.manifests.delete(manifest.id);
-      }
-    };
-  }
-
-  unregister(id: string): boolean {
-    return this.manifests.delete(id);
-  }
-
-  has(id: string): boolean {
-    return this.manifests.has(id);
-  }
-
-  get(id: string): WallpaperManifest | undefined {
-    return this.manifests.get(id);
+    return super.register(manifest);
   }
 
   list(): readonly WallpaperManifest[] {
-    return Object.freeze(Array.from(this.manifests.values()));
-  }
-
-  /**
-   * Test-only escape hatch for resetting the registry between test
-   * cases without spinning up a fresh kernel. Production code MUST
-   * NOT call this — registry teardown is the kernel's responsibility
-   * (managed via `kernel.dispose`).
-   */
-  __resetForTests(): void {
-    this.manifests.clear();
+    return Object.freeze(this.entries());
   }
 }
