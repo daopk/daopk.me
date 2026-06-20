@@ -1,5 +1,11 @@
 import { reactive, readonly, type DeepReadonly } from "vue";
 
+import {
+  setSurfaceBrowserPath,
+  setSurfaceDocumentPath,
+  type AppSurfaceRecord,
+} from "~/shells/shared/appSurface";
+
 export type SnapEdge = "left" | "right" | "max";
 
 export interface WindowBounds {
@@ -9,7 +15,7 @@ export interface WindowBounds {
   height: number;
 }
 
-export interface WindowRecord {
+export interface WindowRecord extends AppSurfaceRecord {
   id: string;
   manifestId: string;
   handleId: string;
@@ -247,25 +253,11 @@ function removeByHandleId(handleId: string): boolean {
 }
 
 function setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean {
-  const target = state.windows.find((w) => w.handleId === handleId && w.manifestId === manifestId);
-
-  if (!target) {
-    return false;
-  }
-
-  target.documentPath = path;
-  return true;
+  return setSurfaceDocumentPath(state.windows, handleId, manifestId, path);
 }
 
 function setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean {
-  const target = state.windows.find((w) => w.handleId === handleId && w.manifestId === manifestId);
-
-  if (!target) {
-    return false;
-  }
-
-  target.browserPath = path;
-  return true;
+  return setSurfaceBrowserPath(state.windows, handleId, manifestId, path);
 }
 
 function setTitle(id: string, title: string): boolean {

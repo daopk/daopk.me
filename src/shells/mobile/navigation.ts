@@ -2,8 +2,13 @@ import { reactive, readonly, ref, watch, type DeepReadonly, type Ref } from "vue
 
 import type { Kernel } from "~/types/kernel";
 import { debugWarn } from "~/core/debug";
+import {
+  setSurfaceBrowserPath,
+  setSurfaceDocumentPath,
+  type AppSurfaceRecord,
+} from "~/shells/shared/appSurface";
 
-export interface NavigationFrame {
+export interface NavigationFrame extends AppSurfaceRecord {
   readonly frameId: string;
   readonly handleId: string;
   readonly manifestId: string;
@@ -290,29 +295,11 @@ function removeByHandleId(handleId: string): boolean {
 }
 
 function setDocumentPath(handleId: string, manifestId: string, path: string | null): boolean {
-  const frame = state.stack.find(
-    (entry) => entry.handleId === handleId && entry.manifestId === manifestId,
-  );
-
-  if (frame === undefined) {
-    return false;
-  }
-
-  frame.documentPath = path;
-  return true;
+  return setSurfaceDocumentPath(state.stack, handleId, manifestId, path);
 }
 
 function setBrowserPath(handleId: string, manifestId: string, path: string | null): boolean {
-  const frame = state.stack.find(
-    (entry) => entry.handleId === handleId && entry.manifestId === manifestId,
-  );
-
-  if (frame === undefined) {
-    return false;
-  }
-
-  frame.browserPath = path;
-  return true;
+  return setSurfaceBrowserPath(state.stack, handleId, manifestId, path);
 }
 
 function setTitle(handleId: string, manifestId: string, title: string | null): boolean {
