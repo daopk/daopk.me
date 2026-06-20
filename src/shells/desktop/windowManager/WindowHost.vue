@@ -15,6 +15,7 @@ import {
   HOME_BROWSER_PATH,
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
+import { dockReveal, measureDockReveal } from "~/shells/desktop/dock/dockReveal";
 import {
   documentPathFor,
   normalizeDocumentOpenPath,
@@ -109,13 +110,6 @@ function measuredStageSize(): StageSize {
   };
 }
 
-function dockIsVisible(zone: HTMLElement): boolean {
-  return (
-    !zone.classList.contains("dock-reveal-zone--auto-hide") ||
-    zone.classList.contains("dock-reveal-zone--revealed")
-  );
-}
-
 function maximizeStageSize(): StageSize {
   const stage = measuredStageSize();
   const host = hostRef.value;
@@ -124,18 +118,16 @@ function maximizeStageSize(): StageSize {
     return stage;
   }
 
-  const dockZone = document.querySelector<HTMLElement>(".dock-reveal-zone");
-  if (dockZone === null || !dockIsVisible(dockZone)) {
+  if (!dockReveal.present || !dockReveal.occupiesStage) {
     return stage;
   }
 
-  const dock = dockZone.querySelector<HTMLElement>(".dock");
-  if (dock === null) {
+  const dockRect = measureDockReveal();
+  if (dockRect === null) {
     return stage;
   }
 
   const hostRect = host.getBoundingClientRect();
-  const dockRect = dock.getBoundingClientRect();
   const dockTop = dockRect.top - hostRect.top;
 
   if (dockRect.height <= 0 || dockTop <= 0 || dockTop >= stage.height) {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch, watchEffect } from "vue";
 
 import DockItem from "./DockItem.vue";
 import { useDock } from "./useDock";
+import { clearDockReveal, setDockReveal, type DockRevealRect } from "./dockReveal";
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
@@ -65,6 +66,22 @@ const dockIsRevealed = computed(
     focusInsideDock.value ||
     contextOpenKey.value !== null,
 );
+
+function measureDockRect(): DockRevealRect | null {
+  const el = dockRef.value;
+  if (el === null) {
+    return null;
+  }
+
+  const rect = el.getBoundingClientRect();
+  return { top: rect.top, height: rect.height };
+}
+
+// Publish dock occupancy to the window host so maximize can stop above a
+// visible dock without the host reaching into the dock's DOM.
+watchEffect(() => {
+  setDockReveal({ occupiesStage: dockIsRevealed.value, measure: measureDockRect });
+});
 
 function revealDock(): void {
   if (dockAutoHide.value) {
@@ -408,6 +425,7 @@ function itemDragPlacement(item: DockItemModel): DockDropPlacement | null {
 
 onBeforeUnmount(() => {
   cleanupPointerDrag();
+  clearDockReveal();
 });
 
 watch(dockAutoHide, (enabled) => {

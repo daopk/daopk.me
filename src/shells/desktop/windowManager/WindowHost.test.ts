@@ -14,6 +14,7 @@ import {
   __resetWindowManagerForTests,
   useWindowManager,
 } from "./useWindowManager";
+import { clearDockReveal, setDockReveal } from "../dock/dockReveal";
 
 const StubIcon = defineComponent({ template: "<svg />" });
 
@@ -163,28 +164,21 @@ function rect(bounds: { top: number; left: number; width: number; height: number
   } as DOMRect;
 }
 
-function appendDockFixture({
-  autoHide = false,
-  revealed = false,
+/**
+ * Registers a fake dock with the dock-reveal registry the window host reads.
+ * `occupiesStage` mirrors a pinned/revealed dock; the measured rect stands in
+ * for the live `.dock` geometry the real dock publishes.
+ */
+function registerDockFixture({
+  occupiesStage,
+  top = 820,
+  height = 58,
 }: {
-  autoHide?: boolean;
-  revealed?: boolean;
-} = {}): { dockZone: HTMLElement; dock: HTMLElement } {
-  const dockZone = document.createElement("div");
-  dockZone.className = [
-    "dock-reveal-zone",
-    autoHide ? "dock-reveal-zone--auto-hide" : "",
-    revealed ? "dock-reveal-zone--revealed" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const dock = document.createElement("div");
-  dock.className = "dock";
-  dockZone.append(dock);
-  document.body.append(dockZone);
-
-  return { dockZone, dock };
+  occupiesStage: boolean;
+  top?: number;
+  height?: number;
+}): void {
+  setDockReveal({ occupiesStage, measure: () => ({ top, height }) });
 }
 
 describe("WindowHost — F1 D3a (shell policy drop)", () => {
@@ -198,6 +192,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     __resetWindowManagerForTests();
+    clearDockReveal();
     document.body.innerHTML = "";
     document.title = "WebOS";
   });
@@ -745,7 +740,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   });
 
   it("maximizes above a visible desktop dock", async () => {
-    const { dock } = appendDockFixture();
+    registerDockFixture({ occupiesStage: true });
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;
 
@@ -761,9 +756,6 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
 
     vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
       rect({ top: 28, left: 0, width: 1000, height: 872 }),
-    );
-    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
-      rect({ top: 820, left: 250, width: 500, height: 58 }),
     );
 
     bus.emit("app.launch.requested", {
@@ -792,7 +784,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   });
 
   it("keeps maximized bounds when an auto-hidden dock conceals after maximize", async () => {
-    const { dockZone, dock } = appendDockFixture({ autoHide: true, revealed: true });
+    registerDockFixture({ occupiesStage: true });
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;
 
@@ -808,9 +800,6 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
 
     vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
       rect({ top: 28, left: 0, width: 1000, height: 872 }),
-    );
-    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
-      rect({ top: 820, left: 250, width: 500, height: 58 }),
     );
 
     bus.emit("app.launch.requested", {
@@ -831,7 +820,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
     const maxed = manager.windows.find((entry) => entry.id === record!.id)!;
     expect(maxed.height).toBe(792);
 
-    dockZone.classList.remove("dock-reveal-zone--revealed");
+    registerDockFixture({ occupiesStage: false });
     await wrapper.vm.$nextTick();
 
     const afterDockHide = manager.windows.find((entry) => entry.id === record!.id)!;
@@ -841,7 +830,7 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
   });
 
   it("maximizes to the full desktop stage when the auto-hidden dock is concealed", async () => {
-    const { dock } = appendDockFixture({ autoHide: true });
+    registerDockFixture({ occupiesStage: false });
     const { kernel, commands, bus } = makeKernel();
     kernelMock = kernel;
 
@@ -857,9 +846,6 @@ describe("WindowHost — F1 D3a (shell policy drop)", () => {
 
     vi.spyOn(wrapper.element, "getBoundingClientRect").mockReturnValue(
       rect({ top: 28, left: 0, width: 1000, height: 872 }),
-    );
-    vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(
-      rect({ top: 820, left: 250, width: 500, height: 58 }),
     );
 
     bus.emit("app.launch.requested", {
