@@ -7,6 +7,7 @@ import {
   X as CloseIcon,
 } from "~/icons/lucide";
 
+import AppIcon from "~/components/AppIcon.vue";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
@@ -298,9 +299,9 @@ function dispatchWindowCommand(id: string): void {
           @pointerdown="record.maximized ? null : drag.onPointerDown($event)"
           @dblclick="onMaximize"
         >
-          <component
-            :is="manifest.icon"
+          <AppIcon
             v-if="manifest"
+            :icon="manifest.icon"
             class="window__title-icon"
             aria-hidden="true"
           />

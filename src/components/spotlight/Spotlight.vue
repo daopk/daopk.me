@@ -12,6 +12,7 @@ import { Search as SearchIcon } from "~/icons/lucide";
 import { Motion } from "motion-v";
 import { computed, nextTick, ref, useId, watch, type Component } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
 import type { AppManifest } from "~/types/app";
 import type { CommandManifest } from "~/types/command";
 import type { SearchHit, SearchKind, SearchVfsMetadata } from "~/types/search";
@@ -328,9 +329,9 @@ const motionTransition = computed(() => {
                 @mousedown.prevent="onRowClick(index)"
                 @mousemove="onRowHover(index)"
               >
-                <component
-                  :is="row.icon"
+                <AppIcon
                   v-if="row.icon"
+                  :icon="row.icon"
                   class="spotlight__optionIcon"
                   :size="18"
                   :stroke-width="2"

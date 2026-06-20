@@ -95,13 +95,26 @@ export async function buildFirstPartyPreviewCatalog(
  * `/apps/<id>/src/...`. Registering this middleware in dev would shadow those
  * source paths (e.g. `/apps/notes/src/main.ts`) and 404 them, so it is not.
  */
-export function appsContentPreviewServer(): PluginOption {
-  const appsRoot = fileURLToPath(new URL("../../apps", import.meta.url));
+export function appsContentPreviewServer(
+  appsRoot: string = fileURLToPath(new URL("../../apps", import.meta.url)),
+): PluginOption {
   const modulePattern = /^\/apps\/([a-z0-9][a-z0-9-]*)\/[^/]+\/(.+)$/;
+  // Dev-only: app-owned image assets (icons) addressed by their release-pinned
+  // URL. Scoped to a flat image filename so it never shadows app source paths
+  // like `/apps/<id>/src/...` that Vite serves directly during dev.
+  const devAssetPattern =
+    /^\/apps\/([a-z0-9][a-z0-9-]*)\/[^/]+\/([a-z0-9][a-z0-9._-]*\.(?:svg|png|jpe?g|webp|avif|gif|ico))$/;
 
   const contentTypeFor = (file: string): string => {
     if (file.endsWith(".css")) return "text/css;charset=utf-8";
     if (file.endsWith(".map")) return "application/json;charset=utf-8";
+    if (file.endsWith(".svg")) return "image/svg+xml";
+    if (file.endsWith(".png")) return "image/png";
+    if (file.endsWith(".webp")) return "image/webp";
+    if (file.endsWith(".avif")) return "image/avif";
+    if (file.endsWith(".gif")) return "image/gif";
+    if (file.endsWith(".ico")) return "image/x-icon";
+    if (file.endsWith(".jpg") || file.endsWith(".jpeg")) return "image/jpeg";
     return "text/javascript;charset=utf-8";
   };
 
@@ -149,8 +162,39 @@ export function appsContentPreviewServer(): PluginOption {
     next();
   };
 
+  // Dev middleware: serve only app-owned image assets from each app's `public/`
+  // dir. On any miss it falls through to Vite so source/module requests are
+  // never shadowed.
+  const devAssetMiddleware: Connect.NextHandleFunction = (req, res, next) => {
+    const pathname = (req.url ?? "").split("?")[0];
+    const match = devAssetPattern.exec(pathname);
+    if (match === null) {
+      next();
+      return;
+    }
+
+    const [, id, file] = match;
+    if (file.includes("..")) {
+      next();
+      return;
+    }
+
+    void (async () => {
+      try {
+        const bytes = await readFile(join(appsRoot, id, "public", file));
+        res.setHeader("Content-Type", contentTypeFor(file));
+        res.end(bytes);
+      } catch {
+        next();
+      }
+    })();
+  };
+
   return {
     name: "daopk-apps-content-preview-server",
+    configureServer(server) {
+      server.middlewares.use(devAssetMiddleware);
+    },
     configurePreviewServer(server) {
       server.middlewares.use(middleware);
     },

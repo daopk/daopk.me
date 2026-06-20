@@ -7,7 +7,7 @@ vi.mock("~/core/debug", () => ({ debugWarn: vi.fn(), debugLog: vi.fn() }));
 const notesManifest = {
   id: "notes",
   name: "Notes",
-  icon: "NotesAppIcon",
+  icon: "icon.svg",
   category: "productivity",
   permissions: ["vfs.read", "vfs.write"],
   defaultWindow: { width: 920, height: 620, centered: true },
@@ -214,6 +214,50 @@ describe("first-party catalog coercion", () => {
     ).toEqual(desktop);
   });
 
+  it("keeps app-owned icon refs and serializable preview match rules", () => {
+    const previews = [
+      {
+        id: "notes:url-preview",
+        surfaces: ["blog.embed"],
+        exportName: "UrlPreview",
+        match: { kind: "app-url" },
+      },
+      {
+        id: "notes:file-preview",
+        surfaces: ["finder.panel"],
+        priority: 100,
+        exportName: "FilePreview",
+        match: { kind: "vfs-file-type", fileType: "pdf" },
+      },
+    ];
+    const widgets = [
+      {
+        id: "notes:widget",
+        title: "Widget",
+        icon: "widget-icon.svg",
+        surface: "desktop:wallpaper",
+        size: "md",
+        exportName: "Widget",
+      },
+    ];
+
+    const manifest = coerceFirstPartyCatalog({
+      apps: [
+        {
+          id: "notes",
+          version: "1.0.1",
+          build: 1,
+          entry: "/apps/notes/1.0.1+1/notes.js",
+          manifest: { ...notesManifest, previews, widgets },
+        },
+      ],
+    }).apps[0]?.manifest;
+
+    expect(manifest?.icon).toBe("icon.svg");
+    expect(manifest?.previews).toEqual(previews);
+    expect(manifest?.widgets?.[0]?.icon).toBe("widget-icon.svg");
+  });
+
   it("drops entries whose id is not in the first-party allowlist", () => {
     expect(
       coerceFirstPartyCatalog({
@@ -226,7 +270,7 @@ describe("first-party catalog coercion", () => {
             manifest: {
               id: "rogue",
               name: "Rogue",
-              icon: "NotesAppIcon",
+              icon: "icon.svg",
               category: "productivity",
             },
           },
@@ -235,11 +279,16 @@ describe("first-party catalog coercion", () => {
     ).toEqual([]);
   });
 
-  it("drops manifests with invalid enum or resolver keys", () => {
+  it("drops manifests with invalid enum, icon, or match rules", () => {
     const cases = [
       { permissions: ["vfs.read", "root"] },
       { category: "root" },
+      // Icon must be a flat, app-owned image filename — no missing extension,
+      // no path traversal, no subdirectories, no foreign extensions.
       { icon: "MissingIcon" },
+      { icon: "../evil.svg" },
+      { icon: "nested/icon.svg" },
+      { icon: "icon.exe" },
       { supportedShells: ["desktop", "tablet"] },
       {
         previews: [
@@ -248,6 +297,26 @@ describe("first-party catalog coercion", () => {
             surfaces: ["finder.panel"],
             exportName: "Preview",
             match: "unknown-match",
+          },
+        ],
+      },
+      {
+        previews: [
+          {
+            id: "notes:preview",
+            surfaces: ["finder.panel"],
+            exportName: "Preview",
+            match: { kind: "bogus-rule" },
+          },
+        ],
+      },
+      {
+        previews: [
+          {
+            id: "notes:preview",
+            surfaces: ["finder.panel"],
+            exportName: "Preview",
+            match: { kind: "vfs-file-type", fileType: "spreadsheet" },
           },
         ],
       },

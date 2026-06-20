@@ -1,7 +1,7 @@
 {
   "id": "youtube-player",
   "name": "YouTube Player",
-  "icon": "YoutubePlayerAppIcon",
+  "icon": "icon.svg",
   "category": "media",
   "singleton": false,
   "defaultWindow": { "width": 960, "height": 540, "centered": true },
@@ -13,7 +13,7 @@
       "surfaces": ["blog.embed"],
       "priority": 100,
       "exportName": "YouTubeVideoPreview",
-      "match": "youtube-url"
+      "match": { "kind": "app-url" }
     }
   ]
 }

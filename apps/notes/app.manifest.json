@@ -1,7 +1,7 @@
 {
   "id": "notes",
   "name": "Notes",
-  "icon": "NotesAppIcon",
+  "icon": "icon.svg",
   "category": "productivity",
   "singleton": true,
   "permissions": ["vfs.read", "vfs.write"],

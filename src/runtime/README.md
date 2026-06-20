@@ -2,8 +2,9 @@
 
 This folder exposes the shared runtime that independently-published first-party
 apps reuse. App packages under `apps/<id>` own serializable app metadata in
-`app.manifest.json` and ship Vue modules; the shell owns the first-party id
-allowlist, schema validation, icon-key resolution, and platform policy.
+`app.manifest.json`, their identity icon asset, and ship Vue modules; the shell
+owns the first-party id allowlist, schema validation, trusted asset-URL
+resolution, and platform policy.
 
 Sharing one runtime instance keeps `provide` / `inject`, reactivity, and
 `useKernel()` working across the host/app boundary. Two Vue copies, or two
@@ -35,11 +36,20 @@ module, and marks shared runtime surfaces as Rollup externals:
 {
   "id": "notes",
   "name": "Notes",
-  "icon": "NotesAppIcon",
+  "icon": "icon.svg",
   "category": "productivity",
   "permissions": ["vfs.read", "vfs.write"]
 }
 ```
+
+The app owns its identity icon: ship the asset at `apps/<id>/public/icon.svg`
+(raster formats such as `.png` are allowed too) and reference it from the
+manifest with a flat relative filename — no `/` or `..`. The build copies
+`public/` into `dist/`, the publish workflow uploads it next to the entry
+module, and the shell resolves it to a release-pinned URL on the same trusted
+origin as the module (`/apps/<id>/<version+build>/icon.svg`) and renders it as
+an `<img>`. Changing an app icon is therefore an app release, not a shell
+change.
 
 ```ts
 // apps/<id>/vite.config.ts
@@ -93,10 +103,11 @@ In development, the shell loads workspace packages directly through
 `firstPartyAppsPhase`, so HMR stays simple and no import map is needed.
 
 In preview and production, the shell fetches `/_api/public/apps/index.json`,
-validates each catalog entry and manifest, resolves serializable icon/matcher
-keys, and loads the published module only when the user launches the app or
-mounts one of its widgets. The import map is injected only during `vite build`,
-so runtime composition should be verified with `pnpm build` plus `pnpm preview`.
+validates each catalog entry and manifest, resolves each app's relative icon ref
+to a trusted release-pinned URL, evaluates serializable preview match rules, and
+loads the published module only when the user launches the app or mounts one of
+its widgets. The import map is injected only during `vite build`, so runtime
+composition should be verified with `pnpm build` plus `pnpm preview`.
 
 ## Verification Checklist
 
@@ -105,7 +116,9 @@ so runtime composition should be verified with `pnpm build` plus `pnpm preview`.
    `@daopk/sdk`, `@daopk/kit`, and related facades at hashed `/assets/*`
    runtime chunks.
 3. Launch a first-party app from the App Store or shell and confirm the module
-   loads from its `/_api/public/apps/<id>/...` catalog URL.
+   loads from its `/_api/public/apps/<id>/...` catalog URL, and that its dock /
+   home / spotlight icon loads as an `<img>` from the matching
+   `/_api/public/apps/<id>/<version+build>/icon.svg` URL.
 4. In DevTools Network, confirm one shared Vue runtime chunk is used by both the
    shell and launched app.
 5. Confirm `useKernel()`, `useVfs()`, and injected `AppContext` work inside the

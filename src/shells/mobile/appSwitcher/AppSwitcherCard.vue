@@ -2,6 +2,8 @@
 import { X as DismissIcon } from "~/icons/lucide";
 import { type Component, computed } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
+
 const props = defineProps<{
   frameId: string;
   handleId: string;
@@ -42,7 +44,7 @@ function onDismiss(event: MouseEvent): void {
     @keydown.space.prevent="onSelect"
   >
     <span class="app-switcher-card__icon" aria-hidden="true">
-      <component :is="icon" :size="20" :stroke-width="1.75" />
+      <AppIcon :icon="icon" :size="20" :stroke-width="1.75" />
     </span>
     <span class="app-switcher-card__name">{{ name }}</span>
     <button

@@ -12,6 +12,7 @@ import {
   useAppChrome,
 } from "~/components/kit";
 import { Button } from "~/components/ui";
+import AppIcon from "~/components/AppIcon.vue";
 import { useKernel } from "~/composables/useKernel";
 import { fetchFirstPartyCatalogForUpdate } from "~/core/apps/firstParty/catalog";
 import { FIRST_PARTY_APP_IDS } from "~/core/apps/firstParty/registry";
@@ -329,7 +330,7 @@ function launchApp(manifestId: string): void {
           <ul class="app-store__grid">
             <li v-for="app in group.apps" :key="app.id" class="app-store__card">
               <div class="app-store__identity">
-                <component :is="app.icon" class="app-store__icon" aria-hidden="true" />
+                <AppIcon :icon="app.icon" class="app-store__icon" aria-hidden="true" />
                 <span class="app-store__copy">
                   <span class="app-store__name">{{ app.name }}</span>
                   <span class="app-store__version">{{ appReleaseLabel(app) }}</span>

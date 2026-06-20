@@ -1,7 +1,7 @@
 {
   "id": "pdf-viewer",
   "name": "PDF Viewer",
-  "icon": "PdfViewerAppIcon",
+  "icon": "icon.svg",
   "category": "productivity",
   "singleton": false,
   "permissions": ["vfs.read"],
@@ -14,7 +14,7 @@
       "surfaces": ["finder.panel"],
       "priority": 100,
       "exportName": "PdfFilePreview",
-      "match": "pdf-file"
+      "match": { "kind": "vfs-file-type", "fileType": "pdf" }
     }
   ]
 }

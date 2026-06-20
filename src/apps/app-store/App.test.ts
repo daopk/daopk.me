@@ -22,15 +22,10 @@ function catalogManifest(
     notes: "Notes",
     photos: "Photos",
   };
-  const icons: Record<string, string> = {
-    browser: "BrowserAppIcon",
-    notes: "NotesAppIcon",
-    photos: "PhotosAppIcon",
-  };
   return {
     id,
     name: names[id] ?? id,
-    icon: icons[id] ?? "NotesAppIcon",
+    icon: "icon.svg",
     category: id === "photos" ? "media" : "productivity",
     ...overrides,
   };

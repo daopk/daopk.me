@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted, shallowRef } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel } from "~/components/ui";
 import { Grid2X2 } from "~/icons/lucide";
 import { useKernel } from "~/composables/useKernel";
@@ -48,7 +49,7 @@ function visibleApps(): AppManifest[] {
         :text-value="app.name"
         @select="launchApp(app.id)"
       >
-        <component :is="app.icon" class="apps-menu__icon" aria-hidden="true" />
+        <AppIcon :icon="app.icon" class="apps-menu__icon" aria-hidden="true" />
         <span>{{ app.name }}</span>
       </DropdownMenuItem>
     </template>

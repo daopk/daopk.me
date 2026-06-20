@@ -3,6 +3,7 @@ import { computed, onUnmounted, shallowRef, watch } from "vue";
 
 import { ActionRow, EmptyState, GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import Switch from "~/components/ui/Switch.vue";
+import AppIcon from "~/components/AppIcon.vue";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -143,7 +144,7 @@ function categoryLabel(category: AppManifest["category"]): string {
       <ul v-else class="dock-settings__app-list">
         <li v-for="app in apps" :key="app.id" class="dock-settings__app-item">
           <div class="dock-settings__app-identity">
-            <component :is="app.icon" class="dock-settings__app-icon" aria-hidden="true" />
+            <AppIcon :icon="app.icon" class="dock-settings__app-icon" aria-hidden="true" />
             <span class="dock-settings__app-copy">
               <span :id="`dock-pin-${app.id}-label`" class="dock-settings__app-name">
                 {{ app.name }}

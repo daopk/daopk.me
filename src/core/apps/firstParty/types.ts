@@ -9,14 +9,18 @@ import type { ShellId } from "~/types/shell";
 import type { DesktopContextMenuSurface, DesktopRendererSurface } from "~/types/desktop";
 import type { WidgetDefaultPlacement, WidgetSize, WidgetSurface } from "~/types/widget";
 
-import type { FirstPartyIconKey } from "./iconResolver";
-import type { FirstPartyPreviewMatcherKey } from "./previewMatchers";
+import type { FirstPartyPreviewMatchRule } from "./previewMatchers";
 
 export interface FirstPartyCatalogWidgetDescriptor {
   readonly id: string;
   readonly title: string;
   readonly description?: string;
-  readonly icon?: FirstPartyIconKey;
+  /**
+   * App-owned icon shipped with the app release, referenced by a relative
+   * filename (e.g. `"widget-icon.svg"`). The host resolves it against the
+   * entry module's directory into a trusted, release-pinned URL.
+   */
+  readonly icon?: string;
   readonly surface: WidgetSurface;
   readonly size: WidgetSize;
   readonly defaultVisible?: boolean;
@@ -33,8 +37,12 @@ export interface FirstPartyCatalogPreviewDescriptor {
   readonly priority?: number;
   /** Named export in the app entry module that is this preview component. */
   readonly exportName: string;
-  /** Host-owned matcher key; matcher functions stay in the shell runtime. */
-  readonly match: FirstPartyPreviewMatcherKey;
+  /**
+   * App-owned, serializable rule describing what this preview matches. Evaluated
+   * synchronously by the shell (no app module load) — see
+   * {@link FirstPartyPreviewMatchRule}.
+   */
+  readonly match: FirstPartyPreviewMatchRule;
 }
 
 export interface FirstPartyCatalogDesktopContextMenuDescriptor {
@@ -63,7 +71,13 @@ export interface FirstPartyCatalogDesktopManifest {
 export interface FirstPartyCatalogAppManifest {
   readonly id: string;
   readonly name: string;
-  readonly icon: FirstPartyIconKey;
+  /**
+   * App-owned identity icon shipped with the app release, referenced by a
+   * relative filename (e.g. `"icon.svg"`). The host resolves it against the
+   * entry module's directory into a trusted, release-pinned URL and renders it
+   * as an image, so apps own their visual identity without a shell code change.
+   */
+  readonly icon: string;
   readonly category: "system" | "productivity" | "media" | "dev" | "other";
   readonly singleton?: boolean;
   readonly hidden?: boolean;

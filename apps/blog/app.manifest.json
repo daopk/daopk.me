@@ -1,7 +1,7 @@
 {
   "id": "blog",
   "name": "Blog",
-  "icon": "BlogAppIcon",
+  "icon": "icon.svg",
   "category": "productivity",
   "permissions": ["vfs.read", "vfs.write", "network.fetch"],
   "defaultWindow": { "width": 720, "height": 520, "centered": true },

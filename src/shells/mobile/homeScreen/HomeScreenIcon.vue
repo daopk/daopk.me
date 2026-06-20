@@ -2,6 +2,7 @@
 import { Loader2 } from "~/icons/lucide";
 import { computed, type Component } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
 import type { AppManifest } from "~/types/app";
 
 const props = withDefaults(
@@ -49,8 +50,8 @@ function onActivate(): void {
     @keydown.space.prevent="onActivate"
   >
     <span class="home-icon__glyph" aria-hidden="true">
-      <component
-        :is="iconComponent"
+      <AppIcon
+        :icon="iconComponent"
         class="home-icon__glyph-art"
         :size="'var(--home-screen-icon-glyph-size)'"
         :stroke-width="2"

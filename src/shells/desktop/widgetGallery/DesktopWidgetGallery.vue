@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
 import { Button } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useWidgetEnabled } from "~/composables/useWidgetEnabled";
@@ -197,7 +198,11 @@ function desktopStageRect(): DOMRect | null {
           :aria-label="item.desktopPlaceable ? `Drag ${item.title} to desktop` : item.title"
           @pointerdown="startDesktopDrag(item, $event)"
         >
-          <component :is="item.icon ?? WidgetsIcon" class="desktop-widget-gallery__preview-icon" />
+          <AppIcon
+            :icon="item.icon"
+            :fallback="WidgetsIcon"
+            class="desktop-widget-gallery__preview-icon"
+          />
           <span class="desktop-widget-gallery__preview-size">{{ item.sizeLabel }}</span>
         </button>
 

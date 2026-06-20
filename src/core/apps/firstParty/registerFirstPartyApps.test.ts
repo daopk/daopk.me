@@ -28,7 +28,7 @@ vi.mock("./devManifests", () => ({
       manifest: {
         id: "notes",
         name: "Notes",
-        icon: "NotesAppIcon",
+        icon: "icon.svg",
         category: "productivity",
         widgets: [
           {
@@ -45,7 +45,7 @@ vi.mock("./devManifests", () => ({
             title: "Note Preview",
             surfaces: ["finder.panel"],
             exportName: "NotePreview",
-            match: "pdf-file",
+            match: { kind: "vfs-file-type", fileType: "pdf" },
           },
         ],
         desktop: {
@@ -134,6 +134,14 @@ async function renderViaAsyncComponent(
   return wrapper.html();
 }
 
+/** Render a resolved identity icon component to HTML so its `<img>`/fallback is inspectable. */
+function renderIcon(icon: Component | undefined | null): string {
+  if (icon === undefined || icon === null) {
+    return "";
+  }
+  return mount(defineComponent({ name: "IconProbe", render: () => h(icon, { size: 24 }) })).html();
+}
+
 describe("registerFirstPartyApps (dev lane)", () => {
   let registered: Array<{ manifest: AppManifest; options?: KernelAppsRegisterOptions }>;
 
@@ -186,13 +194,14 @@ describe("registerFirstPartyApps (dev lane)", () => {
     const catalogManifest: FirstPartyCatalogAppManifest = {
       id: "probe",
       name: "Probe",
-      icon: "NotesAppIcon",
+      icon: "icon.svg",
       category: "dev",
       chrome: { mobile: { titlebar: "hidden" } },
       widgets: [
         {
           id: "probe:widget",
           title: "Probe Widget",
+          icon: "widget.svg",
           surface: "desktop:wallpaper",
           size: "sm",
           exportName: "ProbeWidget",
@@ -204,7 +213,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
           title: "Probe Preview",
           surfaces: ["finder.panel"],
           exportName: "ProbePreview",
-          match: "pdf-file",
+          match: { kind: "vfs-file-type", fileType: "pdf" },
         },
       ],
       desktop: {
@@ -247,6 +256,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
           template: '<div class="probe-desktop-layer">probe desktop</div>',
         }),
       }),
+      "/public/apps/probe/1.2.3+42/probe.js",
       "1.2.3",
       42,
       "abc1234",
@@ -259,8 +269,13 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(((await manifest.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(manifest.component)).toContain("probe-app");
 
+    expect(renderIcon(manifest.icon)).toContain(
+      'src="/public/apps/probe/1.2.3+42/icon.svg"',
+    );
+
     const widget = manifest.widgets?.[0];
     expect(widget).toBeDefined();
+    expect(renderIcon(widget!.icon)).toContain('src="/public/apps/probe/1.2.3+42/widget.svg"');
     expect(((await widget!.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(widget!.component)).toContain("probe-widget");
 
@@ -290,7 +305,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
       manifest: {
         id: "notes",
         name: "Notes",
-        icon: "NotesAppIcon",
+        icon: "icon.svg",
         category: "productivity",
       },
     });
@@ -303,6 +318,34 @@ describe("registerFirstPartyApps (dev lane)", () => {
         revision: "abc1234",
       }),
     );
+  });
+
+  it("resolves the identity icon to a release-pinned <img> next to the entry module", () => {
+    const manifest = firstPartyCatalogEntryToAppManifest({
+      id: "notes",
+      version: "1.2.3",
+      build: 42,
+      entry: "/public/apps/notes/1.2.3+42/notes.js",
+      manifest: { id: "notes", name: "Notes", icon: "icon.svg", category: "productivity" },
+    });
+
+    const html = renderIcon(manifest?.icon);
+    expect(html).toContain("<img");
+    expect(html).toContain('src="/public/apps/notes/1.2.3+42/icon.svg"');
+  });
+
+  it("falls back to a neutral icon when the icon cannot resolve to a trusted asset URL", () => {
+    // A cross-origin entry URL is not a trusted asset host, so the icon ref
+    // cannot resolve and the manifest must still get a renderable fallback.
+    const manifest = firstPartyCatalogManifestToAppManifest(
+      { id: "notes", name: "Notes", icon: "icon.svg", category: "productivity" },
+      async () => ({ default: defineComponent({ name: "X", template: "<div />" }) }),
+      "https://evil.test/apps/notes/1.2.3+42/notes.js",
+      "1.2.3",
+    );
+
+    expect(manifest.icon).toBeTruthy();
+    expect(renderIcon(manifest.icon)).not.toContain("evil.test");
   });
 
   it("skips legacy catalog entries that do not carry a manifest", () => {

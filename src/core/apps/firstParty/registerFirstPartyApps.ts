@@ -1,4 +1,6 @@
 import { debugWarn } from "~/core/debug";
+import { createImageIcon } from "~/icons/createIcon";
+import { FallbackAppIcon } from "~/icons/fluentColor";
 
 import type { AppManifest } from "~/types/app";
 import type {
@@ -11,8 +13,7 @@ import type { AppPreviewProvider } from "~/types/preview";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
 
-import { coerceFirstPartyCatalog, fetchFirstPartyCatalog } from "./catalog";
-import { resolveFirstPartyIcon } from "./iconResolver";
+import { coerceFirstPartyCatalog, fetchFirstPartyCatalog, resolveTrustedAppAssetUrl } from "./catalog";
 import { resolveFirstPartyPreviewMatcher } from "./previewMatchers";
 import { FIRST_PARTY_APP_ID_LIST } from "./registry";
 import type {
@@ -41,14 +42,27 @@ function asEsmModule(component: Component): { default: Component } {
   return { default: component, __esModule: true } as { default: Component };
 }
 
+/**
+ * Build an icon component from an app-owned, release-shipped icon ref resolved
+ * against the app's entry module URL. Returns a neutral fallback if the ref
+ * cannot be resolved to a trusted asset URL (it already passed shape validation
+ * at catalog coercion time, so this is defense-in-depth, not the happy path).
+ */
+function resolveAppIcon(entryUrl: string, appId: string, ref: string): Component {
+  const url = resolveTrustedAppAssetUrl(entryUrl, appId, ref);
+  return url === null ? FallbackAppIcon : createImageIcon(url, `AppIcon:${appId}:${ref}`);
+}
+
 function toWidgetManifest(
   descriptor: FirstPartyCatalogWidgetDescriptor,
   load: FirstPartyModuleLoader,
+  entryUrl: string,
+  appId: string,
 ): WidgetManifest {
   const { exportName, icon, ...rest } = descriptor;
   return {
     ...rest,
-    ...(icon === undefined ? {} : { icon: resolveFirstPartyIcon(icon) }),
+    ...(icon === undefined ? {} : { icon: resolveAppIcon(entryUrl, appId, icon) }),
     component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
   };
 }
@@ -63,7 +77,7 @@ function toPreviewProvider(
     ...rest,
     manifestId,
     component: () => load().then((module) => asEsmModule(module[exportName] as Component)),
-    match: resolveFirstPartyPreviewMatcher(match),
+    match: resolveFirstPartyPreviewMatcher(match, manifestId),
   };
 }
 
@@ -92,6 +106,7 @@ function toDesktopRenderer(
 export function firstPartyCatalogManifestToAppManifest(
   catalogManifest: FirstPartyCatalogAppManifest,
   load: FirstPartyModuleLoader,
+  entryUrl: string,
   version: string,
   build = 0,
   revision?: string,
@@ -101,7 +116,7 @@ export function firstPartyCatalogManifestToAppManifest(
     name: catalogManifest.name,
     version,
     build,
-    icon: resolveFirstPartyIcon(catalogManifest.icon),
+    icon: resolveAppIcon(entryUrl, catalogManifest.id, catalogManifest.icon),
     category: catalogManifest.category,
     component: () => load().then((module) => asEsmModule(module.default as Component)),
   };
@@ -123,7 +138,9 @@ export function firstPartyCatalogManifestToAppManifest(
   if (catalogManifest.keywords !== undefined) manifest.keywords = [...catalogManifest.keywords];
   if (catalogManifest.settings !== undefined) manifest.settings = catalogManifest.settings;
   if (catalogManifest.widgets !== undefined) {
-    manifest.widgets = catalogManifest.widgets.map((widget) => toWidgetManifest(widget, load));
+    manifest.widgets = catalogManifest.widgets.map((widget) =>
+      toWidgetManifest(widget, load, entryUrl, catalogManifest.id),
+    );
   }
   if (catalogManifest.previews !== undefined) {
     manifest.previews = catalogManifest.previews.map((preview) =>
@@ -163,6 +180,7 @@ export function firstPartyCatalogEntryToAppManifest(
   return firstPartyCatalogManifestToAppManifest(
     entry.manifest,
     load,
+    entry.entry,
     entry.version,
     entry.build,
     entry.revision,
@@ -179,6 +197,7 @@ function manifestFromDevEntry(
   return firstPartyCatalogManifestToAppManifest(
     entry.manifest,
     load,
+    entry.entry,
     entry.version,
     entry.build,
     entry.revision,

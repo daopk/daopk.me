@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AppStoreAppIcon,
+  FallbackAppIcon,
+  FinderAppIcon,
   FLUENT_COLOR_ICON_NAMES,
-  fluentColorIconComponents,
+  SettingsAppIcon,
+  TerminalAppIcon,
   type FluentColorIconName,
 } from "./fluentColor";
 import { fluentColorIconData } from "./generated/fluentColor";
@@ -17,8 +21,14 @@ describe("Fluent Color icon subset", () => {
     }
   });
 
-  it("exports renderable Vue components for every identity icon", () => {
-    for (const component of Object.values(fluentColorIconComponents)) {
+  it("exports renderable Vue components for built-in identity icons", () => {
+    for (const component of [
+      FinderAppIcon,
+      SettingsAppIcon,
+      TerminalAppIcon,
+      AppStoreAppIcon,
+      FallbackAppIcon,
+    ]) {
       expect(component).toBeTruthy();
     }
   });

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import AppIcon from "~/components/AppIcon.vue";
+
 import type { DockDropPlacement, DockItemModel } from "./types";
 
 const props = withDefaults(
@@ -77,7 +79,7 @@ const dragStyle = computed(() =>
     @click="emit('launch', item)"
     @pointerdown="emit('reorder-pointer-down', $event, item)"
   >
-    <component :is="item.icon" class="dock-item__icon" aria-hidden="true" />
+    <AppIcon :icon="item.icon" class="dock-item__icon" aria-hidden="true" />
     <span v-if="attention" class="dock-item__attention" aria-hidden="true" />
     <span v-if="running" class="dock-item__indicator" aria-hidden="true" />
   </button>

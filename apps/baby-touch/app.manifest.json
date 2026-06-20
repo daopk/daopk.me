@@ -1,7 +1,7 @@
 {
   "id": "baby-touch",
   "name": "Baby Touch",
-  "icon": "BabyTouchAppIcon",
+  "icon": "icon.png",
   "category": "media",
   "singleton": true,
   "permissions": ["storage.write"],

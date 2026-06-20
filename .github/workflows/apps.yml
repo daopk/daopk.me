@@ -149,10 +149,16 @@ jobs:
             rel="${file#"$dist"/}"
             key="$APP/$release/$rel"
             case "$file" in
-              *.js)  content_type="text/javascript;charset=utf-8" ;;
-              *.css) content_type="text/css;charset=utf-8" ;;
-              *.map) content_type="application/json;charset=utf-8" ;;
-              *)     content_type="application/octet-stream" ;;
+              *.js)   content_type="text/javascript;charset=utf-8" ;;
+              *.css)  content_type="text/css;charset=utf-8" ;;
+              *.map)  content_type="application/json;charset=utf-8" ;;
+              *.svg)  content_type="image/svg+xml" ;;
+              *.png)  content_type="image/png" ;;
+              *.webp) content_type="image/webp" ;;
+              *.avif) content_type="image/avif" ;;
+              *.ico)  content_type="image/x-icon" ;;
+              *.jpg|*.jpeg) content_type="image/jpeg" ;;
+              *)      content_type="application/octet-stream" ;;
             esac
             echo "Uploading $key ($content_type)"
             pnpm exec wrangler r2 object put "$R2_BUCKET/$key" \

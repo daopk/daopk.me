@@ -1,8 +1,7 @@
 import { debugWarn } from "~/core/debug";
 import { publicApiUrl } from "~/core/publicApi";
 
-import { isFirstPartyIconKey } from "./iconResolver";
-import { isFirstPartyPreviewMatcherKey } from "./previewMatchers";
+import { coerceFirstPartyPreviewMatchRule } from "./previewMatchers";
 import { isFirstPartyAppId } from "./registry";
 import type {
   FirstPartyCatalog,
@@ -58,6 +57,21 @@ export type FirstPartyCatalogFetchResult =
 const TRUSTED_PUBLIC_API_ORIGIN = "https://daopk.me";
 const ENTRY_PATH_PATTERN =
   /^\/(?:(?:_api\/)?public\/)?apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.js$/;
+/** Same shape as the entry pattern but for an app-owned image icon asset. */
+const ASSET_PATH_PATTERN =
+  /^\/(?:(?:_api\/)?public\/)?apps\/[a-z0-9][a-z0-9-]*\/[0-9A-Za-z.+-]+\/[A-Za-z0-9._/-]+\.(?:svg|png|webp|avif)$/;
+
+/**
+ * App icon/widget refs are app-owned, release-shipped image filenames. They
+ * must be a single flat filename (no path separators, no `..`) so they can only
+ * resolve to an asset in the app's own release directory. `.svg` is preferred;
+ * raster formats are allowed for apps whose identity art is a bitmap.
+ */
+const ICON_REF_PATTERN = /^[a-z0-9][a-z0-9._-]*\.(?:svg|png|webp|avif)$/;
+
+export function isValidIconRef(value: unknown): value is string {
+  return typeof value === "string" && ICON_REF_PATTERN.test(value) && !value.includes("..");
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -253,7 +267,7 @@ function coerceWidget(input: unknown): FirstPartyCatalogWidgetDescriptor | null 
   if (description !== undefined && typeof description !== "string") {
     return null;
   }
-  if (icon !== undefined && (typeof icon !== "string" || !isFirstPartyIconKey(icon))) {
+  if (icon !== undefined && !isValidIconRef(icon)) {
     return null;
   }
 
@@ -284,6 +298,7 @@ function coercePreview(input: unknown): FirstPartyCatalogPreviewDescriptor | nul
   }
   const { id, title, surfaces, exportName, match } = input;
   const coercedSurfaces = coerceEnumArray(surfaces, PREVIEW_SURFACES);
+  const matchRule = coerceFirstPartyPreviewMatchRule(match);
   if (
     typeof id !== "string" ||
     id.length === 0 ||
@@ -292,8 +307,7 @@ function coercePreview(input: unknown): FirstPartyCatalogPreviewDescriptor | nul
     coercedSurfaces.length === 0 ||
     typeof exportName !== "string" ||
     exportName.length === 0 ||
-    typeof match !== "string" ||
-    !isFirstPartyPreviewMatcherKey(match)
+    matchRule === null
   ) {
     return null;
   }
@@ -309,7 +323,7 @@ function coercePreview(input: unknown): FirstPartyCatalogPreviewDescriptor | nul
     surfaces: coercedSurfaces,
     ...(priority === undefined ? {} : { priority }),
     exportName,
-    match,
+    match: matchRule,
   };
 }
 
@@ -429,8 +443,7 @@ function coerceManifest(input: unknown, entryId: string): FirstPartyCatalogAppMa
     !isFirstPartyAppId(id) ||
     typeof name !== "string" ||
     name.length === 0 ||
-    typeof icon !== "string" ||
-    !isFirstPartyIconKey(icon) ||
+    !isValidIconRef(icon) ||
     typeof category !== "string" ||
     !APP_CATEGORIES.has(category)
   ) {
@@ -555,6 +568,43 @@ function isTrustedEntryUrl(entry: string, id: string): boolean {
 
   return (
     ENTRY_PATH_PATTERN.test(pathname) &&
+    (pathname.startsWith(`/apps/${id}/`) ||
+      pathname.startsWith(`/public/apps/${id}/`) ||
+      pathname.startsWith(`/_api/public/apps/${id}/`))
+  );
+}
+
+/**
+ * Resolve an app-owned asset ref (validated by `isValidIconRef`) against the
+ * app's entry module URL, returning a trusted, release-pinned asset URL or
+ * `null`. The asset must live in the same release directory as the entry and
+ * clear the same trusted-origin + `/apps/<id>/` checks as the entry itself, so
+ * an app can only point its icon at its own published files.
+ */
+export function resolveTrustedAppAssetUrl(
+  entryUrl: string,
+  id: string,
+  ref: string,
+): string | null {
+  if (!isValidIconRef(ref)) {
+    return null;
+  }
+  const slash = entryUrl.lastIndexOf("/");
+  if (slash < 0) {
+    return null;
+  }
+  const assetUrl = `${entryUrl.slice(0, slash + 1)}${ref}`;
+  return isTrustedAssetUrl(assetUrl, id) ? assetUrl : null;
+}
+
+function isTrustedAssetUrl(asset: string, id: string): boolean {
+  const pathname = asset.startsWith("/") ? asset : absoluteEntryPathname(asset);
+  if (pathname === null) {
+    return false;
+  }
+
+  return (
+    ASSET_PATH_PATTERN.test(pathname) &&
     (pathname.startsWith(`/apps/${id}/`) ||
       pathname.startsWith(`/public/apps/${id}/`) ||
       pathname.startsWith(`/_api/public/apps/${id}/`))
