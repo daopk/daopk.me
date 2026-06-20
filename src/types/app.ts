@@ -59,11 +59,12 @@ export interface AppManifest {
   /** Short source revision for first-party release traceability. */
   revision?: string;
   /**
-   * App icon as a Vue Component (typically an Iconify-backed icon export).
-   * Manifests own their visual identity so the dock/launcher can tree-shake
-   * down to only the icons actually registered. If broader registries
-   * (remote/serializable manifests) become a need later, introduce a parallel
-   * string-keyed icon registry then; do not weaken this contract.
+   * App icon as a resolved Vue Component. Built-in (system) apps import a
+   * Fluent Color glyph directly; first-party apps declare a flat icon filename
+   * in their serializable manifest, which the host resolves to a trusted
+   * release-pinned image component (`createImageIcon`) at registration. Keeping
+   * this contract a resolved Component (not a string key) lets the dock,
+   * launcher, and other surfaces render any app icon uniformly via `AppIcon`.
    */
   icon: Component;
   category: "system" | "productivity" | "media" | "dev" | "other";

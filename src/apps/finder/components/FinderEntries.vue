@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch, type Component } from "vue";
 
 import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";
 import { Badge, EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
-import type { VfsDirEntry } from "@daopk/sdk";
+import { useKernel, type VfsDirEntry } from "@daopk/sdk";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
+
+import AppIcon from "~/components/AppIcon.vue";
 
 import type { FinderViewMode } from "../composables/useFinder";
 import {
@@ -14,7 +16,6 @@ import {
   formatModified,
   isCloudDriveEntry,
 } from "../utils/display";
-import { openSuggestionIcon } from "../utils/openSuggestionIcons";
 import { openSuggestionsForEntry, type FinderOpenSuggestion } from "../utils/openSuggestions";
 
 const GRID_KEYBOARD_COLUMNS = 4;
@@ -58,6 +59,8 @@ const emit = defineEmits<{
   requestDeleteEntry: [entry: VfsDirEntry];
   selectByIndex: [index: number];
 }>();
+
+const kernel = useKernel();
 
 const entriesRef = ref<HTMLElement | null>(null);
 const gridColumns = ref(GRID_KEYBOARD_COLUMNS);
@@ -125,6 +128,10 @@ function canMutateEntry(entry: VfsDirEntry): boolean {
 
 function isLoadingCloudEntry(entry: VfsDirEntry): boolean {
   return props.loadingPath === entry.path && isCloudDriveEntry(entry);
+}
+
+function openSuggestionIconFor(suggestion: FinderOpenSuggestion): Component | null {
+  return kernel.apps.list().find((app) => app.id === suggestion.manifestId)?.icon ?? null;
 }
 
 function isTouchLikePointer(event: PointerEvent): boolean {
@@ -313,8 +320,8 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   :key="suggestion.id"
                   @select="emit('openWithSuggestion', entry, suggestion)"
                 >
-                  <component
-                    :is="openSuggestionIcon(suggestion)"
+                  <AppIcon
+                    :icon="openSuggestionIconFor(suggestion)"
                     class="finder__context-icon finder__context-icon--app"
                     :size="16"
                     aria-hidden="true"

@@ -15,12 +15,8 @@ function createFluentIcon(name: FluentColorIconName, componentName: string): Com
 
 export const FLUENT_COLOR_ICON_NAMES = fluentColorIconNames;
 
-export const BlogAppIcon = createFluentIcon("document-text-24", "FluentBlogAppIcon");
 export const CloudFolderIcon = createFluentIcon("cloud-24", "FluentCloudFolderIcon");
 export const FinderAppIcon = createFluentIcon("document-folder-24", "FluentFinderAppIcon");
-export const EditorAppIcon = createFluentIcon("edit-32", "FluentEditorAppIcon");
-export const NotesAppIcon = createFluentIcon("notebook-32", "FluentNotesAppIcon");
-export const PdfViewerAppIcon = createFluentIcon("document-32", "FluentPdfViewerAppIcon");
 export const TerminalAppIcon = createFluentIcon("code-block-32", "FluentTerminalAppIcon");
 export const SettingsAppIcon = createFluentIcon("settings-32", "FluentSettingsAppIcon");
 export const TemplateAppIcon = createFluentIcon("apps-32", "FluentTemplateAppIcon");

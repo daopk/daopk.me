@@ -1,6 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, nextTick } from "vue";
+import { defineComponent, h, nextTick } from "vue";
 
 import { basename, dirname, normalizeVfsPath } from "~/core/vfs/path";
 import type { VfsDirEntry, VfsStat } from "~/core/vfs/nodes";
@@ -39,6 +39,11 @@ function statFromEntry(item: VfsDirEntry): VfsStat {
     ...(item.mimeType === undefined ? {} : { mimeType: item.mimeType }),
   };
 }
+
+const stubAppIcon = defineComponent({
+  name: "StubAppIcon",
+  render: () => h("img", { alt: "" }),
+});
 
 function makeKernel(
   listings: Record<string, readonly VfsDirEntry[]>,
@@ -230,6 +235,17 @@ function makeKernel(
           ? { provider: pdfPreviewProvider, args: { path: input.entry.path } }
           : null,
       ),
+    },
+    apps: {
+      register: vi.fn(),
+      launch: vi.fn(),
+      unregister: vi.fn(),
+      list: vi.fn(() => [
+        { id: "blog", icon: stubAppIcon },
+        { id: "editor", icon: stubAppIcon },
+        { id: "notes", icon: stubAppIcon },
+        { id: "pdf-viewer", icon: stubAppIcon },
+      ]),
     },
   } as unknown as Kernel;
 }

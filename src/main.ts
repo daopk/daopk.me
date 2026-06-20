@@ -21,7 +21,6 @@ import { registerPwaInstallPrompt } from "~/service-worker/installController";
 import { referralCode } from "~/utils/console";
 
 import { KernelInjectionKey } from "~/types/kernel";
-import { disposeBuiltinWidgets, registerBuiltinWidgets } from "~/widgets/builtin";
 
 const app = createApp(App);
 const disposePwaInstallPrompt = registerPwaInstallPrompt();
@@ -53,8 +52,6 @@ if (import.meta.env.DEV) {
   });
 }
 
-registerBuiltinWidgets(kernel);
-
 app.provide(KernelInjectionKey, kernel);
 
 const bootManager = new BootManager(kernel, kernel.boot, [...defaultBootPhases]);
@@ -78,6 +75,5 @@ referralCode();
 import.meta.hot?.dispose(() => {
   disposePwaInstallPrompt();
   bootManager.dispose();
-  disposeBuiltinWidgets();
   kernel.dispose();
 });
