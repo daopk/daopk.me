@@ -5,7 +5,7 @@ import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "
 import { useKernel } from "~/composables/useKernel";
 import { useEdgeSwipe } from "~/composables/useEdgeSwipe";
 
-import AppMount from "~/shells/desktop/windowManager/AppMount.vue";
+import AppMount from "~/shells/shared/AppMount.vue";
 
 import {
   AppChromeInjectionKey,

@@ -12,7 +12,7 @@ import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import type { AppChromeContentSize, AppChromeController } from "~/types/app";
-import AppMount from "./AppMount.vue";
+import AppMount from "~/shells/shared/AppMount.vue";
 import { TITLEBAR_HEIGHT, type SnapEdge, type WindowRecord } from "./useWindowManager";
 import { clampWindowPosition } from "./windowGeometry";
 import { useWindowDrag } from "./useWindowDrag";
