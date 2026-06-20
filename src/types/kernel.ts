@@ -133,10 +133,6 @@ export interface KernelVfsFacade {
   remove(_path: string, _options: KernelVfsDirectoryOptions): Promise<boolean>;
 }
 
-export interface KernelBackgroundFacade {
-  run<Result = unknown>(_jobId: string, input: Record<string, unknown>): Promise<Result>;
-}
-
 export interface KernelProfileFacade {
   current(): ProfileSessionSnapshot;
   lock(): Promise<void>;
@@ -222,7 +218,6 @@ export interface Kernel {
   readonly events: KernelEventsFacade;
   readonly settings: KernelSettingsFacade;
   readonly vfs: KernelVfsFacade;
-  readonly background: KernelBackgroundFacade;
   readonly profile: KernelProfileFacade;
   readonly telemetry: KernelTelemetryFacade;
   readonly theme: KernelThemeFacade;

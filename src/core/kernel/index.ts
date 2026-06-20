@@ -85,7 +85,7 @@ const appDesktopContributionDisposers = new Map<string, Array<() => void>>();
 const lifecycleInternal = new Lifecycle();
 const processesInternal = new ProcessTable();
 const pendingProcessKills = new Map<string, Promise<void>>();
-const queuedNotifications = new Map<string, Record<string, unknown>>();
+let notificationIdFallback = 0;
 const noopAbortController = new AbortController();
 const EMPTY_COMMAND_PAYLOAD = Object.freeze({});
 const telemetryInternal = new TelemetryBus({
@@ -783,16 +783,6 @@ function buildKernel(): Kernel {
       getVfs: () => vfsInternal,
     }),
 
-    background: {
-      async run<Result = unknown>(jobId: string, input: Record<string, unknown>): Promise<Result> {
-        void input;
-
-        debugLog("[kernel stub] background.run", jobId);
-
-        return undefined as Result;
-      },
-    },
-
     telemetry: {
       isEnabled() {
         return telemetryInternal.isEnabled();
@@ -839,27 +829,36 @@ function buildKernel(): Kernel {
     ...registryFacades,
 
     notifications: {
-      // kernel-side permission gate. The contract is that
-      // persisted grant MUST still emit a `permission.requested`
-      async enqueue(payload, options) {
+      /**
+       * Permission-gated notification entry point. The gate is real and fully
+       * wired (see notifications.permission.test.ts): system apps and
+       * first-party apps that declare `notifications.post` auto-grant, a
+       * persisted decision resolves without re-prompting, and everyone else
+       * prompts via a parked `permission.requested`. On grant we mint and
+       * return an opaque id; on denial we return `null` — a soft no-op that
+       * callers MUST NOT retry.
+       *
+       * Delivery is intentionally NOT wired yet: there is no notification
+       * surface to render `toast`, so on grant the payload is accepted (and
+       * gated) but not displayed or buffered. A future notification host
+       * should consume the granted call here; until then this is a permission
+       * stub, not a renderer.
+       */
+      async enqueue(toast, options) {
+        void toast;
+
         const decision = await permissionsInternal.request(
           options.manifestId,
           "notifications.post",
           { source: "app" },
         );
         if (!decision.granted) {
-          // Denial is a soft no-op — callers MUST NOT retry. The
           return null;
         }
 
-        const id =
-          typeof globalThis.crypto?.randomUUID === "function"
-            ? globalThis.crypto.randomUUID()
-            : `note-${queuedNotifications.size + 1}`;
-
-        queuedNotifications.set(id, payload);
-
-        return id;
+        return typeof globalThis.crypto?.randomUUID === "function"
+          ? globalThis.crypto.randomUUID()
+          : `note-${++notificationIdFallback}`;
       },
     },
 
