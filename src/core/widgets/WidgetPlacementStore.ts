@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
-import { ref, shallowRef, type Ref } from "vue";
+import { ref, type Ref } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
-import { KVStore } from "~/core/storage/KVStore";
+import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
 import { WIDGETS_KV_NAMESPACE, WIDGETS_KV_PRIMARY_KEY } from "~/core/storage/constants";
 import { WIDGET_GRID_GAP_UNITS, WIDGET_SIZE_GRID_UNITS } from "~/core/widgets/sizing";
 import type { WidgetShellScope, WidgetSize } from "~/types/widget";
@@ -278,40 +278,41 @@ export function resolveNearestFreeWidgetPlacement(
 }
 
 export const useWidgetPlacementStore = defineStore("kernel-widget-placements", () => {
-  const kvRef = shallowRef<KVStore<WidgetPlacementState>>();
   const placements: Ref<Readonly<Record<string, WidgetPlacement>>> = ref({});
   const enabled: Ref<Readonly<WidgetScopedEnabledState>> = ref(emptyEnabledState());
 
-  let suppressWrite = false;
-  let disposeKv: undefined | (() => void);
-
-  function persist(): void {
-    const store = kvRef.value;
-    if (!store || suppressWrite) return;
-    // editor is the dominant case; cross-tab races on this namespace
-    store.set(WIDGETS_KV_PRIMARY_KEY, {
+  function snapshot(): WidgetPlacementState {
+    return {
       placements: { ...placements.value },
       enabled: {
         desktop: { ...enabled.value.desktop },
         mobile: { ...enabled.value.mobile },
       },
+    };
+  }
+
+  const persistence = createKvBackedStore<WidgetPlacementState>({
+    primaryKey: WIDGETS_KV_PRIMARY_KEY,
+    version: 1,
+    snapshot,
+    onRemoteChange: () => {
+      handleRemoteKvNotification();
+    },
+  });
+
+  function applyState(next: WidgetPlacementState): void {
+    persistence.runSuppressed(() => {
+      placements.value = { ...next.placements };
+      enabled.value = {
+        desktop: { ...next.enabled.desktop },
+        mobile: { ...next.enabled.mobile },
+      };
     });
   }
 
-  function applyState(next: WidgetPlacementState): void {
-    suppressWrite = true;
-    placements.value = { ...next.placements };
-    enabled.value = {
-      desktop: { ...next.enabled.desktop },
-      mobile: { ...next.enabled.mobile },
-    };
-    suppressWrite = false;
-  }
-
   function handleRemoteKvNotification(): void {
-    const store = kvRef.value;
-    const raw = store?.get(WIDGETS_KV_PRIMARY_KEY);
-    if (raw === null || raw === undefined) {
+    const raw = persistence.read();
+    if (raw === null) {
       applyState(emptyState());
       return;
     }
@@ -330,7 +331,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
    * remote-change listener in other tabs.
    */
   function set(id: string, next: WidgetPlacement): void {
-    if (!kvRef.value) return;
+    if (!persistence.kv.value) return;
 
     const sanitized: WidgetPlacement = {
       gridX: Math.max(0, Math.floor(next.gridX)),
@@ -347,16 +348,16 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
     }
 
     placements.value = { ...placements.value, [id]: sanitized };
-    persist();
+    persistence.commit();
   }
 
   function remove(id: string): void {
-    if (!kvRef.value) return;
+    if (!persistence.kv.value) return;
     if (placements.value[id] === undefined) return;
     const next = { ...placements.value };
     delete next[id];
     placements.value = next;
-    persist();
+    persistence.commit();
   }
 
   function list(): Readonly<Record<string, WidgetPlacement>> {
@@ -373,7 +374,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
     value: boolean,
     defaultVisible = true,
   ): void {
-    if (!kvRef.value) return;
+    if (!persistence.kv.value) return;
 
     const scopeMap = enabled.value[scope];
     const current = scopeMap[id]; // undefined | true | false
@@ -389,7 +390,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
       nextScopeMap = { ...scopeMap, [id]: value };
     }
     enabled.value = { ...enabled.value, [scope]: nextScopeMap };
-    persist();
+    persistence.commit();
   }
 
   function listEnabled(scope: WidgetShellScope): Readonly<Record<string, boolean>> {
@@ -397,21 +398,9 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
   }
 
   function hydrate(options?: WidgetPlacementHydrateOptions): void {
-    disposeKv?.();
-    disposeKv = undefined;
+    persistence.start(options?.storageNamespace ?? activeProfileKvNamespace(WIDGETS_KV_NAMESPACE));
 
-    kvRef.value?.dispose();
-    kvRef.value = new KVStore<WidgetPlacementState>(
-      options?.storageNamespace ?? activeProfileKvNamespace(WIDGETS_KV_NAMESPACE),
-      {
-        version: 1,
-        onRemoteChange(): void {
-          handleRemoteKvNotification();
-        },
-      },
-    );
-
-    const persisted = kvRef.value.get(WIDGETS_KV_PRIMARY_KEY);
+    const persisted = persistence.read();
     const loaded =
       persisted !== null
         ? coerceAndMigrateState(persisted)
@@ -419,22 +408,16 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
 
     applyState(loaded.state);
     if (loaded.migrated) {
-      persist();
+      persistence.commit();
     }
-
-    disposeKv = (): void => {
-      kvRef.value?.dispose();
-      kvRef.value = undefined;
-    };
   }
 
   function dispose(): void {
-    disposeKv?.();
-    disposeKv = undefined;
+    persistence.dispose();
   }
 
   function isHydrated(): boolean {
-    return kvRef.value !== undefined;
+    return persistence.kv.value !== undefined;
   }
 
   return {

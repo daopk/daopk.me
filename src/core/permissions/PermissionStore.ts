@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
-import { ref, shallowRef, type Ref } from "vue";
+import { ref, type Ref } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import { PERMISSIONS_KV_NAMESPACE, PERMISSIONS_KV_PRIMARY_KEY } from "~/core/storage/constants";
-import { KVStore } from "~/core/storage/KVStore";
+import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
 import type { AppPermission } from "~/types/app";
 import type {
   PermissionLedgerEntry,
@@ -55,34 +55,35 @@ function coerceState(candidate: unknown): PermissionPersistedState {
 }
 
 export const usePermissionStore = defineStore("kernel-permissions", () => {
-  const kvRef = shallowRef<KVStore<PermissionPersistedState>>();
   // must call `set` / `remove` to mutate, never push into the ref.
   const decisions: Ref<Readonly<PersistedPermissionState>> = ref({});
 
-  let suppressWrite = false;
-  let disposeKv: undefined | (() => void);
-
-  function persist(): void {
-    const store = kvRef.value;
-    if (!store || suppressWrite) return;
-    // synchronously so a shallow clone would be safe in practice,
-    const snapshot: PersistedPermissionState = {};
+  function snapshot(): PermissionPersistedState {
+    const cloned: PersistedPermissionState = {};
     for (const [manifestId, perms] of Object.entries(decisions.value)) {
-      snapshot[manifestId] = { ...perms };
+      cloned[manifestId] = { ...perms };
     }
-    store.set(PERMISSIONS_KV_PRIMARY_KEY, { decisions: snapshot });
+    return { decisions: cloned };
   }
 
+  const persistence = createKvBackedStore<PermissionPersistedState>({
+    primaryKey: PERMISSIONS_KV_PRIMARY_KEY,
+    version: 1,
+    snapshot,
+    onRemoteChange: () => {
+      handleRemoteKvNotification();
+    },
+  });
+
   function applyState(next: PermissionPersistedState): void {
-    suppressWrite = true;
-    decisions.value = { ...next.decisions };
-    suppressWrite = false;
+    persistence.runSuppressed(() => {
+      decisions.value = { ...next.decisions };
+    });
   }
 
   function handleRemoteKvNotification(): void {
-    const store = kvRef.value;
-    const raw = store?.get(PERMISSIONS_KV_PRIMARY_KEY);
-    if (raw === null || raw === undefined) {
+    const raw = persistence.read();
+    if (raw === null) {
       applyState({ decisions: {} });
       return;
     }
@@ -102,7 +103,7 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
     granted: boolean,
     now: number = Date.now(),
   ): void {
-    if (!kvRef.value) return;
+    if (!persistence.kv.value) return;
     const existing = decisions.value[manifestId]?.[permission];
     if (existing !== undefined && existing.granted === granted) {
       return;
@@ -115,11 +116,11 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
       ...decisions.value,
       [manifestId]: nextInner,
     };
-    persist();
+    persistence.commit();
   }
 
   function remove(manifestId: string, permission: AppPermission): boolean {
-    if (!kvRef.value) return false;
+    if (!persistence.kv.value) return false;
     const inner = decisions.value[manifestId];
     if (inner === undefined || inner[permission] === undefined) {
       return false;
@@ -133,7 +134,7 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
       nextOuter[manifestId] = nextInner;
     }
     decisions.value = nextOuter;
-    persist();
+    persistence.commit();
     return true;
   }
 
@@ -155,40 +156,20 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
   }
 
   function hydrate(options?: PermissionStoreHydrateOptions): void {
-    disposeKv?.();
-    disposeKv = undefined;
-
-    kvRef.value?.dispose();
-    kvRef.value = new KVStore<PermissionPersistedState>(
+    persistence.start(
       options?.storageNamespace ?? activeProfileKvNamespace(PERMISSIONS_KV_NAMESPACE),
-      {
-        version: 1,
-        onRemoteChange(): void {
-          handleRemoteKvNotification();
-        },
-      },
     );
 
-    const persisted = kvRef.value.get(PERMISSIONS_KV_PRIMARY_KEY);
-    const loaded = persisted !== null ? coerceState(persisted) : { ...DEFAULT_STATE };
-
-    suppressWrite = true;
-    decisions.value = { ...loaded.decisions };
-    suppressWrite = false;
-
-    disposeKv = (): void => {
-      kvRef.value?.dispose();
-      kvRef.value = undefined;
-    };
+    const persisted = persistence.read();
+    applyState(persisted !== null ? coerceState(persisted) : { ...DEFAULT_STATE });
   }
 
   function dispose(): void {
-    disposeKv?.();
-    disposeKv = undefined;
+    persistence.dispose();
   }
 
   function isHydrated(): boolean {
-    return kvRef.value !== undefined;
+    return persistence.kv.value !== undefined;
   }
 
   return {
