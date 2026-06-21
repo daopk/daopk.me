@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import {
   ActionRow,
@@ -16,6 +16,7 @@ import {
   IconButton,
   ListButton,
   Panel,
+  Progress,
   ScrollArea,
   SectionHeader,
   SegmentedControl,
@@ -43,8 +44,12 @@ import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  RadioGroup,
+  RadioGroupItem,
   Slider,
   Switch,
+  Tooltip,
+  useToast,
 } from "~/components/ui";
 import {
   Download,
@@ -73,7 +78,20 @@ const selectValue = ref("md");
 const segmentValue = ref("grid");
 const tabValue = ref("overview");
 const choiceValue = ref("comfortable");
+const radioValue = ref("comfortable");
+const requiredValue = ref("");
+const progressValue = ref(60);
 const dialogOpen = ref(false);
+
+const toast = useToast();
+
+const requiredError = computed(() =>
+  requiredValue.value.trim().length === 0 ? "This field is required." : undefined,
+);
+
+function bumpProgress(): void {
+  progressValue.value = progressValue.value >= 100 ? 0 : Math.min(100, progressValue.value + 20);
+}
 
 const selectOptions: readonly SelectOption[] = [
   { value: "sm", label: "Small" },
@@ -208,6 +226,9 @@ const densityChoices = [
           <FormField label="Disabled">
             <TextInput model-value="Read only" disabled />
           </FormField>
+          <FormField label="Required" :error="requiredError" required>
+            <TextInput v-model="requiredValue" placeholder="Type to clear the error" />
+          </FormField>
         </div>
         <FormField label="Textarea">
           <Textarea v-model="textareaValue" :rows="3" />
@@ -221,10 +242,14 @@ const densityChoices = [
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">Switch + Slider (ui)</GroupLabel>
         <div class="gallery__row">
-          <Switch :model-value="switchValue" @update:model-value="(v) => (switchValue = v)" />
+          <Switch
+            :model-value="switchValue"
+            aria-label="Demo switch"
+            @update:model-value="(v) => (switchValue = v)"
+          />
           <span class="gallery__caption">{{ switchValue ? "On" : "Off" }}</span>
           <Separator orientation="vertical" class="gallery__inline-divider" />
-          <Switch :model-value="false" disabled />
+          <Switch :model-value="false" aria-label="Disabled switch" disabled />
           <span class="gallery__caption">Disabled</span>
         </div>
         <Slider
@@ -260,6 +285,78 @@ const densityChoices = [
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">RadioGroup (ui)</GroupLabel>
+        <RadioGroup
+          :model-value="radioValue"
+          label="Density"
+          orientation="horizontal"
+          @update:model-value="(v) => (radioValue = v)"
+        >
+          <RadioGroupItem value="compact" label="Compact" />
+          <RadioGroupItem value="comfortable" label="Comfortable" />
+          <RadioGroupItem value="spacious" label="Spacious" />
+          <RadioGroupItem value="locked" label="Locked" disabled />
+        </RadioGroup>
+        <p class="gallery__caption">Selected: {{ radioValue }}</p>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">Tooltip (ui)</GroupLabel>
+        <div class="gallery__row">
+          <Tooltip label="Refresh the current view">
+            <Button size="sm" variant="secondary" :icon-start="RefreshCw">Hover me</Button>
+          </Tooltip>
+          <Tooltip label="Open settings" side="right">
+            <IconButton :icon="Settings" label="Settings" variant="subtle" />
+          </Tooltip>
+        </div>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">Toast (ui)</GroupLabel>
+        <div class="gallery__row">
+          <Button
+            size="sm"
+            variant="secondary"
+            @click="toast.info({ title: 'Heads up', description: 'An informational toast.' })"
+          >
+            Info
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            @click="toast.success({ title: 'Saved', description: 'Your changes were saved.' })"
+          >
+            Success
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            @click="toast.warning({ title: 'Careful', description: 'Review before continuing.' })"
+          >
+            Warning
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            @click="toast.error({ title: 'Failed', description: 'Something went wrong.' })"
+          >
+            Error
+          </Button>
+        </div>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">Progress (kit)</GroupLabel>
+        <Progress :value="progressValue" label="Determinate progress" />
+        <Progress :value="null" label="Indeterminate progress" />
+        <div class="gallery__row">
+          <Button size="sm" variant="secondary" @click="bumpProgress">Advance</Button>
+          <span class="gallery__caption">Value: {{ progressValue }}%</span>
+        </div>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">ListButton + ActionRow (kit)</GroupLabel>
         <Panel class="gallery__list" variant="default" padding="none">
           <ListButton :icon="Folder" title="Documents" meta="24 items" />
@@ -271,11 +368,16 @@ const densityChoices = [
             title="Auto-hide dock"
             description="Reveal it by moving the pointer to the edge."
           >
-            <Switch :model-value="switchValue" @update:model-value="(v) => (switchValue = v)" />
+            <Switch
+              :model-value="switchValue"
+              aria-label="Auto-hide dock"
+              @update:model-value="(v) => (switchValue = v)"
+            />
           </ActionRow>
           <ActionRow title="Automatic updates" description="Install updates in the background.">
             <Switch
               :model-value="autoUpdateValue"
+              aria-label="Automatic updates"
               @update:model-value="(v) => (autoUpdateValue = v)"
             />
           </ActionRow>

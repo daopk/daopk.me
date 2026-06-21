@@ -13,6 +13,7 @@ export { default as IconButton } from "./IconButton.vue";
 export { default as ListButton } from "./ListButton.vue";
 export { default as Panel } from "./Panel.vue";
 export { default as PreviewHost } from "./PreviewHost.vue";
+export { default as Progress } from "./Progress.vue";
 export { default as ScrollArea } from "./ScrollArea.vue";
 export { default as SectionHeader } from "./SectionHeader.vue";
 export { default as SegmentedControl } from "./SegmentedControl.vue";

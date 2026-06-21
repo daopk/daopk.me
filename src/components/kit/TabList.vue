@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, nextTick, ref } from "vue";
+
 import type { TabListOption } from "./types";
 
 interface TabListProps {
@@ -10,7 +12,7 @@ interface TabListProps {
   size?: "sm" | "md";
 }
 
-withDefaults(defineProps<TabListProps>(), {
+const props = withDefaults(defineProps<TabListProps>(), {
   activeItemClass: undefined,
   itemClass: undefined,
   size: "md",
@@ -21,6 +23,18 @@ const emit = defineEmits<{
   change: [next: string];
 }>();
 
+const listRef = ref<HTMLElement | null>(null);
+
+// The single tab in the page tab sequence (roving tabindex): the selected one
+// when it is enabled, otherwise the first enabled tab.
+const focusableValue = computed(() => {
+  const active = props.tabs.find((tab) => tab.value === props.modelValue && !tab.disabled);
+  if (active) {
+    return active.value;
+  }
+  return props.tabs.find((tab) => !tab.disabled)?.value;
+});
+
 function selectTab(tab: TabListOption): void {
   if (tab.disabled) {
     return;
@@ -29,10 +43,71 @@ function selectTab(tab: TabListOption): void {
   emit("update:modelValue", tab.value);
   emit("change", tab.value);
 }
+
+function focusValue(value: string): void {
+  void nextTick(() => {
+    const buttons = Array.from(
+      listRef.value?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [],
+    );
+    buttons.find((button) => button.dataset.value === value)?.focus();
+  });
+}
+
+function moveFocus(current: string, direction: 1 | -1 | "home" | "end"): void {
+  const enabled = props.tabs.filter((tab) => !tab.disabled);
+  if (enabled.length === 0) {
+    return;
+  }
+
+  let nextIndex: number;
+  if (direction === "home") {
+    nextIndex = 0;
+  } else if (direction === "end") {
+    nextIndex = enabled.length - 1;
+  } else {
+    const currentIndex = enabled.findIndex((tab) => tab.value === current);
+    const base = currentIndex === -1 ? 0 : currentIndex;
+    nextIndex = (base + direction + enabled.length) % enabled.length;
+  }
+
+  const next = enabled[nextIndex];
+  if (!next) {
+    return;
+  }
+
+  selectTab(next);
+  focusValue(next.value);
+}
+
+function onKeydown(event: KeyboardEvent, tab: TabListOption): void {
+  switch (event.key) {
+    case "ArrowRight":
+    case "ArrowDown":
+      event.preventDefault();
+      moveFocus(tab.value, 1);
+      break;
+    case "ArrowLeft":
+    case "ArrowUp":
+      event.preventDefault();
+      moveFocus(tab.value, -1);
+      break;
+    case "Home":
+      event.preventDefault();
+      moveFocus(tab.value, "home");
+      break;
+    case "End":
+      event.preventDefault();
+      moveFocus(tab.value, "end");
+      break;
+    default:
+      break;
+  }
+}
 </script>
 
 <template>
   <div
+    ref="listRef"
     class="ds-kit-tab-list"
     :class="`ds-kit-tab-list--${size}`"
     role="tablist"
@@ -50,11 +125,14 @@ function selectTab(tab: TabListOption): void {
         modelValue === tab.value && activeItemClass,
       ]"
       role="tab"
+      :data-value="tab.value"
+      :tabindex="tab.value === focusableValue ? 0 : -1"
       :aria-selected="modelValue === tab.value"
       :aria-controls="tab.panelId"
       :aria-label="tab.ariaLabel ?? tab.label"
       :disabled="tab.disabled || undefined"
       @click="selectTab(tab)"
+      @keydown="onKeydown($event, tab)"
     >
       <component :is="tab.icon" v-if="tab.icon" class="ds-kit-tab-list__icon" aria-hidden="true" />
       <span>{{ tab.label }}</span>

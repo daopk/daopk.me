@@ -1,21 +1,58 @@
 <script setup lang="ts">
+import { computed, inject, ref, watchEffect } from "vue";
+
 import { Check } from "~/icons/lucide";
+
+import { FormFieldContextKey } from "./formFieldContext";
 
 interface CheckboxProps {
   modelValue?: boolean;
   disabled?: boolean;
+  /** Renders the mixed/partial state (sets the native `indeterminate` flag). */
+  indeterminate?: boolean;
   ariaLabel?: string;
+  id?: string;
+  name?: string;
 }
 
-withDefaults(defineProps<CheckboxProps>(), {
+const props = withDefaults(defineProps<CheckboxProps>(), {
   modelValue: false,
   disabled: false,
+  indeterminate: false,
   ariaLabel: undefined,
+  id: undefined,
+  name: undefined,
 });
 
 const emit = defineEmits<{
   "update:modelValue": [next: boolean];
 }>();
+
+const field = inject(FormFieldContextKey, null);
+
+const resolvedId = computed(() => props.id ?? field?.controlId.value);
+const describedBy = computed(() => field?.describedById.value);
+const isInvalid = computed(() => Boolean(field?.invalid.value));
+const isRequired = computed(() => Boolean(field?.required.value));
+
+const inputRef = ref<HTMLInputElement | null>(null);
+
+// `indeterminate` is a DOM property, not an attribute — keep it in sync after
+// each render so the ref is populated on the first run.
+watchEffect(
+  () => {
+    if (inputRef.value) {
+      inputRef.value.indeterminate = props.indeterminate;
+    }
+  },
+  { flush: "post" },
+);
+
+function focus(options?: FocusOptions): void {
+  inputRef.value?.focus(options);
+}
+
+defineExpose({ focus });
 
 function onChange(event: Event): void {
   emit("update:modelValue", (event.target as HTMLInputElement).checked);
@@ -26,11 +63,17 @@ function onChange(event: Event): void {
   <label class="ds-kit-checkbox" :class="{ 'ds-kit-checkbox--disabled': disabled }">
     <span class="ds-kit-checkbox__control">
       <input
+        :id="resolvedId"
+        ref="inputRef"
         type="checkbox"
         class="ds-kit-checkbox__input"
+        :name="name"
         :checked="modelValue"
         :disabled="disabled"
         :aria-label="ariaLabel"
+        :aria-invalid="isInvalid || undefined"
+        :aria-required="isRequired || undefined"
+        :aria-describedby="describedBy"
         @change="onChange"
       />
       <Check class="ds-kit-checkbox__check" :size="14" :stroke-width="3" aria-hidden="true" />
@@ -74,7 +117,8 @@ function onChange(event: Event): void {
     background-color var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease);
 
-  &:checked {
+  &:checked,
+  &:indeterminate {
     background: var(--color-accent);
     border-color: var(--color-accent);
   }

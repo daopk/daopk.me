@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, inject, ref } from "vue";
+
+import { FormFieldContextKey } from "./formFieldContext";
 
 interface TextInputProps {
   modelValue?: string;
@@ -8,20 +10,38 @@ interface TextInputProps {
   readonly?: boolean;
   type?: "text" | "search" | "email" | "password" | "url" | "number" | "date" | "time";
   variant?: "default" | "plain";
+  /** Explicit id; defaults to the enclosing `FormField`'s generated id. */
+  id?: string;
+  name?: string;
+  placeholder?: string;
+  autocomplete?: string;
+  inputmode?: "none" | "text" | "decimal" | "numeric" | "tel" | "search" | "email" | "url";
 }
 
-withDefaults(defineProps<TextInputProps>(), {
+const props = withDefaults(defineProps<TextInputProps>(), {
   modelValue: "",
   disabled: false,
   invalid: false,
   readonly: false,
   type: "text",
   variant: "default",
+  id: undefined,
+  name: undefined,
+  placeholder: undefined,
+  autocomplete: undefined,
+  inputmode: undefined,
 });
 
 defineEmits<{
   "update:modelValue": [next: string];
 }>();
+
+const field = inject(FormFieldContextKey, null);
+
+const resolvedId = computed(() => props.id ?? field?.controlId.value);
+const describedBy = computed(() => field?.describedById.value);
+const isInvalid = computed(() => props.invalid || Boolean(field?.invalid.value));
+const isRequired = computed(() => Boolean(field?.required.value));
 
 const inputRef = ref<HTMLInputElement | null>(null);
 
@@ -42,14 +62,21 @@ defineExpose({ blur, focus, select });
 
 <template>
   <input
+    :id="resolvedId"
     ref="inputRef"
     class="ds-kit-text-input"
-    :class="[`ds-kit-text-input--${variant}`, invalid && 'ds-kit-text-input--invalid']"
+    :class="[`ds-kit-text-input--${variant}`, isInvalid && 'ds-kit-text-input--invalid']"
     :type="type"
+    :name="name"
+    :placeholder="placeholder"
+    :autocomplete="autocomplete"
+    :inputmode="inputmode"
     :value="modelValue"
     :disabled="disabled || undefined"
     :readonly="readonly || undefined"
-    :aria-invalid="invalid || undefined"
+    :aria-invalid="isInvalid || undefined"
+    :aria-required="isRequired || undefined"
+    :aria-describedby="describedBy"
     @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
   />
 </template>

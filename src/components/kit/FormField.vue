@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { computed, provide, useId } from "vue";
+
+import { FormFieldContextKey } from "./formFieldContext";
+
 interface FormFieldProps {
+  /** Visible field label, rendered above the control. */
   label?: string;
+  /** Explicit control id. Defaults to an auto-generated id wired to the slot control. */
   for?: string;
+  /** Helper text shown below the control when there is no error. */
   hint?: string;
+  /** Error text; replaces the hint and is announced via `role="alert"`. */
   error?: string;
+  /** Marks the field required (adds the visual `*` and `aria-required`). */
   required?: boolean;
 }
 
@@ -14,19 +23,35 @@ const props = withDefaults(defineProps<FormFieldProps>(), {
   error: undefined,
   required: false,
 });
+
+const generatedId = useId();
+const messageId = useId();
+
+const controlId = computed(() => props.for ?? generatedId);
+const invalid = computed(() => Boolean(props.error));
+const required = computed(() => props.required);
+const describedById = computed(() => (props.error || props.hint ? messageId : undefined));
+
+provide(FormFieldContextKey, { controlId, describedById, invalid, required });
 </script>
 
 <template>
-  <label class="ds-kit-form-field" :for="props.for">
+  <label class="ds-kit-form-field" :for="controlId">
     <span v-if="label" class="ds-kit-form-field__label">
       <span>{{ label }}</span>
       <span v-if="required" aria-hidden="true">*</span>
     </span>
     <slot />
-    <span v-if="error" class="ds-kit-form-field__message ds-kit-form-field__message--error">
+    <span
+      v-if="error"
+      :id="messageId"
+      class="ds-kit-form-field__message ds-kit-form-field__message--error"
+      role="alert"
+      aria-live="assertive"
+    >
       {{ error }}
     </span>
-    <span v-else-if="hint" class="ds-kit-form-field__message">
+    <span v-else-if="hint" :id="messageId" class="ds-kit-form-field__message">
       {{ hint }}
     </span>
   </label>

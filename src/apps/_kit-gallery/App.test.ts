@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { nextTick } from "vue";
 
 import App from "./App.vue";
 
@@ -32,5 +33,32 @@ describe("Kit Gallery", () => {
     await cards[0].trigger("click");
     expect(cards[0].attributes("aria-checked")).toBe("true");
     expect(cards[1].attributes("aria-checked")).toBe("false");
+  });
+
+  // Smoke a11y guard over the whole catalog. color-contrast needs real layout
+  // (unavailable in happy-dom) so it is disabled; we fail only on serious or
+  // critical structural violations (labels, roles, names, duplicate ids).
+  it("has no serious accessibility violations", async () => {
+    const axe = (await import("axe-core")).default;
+    const wrapper = mount(App, { attachTo: document.body });
+    await nextTick();
+
+    const results = await axe.run(wrapper.element as HTMLElement, {
+      resultTypes: ["violations"],
+      rules: { "color-contrast": { enabled: false } },
+    });
+
+    const blocking = results.violations.filter(
+      (violation) => violation.impact === "serious" || violation.impact === "critical",
+    );
+    const summary = blocking.map(
+      (violation) =>
+        `${violation.id}: ${violation.help} -> ${violation.nodes
+          .map((node) => node.html)
+          .join(" | ")}`,
+    );
+    expect(summary).toEqual([]);
+
+    wrapper.unmount();
   });
 });

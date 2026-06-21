@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed, inject, ref } from "vue";
+
+import { FormFieldContextKey } from "./formFieldContext";
 import type { SelectOption } from "./types";
 
 interface SelectProps {
@@ -7,26 +10,55 @@ interface SelectProps {
   disabled?: boolean;
   invalid?: boolean;
   placeholder?: string;
+  /** Explicit id; defaults to the enclosing `FormField`'s generated id. */
+  id?: string;
+  name?: string;
 }
 
-withDefaults(defineProps<SelectProps>(), {
+const props = withDefaults(defineProps<SelectProps>(), {
   disabled: false,
   invalid: false,
   placeholder: undefined,
+  id: undefined,
+  name: undefined,
 });
 
 defineEmits<{
   "update:modelValue": [next: string];
 }>();
+
+const field = inject(FormFieldContextKey, null);
+
+const resolvedId = computed(() => props.id ?? field?.controlId.value);
+const describedBy = computed(() => field?.describedById.value);
+const isInvalid = computed(() => props.invalid || Boolean(field?.invalid.value));
+const isRequired = computed(() => Boolean(field?.required.value));
+
+const selectRef = ref<HTMLSelectElement | null>(null);
+
+function blur(): void {
+  selectRef.value?.blur();
+}
+
+function focus(options?: FocusOptions): void {
+  selectRef.value?.focus(options);
+}
+
+defineExpose({ blur, focus });
 </script>
 
 <template>
   <select
+    :id="resolvedId"
+    ref="selectRef"
     class="ds-kit-select"
-    :class="{ 'ds-kit-select--invalid': invalid }"
+    :class="{ 'ds-kit-select--invalid': isInvalid }"
+    :name="name"
     :value="modelValue"
     :disabled="disabled || undefined"
-    :aria-invalid="invalid || undefined"
+    :aria-invalid="isInvalid || undefined"
+    :aria-required="isRequired || undefined"
+    :aria-describedby="describedBy"
     @change="$emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
   >
     <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>

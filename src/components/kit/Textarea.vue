@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, inject, ref } from "vue";
+
+import { FormFieldContextKey } from "./formFieldContext";
 
 interface TextareaProps {
   modelValue?: string;
@@ -9,9 +11,14 @@ interface TextareaProps {
   resize?: "none" | "vertical";
   rows?: number;
   variant?: "default" | "plain";
+  /** Explicit id; defaults to the enclosing `FormField`'s generated id. */
+  id?: string;
+  name?: string;
+  placeholder?: string;
+  autocomplete?: string;
 }
 
-withDefaults(defineProps<TextareaProps>(), {
+const props = withDefaults(defineProps<TextareaProps>(), {
   modelValue: "",
   disabled: false,
   invalid: false,
@@ -19,35 +26,56 @@ withDefaults(defineProps<TextareaProps>(), {
   resize: "vertical",
   rows: 3,
   variant: "default",
+  id: undefined,
+  name: undefined,
+  placeholder: undefined,
+  autocomplete: undefined,
 });
 
 defineEmits<{
   "update:modelValue": [next: string];
 }>();
 
+const field = inject(FormFieldContextKey, null);
+
+const resolvedId = computed(() => props.id ?? field?.controlId.value);
+const describedBy = computed(() => field?.describedById.value);
+const isInvalid = computed(() => props.invalid || Boolean(field?.invalid.value));
+const isRequired = computed(() => Boolean(field?.required.value));
+
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
+
+function blur(): void {
+  textareaRef.value?.blur();
+}
 
 function focus(options?: FocusOptions): void {
   textareaRef.value?.focus(options);
 }
 
-defineExpose({ focus });
+defineExpose({ blur, focus });
 </script>
 
 <template>
   <textarea
+    :id="resolvedId"
     ref="textareaRef"
     class="ds-kit-textarea"
     :class="[
       `ds-kit-textarea--${variant}`,
       `ds-kit-textarea--resize-${resize}`,
-      invalid && 'ds-kit-textarea--invalid',
+      isInvalid && 'ds-kit-textarea--invalid',
     ]"
+    :name="name"
+    :placeholder="placeholder"
+    :autocomplete="autocomplete"
     :value="modelValue"
     :rows="rows"
     :disabled="disabled || undefined"
     :readonly="readonly || undefined"
-    :aria-invalid="invalid || undefined"
+    :aria-invalid="isInvalid || undefined"
+    :aria-required="isRequired || undefined"
+    :aria-describedby="describedBy"
     @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
   />
 </template>

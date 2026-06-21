@@ -37,6 +37,15 @@
   --permission-dialog-overlay-z: 1800;
   --permission-dialog-content-z: 1801;
 
+  /* Toast — transient notifications in a bottom-corner viewport. Above
+     every chrome/modal band so they stay visible, but the viewport is
+     corner-anchored so it never traps or obscures centered surfaces. */
+  --toast-z: 1900;
+
+  /* Tooltip — top of the stack. Small, transient, and must read over any
+     surface it points at (including modal content). */
+  --tooltip-z: 2000;
+
   --dock-bg: var(--menubar-bg-translucent);
   --dock-blur: var(--menubar-blur);
   --dock-z: 900;

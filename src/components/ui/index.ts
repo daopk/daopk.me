@@ -12,5 +12,11 @@ export {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
 } from "./DropdownMenu.vue";
+export { default as RadioGroup } from "./RadioGroup.vue";
+export { default as RadioGroupItem } from "./RadioGroupItem.vue";
 export { default as Slider } from "./Slider.vue";
 export { default as Switch } from "./Switch.vue";
+export { default as ToastHost } from "./ToastHost.vue";
+export { default as Tooltip } from "./Tooltip.vue";
+export { useToast } from "./useToast";
+export type { ToastApi, ToastOptions, ToastRecord, ToastTone } from "./useToast";

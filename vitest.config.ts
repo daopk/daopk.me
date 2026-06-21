@@ -50,6 +50,13 @@ export default mergeConfig(
           "src/composables/**/*.ts",
           "src/shells/mobile/**/*.ts",
           "src/shells/mobile/**/*.vue",
+          // Design-system kit + ui layers — the production-grade gate. Scoped to
+          // the two component libraries (not all of `src/components/**`, which
+          // also holds untested app-shell surfaces like auth/boot/spotlight).
+          "src/components/kit/**/*.ts",
+          "src/components/kit/**/*.vue",
+          "src/components/ui/**/*.ts",
+          "src/components/ui/**/*.vue",
         ],
         // `IndexedDBStore.ts` is exercised mostly via integration paths we have
         // not yet wired up — it drags the unit threshold below 70%. Exclude it
@@ -72,6 +79,12 @@ export default mergeConfig(
         // again as we backfill store tests in later phases.
         thresholds: {
           statements: 65,
+          // The design-system layers ship to apps as a published surface, so
+          // they are held to a higher, enforced bar than the app internals.
+          // Files matching these globs are gated here (and excluded from the
+          // global floor above).
+          "src/components/kit/**": { statements: 90 },
+          "src/components/ui/**": { statements: 80 },
         },
       },
     },
