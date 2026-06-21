@@ -38,7 +38,6 @@ const {
   showCreateProfile,
   showProfileList,
   showUnlockProfile,
-  status,
   unlockButtonLabel,
   unlockSelected,
 } = useAuthGate({
@@ -63,7 +62,6 @@ const {
         :title="screenTitle"
         :subtitle="screenSubtitle"
         :passkey-available="passkeyAvailable"
-        :status="status"
         :error-message="errorMessage"
       >
         <AuthCreatePanel

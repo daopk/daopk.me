@@ -7,7 +7,6 @@ defineProps<{
   title: string;
   subtitle: string;
   passkeyAvailable: boolean;
-  status: string;
   errorMessage: string;
 }>();
 </script>
@@ -32,7 +31,6 @@ defineProps<{
 
     <slot />
 
-    <p v-if="status" class="auth-gate__status" aria-live="polite">{{ status }}</p>
     <p v-if="errorMessage" class="auth-gate__alert" role="alert">{{ errorMessage }}</p>
   </section>
 </template>
@@ -96,19 +94,11 @@ defineProps<{
   margin: 0;
 }
 
-.auth-gate__status,
 .auth-gate__alert {
+  color: var(--color-error);
   font-size: 13px;
   line-height: 1.45;
   margin: 0;
-}
-
-.auth-gate__status {
-  color: var(--color-fg-muted);
-}
-
-.auth-gate__alert {
-  color: var(--color-error);
 }
 
 @media (max-width: 760px) {
@@ -153,7 +143,6 @@ defineProps<{
     max-inline-size: 28rem;
   }
 
-  .auth-gate__status,
   .auth-gate__alert {
     margin-block-start: var(--space-sm);
     text-align: start;

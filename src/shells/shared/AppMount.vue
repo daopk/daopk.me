@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch, provide } from "vue";
+import { computed, defineAsyncComponent, onMounted, watch, provide, shallowRef } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { debugWarn } from "~/core/debug";
@@ -10,6 +10,7 @@ import {
   type AppContext,
 } from "~/types/app";
 
+import { AppMountRetryKey } from "./appMountContext";
 import AppMountError from "./AppMountError.vue";
 import AppMountLoading from "./AppMountLoading.vue";
 
@@ -65,19 +66,39 @@ function emitProcessErrored(err: unknown): void {
   });
 }
 
-const resolvedComponent = manifest.value
-  ? defineAsyncComponent({
-      loader: manifest.value.component,
-      loadingComponent: AppMountLoading,
-      errorComponent: AppMountError,
-      delay: 0,
-      timeout: 10_000,
-      onError(err, _retry, fail) {
-        emitProcessErrored(err);
-        fail();
-      },
-    })
-  : undefined;
+function createResolvedComponent() {
+  const loader = manifest.value?.component;
+  if (loader === undefined) {
+    return undefined;
+  }
+
+  return defineAsyncComponent({
+    loader,
+    loadingComponent: AppMountLoading,
+    errorComponent: AppMountError,
+    delay: 0,
+    timeout: 10_000,
+    onError(err, _retry, fail) {
+      emitProcessErrored(err);
+      fail();
+    },
+  });
+}
+
+// Stored in a ref so a manual retry can swap in a *fresh* async wrapper. Vue's
+// `defineAsyncComponent` caches its rejected request in a closure, so simply
+// remounting the same wrapper would re-throw the cached error; recreating it
+// gives the loader a clean attempt.
+const resolvedComponent = shallowRef(createResolvedComponent());
+
+function retryLoad(): void {
+  const next = createResolvedComponent();
+  if (next !== undefined) {
+    resolvedComponent.value = next;
+  }
+}
+
+provide(AppMountRetryKey, manifest.value ? retryLoad : null);
 
 onMounted(() => {
   if (!manifest.value) {

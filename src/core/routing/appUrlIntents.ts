@@ -26,10 +26,7 @@ import {
 } from "./intents/intentShared";
 import { parseBlogUrlIntent } from "./intents/blogIntent";
 import { parseMoviesUrlIntent } from "./intents/moviesIntent";
-import {
-  youtubePlayerAppArgs,
-  youtubePlayerProtocolArgs,
-} from "./intents/youtubePlayerIntent";
+import { youtubePlayerAppArgs, youtubePlayerProtocolArgs } from "./intents/youtubePlayerIntent";
 
 export type { AppUrlIntent, AppUrlLaunchIntent } from "./intents/intentShared";
 export {
@@ -243,7 +240,16 @@ export function hasAutoGuestLoginUrlIntent(kernel: Kernel, input?: string | URL)
   );
 }
 
-export function consumeInitialAppUrlIntent(kernel: Kernel, input?: string | URL): boolean {
+export interface ConsumeInitialAppUrlIntentOptions {
+  /** Invoked when the URL targets an app that is not registered. */
+  onUnknownApp?: (manifestId: string) => void;
+}
+
+export function consumeInitialAppUrlIntent(
+  kernel: Kernel,
+  input?: string | URL,
+  options?: ConsumeInitialAppUrlIntentOptions,
+): boolean {
   if (initialAppUrlIntentConsumed) {
     return false;
   }
@@ -263,6 +269,7 @@ export function consumeInitialAppUrlIntent(kernel: Kernel, input?: string | URL)
   const manifest = kernel.apps.list().find((entry) => entry.id === intent.manifestId);
   if (!manifest) {
     debugWarn("[url-intent]", "unknown app deep link", intent.manifestId);
+    options?.onUnknownApp?.(intent.manifestId);
     return false;
   }
 

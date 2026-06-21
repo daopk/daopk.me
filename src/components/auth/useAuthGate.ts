@@ -32,7 +32,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
   const displayName = ref("Local Profile");
   const mode = ref<AuthMode>("unlock");
   const busy = ref(false);
-  const status = ref("");
   const errorMessage = ref("");
   const autoUpdate = useAuthAutoUpdate(computed(() => activeProfile.value === null));
 
@@ -132,7 +131,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
       return;
     }
 
-    status.value = "Importing local data";
     await migrateGlobalDataToProfile({ profileId, encryptionKey });
     store.markGlobalImported();
   }
@@ -164,7 +162,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
 
     busy.value = true;
     errorMessage.value = "";
-    status.value = "Creating profile";
     await waitForBusyFeedback();
 
     const wasFirstProfile = profiles.value.length === 0;
@@ -190,7 +187,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     } finally {
       if (!authenticated) {
         busy.value = false;
-        status.value = "";
         refreshProfiles();
         if (createdProfileId && errorMessage.value) {
           selectedProfileId.value = createdProfileId;
@@ -213,7 +209,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
 
     busy.value = true;
     errorMessage.value = "";
-    status.value = "Creating guest";
     await waitForBusyFeedback();
 
     const wasFirstProfile = profiles.value.length === 0;
@@ -246,7 +241,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     } finally {
       if (!authenticated) {
         busy.value = false;
-        status.value = "";
         refreshProfiles();
         if (createdProfileId && errorMessage.value) {
           selectedProfileId.value = createdProfileId;
@@ -266,14 +260,12 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
 
   function showCreateProfile(): void {
     errorMessage.value = "";
-    status.value = "";
     displayName.value = "Local Profile";
     mode.value = "create";
   }
 
   function showUnlockProfile(): void {
     errorMessage.value = "";
-    status.value = "";
     mode.value = "unlock";
   }
 
@@ -298,7 +290,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
 
     busy.value = true;
     errorMessage.value = "";
-    status.value = "Unlocking";
     await waitForBusyFeedback();
 
     let authenticated = false;
@@ -314,7 +305,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     } finally {
       if (!authenticated) {
         busy.value = false;
-        status.value = "";
         refreshProfiles();
       }
     }
@@ -323,7 +313,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
   async function openGuestProfile(profile: GuestProfileRecord): Promise<boolean> {
     busy.value = true;
     errorMessage.value = "";
-    status.value = "Opening guest";
     await waitForBusyFeedback();
 
     let authenticated = false;
@@ -340,7 +329,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     } finally {
       if (!authenticated) {
         busy.value = false;
-        status.value = "";
         refreshProfiles();
       }
     }
@@ -396,7 +384,6 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
     showCreateProfile,
     showProfileList,
     showUnlockProfile,
-    status,
     unlockButtonLabel,
     unlockSelected,
   };

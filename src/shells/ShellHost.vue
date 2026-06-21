@@ -3,6 +3,7 @@ import { nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "v
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
 import ToastHost from "~/components/ui/ToastHost.vue";
+import { useToast } from "~/components/ui";
 import { runAutorunManifests } from "~/core/boot/autorun";
 import {
   consumeInitialAppUrlIntent,
@@ -15,6 +16,7 @@ import { peekShellStickyOverride, pickShell, type PickedShell } from "~/shells/s
 
 const kernel = useKernel();
 const breakpoint = useBreakpoint();
+const toast = useToast();
 const hostRef = useTemplateRef<HTMLElement>("hostRef");
 
 const bootstrapSticky = peekShellStickyOverride();
@@ -61,7 +63,11 @@ function onShellReady(shellRoot: Element): void {
 
   // cancels any pending callback before tearing down (HMR / tests).
   kernel.boot.scheduleIdleAfterShellReady(() => {
-    consumeInitialAppUrlIntent(kernel);
+    consumeInitialAppUrlIntent(kernel, undefined, {
+      onUnknownApp: (manifestId) => {
+        toast.error({ title: "App unavailable", description: `"${manifestId}" isn't installed.` });
+      },
+    });
     void runAutorunManifests(kernel);
   });
 }
@@ -157,11 +163,25 @@ function focusShellMain(rootEl: Element): void {
 
 .shell-fade-enter-active,
 .shell-fade-leave-active {
-  transition: none;
+  transition: opacity var(--duration-base) var(--ease);
 }
 
 .shell-fade-enter-from,
 .shell-fade-leave-to {
-  opacity: 1;
+  opacity: 0;
+}
+
+// Initial boot reveal stays instant (no `appear`); the auth gate lifts away to
+// expose a fully-painted shell. Only runtime shell swaps cross-fade.
+@media (prefers-reduced-motion: reduce) {
+  .shell-fade-enter-active,
+  .shell-fade-leave-active {
+    transition: none;
+  }
+
+  .shell-fade-enter-from,
+  .shell-fade-leave-to {
+    opacity: 1;
+  }
 }
 </style>

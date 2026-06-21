@@ -1,6 +1,7 @@
-import { inject } from "vue";
+import { inject, watch } from "vue";
 
 import { AppContextInjectionKey, useKernel, useVfs } from "@daopk/sdk";
+import { useToast } from "@daopk/ui";
 
 import { useEditor } from "../useEditor";
 import { useEditorFilePicker } from "./useEditorFilePicker";
@@ -26,6 +27,18 @@ export function useEditorApp() {
     filePickerPermissionError: filePicker.permissionError,
     filePickerPermissionPending: filePicker.permissionPending,
   });
+  const toast = useToast();
+
+  // `saved` is only ever reached from a successful `save()` (open flows land on
+  // `ready`/`new`), so a saving -> saved transition is an unambiguous save.
+  watch(
+    () => editor.status.value,
+    (next, prev) => {
+      if (next === "saved" && prev === "saving") {
+        toast.success({ title: "Saved" });
+      }
+    },
+  );
 
   function onFilePickerConfirm(path: string): void {
     filePicker.close();

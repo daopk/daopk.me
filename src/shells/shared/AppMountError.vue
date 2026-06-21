@@ -1,12 +1,35 @@
 <script setup lang="ts">
-import { AlertCircle as ErrorIcon } from "~/icons/lucide";
+import { inject } from "vue";
+
+import { Button } from "~/components/ui";
+import { AlertCircle as ErrorIcon, RefreshCw } from "~/icons/lucide";
+
+import { AppMountRetryKey } from "./appMountContext";
+
+const retry = inject(AppMountRetryKey, null);
 </script>
 
 <template>
   <div class="app-mount-error" role="alert">
     <ErrorIcon class="app-mount-error__icon" aria-hidden="true" />
     <p class="app-mount-error__title">Failed to load app content</p>
-    <p class="app-mount-error__hint">Try closing and reopening the window.</p>
+    <p class="app-mount-error__hint">
+      {{
+        retry
+          ? "The app couldn't load. Check your connection and try again."
+          : "Try closing and reopening the window."
+      }}
+    </p>
+    <Button
+      v-if="retry"
+      class="app-mount-error__retry"
+      variant="secondary"
+      size="sm"
+      :icon-start="RefreshCw"
+      @click="retry"
+    >
+      Try again
+    </Button>
   </div>
 </template>
 
@@ -40,5 +63,10 @@ import { AlertCircle as ErrorIcon } from "~/icons/lucide";
 .app-mount-error__hint {
   font-size: 12px;
   margin: 0;
+  max-inline-size: 34ch;
+}
+
+.app-mount-error__retry {
+  margin-block-start: var(--space-xs);
 }
 </style>

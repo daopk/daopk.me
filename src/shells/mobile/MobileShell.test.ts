@@ -6,6 +6,7 @@ import { defineComponent, inject, nextTick, onMounted, type Component } from "vu
 import { AppChromeInjectionKey, type AppHandle, type AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 import { useSettingsStore } from "~/core/storage/SettingsStore";
+import { clearToasts, toastQueue } from "~/components/ui/useToast";
 
 import MobileShell from "./MobileShell.vue";
 import HomeScreen from "./homeScreen/HomeScreen.vue";
@@ -119,6 +120,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     __resetNavigationForTest();
     window.history.replaceState(null, "", "/");
     document.title = "WebOS";
+    clearToasts();
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T09:41:00"));
@@ -341,16 +343,10 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     wrapper.unmount();
   });
 
-  it("alerts for desktop-only apps without launching them", async () => {
+  it("warns via a toast for desktop-only apps without launching them", async () => {
     currentKernel = makeKernel([
       manifest({ id: "desktop-tool", name: "Desktop Tool", supportedShells: ["desktop"] }),
     ]);
-    const previousAlert = window.alert;
-    const alertSpy = vi.fn();
-    Object.defineProperty(window, "alert", {
-      configurable: true,
-      value: alertSpy,
-    });
 
     const wrapper = mount(MobileShell, { attachTo: document.body });
 
@@ -360,16 +356,14 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await nextTick();
 
       expect(launchCount).toBe(0);
-      expect(alertSpy).toHaveBeenCalledWith(
-        "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
-      );
+      expect(toastQueue).toHaveLength(1);
+      expect(toastQueue[0]).toMatchObject({
+        tone: "warning",
+        description: "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
+      });
       expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
       expect(wrapper.find(".unsupported-app-view").exists()).toBe(false);
     } finally {
-      Object.defineProperty(window, "alert", {
-        configurable: true,
-        value: previousAlert,
-      });
       wrapper.unmount();
     }
   });

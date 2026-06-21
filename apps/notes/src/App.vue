@@ -18,6 +18,7 @@ import {
   ContextMenuSeparator,
   Dialog,
   DialogActions,
+  useToast,
 } from "@daopk/ui";
 import { FileText, Plus } from "@daopk/icons";
 import {
@@ -46,6 +47,7 @@ interface AppFrameRef {
 const kernel = useKernel();
 const appContext = inject(AppContextInjectionKey, null);
 const vfs = useVfs();
+const toast = useToast();
 const pinnedNotes = usePinnedDesktopNotes();
 const notes = useNotes({
   vfs: {
@@ -239,7 +241,10 @@ async function confirmDeleteNote(): Promise<void> {
   const note = pendingDeleteNote.value;
   deletingNote.value = true;
   try {
-    await notes.deleteNote(note.path);
+    const deleted = await notes.deleteNote(note.path);
+    if (deleted) {
+      toast.success({ title: "Moved to Trash", description: `"${note.title}" moved to Trash.` });
+    }
   } finally {
     deletingNote.value = false;
     deleteDialogOpen.value = false;

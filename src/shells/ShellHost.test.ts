@@ -146,7 +146,9 @@ describe("ShellHost — shell-ready wiring", () => {
     expect(scheduleIdle).toHaveBeenCalledTimes(1);
     expect(scheduleIdle).toHaveBeenCalledWith(expect.any(Function));
     expect(consumeInitialAppUrlIntent).toHaveBeenCalledTimes(1);
-    expect(consumeInitialAppUrlIntent).toHaveBeenCalledWith(kernel);
+    expect(consumeInitialAppUrlIntent).toHaveBeenCalledWith(kernel, undefined, {
+      onUnknownApp: expect.any(Function),
+    });
     expect(runAutorunManifests).toHaveBeenCalledTimes(1);
     expect(runAutorunManifests).toHaveBeenCalledWith(kernel);
 

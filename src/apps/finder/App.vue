@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AppFrame } from "@daopk/kit";
+import { AppFrame, Progress } from "@daopk/kit";
 
 import FinderDeleteDialog from "./components/FinderDeleteDialog.vue";
 import FinderEntries from "./components/FinderEntries.vue";
@@ -56,15 +56,24 @@ const {
 
 <template>
   <AppFrame as="section" class="finder" layout="flex-column" aria-label="Finder">
-    <FinderToolbar
-      :breadcrumbs="breadcrumbs"
-      :cwd="cwd"
-      :view-mode="viewMode"
-      @breadcrumb="onBreadcrumb"
-      @go-up="finder.goUp"
-      @refresh="finder.refresh"
-      @set-view-mode="finder.setViewMode"
-    />
+    <div class="finder__chrome">
+      <FinderToolbar
+        :breadcrumbs="breadcrumbs"
+        :cwd="cwd"
+        :view-mode="viewMode"
+        @breadcrumb="onBreadcrumb"
+        @go-up="finder.goUp"
+        @refresh="finder.refresh"
+        @set-view-mode="finder.setViewMode"
+      />
+      <Progress
+        v-if="loading"
+        class="finder__loading-bar"
+        :value="null"
+        size="sm"
+        label="Loading folder"
+      />
+    </div>
 
     <div class="finder__body">
       <FinderEntries
@@ -127,6 +136,18 @@ const {
   font-size: 13px;
   inline-size: 100%;
   min-block-size: 0;
+}
+
+.finder__chrome {
+  flex: 0 0 auto;
+  position: relative;
+}
+
+.finder__loading-bar {
+  border-radius: 0;
+  inset-block-end: 0;
+  inset-inline: 0;
+  position: absolute;
 }
 
 .finder__body {

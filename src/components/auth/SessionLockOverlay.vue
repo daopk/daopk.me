@@ -24,7 +24,6 @@ const autoUpdate = useAuthAutoUpdate(computed(() => locked.value));
 
 const busy = ref(false);
 const errorMessage = ref("");
-const status = ref("");
 
 const isGuest = computed(() => profile.authMode === "guest");
 const unlockLabel = computed(() => (isGuest.value ? "Unlock Guest" : "Unlock Desktop"));
@@ -62,7 +61,6 @@ async function unlockDesktop(): Promise<void> {
 
   busy.value = true;
   errorMessage.value = "";
-  status.value = "Unlocking";
 
   try {
     const record = store.get(profile.profileId);
@@ -75,7 +73,6 @@ async function unlockDesktop(): Promise<void> {
     errorMessage.value = describeError(error);
   } finally {
     busy.value = false;
-    status.value = "";
   }
 }
 
@@ -138,9 +135,6 @@ onUnmounted(() => {
           <p class="session-lock__subtitle">{{ subtitle }}</p>
 
           <p v-if="errorMessage" class="session-lock__error" role="alert">{{ errorMessage }}</p>
-          <p v-else-if="status" class="session-lock__status" role="status" aria-live="polite">
-            {{ status }}
-          </p>
 
           <form class="session-lock__actions" @submit.prevent="unlockDesktop">
             <Button
@@ -244,19 +238,11 @@ onUnmounted(() => {
   margin: 0;
 }
 
-.session-lock__error,
-.session-lock__status {
+.session-lock__error {
+  color: var(--color-error);
   font-size: 13px;
   line-height: 1.45;
   margin: 0;
-}
-
-.session-lock__error {
-  color: var(--color-error);
-}
-
-.session-lock__status {
-  color: var(--color-fg-muted);
 }
 
 .session-lock__actions {
@@ -353,8 +339,7 @@ onUnmounted(() => {
     font-size: 14px;
   }
 
-  .session-lock__error,
-  .session-lock__status {
+  .session-lock__error {
     margin-block-start: var(--space-sm);
     text-align: start;
   }

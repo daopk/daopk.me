@@ -11,7 +11,7 @@ import {
   ToolbarTitle,
   useAppChrome,
 } from "~/components/kit";
-import { Button } from "~/components/ui";
+import { Button, useToast } from "~/components/ui";
 import AppIcon from "~/components/AppIcon.vue";
 import { useKernel } from "~/composables/useKernel";
 import { fetchFirstPartyCatalogForUpdate } from "~/core/apps/firstParty/catalog";
@@ -49,6 +49,7 @@ const CATEGORY_LABELS: Record<AppCategory, string> = {
 const PROCESS_KILL_TIMEOUT_MS = 3000;
 
 const kernel = useKernel();
+const toast = useToast();
 const apps = shallowRef<readonly AppManifest[]>(visibleFirstPartyApps());
 const updateEntries = shallowRef<ReadonlyMap<string, FirstPartyCatalogEntry>>(new Map());
 const updatingIds = shallowRef<ReadonlySet<string>>(new Set());
@@ -264,11 +265,14 @@ async function updateApp(app: AppManifest): Promise<void> {
     kernel.apps.register(manifest, { source: "external" });
     await waitForProcessKills(restartSnapshots);
     launchRestartedApp(app.id, restartSnapshots);
+    toast.success({
+      title: "App updated",
+      description: `${app.name} is now ${catalogEntryReleaseLabel(entry)}.`,
+    });
   } catch (error) {
-    checkState.value = {
-      kind: "error",
-      message: error instanceof Error ? error.message : String(error),
-    };
+    const message = error instanceof Error ? error.message : String(error);
+    checkState.value = { kind: "error", message };
+    toast.error({ title: `Couldn't update ${app.name}`, description: message });
   } finally {
     setUpdating(app.id, false);
   }

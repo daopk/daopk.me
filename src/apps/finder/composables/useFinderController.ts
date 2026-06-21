@@ -1,6 +1,7 @@
 import { computed, inject, onMounted, onUnmounted, watch, type ComputedRef } from "vue";
 
 import { AppContextInjectionKey, useKernel, useVfs, type VfsDirEntry } from "@daopk/sdk";
+import { useToast } from "@daopk/ui";
 
 import { useActiveShell } from "~/composables/useActiveShell";
 
@@ -42,10 +43,27 @@ export function useFinderController(): FinderControllerBindings {
     initialReveal: typeof ctx?.args.reveal === "string" ? ctx.args.reveal : undefined,
     autoSelectFirstEntry: computed(() => !isMobile.value),
   });
+  const toast = useToast();
   const preview = useFinderPreview({ vfs });
   const openActions = useFinderOpenActions({ events: kernel.events, finder });
   const clipboard = useFinderClipboard({ finder });
-  const deleteDialog = useFinderDeleteDialog({ deleteEntry: finder.deleteEntry });
+  const deleteDialog = useFinderDeleteDialog({
+    deleteEntry: async (path: string) => {
+      const moved = await finder.deleteEntry(path);
+      if (moved) {
+        const name = path.slice(path.lastIndexOf("/") + 1) || path;
+        toast.success({ title: "Moved to Trash", description: `"${name}" moved to Trash.` });
+      }
+      return moved;
+    },
+  });
+
+  async function copyPath(path: string): Promise<void> {
+    await clipboard.copyPath(path);
+    if (finder.error.value === null) {
+      toast.info({ title: "Path copied", description: path });
+    }
+  }
 
   const activeDescendant = computed(() =>
     finder.selectedIndex.value < 0 ? undefined : `finder-entry-${finder.selectedIndex.value}`,
@@ -117,6 +135,7 @@ export function useFinderController(): FinderControllerBindings {
     ...deleteDialog,
     ...openActions,
     activeDescendant,
+    copyPath,
     finder,
     isMobile,
     mutationDisabled,

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref, useTemplateRef, watch } from "vue";
 import { useElementBounding, useResizeObserver } from "@vueuse/core";
 
+import { useToast } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
@@ -16,10 +17,7 @@ import {
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
 import { dockReveal, measureDockReveal } from "~/shells/desktop/dock/dockReveal";
-import {
-  documentPathFor,
-  normalizeDocumentOpenPath,
-} from "~/shells/shared/documentOpenRouting";
+import { documentPathFor, normalizeDocumentOpenPath } from "~/shells/shared/documentOpenRouting";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
@@ -41,11 +39,19 @@ import {
 type AppLaunchSource = KernelEventPayloads["app.launch.requested"]["source"];
 
 const kernel = useKernel();
+const toast = useToast();
 const windowManager = useWindowManager({
   killProcess: (handleId: string): void => {
     kernel.processes.kill(handleId);
   },
 });
+
+function notifyLaunchFailed(manifest: AppManifest): void {
+  toast.error({
+    title: "Couldn't open app",
+    description: `${manifest.name} failed to start. Please try again.`,
+  });
+}
 
 const hostRef = useTemplateRef<HTMLElement>("hostRef");
 const stageBounds = reactive({ width: 0, height: 0 });
@@ -402,6 +408,7 @@ async function onLaunchRequested(
 
   if (!manifest) {
     debugWarn("[window-host] launch requested for unknown manifest", manifestId);
+    toast.error({ title: "App unavailable", description: `"${manifestId}" isn't installed.` });
 
     return;
   }
@@ -432,6 +439,7 @@ async function onLaunchRequested(
   } catch (error) {
     if (error instanceof AppLaunchError) {
       debugWarn("[window-host] launch failed", error.code, error.manifestId);
+      notifyLaunchFailed(manifest);
 
       return;
     }
@@ -668,6 +676,7 @@ async function onSpawnNewRequested(
 
   if (!manifest) {
     debugWarn("[window-host] spawn.new requested for unknown manifest", manifestId);
+    toast.error({ title: "App unavailable", description: `"${manifestId}" isn't installed.` });
     return;
   }
 
@@ -677,6 +686,7 @@ async function onSpawnNewRequested(
   } catch (error) {
     if (error instanceof AppLaunchError) {
       debugWarn("[window-host] spawn.new failed", error.code, error.manifestId);
+      notifyLaunchFailed(manifest);
       return;
     }
     throw error;

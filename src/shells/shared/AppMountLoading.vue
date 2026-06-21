@@ -1,8 +1,10 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { Spinner } from "~/components/kit";
+</script>
 
 <template>
   <div class="app-mount-loading" aria-busy="true" aria-live="polite">
-    <span class="app-mount-loading__label">Loading…</span>
+    <Spinner size="lg" label="Loading app" />
   </div>
 </template>
 
@@ -15,25 +17,5 @@
   inline-size: 100%;
   justify-content: center;
   padding: var(--space-md);
-}
-
-.app-mount-loading__label {
-  font-size: 13px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .app-mount-loading__label {
-    animation: app-mount-loading-pulse 1200ms ease-in-out infinite;
-  }
-}
-
-@keyframes app-mount-loading-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
 }
 </style>

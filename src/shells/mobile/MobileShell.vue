@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
+import { useToast } from "~/components/ui";
 import HomeScreen from "./homeScreen/HomeScreen.vue";
 import AppView from "./AppView.vue";
 import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
@@ -20,10 +21,7 @@ import {
 } from "~/core/routing/appBrowserPaths";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
-import {
-  documentPathFor,
-  normalizeDocumentOpenPath,
-} from "~/shells/shared/documentOpenRouting";
+import { documentPathFor, normalizeDocumentOpenPath } from "~/shells/shared/documentOpenRouting";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import { useMobileNavigation } from "./useMobileNavigation";
@@ -32,6 +30,7 @@ import type { AppManifest } from "~/types/app";
 
 const kernel = useKernel();
 const nav = useMobileNavigation();
+const toast = useToast();
 const { titleFor } = useAppViewTitle();
 const homeLabelContrastStyle = useWallpaperLabelContrast("mobile");
 
@@ -167,11 +166,11 @@ function unsupportedManifestFor(manifestId: string): AppManifest | null {
   return manifest;
 }
 
-function alertUnsupportedManifest(manifest: AppManifest): void {
-  const message = appUnsupportedShellMessage(manifest, "mobile");
-  if (typeof window !== "undefined" && typeof window.alert === "function") {
-    window.alert(message);
-  }
+function notifyUnsupportedManifest(manifest: AppManifest): void {
+  toast.warning({
+    title: "Not available on mobile",
+    description: appUnsupportedShellMessage(manifest, "mobile"),
+  });
 }
 
 function addLaunching(manifestId: string): void {
@@ -199,7 +198,7 @@ function onLaunch(
   if (unsupported) {
     showSwitcher.value = false;
     clearLaunching(manifestId);
-    alertUnsupportedManifest(unsupported);
+    notifyUnsupportedManifest(unsupported);
     return;
   }
 
@@ -240,7 +239,7 @@ function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>
   if (unsupported) {
     showSwitcher.value = false;
     clearLaunching(manifestId);
-    alertUnsupportedManifest(unsupported);
+    notifyUnsupportedManifest(unsupported);
     return;
   }
   addLaunching(manifestId);
@@ -261,7 +260,7 @@ async function onEditorOpenRequested(path: string): Promise<void> {
   if (unsupported) {
     showSwitcher.value = false;
     clearLaunching("editor");
-    alertUnsupportedManifest(unsupported);
+    notifyUnsupportedManifest(unsupported);
     return;
   }
 
@@ -303,7 +302,7 @@ async function onBlogPostOpenRequested(path: string, slug: string): Promise<void
   if (unsupported) {
     showSwitcher.value = false;
     clearLaunching("blog");
-    alertUnsupportedManifest(unsupported);
+    notifyUnsupportedManifest(unsupported);
     return;
   }
 
@@ -339,7 +338,7 @@ async function onPdfViewerOpenRequested(path: string): Promise<void> {
   if (unsupported) {
     showSwitcher.value = false;
     clearLaunching("pdf-viewer");
-    alertUnsupportedManifest(unsupported);
+    notifyUnsupportedManifest(unsupported);
     return;
   }
 
