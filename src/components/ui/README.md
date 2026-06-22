@@ -28,20 +28,21 @@ density / safe-area rules, and the kit↔ui boundary.
 
 Props in **bold** are required.
 
-| Component                | Wraps (reka)     | Key props                                                                                                                     | Emits / slots                                 |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `Button`                 | —                | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot                 |
-| `Card`                   | —                | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                  |
-| `Switch`                 | `Switch*`        | **`modelValue`**, `disabled` · _needs an accessible name — pass `aria-label`/`aria-labelledby`_                               | `update:modelValue`                           |
-| `Slider`                 | `Slider*`        | **`modelValue`**, `min`, `max`, `step`, `orientation`, `disabled`, `ariaLabel`, `ariaValuetext`                               | `update:modelValue`, `commit`                 |
-| `RadioGroup`             | `RadioGroupRoot` | `modelValue`, `orientation` (`vertical`/`horizontal`), `disabled`, `label`, `name`                                            | `update:modelValue` · default slot (items)    |
-| `RadioGroupItem`         | `RadioGroupItem` | **`value`**, `label`, `disabled`, `id`                                                                                        | default slot (label)                          |
-| `Tooltip`                | `Tooltip*`       | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`                                                           | default slot (trigger, `as-child`), `content` |
-| `Dialog`                 | `Dialog*`        | **`open`**, **`title`**, `description`, `variant` (`modal`/`sheet`), `size`, `dismissible`, `modal`                           | `update:open`, `close` · default slot         |
-| `DialogActions`          | —                | layout for dialog footer buttons                                                                                              | default slot                                  |
-| `DropdownMenu` (+ items) | `DropdownMenu*`  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items` slots     |
-| `ContextMenu` (+ items)  | `ContextMenu*`   | `contentClass`, `portalTo`                                                                                                    | `update:open` · `trigger` / `items` slots     |
-| `ToastHost`              | `Toast*`         | _none_ — mount once globally (already mounted in `ShellHost`)                                                                 | renders the `useToast` queue                  |
+| Component                | Wraps (reka)     | Key props                                                                                                                     | Emits / slots                                     |
+| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `Button`                 | —                | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot                     |
+| `Card`                   | —                | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                      |
+| `Switch`                 | `Switch*`        | **`modelValue`**, `disabled` · _needs an accessible name — pass `aria-label`/`aria-labelledby`_                               | `update:modelValue`                               |
+| `Slider`                 | `Slider*`        | **`modelValue`**, `min`, `max`, `step`, `orientation`, `disabled`, `ariaLabel`, `ariaValuetext`                               | `update:modelValue`, `commit`                     |
+| `RadioGroup`             | `RadioGroupRoot` | `modelValue`, `orientation` (`vertical`/`horizontal`), `disabled`, `label`, `name`                                            | `update:modelValue` · default slot (items)        |
+| `RadioGroupItem`         | `RadioGroupItem` | **`value`**, `label`, `disabled`, `id`                                                                                        | default slot (label)                              |
+| `Tooltip`                | `Tooltip*`       | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`                                                           | default slot (trigger, `as-child`), `content`     |
+| `HoverCard`              | `HoverCard*`     | `side`, `align`, `openDelay`, `closeDelay`, `sideOffset`, `disabled`, `enableTouch`, `portalTo`                               | `update:open` · default slot (trigger), `content` |
+| `Dialog`                 | `Dialog*`        | **`open`**, **`title`**, `description`, `variant` (`modal`/`sheet`), `size`, `dismissible`, `modal`                           | `update:open`, `close` · default slot             |
+| `DialogActions`          | —                | layout for dialog footer buttons                                                                                              | default slot                                      |
+| `DropdownMenu` (+ items) | `DropdownMenu*`  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items` slots         |
+| `ContextMenu` (+ items)  | `ContextMenu*`   | `contentClass`, `portalTo`                                                                                                    | `update:open` · `trigger` / `items` slots         |
+| `ToastHost`              | `Toast*`         | _none_ — mount once globally (already mounted in `ShellHost`)                                                                 | renders the `useToast` queue                      |
 
 ## Toasts
 

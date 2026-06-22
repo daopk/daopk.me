@@ -20,6 +20,10 @@ const props = withDefaults(
   },
 );
 
+const emit = defineEmits<{
+  "aspect-ratio-change": [aspectRatio: number | null];
+}>();
+
 const kernel = useKernel();
 
 const resolution = computed(() =>
@@ -75,6 +79,7 @@ const PreviewHostError = defineComponent({
       :args="resolution.args"
       :input="input"
       :surface="surface"
+      @aspect-ratio-change="emit('aspect-ratio-change', $event)"
     />
     <EmptyState
       v-else

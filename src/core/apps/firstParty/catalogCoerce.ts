@@ -43,7 +43,11 @@ const WIDGET_SURFACES = new Set<WidgetSurface>([
   "any",
 ]);
 const WIDGET_SIZES = new Set<WidgetSize>(["sm", "md", "lg"]);
-const PREVIEW_SURFACES = new Set<AppPreviewSurface>(["blog.embed", "finder.panel"]);
+const PREVIEW_SURFACES = new Set<AppPreviewSurface>([
+  "blog.embed",
+  "finder.panel",
+  "movies.trailer",
+]);
 const DESKTOP_CONTEXT_MENU_SURFACES = new Set<DesktopContextMenuSurface>(["desktop:background"]);
 const DESKTOP_RENDERER_SURFACES = new Set<DesktopRendererSurface>(["desktop:wallpaper"]);
 

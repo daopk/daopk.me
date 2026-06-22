@@ -13,6 +13,7 @@ import {
 } from "@daopk/sdk";
 
 import App from "./App.vue";
+import YouTubePlayerSurface from "./components/YouTubePlayerSurface.vue";
 import { AUTO_HIDE_CONTROLS_DELAY_MS } from "./composables/useAutoHideControls";
 import type {
   YouTubePlayerEvent,
@@ -236,9 +237,13 @@ function expectPlayerIframe(
   expect(url.origin).toBe("https://www.youtube.com");
   expect(url.pathname).toBe(`/embed/${videoId}`);
   expect(url.searchParams.get("controls")).toBe("0");
+  expect(url.searchParams.get("disablekb")).toBe("0");
   expect(url.searchParams.get("enablejsapi")).toBe("1");
+  expect(url.searchParams.get("fs")).toBe("1");
+  expect(url.searchParams.get("iv_load_policy")).toBe("3");
   expect(url.searchParams.get("origin")).toBe(window.location.origin);
   expect(url.searchParams.get("playsinline")).toBe("1");
+  expect(url.searchParams.get("rel")).toBe("0");
 
   return url;
 }
@@ -614,6 +619,24 @@ describe("YouTube Player App", () => {
     wrapper.unmount();
   });
 
+  it("emits aspect ratio changes from loaded video metadata", async () => {
+    mockOEmbedResponse({ width: 1080, height: 1920 });
+    const wrapper = mount(YouTubePlayerSurface, {
+      props: {
+        videoId: "IQsLEaj89bg",
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.emitted("aspect-ratio-change")).toContainEqual([0.5625]);
+    });
+    expect(wrapper.get(".youtube-player__stage").attributes("style")).toContain(
+      "--youtube-player-aspect-ratio: 0.5625",
+    );
+
+    wrapper.unmount();
+  });
+
   it("requests a content-size update when the loaded thumbnail changes the player ratio", async () => {
     const contentSizes: Array<AppChromeContentSize | null> = [];
     const appChrome: AppChromeController = {
@@ -719,6 +742,45 @@ describe("YouTube Player App", () => {
     expect(wrapper.get(".youtube-player__controls").classes()).not.toContain(
       "youtube-player__controls--hidden",
     );
+
+    wrapper.unmount();
+  });
+
+  it("makes disabled-control preview iframes noninteractive", async () => {
+    const wrapper = mount(YouTubePlayerSurface, {
+      props: {
+        autoplayRevision: 1,
+        controlsEnabled: false,
+        privacyEnhanced: true,
+        videoId: "IQsLEaj89bg",
+      },
+    });
+    const player = await waitForPlayer();
+    player.options.events?.onReady?.({ target: player } as YouTubePlayerEvent);
+    await nextTick();
+
+    const frame = wrapper.get("iframe");
+    expect(frame.classes()).toContain("youtube-player__embed--noninteractive");
+    expect(frame.attributes("allowfullscreen")).toBeUndefined();
+    expect(frame.attributes("aria-hidden")).toBe("true");
+    expect(frame.attributes("tabindex")).toBe("-1");
+    expect(wrapper.find(".youtube-player__poster").exists()).toBe(false);
+    expect(wrapper.find(".youtube-player__controls").exists()).toBe(false);
+    expect(wrapper.find(".youtube-player__preview-shield").exists()).toBe(true);
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+
+    player.options.events?.onAutoplayBlocked?.({ target: player });
+    await nextTick();
+    expect(wrapper.text()).toContain("Playback was blocked.");
+    expect(wrapper.text()).not.toContain("Press play to start.");
+
+    const url = new URL(frame.attributes("src")!);
+    expect(url.origin).toBe("https://www.youtube-nocookie.com");
+    expect(url.searchParams.get("controls")).toBe("0");
+    expect(url.searchParams.get("disablekb")).toBe("1");
+    expect(url.searchParams.get("fs")).toBe("0");
+    expect(url.searchParams.get("iv_load_policy")).toBe("3");
+    expect(url.searchParams.get("rel")).toBe("0");
 
     wrapper.unmount();
   });

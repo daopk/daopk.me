@@ -2,7 +2,7 @@ import type { Component } from "vue";
 
 import type { VfsDirEntry } from "~/core/vfs/nodes";
 
-export type AppPreviewSurface = "blog.embed" | "finder.panel";
+export type AppPreviewSurface = "blog.embed" | "finder.panel" | "movies.trailer";
 
 export interface AppPreviewUrlInput {
   readonly kind: "url";

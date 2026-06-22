@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildMoviePersonUrl,
   buildMovieSeasonUrl,
+  buildMovieTrailerUrl,
   buildMoviesListUrl,
   DEFAULT_MOVIES_LIST_LIMIT,
   fetchMovieDetail,
@@ -15,6 +16,7 @@ import {
   movieEpisodeDetailFromParts,
   moviePersonFromPayload,
   movieSeasonFromPayload,
+  movieTrailerFromPayload,
   moviesListFromPayload,
   setMoviesApiLocale,
   tmdbImageUrl,
@@ -86,6 +88,9 @@ describe("moviesApi", () => {
 
     const personUrl = new URL(buildMoviePersonUrl(819), "https://daopk.test");
     expect(personUrl.pathname).toBe("/_api/public/movies/person/819");
+
+    const trailerUrl = new URL(buildMovieTrailerUrl("movie", 550), "https://daopk.test");
+    expect(trailerUrl.pathname).toBe("/_api/public/movies/trailer/movie/550");
   });
 
   it("normalizes app-ready TMDB list payloads", () => {
@@ -390,6 +395,41 @@ describe("moviesApi", () => {
         },
       ],
     });
+  });
+
+  it("normalizes trailer payloads", () => {
+    expect(
+      movieTrailerFromPayload({
+        trailer: {
+          embedUrl: "https://www.youtube-nocookie.com/embed/M7lc1UVf-VE?autoplay=1&mute=1",
+          id: "trailer-1",
+          key: "M7lc1UVf-VE",
+          name: "Official Trailer",
+          official: true,
+          publishedAt: "2025-01-01T00:00:00.000Z",
+          site: "YouTube",
+          thumbnailUrl: "https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg",
+          type: "Trailer",
+          watchUrl: "https://www.youtube.com/watch?v=M7lc1UVf-VE",
+        },
+      }),
+    ).toEqual({
+      trailer: {
+        key: "M7lc1UVf-VE",
+      },
+    });
+
+    expect(movieTrailerFromPayload({ trailer: null })).toEqual({ trailer: null });
+    expect(
+      movieTrailerFromPayload({
+        trailer: {
+          id: "trailer-1",
+          key: "not-a-youtube-id",
+          name: "Invalid Trailer",
+          site: "YouTube",
+        },
+      }),
+    ).toEqual({ trailer: null });
   });
 
   it("drops empty play payloads", () => {

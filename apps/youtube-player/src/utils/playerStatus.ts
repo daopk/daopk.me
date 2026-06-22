@@ -1,6 +1,14 @@
 export type PlayerNotice = "api-error" | "player-error" | "autoplay-blocked";
 
-export function playerStatusMessage(notice: PlayerNotice | null, errorCode: number | null): string {
+export interface PlayerStatusMessageOptions {
+  readonly canStartPlayback?: boolean;
+}
+
+export function playerStatusMessage(
+  notice: PlayerNotice | null,
+  errorCode: number | null,
+  options: PlayerStatusMessageOptions = {},
+): string {
   if (notice === "api-error") {
     return "YouTube player is unavailable.";
   }
@@ -12,7 +20,9 @@ export function playerStatusMessage(notice: PlayerNotice | null, errorCode: numb
   }
 
   if (notice === "autoplay-blocked") {
-    return "Playback was blocked. Press play to start.";
+    return options.canStartPlayback === false
+      ? "Playback was blocked."
+      : "Playback was blocked. Press play to start.";
   }
 
   return "";

@@ -40,6 +40,39 @@ describe("PreviewHost", () => {
     expect(wrapper.find(".preview-probe").text()).toBe("blog.embed:M7lc1UVf-VE:url");
   });
 
+  it("forwards preview aspect ratio changes from the provider component", async () => {
+    const input: AppPreviewInput = { kind: "url", url: "https://youtu.be/M7lc1UVf-VE" };
+    const PreviewComponent = defineComponent({
+      emits: ["aspect-ratio-change"],
+      mounted() {
+        this.$emit("aspect-ratio-change", 0.5625);
+      },
+      template: '<div class="preview-probe" />',
+    });
+    const provider: AppPreviewProvider = {
+      id: "youtube-player:video-preview",
+      manifestId: "youtube-player",
+      surfaces: ["movies.trailer"],
+      component: () => Promise.resolve({ default: PreviewComponent }),
+      match: () => ({ args: { videoId: "M7lc1UVf-VE" } }),
+    };
+    const kernel = {
+      previews: {
+        resolve: vi.fn(() => ({ provider, args: { videoId: "M7lc1UVf-VE" } })),
+      },
+    } as unknown as Kernel;
+
+    const wrapper = mount(PreviewHost, {
+      props: { input, surface: "movies.trailer" },
+      global: { provide: { [KernelInjectionKey as symbol]: kernel } },
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.emitted("aspect-ratio-change")).toEqual([[0.5625]]);
+  });
+
   it("renders the fallback when no provider matches", () => {
     const kernel = {
       previews: {

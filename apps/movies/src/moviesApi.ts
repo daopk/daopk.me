@@ -3,6 +3,7 @@ import { browserPreferredLocale, type SupportedLocale } from "@daopk/sdk";
 import { movieSlugFromText } from "./utils/movieSlug";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
+const YOUTUBE_VIDEO_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
 export type MovieMediaType = "movie" | "tv";
 export type MoviesSearchMedia = "all" | MovieMediaType;
@@ -77,6 +78,14 @@ export interface MoviePlaySource {
 export interface MoviePlayInfo {
   readonly slug: string;
   readonly sources: readonly MoviePlaySource[];
+}
+
+export interface MovieTrailer {
+  readonly key: string;
+}
+
+export interface MovieTrailerResult {
+  readonly trailer: MovieTrailer | null;
 }
 
 export interface MovieSeason {
@@ -460,6 +469,11 @@ function asHttpsUrl(value: unknown): string | null {
   }
 }
 
+function asYouTubeVideoId(value: unknown): string | null {
+  const text = asNonEmptyString(value);
+  return text !== null && YOUTUBE_VIDEO_ID_PATTERN.test(text) ? text : null;
+}
+
 function asNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -598,6 +612,28 @@ function playInfoFromPayload(payload: unknown): MoviePlayInfo | null {
   return {
     slug: asString(payload.slug),
     sources,
+  };
+}
+
+function movieTrailerFromEntry(entry: unknown): MovieTrailer | null {
+  if (!isRecord(entry) || entry.site !== "YouTube") {
+    return null;
+  }
+
+  const key = asYouTubeVideoId(entry.key);
+  if (key === null) {
+    return null;
+  }
+
+  return {
+    key,
+  };
+}
+
+export function movieTrailerFromPayload(payload: unknown): MovieTrailerResult {
+  const record = isRecord(payload) ? payload : {};
+  return {
+    trailer: movieTrailerFromEntry(record.trailer),
   };
 }
 
@@ -920,6 +956,10 @@ export function buildMoviePersonUrl(tmdbId: number): string {
   return publicApiUrl(`/public/movies/person/${encodeURIComponent(String(tmdbId))}`);
 }
 
+export function buildMovieTrailerUrl(mediaType: MovieMediaType, tmdbId: number): string {
+  return publicApiUrl(`/public/movies/trailer/${mediaType}/${encodeURIComponent(String(tmdbId))}`);
+}
+
 async function fetchJson(url: string, options: { signal?: AbortSignal } = {}): Promise<unknown> {
   const response = await fetch(urlWithMoviesApiLanguage(url), {
     signal: options.signal,
@@ -1065,6 +1105,17 @@ export async function fetchMoviePerson(
     throw new Error("Movie person response was not usable.");
   }
   return person;
+}
+
+export async function fetchMovieTrailer(
+  mediaType: MovieMediaType,
+  tmdbId: number,
+  options: { signal?: AbortSignal } = {},
+): Promise<MovieTrailerResult> {
+  const payload = await fetchJson(buildMovieTrailerUrl(mediaType, tmdbId), {
+    signal: options.signal,
+  });
+  return movieTrailerFromPayload(payload);
 }
 
 export async function fetchMovieSeason(

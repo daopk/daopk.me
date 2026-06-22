@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, nextTick, onMounted } from "vue";
 
 import {
   AppChromeInjectionKey,
@@ -18,6 +18,7 @@ import type {
   MoviePersonDetail,
   MoviePlayInfo,
   MovieSeasonDetail,
+  MovieTrailerResult,
   MoviesFiltersResult,
   MovieSummary,
   MoviesListResult,
@@ -40,6 +41,7 @@ vi.mock("./moviesApi", async (importOriginal) => {
     fetchMovieEpisode: vi.fn(),
     fetchMoviePerson: vi.fn(),
     fetchMovieSeason: vi.fn(),
+    fetchMovieTrailer: vi.fn(),
     fetchMoviesFilters: vi.fn(),
     fetchMoviesList: vi.fn(),
   };
@@ -105,6 +107,7 @@ import {
   fetchMoviesFilters,
   fetchMoviePerson,
   fetchMovieSeason,
+  fetchMovieTrailer,
   fetchMoviesList,
 } from "./moviesApi";
 
@@ -143,6 +146,17 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
       },
     ],
     ...overrides,
+  };
+}
+
+function trailerResult(
+  overrides: Partial<NonNullable<MovieTrailerResult["trailer"]>> = {},
+): MovieTrailerResult {
+  return {
+    trailer: {
+      key: "M7lc1UVf-VE",
+      ...overrides,
+    },
   };
 }
 
@@ -430,10 +444,44 @@ function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
     .attributes("aria-label");
 }
 
+function stubHoverPreviewCapability(matches = true): () => void {
+  const previous = window.matchMedia;
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      addEventListener: vi.fn(),
+      addListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+      matches,
+      media: query,
+      onchange: null,
+      removeEventListener: vi.fn(),
+      removeListener: vi.fn(),
+    })),
+  });
+
+  return () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: previous,
+    });
+  };
+}
+
+async function hoverFirstHomeRailCard(wrapper: VueWrapper): Promise<void> {
+  const card = wrapper.get(".movies-home__rail .movie-card");
+  await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
+  await card.trigger("pointermove", { clientX: 244, clientY: 184, pointerType: "mouse" });
+  await new Promise((resolve) => window.setTimeout(resolve, 360));
+  await flushPromises();
+  await nextTick();
+}
+
 describe("Movies app", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    delete document.documentElement.dataset.shell;
     localStorage.clear();
     window.history.replaceState(null, "", "/apps/movies");
     vi.mocked(fetchMoviesList).mockResolvedValue(list([movie()]));
@@ -443,6 +491,7 @@ describe("Movies app", () => {
     vi.mocked(fetchMovieSeason).mockImplementation(async (_tmdbId, seasonNumber) =>
       seasonDetail({ seasonNumber }),
     );
+    vi.mocked(fetchMovieTrailer).mockResolvedValue({ trailer: null });
     vi.mocked(fetchMovieEpisode).mockImplementation(
       async (_tmdbId, seasonNumber, episodeNumber) => {
         const season = seasonDetail({ seasonNumber });
@@ -457,6 +506,7 @@ describe("Movies app", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    delete document.documentElement.dataset.shell;
     localStorage.clear();
   });
 
@@ -628,6 +678,301 @@ describe("Movies app", () => {
     const dragEvent = new Event("dragstart", { bubbles: true, cancelable: true });
     expect(wrapper.get(".movie-card__poster").element.dispatchEvent(dragEvent)).toBe(false);
     expect(dragEvent.defaultPrevented).toBe(true);
+  });
+
+  it("loads and renders a trailer preview when hovering a Home rail card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const PreviewComponent = defineComponent({
+      emits: ["aspect-ratio-change"],
+      props: ["args", "input", "surface"],
+      setup(_props, { emit }) {
+        onMounted(() => emit("aspect-ratio-change", 0.5625));
+      },
+      template:
+        '<div class="preview-probe">{{ surface }}:{{ args.videoId }}:{{ args.autoplay }}:{{ input.kind }}</div>',
+    });
+    const provider = {
+      id: "youtube-player:video-preview",
+      manifestId: "youtube-player",
+      surfaces: ["movies.trailer"],
+      component: () => Promise.resolve({ default: PreviewComponent }),
+      match: vi.fn(),
+    };
+    const resolve = vi.fn(() => ({
+      args: { autoplay: true, videoId: "M7lc1UVf-VE" },
+      provider,
+    }));
+    const kernel = {
+      events: { emit: vi.fn() },
+      previews: { resolve },
+    } as unknown as Kernel;
+    vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+    await hoverFirstHomeRailCard(wrapper);
+    await flushPromises();
+    await nextTick();
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    expect(resolve).toHaveBeenCalledWith(
+      {
+        kind: "url",
+        url: "youtube-player://video/M7lc1UVf-VE?autoplay=1",
+      },
+      { surface: "movies.trailer" },
+    );
+    const preview = document.body.querySelector(".movies-trailer-hover-card");
+    expect(preview?.textContent).toContain("Fight Club");
+    expect(preview?.getAttribute("style")).toContain(
+      "--movies-trailer-preview-aspect-ratio: 0.5625 / 1",
+    );
+    expect(document.body.querySelector(".preview-probe")?.textContent).toBe(
+      "movies.trailer:M7lc1UVf-VE:true:url",
+    );
+
+    restoreHoverPreview();
+  });
+
+  it("keeps the trailer preview anchored after it appears", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const TrailerPreviewProbe = defineComponent({
+      name: "MovieTrailerHoverPreview",
+      props: ["anchorMode", "disabled", "movie", "reference", "trailerCache"],
+      setup(props) {
+        function rectValue(axis: "left" | "top"): string {
+          const reference = props.reference as
+            | { getBoundingClientRect: () => Pick<DOMRect, "left" | "top"> }
+            | undefined;
+          return reference === undefined ? "" : String(reference.getBoundingClientRect()[axis]);
+        }
+
+        return { rectValue };
+      },
+      template:
+        '<div class="preview-anchor-probe" :data-left="rectValue(\'left\')" :data-top="rectValue(\'top\')" />',
+    });
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        stubs: {
+          MovieTrailerHoverPreview: TrailerPreviewProbe,
+        },
+      },
+    });
+    await settle();
+
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
+    await card.trigger("pointermove", { clientX: 300, clientY: 220, pointerType: "mouse" });
+    await new Promise((resolve) => window.setTimeout(resolve, 360));
+    await nextTick();
+
+    const probe = wrapper.get(".preview-anchor-probe");
+    expect(probe.attributes("data-left")).toBe("300");
+    expect(probe.attributes("data-top")).toBe("220");
+
+    await card.trigger("pointermove", { clientX: 460, clientY: 260, pointerType: "mouse" });
+    await nextTick();
+
+    expect(probe.attributes("data-left")).toBe("300");
+    expect(probe.attributes("data-top")).toBe("220");
+
+    restoreHoverPreview();
+  });
+
+  it("keeps the trailer preview open when moving from a card into the preview", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    await hoverFirstHomeRailCard(wrapper);
+
+    const preview = document.body.querySelector(".movies-trailer-hover-card");
+    expect(preview).toBeInstanceOf(HTMLElement);
+
+    await card.trigger("pointerleave", { pointerType: "mouse" });
+    preview!.dispatchEvent(new Event("pointerenter"));
+    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    await nextTick();
+
+    expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    preview!.dispatchEvent(new Event("pointerleave"));
+    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    await nextTick();
+
+    expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
+
+    restoreHoverPreview();
+  });
+
+  it("keeps the trailer preview open after a card pointer leave when the pointer still rests on the card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const elementFromPoint = vi.spyOn(document, "elementFromPoint");
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    await hoverFirstHomeRailCard(wrapper);
+    elementFromPoint.mockReturnValue(card.element);
+
+    await card.trigger("pointerleave", { clientX: 244, clientY: 184, pointerType: "mouse" });
+    await new Promise((resolve) => window.setTimeout(resolve, 420));
+    await nextTick();
+
+    expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    wrapper.unmount();
+    elementFromPoint.mockRestore();
+    restoreHoverPreview();
+  });
+
+  it("keeps the trailer preview open after preview pointer leave when scroll leaves the pointer over the card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const elementFromPoint = vi.spyOn(document, "elementFromPoint");
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    await hoverFirstHomeRailCard(wrapper);
+
+    const preview = document.body.querySelector(".movies-trailer-hover-card");
+    expect(preview).toBeInstanceOf(HTMLElement);
+    elementFromPoint.mockReturnValue(card.element);
+
+    const leaveEvent = new Event("pointerleave", { bubbles: true });
+    Object.defineProperties(leaveEvent, {
+      clientX: { value: 244 },
+      clientY: { value: 184 },
+      pointerType: { value: "mouse" },
+    });
+    preview!.dispatchEvent(leaveEvent);
+    await new Promise((resolve) => window.setTimeout(resolve, 420));
+    await nextTick();
+
+    expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    wrapper.unmount();
+    elementFromPoint.mockRestore();
+    restoreHoverPreview();
+  });
+
+  it("reuses one shared trailer preview when moving between Home rail cards", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const secondMovie = movie({
+      canonicalPath: "/movie/551-se7en",
+      id: "movie-551",
+      name: "Se7en",
+      slug: "se7en",
+      tmdbId: 551,
+    });
+    const PreviewComponent = defineComponent({
+      props: ["args", "input", "surface"],
+      template: '<div class="preview-probe">{{ surface }}:{{ args.videoId }}</div>',
+    });
+    const kernel = {
+      events: { emit: vi.fn() },
+      previews: {
+        resolve: vi.fn(() => ({
+          args: { autoplay: true, videoId: "M7lc1UVf-VE" },
+          provider: {
+            id: "youtube-player:video-preview",
+            manifestId: "youtube-player",
+            surfaces: ["movies.trailer"],
+            component: () => Promise.resolve({ default: PreviewComponent }),
+            match: vi.fn(),
+          },
+        })),
+      },
+    } as unknown as Kernel;
+    vi.mocked(fetchMoviesList).mockResolvedValue(list([movie(), secondMovie]));
+    vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+
+    const cards = wrapper.findAll(".movies-home__rail .movie-card");
+    await cards[0]!.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
+    await new Promise((resolve) => window.setTimeout(resolve, 360));
+    await flushPromises();
+    await nextTick();
+
+    expect(document.body.querySelectorAll(".movies-trailer-hover-card")).toHaveLength(1);
+    expect(document.body.querySelector(".movies-trailer-hover-card")?.textContent).toContain(
+      "Fight Club",
+    );
+
+    await cards[1]!.trigger("pointerenter", { clientX: 420, clientY: 180, pointerType: "mouse" });
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    await flushPromises();
+    await nextTick();
+
+    expect(document.body.querySelectorAll(".movies-trailer-hover-card")).toHaveLength(1);
+    expect(document.body.querySelector(".movies-trailer-hover-card")?.textContent).toContain(
+      "Se7en",
+    );
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 551);
+
+    restoreHoverPreview();
+  });
+
+  it("shows an unavailable trailer fallback for Home rail hover previews", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    vi.mocked(fetchMovieTrailer).mockResolvedValue({ trailer: null });
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    await hoverFirstHomeRailCard(wrapper);
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    expect(document.body.textContent).toContain("Trailer unavailable");
+
+    restoreHoverPreview();
+  });
+
+  it("does not request trailer previews in hoverless contexts", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability(false);
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    await hoverFirstHomeRailCard(wrapper);
+
+    expect(fetchMovieTrailer).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
+
+    restoreHoverPreview();
+  });
+
+  it("does not request trailer previews in the mobile shell", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability(true);
+    document.documentElement.dataset.shell = "mobile";
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    await hoverFirstHomeRailCard(wrapper);
+
+    expect(fetchMovieTrailer).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
+
+    restoreHoverPreview();
   });
 
   it("renders Movies home and catalog controls in Vietnamese when locale is vi", async () => {

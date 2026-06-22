@@ -10,7 +10,7 @@
     {
       "id": "youtube-player:video-preview",
       "title": "YouTube video",
-      "surfaces": ["blog.embed"],
+      "surfaces": ["blog.embed", "movies.trailer"],
       "priority": 100,
       "exportName": "YouTubeVideoPreview",
       "match": { "kind": "app-url" }

@@ -23,16 +23,21 @@ const PREFERRED_PLAYER_CONTENT_SIZE = { width: 960, height: 540 };
 const props = withDefaults(
   defineProps<{
     readonly autoplayRevision?: number;
+    readonly controlsEnabled?: boolean;
+    readonly privacyEnhanced?: boolean;
     readonly resizeToAspectRatio?: boolean;
     readonly videoId: string | null;
   }>(),
   {
     autoplayRevision: 0,
+    controlsEnabled: true,
+    privacyEnhanced: false,
     resizeToAspectRatio: false,
   },
 );
 
 const emit = defineEmits<{
+  "aspect-ratio-change": [aspectRatio: number | null];
   "content-size-change": [size: AppChromeContentSize | null];
   "title-change": [title: string];
   "video-request": [videoId: string];
@@ -82,8 +87,12 @@ const { style: playerStageStyle } = useAspectFitBox(playerViewport, videoAspectR
 const { controlsHidden, controlsVisible, setControlsFocused, showControls } = useAutoHideControls({
   playing,
 });
-const posterVisible = computed(() => hasVideo.value && !playing.value);
-const statusMessage = computed(() => playerStatusMessage(notice.value, playerErrorCode.value));
+const posterVisible = computed(() => props.controlsEnabled && hasVideo.value && !playing.value);
+const statusMessage = computed(() =>
+  playerStatusMessage(notice.value, playerErrorCode.value, {
+    canStartPlayback: props.controlsEnabled,
+  }),
+);
 const surfaceTitle = computed(() => videoTitle.value ?? "YouTube Player");
 
 onUnmounted(() => {
@@ -99,6 +108,7 @@ watch(
     videoAspectRatioSource.value = null;
     videoAspectRatioRequest?.abort();
     videoAspectRatioRequest = null;
+    emit("aspect-ratio-change", null);
 
     if (previousVideoId !== undefined && nextVideoId !== previousVideoId) {
       emit("content-size-change", null);
@@ -140,6 +150,7 @@ function setVideoAspectRatio(
   requestAspectRatioWindowSize(nextAspectRatio);
   videoAspectRatio.value = nextAspectRatio;
   videoAspectRatioSource.value = source;
+  emit("aspect-ratio-change", nextAspectRatio);
 }
 
 function requestAspectRatioWindowSize(nextAspectRatio: number): void {
@@ -183,11 +194,17 @@ function submitManualVideo(): void {
         class="youtube-player__stage"
         :class="{ 'youtube-player__stage--controls-hidden': controlsHidden }"
         :style="playerStageStyle"
-        @pointerdown="showControls"
-        @pointermove="showControls"
-        @touchstart="showControls"
+        @pointerdown="props.controlsEnabled && showControls()"
+        @pointermove="props.controlsEnabled && showControls()"
+        @touchstart="props.controlsEnabled && showControls()"
       >
-        <YouTubeEmbed :has-video="hasVideo" :video-id="videoId" @host-change="setPlayerHost" />
+        <YouTubeEmbed
+          :has-video="hasVideo"
+          :interactive="props.controlsEnabled"
+          :privacy-enhanced="privacyEnhanced"
+          :video-id="videoId"
+          @host-change="setPlayerHost"
+        />
 
         <EmptyState v-if="!hasVideo" class="youtube-player__empty" role="presentation">
           <form
@@ -247,12 +264,17 @@ function submitManualVideo(): void {
         </Transition>
 
         <div
-          v-if="hasVideo && controlsHidden"
+          v-if="props.controlsEnabled && hasVideo && controlsHidden"
           class="youtube-player__interaction-layer"
           aria-hidden="true"
           @pointerdown="showControls"
           @pointermove="showControls"
           @touchstart="showControls"
+        />
+        <div
+          v-else-if="!props.controlsEnabled && hasVideo"
+          class="youtube-player__preview-shield"
+          aria-hidden="true"
         />
 
         <p v-if="statusMessage" class="youtube-player__status" role="status" aria-live="polite">
@@ -260,7 +282,7 @@ function submitManualVideo(): void {
         </p>
 
         <YouTubePlayerControls
-          v-if="hasVideo"
+          v-if="props.controlsEnabled && hasVideo"
           :controls-disabled="controlsDisabled"
           :current-time="currentTime"
           :duration="duration"
@@ -328,6 +350,13 @@ function submitManualVideo(): void {
   inset: 0;
   position: absolute;
   z-index: 1;
+}
+
+.youtube-player__preview-shield {
+  cursor: default;
+  inset: 0;
+  position: absolute;
+  z-index: 3;
 }
 
 .youtube-player__empty {

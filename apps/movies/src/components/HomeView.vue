@@ -7,7 +7,9 @@ import { ChevronRight, Trash2 } from "@daopk/icons";
 
 import HomeHero from "./HomeHero.vue";
 import MovieCard from "./MovieCard.vue";
+import MovieTrailerHoverPreview from "./MovieTrailerHoverPreview.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
+import { useMovieTrailerPreview } from "../composables/useMovieTrailerPreview";
 import {
   homeGroupTitle,
   homePeriodOptions,
@@ -73,6 +75,19 @@ const continueWatchingItems = ref<readonly ContinueWatchingItem[]>([]);
 const featured = ref<readonly MovieSummary[]>([]);
 const rows = ref<Record<string, readonly MovieSummary[]>>({});
 const state = ref<LoadState>("loading");
+const {
+  anchorMode: trailerPreviewAnchorMode,
+  close: closeTrailerPreview,
+  closeNow: closeTrailerPreviewNow,
+  enabled: trailerPreviewEnabled,
+  keepOpen: keepTrailerPreviewOpen,
+  movie: trailerPreviewMovie,
+  move: moveTrailerPreview,
+  reference: trailerPreviewReference,
+  showFromFocus: showTrailerPreviewFromFocus,
+  showFromPointer: showTrailerPreviewFromPointer,
+  trailerCache: trailerPreviewCache,
+} = useMovieTrailerPreview();
 const selectedPeriods = ref<Record<PeriodGroupId, MoviesListPeriod>>({
   trending: "week",
 });
@@ -88,6 +103,7 @@ const hasHomeContent = hasFeatured;
 watch(
   locale,
   () => {
+    closeTrailerPreviewNow();
     void loadHome();
     void loadContinueWatching();
   },
@@ -463,7 +479,15 @@ function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesL
                     :key="movie.id"
                     class="movies-home__rail-item"
                   >
-                    <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
+                    <MovieCard
+                      :movie="movie"
+                      @blur="closeTrailerPreview"
+                      @focus="showTrailerPreviewFromFocus(movie, $event)"
+                      @pointerenter="showTrailerPreviewFromPointer(movie, $event)"
+                      @pointerleave="closeTrailerPreview"
+                      @pointermove="moveTrailerPreview(movie, $event)"
+                      @open="$emit('open-detail', $event)"
+                    />
                   </li>
                 </ul>
               </section>
@@ -472,6 +496,16 @@ function queryForRow(group: MoviesRowGroupConfig, row: MoviesRowConfig): MoviesL
         </template>
       </div>
     </section>
+
+    <MovieTrailerHoverPreview
+      :anchor-mode="trailerPreviewAnchorMode"
+      :disabled="!trailerPreviewEnabled"
+      :movie="trailerPreviewMovie"
+      :reference="trailerPreviewReference"
+      :trailer-cache="trailerPreviewCache"
+      @preview-enter="keepTrailerPreviewOpen"
+      @preview-leave="closeTrailerPreview"
+    />
   </ScrollArea>
 </template>
 

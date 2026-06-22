@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 
-const props = defineProps<{
-  hasVideo: boolean;
-  videoId: string | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    hasVideo: boolean;
+    interactive?: boolean;
+    privacyEnhanced?: boolean;
+    videoId: string | null;
+  }>(),
+  {
+    interactive: true,
+    privacyEnhanced: false,
+  },
+);
 
 const emit = defineEmits<{
   "host-change": [host: HTMLIFrameElement | null];
@@ -18,7 +26,11 @@ const embedSrc = computed(() => {
 
   const params = new URLSearchParams({
     controls: "0",
+    disablekb: props.interactive ? "0" : "1",
     enablejsapi: "1",
+    fs: props.interactive ? "1" : "0",
+    iv_load_policy: "3",
+    rel: "0",
     playsinline: "1",
   });
 
@@ -26,7 +38,10 @@ const embedSrc = computed(() => {
     params.set("origin", window.location.origin);
   }
 
-  return `https://www.youtube.com/embed/${encodeURIComponent(props.videoId)}?${params.toString()}`;
+  const origin = props.privacyEnhanced
+    ? "https://www.youtube-nocookie.com"
+    : "https://www.youtube.com";
+  return `${origin}/embed/${encodeURIComponent(props.videoId)}?${params.toString()}`;
 });
 
 watch(host, (nextHost) => emit("host-change", nextHost), {
@@ -45,11 +60,14 @@ onBeforeUnmount(() => {
       :key="videoId ?? 'empty'"
       ref="host"
       class="youtube-player__embed"
+      :class="{ 'youtube-player__embed--noninteractive': !interactive }"
       credentialless="credentialless"
       :src="embedSrc"
       allow="autoplay; encrypted-media; picture-in-picture"
-      allowfullscreen
+      :allowfullscreen="interactive"
+      :aria-hidden="interactive ? undefined : 'true'"
       referrerpolicy="strict-origin-when-cross-origin"
+      :tabindex="interactive ? undefined : -1"
       title="YouTube video player"
     />
   </div>
@@ -72,5 +90,9 @@ onBeforeUnmount(() => {
   inset-inline-start: 0;
   inline-size: 100%;
   position: absolute;
+}
+
+.youtube-player__embed--noninteractive {
+  pointer-events: none;
 }
 </style>
