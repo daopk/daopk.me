@@ -5,6 +5,7 @@ import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { ArrowLeft } from "@daopk/icons";
 
+import EpisodeList from "./EpisodeList.vue";
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import {
@@ -118,6 +119,19 @@ const episodeInfo = computed(() => {
     title: episode.name,
   };
 });
+const seasonEpisodes = computed<readonly MovieSeasonEpisode[]>(() => {
+  if (props.target.kind !== "episode") {
+    return [];
+  }
+  return episodeDetail.value?.season.episodes ?? [];
+});
+const seasonEpisodesLabel = computed(() => {
+  const currentEpisodeDetail = episodeDetail.value;
+  return currentEpisodeDetail === null ? "" : seasonLabel(currentEpisodeDetail.season, t);
+});
+const activeEpisodeNumber = computed(() =>
+  props.target.kind === "episode" ? props.target.episodeNumber : null,
+);
 const nextEpisode = computed<MovieSeasonEpisode | null>(() => {
   const target = props.target;
   const currentEpisodeDetail = episodeDetail.value;
@@ -241,6 +255,20 @@ function watchNextEpisode(): void {
   }
 }
 
+function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
+  const currentEpisodeDetail = episodeDetail.value;
+  if (episode.play === null || currentEpisodeDetail === null) {
+    return;
+  }
+
+  emit("watch-episode", {
+    episodeNumber: episode.episodeNumber,
+    seasonNumber: episode.seasonNumber,
+    slug: currentEpisodeDetail.series.slug,
+    tmdbId: props.target.tmdbId,
+  });
+}
+
 function handleKeyboardEvent(event: KeyboardEvent): void {
   playerRef.value?.handleAppKeydown?.(event);
 }
@@ -327,6 +355,21 @@ defineExpose({
           {{ episodeInfo.overview }}
         </p>
       </section>
+
+      <section
+        v-if="seasonEpisodes.length > 0"
+        class="movies-watch__episodes"
+        :aria-label="t('movies.section.episode')"
+      >
+        <h2 class="movies-watch__episodes-heading">
+          {{ seasonEpisodesLabel || t("movies.section.episode") }}
+        </h2>
+        <EpisodeList
+          :episodes="seasonEpisodes"
+          :active-episode-number="activeEpisodeNumber"
+          @open="watchSeasonEpisode"
+        />
+      </section>
     </article>
   </ScrollArea>
 </template>
@@ -392,8 +435,28 @@ defineExpose({
   inline-size: 100%;
   margin-inline: auto;
   max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding: var(--space-lg) var(--movies-content-outer-padding-inline, var(--space-lg)) 0;
+}
+
+.movies-watch__episode-info:last-child {
+  padding-block-end: clamp(var(--space-xl), 10vh, 96px);
+}
+
+.movies-watch__episodes {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-md);
+  inline-size: 100%;
+  margin-inline: auto;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
   padding: var(--space-lg) var(--movies-content-outer-padding-inline, var(--space-lg))
     clamp(var(--space-xl), 10vh, 96px);
+}
+
+.movies-watch__episodes-heading {
+  font-size: var(--font-size-lg);
+  line-height: var(--leading-tight);
+  margin: 0;
 }
 
 .movies-watch__episode-eyebrow,
