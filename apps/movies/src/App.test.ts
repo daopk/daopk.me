@@ -55,6 +55,7 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
       posterUrl: { default: "", type: String },
       progressKey: { default: "", type: String },
       showBackButton: { default: false, type: Boolean },
+      sourceIndex: { default: 0, type: Number },
       title: { required: true, type: String },
     },
     emits: ["back", "next-episode"],
@@ -68,6 +69,7 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
         :data-autoplay="autoplay ? 'true' : 'false'"
         :data-next-episode-label="nextEpisodeLabel"
         :data-progress-key="progressKey"
+        :data-source-index="String(sourceIndex)"
         :data-title="title"
       >
         <button
@@ -1035,6 +1037,76 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
     expect(wrapper.find(".movies-watch__episode-info").exists()).toBe(false);
+  });
+
+  it("opens a Continue Watching movie with the last saved source", async () => {
+    const alternateSource = {
+      embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+      filename: "fight-club-alt.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+      name: "Alt",
+      serverName: "Server 2",
+      slug: "alt",
+    };
+    vi.mocked(fetchMovieDetail).mockResolvedValue(
+      detail({ play: playInfo({ sources: [playInfo().sources[0]!, alternateSource] }) }),
+    );
+    persistAppProgress(moviePlaybackProgressKey(550), {
+      currentTime: 42,
+      duration: 120,
+      source: {
+        filename: "fight-club-alt.m3u8",
+        index: 1,
+        m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+        name: "Alt",
+        serverName: "Server 2",
+        slug: "alt",
+      },
+      updatedAt: Date.now(),
+    });
+
+    const wrapper = mount(App);
+    await settle();
+
+    const continueMovie = wrapper
+      .findAll(".movies-home__continue-card")
+      .find((card) => card.text().includes("Fight Club"));
+    expect(continueMovie).toBeDefined();
+    await continueMovie!.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
+  });
+
+  it("falls back to the first source when the saved Continue Watching source is unavailable", async () => {
+    vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
+    persistAppProgress(moviePlaybackProgressKey(550), {
+      currentTime: 42,
+      duration: 120,
+      source: {
+        filename: "fight-club-missing.m3u8",
+        index: 1,
+        m3u8Url: "https://stream.example.test/fight-club/missing.m3u8",
+        name: "Missing",
+        serverName: "Server 9",
+        slug: "missing",
+      },
+      updatedAt: Date.now(),
+    });
+
+    const wrapper = mount(App);
+    await settle();
+
+    const continueMovie = wrapper
+      .findAll(".movies-home__continue-card")
+      .find((card) => card.text().includes("Fight Club"));
+    expect(continueMovie).toBeDefined();
+    await continueMovie!.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-watch").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("0");
   });
 
   it("opens a Continue Watching TV episode directly into autoplay playback", async () => {

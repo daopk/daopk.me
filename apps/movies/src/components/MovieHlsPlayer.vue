@@ -30,6 +30,7 @@ import {
 import {
   createMoviesPlaybackProgressStore,
   isResumableMoviePlaybackTime,
+  moviesPlaybackProgressSourceSnapshot,
 } from "../moviesPlaybackProgress";
 import type { MoviesTranslationKey } from "../i18n";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
@@ -660,9 +661,14 @@ function persistPlaybackProgress(options: { force?: boolean } = {}): void {
   }
 
   syncMediaState();
+  const source = activeSource.value;
   playbackProgressStore.save(key, {
     currentTime: currentTime.value,
     duration: duration.value,
+    source:
+      source === null
+        ? null
+        : moviesPlaybackProgressSourceSnapshot(source, selectedSourceIndex.value),
   });
   lastProgressPersistedAtMs = now;
 }

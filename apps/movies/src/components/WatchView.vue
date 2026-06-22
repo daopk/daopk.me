@@ -24,7 +24,12 @@ import {
   type MoviePlayInfo,
   type MovieSeasonEpisode,
 } from "../moviesApi";
-import { episodePlaybackProgressKey, moviePlaybackProgressKey } from "../moviesPlaybackProgress";
+import {
+  createMoviesPlaybackProgressStore,
+  episodePlaybackProgressKey,
+  moviePlaybackProgressKey,
+  resolveMoviesPlaybackProgressSourceIndex,
+} from "../moviesPlaybackProgress";
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
 type LoadState = "loading" | "ready" | "error";
@@ -56,6 +61,7 @@ const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
+const playbackProgressStore = createMoviesPlaybackProgressStore();
 
 const play = computed<MoviePlayInfo | null>(() => {
   if (props.target.kind === "movie") {
@@ -201,6 +207,7 @@ onUnmounted(() => {
   abortController?.abort();
   viewportObserver?.disconnect();
   viewportObserver = null;
+  playbackProgressStore.dispose();
 });
 
 // Publish the watch viewport height so the player can letterbox itself to the
@@ -239,6 +246,7 @@ async function loadTarget(): Promise<void> {
         { signal: controller.signal },
       );
     }
+    restoreSavedSourceIndex();
     state.value = "ready";
   } catch {
     if (controller.signal.aborted) {
@@ -246,6 +254,17 @@ async function loadTarget(): Promise<void> {
     }
     state.value = "error";
   }
+}
+
+function restoreSavedSourceIndex(): void {
+  const currentPlay = play.value;
+  selectedSourceIndex.value =
+    currentPlay === null
+      ? 0
+      : resolveMoviesPlaybackProgressSourceIndex(
+          playbackProgressStore.get(progressKey.value),
+          currentPlay.sources,
+        );
 }
 
 function watchNextEpisode(): void {

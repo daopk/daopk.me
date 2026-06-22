@@ -1,5 +1,7 @@
 import { activeProfileKvNamespace, KVStore } from "@daopk/sdk";
 
+import type { MoviePlaySource } from "./moviesApi";
+
 const MOVIES_PLAYBACK_PROGRESS_KV_NAMESPACE = "movies";
 export const MOVIES_PLAYBACK_PROGRESS_KV_KEY = "playback-progress";
 const MOVIES_PLAYBACK_PROGRESS_MIN_RESUME_SECONDS = 5;
@@ -8,9 +10,19 @@ const MOVIES_PLAYBACK_PROGRESS_NEAR_END_SECONDS = 15;
 const MOVIES_PLAYBACK_PROGRESS_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 180;
 const MOVIES_PLAYBACK_PROGRESS_MAX_ENTRIES = 200;
 
+export interface MoviesPlaybackProgressSourceSnapshot {
+  readonly filename: string;
+  readonly index: number;
+  readonly m3u8Url: string;
+  readonly name: string;
+  readonly serverName: string;
+  readonly slug: string;
+}
+
 export interface MoviesPlaybackProgressEntry {
   readonly currentTime: number;
   readonly duration: number;
+  readonly source?: MoviesPlaybackProgressSourceSnapshot;
   readonly updatedAt: number;
 }
 
@@ -41,6 +53,12 @@ export interface MoviesPlaybackProgressRecord {
 export interface CreateMoviesPlaybackProgressStoreOptions {
   readonly now?: () => number;
   readonly storageNamespace?: string;
+}
+
+interface MoviesPlaybackProgressSaveInput {
+  readonly currentTime: number;
+  readonly duration: number;
+  readonly source?: MoviesPlaybackProgressSourceSnapshot | null;
 }
 
 interface CoerceResult {
@@ -111,13 +129,59 @@ export function isResumableMoviePlaybackTime(currentTime: number, duration: numb
   );
 }
 
+export function moviesPlaybackProgressSourceSnapshot(
+  source: MoviePlaySource,
+  index: number,
+): MoviesPlaybackProgressSourceSnapshot {
+  return {
+    filename: source.filename,
+    index: normalizedSourceIndex(index),
+    m3u8Url: source.m3u8Url,
+    name: source.name,
+    serverName: source.serverName,
+    slug: source.slug,
+  };
+}
+
+export function resolveMoviesPlaybackProgressSourceIndex(
+  progress: MoviesPlaybackProgressEntry | null | undefined,
+  sources: readonly MoviePlaySource[],
+): number {
+  const savedSource = progress?.source;
+  if (savedSource === undefined || sources.length === 0) {
+    return 0;
+  }
+
+  const m3u8Match = sourceIndexBy(sources, (source) => source.m3u8Url === savedSource.m3u8Url);
+  if (m3u8Match !== null) {
+    return m3u8Match;
+  }
+
+  const slugServerMatch = sourceIndexBy(
+    sources,
+    (source) =>
+      savedSource.slug.length > 0 &&
+      source.slug === savedSource.slug &&
+      source.serverName === savedSource.serverName,
+  );
+  if (slugServerMatch !== null) {
+    return slugServerMatch;
+  }
+
+  const slugMatch = sourceIndexBy(
+    sources,
+    (source) => savedSource.slug.length > 0 && source.slug === savedSource.slug,
+  );
+  return slugMatch ?? 0;
+}
+
 export function createMoviesPlaybackProgressStore(
   options: CreateMoviesPlaybackProgressStoreOptions = {},
 ): {
   clear: (key: string) => void;
   dispose: () => void;
   get: (key: string) => MoviesPlaybackProgressEntry | null;
-  save: (key: string, progress: { currentTime: number; duration: number }) => void;
+  save: (key: string, progress: MoviesPlaybackProgressSaveInput) => void;
   snapshot: () => MoviesPlaybackProgressState;
 } {
   const now = options.now ?? (() => Date.now());
@@ -157,7 +221,7 @@ export function createMoviesPlaybackProgressStore(
     return entry;
   }
 
-  function save(key: string, progress: { currentTime: number; duration: number }): void {
+  function save(key: string, progress: MoviesPlaybackProgressSaveInput): void {
     const currentTime = normalizedMediaTime(progress.currentTime);
     const duration = normalizedMediaTime(progress.duration);
 
@@ -172,6 +236,9 @@ export function createMoviesPlaybackProgressStore(
         [key]: {
           currentTime,
           duration,
+          ...(progress.source === undefined || progress.source === null
+            ? {}
+            : { source: progress.source }),
           updatedAt: now(),
         },
       },
@@ -230,13 +297,16 @@ function coerceProgressEntry(candidate: unknown): MoviesPlaybackProgressEntry | 
 
   const currentTime = normalizedMediaTime(candidate.currentTime);
   const duration = normalizedMediaTime(candidate.duration);
+  const source = coerceProgressSourceSnapshot(candidate.source);
   const updatedAt = normalizedTimestamp(candidate.updatedAt);
 
   if (updatedAt === null) {
     return null;
   }
 
-  return { currentTime, duration, updatedAt };
+  return source === null
+    ? { currentTime, duration, updatedAt }
+    : { currentTime, duration, source, updatedAt };
 }
 
 function pruneMoviesPlaybackProgress(
@@ -265,6 +335,41 @@ function normalizedMediaTime(value: unknown): number {
 
 function normalizedTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function normalizedSourceIndex(value: unknown): number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
+function normalizedString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function coerceProgressSourceSnapshot(
+  candidate: unknown,
+): MoviesPlaybackProgressSourceSnapshot | null {
+  if (!isRecord(candidate)) {
+    return null;
+  }
+
+  const source: MoviesPlaybackProgressSourceSnapshot = {
+    filename: normalizedString(candidate.filename),
+    index: normalizedSourceIndex(candidate.index),
+    m3u8Url: normalizedString(candidate.m3u8Url),
+    name: normalizedString(candidate.name),
+    serverName: normalizedString(candidate.serverName),
+    slug: normalizedString(candidate.slug),
+  };
+
+  return source.m3u8Url.length === 0 && source.slug.length === 0 ? null : source;
+}
+
+function sourceIndexBy(
+  sources: readonly MoviePlaySource[],
+  predicate: (source: MoviePlaySource) => boolean,
+): number | null {
+  const index = sources.findIndex(predicate);
+  return index === -1 ? null : index;
 }
 
 function positiveSafeInteger(value: string | undefined): number | null {

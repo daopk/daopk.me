@@ -620,6 +620,40 @@ content-c.ts
     });
   });
 
+  it("saves the active source snapshot with playback progress", async () => {
+    const alternateSource = {
+      embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+      filename: "fight-club-alt.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+      name: "Alt",
+      serverName: "Server 2",
+      slug: "alt",
+    };
+    const wrapper = mountPlayer({
+      play: playInfo({ sources: [playInfo().sources[0]!, alternateSource] }),
+      progressKey: MOVIE_PROGRESS_KEY,
+      sourceIndex: 1,
+    });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+      currentTime: 30,
+      duration: 120,
+      source: {
+        filename: "fight-club-alt.m3u8",
+        index: 1,
+        m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+        name: "Alt",
+        serverName: "Server 2",
+        slug: "alt",
+      },
+    });
+  });
+
   it("saves progress immediately after seek and pause", async () => {
     const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
     await settle();
