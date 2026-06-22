@@ -1905,9 +1905,11 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
 
 <style scoped lang="scss">
 .movies-hls-player {
+  background: #08090d;
   color: var(--color-fg);
   display: grid;
   inline-size: 100%;
+  justify-items: center;
   min-inline-size: 0;
 }
 
@@ -1917,7 +1919,11 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   border-radius: 0;
   color: #f7f8fb;
   cursor: pointer;
-  inline-size: 100%;
+  // Fit the 16:9 stage inside the available width AND the visible window
+  // height. `--movies-player-fit-block-size` is the watch viewport height fed
+  // by WatchView; the fallback (100%) keeps the stage full-width when it is
+  // unset (e.g. the player is rendered outside the watch viewport).
+  inline-size: min(100%, calc(var(--movies-player-fit-block-size, 100%) * 16 / 9));
   min-block-size: 0;
   min-inline-size: 0;
   overflow: hidden;

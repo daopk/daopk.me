@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
@@ -49,8 +49,11 @@ const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
+const scrollAreaRef = ref<{ element: HTMLElement | null } | null>(null);
 const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
+let viewportObserver: ResizeObserver | null = null;
+let lastViewportBlockSize = -1;
 
 const play = computed<MoviePlayInfo | null>(() => {
   if (props.target.kind === "movie") {
@@ -154,9 +157,39 @@ watch(
   { deep: true, immediate: true },
 );
 
+onMounted(() => {
+  const element = scrollAreaRef.value?.element ?? null;
+  if (element === null || typeof ResizeObserver === "undefined") {
+    return;
+  }
+
+  viewportObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (entry !== undefined) {
+      applyViewportBlockSize(element, entry.contentRect.height);
+    }
+  });
+  viewportObserver.observe(element);
+});
+
 onUnmounted(() => {
   abortController?.abort();
+  viewportObserver?.disconnect();
+  viewportObserver = null;
 });
+
+// Publish the watch viewport height so the player can letterbox itself to the
+// visible area (see `--movies-player-fit-block-size` in MovieHlsPlayer.vue),
+// keeping the controls/progress bar on-screen when the window is short.
+function applyViewportBlockSize(element: HTMLElement, blockSize: number): void {
+  const rounded = Math.round(blockSize);
+  if (rounded <= 0 || rounded === lastViewportBlockSize) {
+    return;
+  }
+
+  lastViewportBlockSize = rounded;
+  element.style.setProperty("--movies-player-fit-block-size", `${rounded}px`);
+}
 
 async function loadTarget(): Promise<void> {
   abortController?.abort();
@@ -206,7 +239,7 @@ defineExpose({
 </script>
 
 <template>
-  <ScrollArea class="movies-watch" safe-area>
+  <ScrollArea ref="scrollAreaRef" class="movies-watch" safe-area>
     <MoviesLoadingOverlay v-if="state === 'loading'" />
 
     <EmptyState
