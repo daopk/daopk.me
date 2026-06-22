@@ -48,6 +48,7 @@ const emit = defineEmits<{
 const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
+const selectedSourceIndex = ref(0);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
 const scrollAreaRef = ref<{ element: HTMLElement | null } | null>(null);
 const { locale, t } = useMoviesI18n();
@@ -62,6 +63,16 @@ const play = computed<MoviePlayInfo | null>(() => {
 
   return episodeDetail.value?.episode.play ?? null;
 });
+const sourceOptions = computed(() =>
+  (play.value?.sources ?? []).map((source, index) => ({
+    index,
+    label:
+      [source.serverName, source.name || source.filename || source.slug]
+        .filter((value) => value.length > 0)
+        .join(" - ") || t("movies.player.sourceFallback", { number: index + 1 }),
+  })),
+);
+const hasSourceOptions = computed(() => sourceOptions.value.length > 1);
 const title = computed(() => {
   if (props.target.kind === "movie") {
     return movieDetail.value?.name ?? mediaLabel("movie", t, "singular");
@@ -198,6 +209,7 @@ async function loadTarget(): Promise<void> {
   state.value = "loading";
   movieDetail.value = null;
   episodeDetail.value = null;
+  selectedSourceIndex.value = 0;
 
   try {
     const target = props.target;
@@ -272,10 +284,31 @@ defineExpose({
         :poster-url="posterUrl"
         :progress-key="progressKey"
         show-back-button
+        :source-index="selectedSourceIndex"
         :title="title"
         @back="$emit('back')"
         @next-episode="watchNextEpisode"
       />
+
+      <section
+        v-if="hasSourceOptions"
+        class="movies-watch__sources"
+        :aria-label="t('movies.player.source')"
+      >
+        <span class="movies-watch__sources-label">{{ t("movies.player.source") }}</span>
+        <div class="movies-watch__sources-list">
+          <Button
+            v-for="source in sourceOptions"
+            :key="source.index"
+            size="sm"
+            :variant="selectedSourceIndex === source.index ? 'primary' : 'secondary'"
+            :aria-pressed="selectedSourceIndex === source.index"
+            @click="selectedSourceIndex = source.index"
+          >
+            {{ source.label }}
+          </Button>
+        </div>
+      </section>
 
       <section
         v-if="episodeInfo !== null"
@@ -323,6 +356,33 @@ defineExpose({
 
 .movies-watch__player {
   inline-size: 100%;
+}
+
+.movies-watch__sources {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  margin-inline: auto;
+  max-inline-size: var(--movies-content-box-max-inline-size, 1440px);
+  padding: var(--space-lg) var(--movies-content-outer-padding-inline, var(--space-lg)) 0;
+}
+
+.movies-watch__sources:last-child {
+  padding-block-end: clamp(var(--space-xl), 10vh, 96px);
+}
+
+.movies-watch__sources-label {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+}
+
+.movies-watch__sources-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
 }
 
 .movies-watch__episode-info {

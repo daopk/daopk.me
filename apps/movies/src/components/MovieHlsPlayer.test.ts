@@ -697,8 +697,7 @@ content-c.ts
     await settle();
 
     const firstInstance = hlsMock.instances[0]!;
-    await openSettings(wrapper);
-    click(menuRadioItem("Server 2 - Alt"));
+    await wrapper.setProps({ sourceIndex: 1 });
     await settle();
 
     expect(firstInstance.destroy).toHaveBeenCalledTimes(1);

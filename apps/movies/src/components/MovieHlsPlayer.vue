@@ -43,6 +43,7 @@ interface MovieHlsPlayerProps {
   posterUrl?: string;
   progressKey?: string;
   showBackButton?: boolean;
+  sourceIndex?: number;
   title: string;
 }
 
@@ -105,6 +106,7 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   posterUrl: "",
   progressKey: "",
   showBackButton: false,
+  sourceIndex: 0,
 });
 
 const emit = defineEmits<{
@@ -117,7 +119,6 @@ const backControlsRoot = ref<HTMLElement | null>(null);
 const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
 const videoElement = ref<HTMLVideoElement | null>(null);
-const selectedSourceIndex = ref(0);
 const playbackErrorKey = ref<PlaybackErrorKey | "">("");
 const hlsLevels = ref<readonly HlsQualityLevel[]>([]);
 const selectedQualityLevel = ref(-1);
@@ -145,6 +146,7 @@ const seekPointerPreview = ref<{ leftPx: number; seconds: number } | null>(null)
 const playbackAdMarkers = ref<readonly HlsPlaybackAdMarker[]>([]);
 
 let hls: Hls | null = null;
+let previousSourcesRef: MoviePlayInfo["sources"] | null = null;
 let hideControlsTimer: number | undefined;
 let surfaceClickTimer: number | undefined;
 let suppressControlsRevealUntilMs = 0;
@@ -154,26 +156,17 @@ let resumeProgressApplied = false;
 const { t } = useMoviesI18n();
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 
-const sourceOptions = computed(() =>
-  props.play.sources.map((source, index) => ({
-    index,
-    label: [source.serverName, source.name || source.filename || source.slug]
-      .filter((value) => value.length > 0)
-      .join(" - "),
-  })),
-);
+const selectedSourceIndex = computed(() => {
+  const sources = props.play.sources;
+  if (sources.length === 0) {
+    return 0;
+  }
+  const index = props.sourceIndex;
+  return Number.isInteger(index) && index >= 0 && index < sources.length ? index : 0;
+});
 const activeSource = computed(
   () => props.play.sources[selectedSourceIndex.value] ?? props.play.sources[0] ?? null,
 );
-const sourceSelectValue = computed({
-  get: () => String(selectedSourceIndex.value),
-  set: (nextValue: string) => {
-    const nextIndex = Number(nextValue);
-    if (Number.isInteger(nextIndex)) {
-      selectedSourceIndex.value = nextIndex;
-    }
-  },
-});
 const qualityOptions = computed<readonly QualityOption[]>(() => {
   if (hlsLevels.value.length <= 1) {
     return [];
@@ -198,11 +191,6 @@ const playbackSpeedSelectValue = computed({
 });
 const hasQualityMenu = computed(() => qualityOptions.value.length > 0);
 const hasSettingsMenu = computed(() => true);
-const selectedSourceLabel = computed(
-  () =>
-    sourceOptions.value.find((source) => source.index === selectedSourceIndex.value)?.label ??
-    t("movies.player.source"),
-);
 const selectedQualityLabel = computed(() => {
   if (!hasQualityMenu.value) {
     return "";
@@ -225,11 +213,9 @@ const selectedPlaybackSpeedStatus = computed(() =>
   playbackSpeed.value === 1 ? "" : speedLabel(playbackSpeed.value),
 );
 const sourceStatusText = computed(() => {
-  const parts = [
-    selectedSourceLabel.value,
-    selectedQualityLabel.value,
-    selectedPlaybackSpeedStatus.value,
-  ].filter((part) => part.length > 0);
+  const parts = [selectedQualityLabel.value, selectedPlaybackSpeedStatus.value].filter(
+    (part) => part.length > 0,
+  );
   return parts.join(" - ");
 });
 const hasDuration = computed(() => Number.isFinite(duration.value) && duration.value > 0);
@@ -291,16 +277,6 @@ const playbackError = computed(() =>
   playbackErrorKey.value === "" ? "" : t(playbackErrorKey.value),
 );
 
-watch(
-  () => props.play.sources,
-  (sources) => {
-    if (sources.length === 0 || selectedSourceIndex.value >= sources.length) {
-      selectedSourceIndex.value = 0;
-    }
-  },
-  { immediate: true },
-);
-
 onMounted(() => {
   syncFullscreenState();
   syncPictureInPictureState();
@@ -311,13 +287,20 @@ onMounted(() => {
   videoElement.value?.addEventListener("enterpictureinpicture", syncPictureInPictureState);
   videoElement.value?.addEventListener("leavepictureinpicture", syncPictureInPictureState);
   videoElement.value?.addEventListener("webkitpresentationmodechanged", syncPictureInPictureState);
+  previousSourcesRef = props.play.sources;
   void attachSource({ autoplay: props.autoplay });
 });
 
 watch(
   () => activeSource.value?.m3u8Url ?? "",
-  (_next, previous) => {
-    void attachSource({ autoplay: props.autoplay && previous === undefined });
+  () => {
+    // A source switch keeps the same `play.sources` reference (only the
+    // selected index changes), so resume playback automatically. Navigating to
+    // a different title/episode swaps the array and defers to `autoplay`.
+    const sources = props.play.sources;
+    const isSourceSwitch = previousSourcesRef !== null && previousSourcesRef === sources;
+    previousSourcesRef = sources;
+    void attachSource({ autoplay: isSourceSwitch || props.autoplay });
   },
 );
 
@@ -1537,10 +1520,6 @@ function speedLabel(speed: number): string {
   return `${speed}x`;
 }
 
-function sourceFallbackLabel(index: number): string {
-  return t("movies.player.sourceFallback", { number: index + 1 });
-}
-
 function qualityFallbackLabel(index: number): string {
   return t("movies.player.qualityFallback", { number: index + 1 });
 }
@@ -1824,25 +1803,6 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
               />
             </template>
             <template #items>
-              <DropdownMenuLabel v-if="sourceOptions.length > 1" class="ds-dropdown-menu__label">
-                {{ t("movies.player.source") }}
-              </DropdownMenuLabel>
-              <DropdownMenuRadioGroup v-if="sourceOptions.length > 1" v-model="sourceSelectValue">
-                <DropdownMenuRadioItem
-                  v-for="source in sourceOptions"
-                  :key="source.index"
-                  :value="String(source.index)"
-                  :text-value="source.label || sourceFallbackLabel(source.index)"
-                >
-                  <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
-                    <Check aria-hidden="true" />
-                  </DropdownMenuItemIndicator>
-                  {{ source.label || sourceFallbackLabel(source.index) }}
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-
-              <DropdownMenuSeparator v-if="sourceOptions.length > 1" />
-
               <DropdownMenuLabel class="ds-dropdown-menu__label">
                 {{ t("movies.player.speed") }}
               </DropdownMenuLabel>
