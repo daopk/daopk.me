@@ -1608,7 +1608,6 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
         playsinline
         preload="metadata"
         :poster="posterUrl || undefined"
-        :title="title"
         @canplay="onVideoCanPlay"
         @durationchange="syncMediaState"
         @ended="onVideoEnded"
@@ -1933,6 +1932,10 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
 .movies-hls-player__stage:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
+}
+
+.movies-hls-player__stage--controls-hidden {
+  cursor: none;
 }
 
 .movies-hls-player__stage--fullscreen {
