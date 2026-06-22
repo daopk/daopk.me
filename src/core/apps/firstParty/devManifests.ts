@@ -13,10 +13,10 @@ const manifestModules = import.meta.glob<unknown>("../../../../apps/*/app.manife
   eager: true,
   import: "default",
 });
-const packageModules = import.meta.glob<{ version?: string }>(
-  "../../../../apps/*/package.json",
-  { eager: true, import: "default" },
-);
+const packageModules = import.meta.glob<{ version?: string }>("../../../../apps/*/package.json", {
+  eager: true,
+  import: "default",
+});
 
 function appIdFromPath(path: string, file: "app.manifest.json" | "package.json"): string | null {
   return new RegExp(`/apps/([^/]+)/${file.replace(".", "\\.")}$`).exec(path)?.[1] ?? null;

@@ -18,9 +18,7 @@ export function findSurfaceByHandle<T extends AppSurfaceRecord>(
   handleId: string,
   manifestId: string,
 ): T | undefined {
-  return records.find(
-    (record) => record.handleId === handleId && record.manifestId === manifestId,
-  );
+  return records.find((record) => record.handleId === handleId && record.manifestId === manifestId);
 }
 
 /** Sets `documentPath` on the matching surface; returns whether one matched. */

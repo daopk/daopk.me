@@ -13,7 +13,11 @@ import type { AppPreviewProvider } from "~/types/preview";
 import type { WidgetManifest } from "~/types/widget";
 import type { Component } from "vue";
 
-import { coerceFirstPartyCatalog, fetchFirstPartyCatalog, resolveTrustedAppAssetUrl } from "./catalog";
+import {
+  coerceFirstPartyCatalog,
+  fetchFirstPartyCatalog,
+  resolveTrustedAppAssetUrl,
+} from "./catalog";
 import { resolveFirstPartyPreviewMatcher } from "./previewMatchers";
 import { FIRST_PARTY_APP_ID_LIST } from "./registry";
 import type {

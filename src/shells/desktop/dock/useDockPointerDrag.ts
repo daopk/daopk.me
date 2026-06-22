@@ -56,8 +56,14 @@ interface DockPointTarget {
 const REMOVE_TOOLTIP_DELAY_MS = 1000;
 
 export function useDockPointerDrag(options: DockPointerDragOptions): DockPointerDrag {
-  const { items, dockRef, canDragPinnedApp, canReorderPinnedApp, reorderPinnedApp, removeFromDock } =
-    options;
+  const {
+    items,
+    dockRef,
+    canDragPinnedApp,
+    canReorderPinnedApp,
+    reorderPinnedApp,
+    removeFromDock,
+  } = options;
 
   const draggedManifestId = ref<string | null>(null);
   const dragOffsetX = ref(0);

@@ -269,9 +269,7 @@ describe("registerFirstPartyApps (dev lane)", () => {
     expect(((await manifest.component()) as { __esModule?: boolean }).__esModule).toBe(true);
     expect(await renderViaAsyncComponent(manifest.component)).toContain("probe-app");
 
-    expect(renderIcon(manifest.icon)).toContain(
-      'src="/public/apps/probe/1.2.3+42/icon.svg"',
-    );
+    expect(renderIcon(manifest.icon)).toContain('src="/public/apps/probe/1.2.3+42/icon.svg"');
 
     const widget = manifest.widgets?.[0];
     expect(widget).toBeDefined();

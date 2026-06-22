@@ -30,7 +30,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Validate an untrusted catalog `match` value into a known, serializable rule. */
-export function coerceFirstPartyPreviewMatchRule(value: unknown): FirstPartyPreviewMatchRule | null {
+export function coerceFirstPartyPreviewMatchRule(
+  value: unknown,
+): FirstPartyPreviewMatchRule | null {
   if (!isRecord(value)) {
     return null;
   }

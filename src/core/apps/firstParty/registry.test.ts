@@ -18,8 +18,7 @@ const APPS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../a
 function publishedAppIds(): string[] {
   return readdirSync(APPS_DIR, { withFileTypes: true })
     .filter(
-      (entry) =>
-        entry.isDirectory() && existsSync(join(APPS_DIR, entry.name, "app.manifest.json")),
+      (entry) => entry.isDirectory() && existsSync(join(APPS_DIR, entry.name, "app.manifest.json")),
     )
     .map((entry) => entry.name)
     .sort();
