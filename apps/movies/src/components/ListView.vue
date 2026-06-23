@@ -6,8 +6,10 @@ import { Search } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
 import MovieCard from "./MovieCard.vue";
+import MovieTrailerHoverPreview from "./MovieTrailerHoverPreview.vue";
 import { countryLabel, genreLabel, sortLabel } from "../i18n/labels";
 import type { MovieSummary, MoviesListQuery } from "../moviesApi";
+import { useMovieTrailerPreview } from "../composables/useMovieTrailerPreview";
 import { useMoviesListView } from "../composables/useMoviesListView";
 
 interface ListViewProps {
@@ -20,6 +22,19 @@ const emit = defineEmits<{
   "open-detail": [movie: MovieSummary];
   "open-list": [query: MoviesListQuery];
 }>();
+
+const {
+  anchorMode: trailerPreviewAnchorMode,
+  close: closeTrailerPreview,
+  enabled: trailerPreviewEnabled,
+  keepOpen: keepTrailerPreviewOpen,
+  movie: trailerPreviewMovie,
+  move: moveTrailerPreview,
+  reference: trailerPreviewReference,
+  showFromFocus: showTrailerPreviewFromFocus,
+  showFromPointer: showTrailerPreviewFromPointer,
+  trailerCache: trailerPreviewCache,
+} = useMovieTrailerPreview();
 
 const {
   activeCountry,
@@ -194,7 +209,15 @@ const {
         <template v-else>
           <ul class="movies-list__grid">
             <li v-for="movie in items" :key="movie.id" class="movies-list__item">
-              <MovieCard :movie="movie" @open="$emit('open-detail', $event)" />
+              <MovieCard
+                :movie="movie"
+                @blur="closeTrailerPreview"
+                @focus="showTrailerPreviewFromFocus(movie, $event)"
+                @pointerenter="showTrailerPreviewFromPointer(movie, $event)"
+                @pointerleave="closeTrailerPreview"
+                @pointermove="moveTrailerPreview(movie, $event)"
+                @open="$emit('open-detail', $event)"
+              />
             </li>
           </ul>
 
@@ -213,6 +236,16 @@ const {
         </template>
       </section>
     </div>
+
+    <MovieTrailerHoverPreview
+      :anchor-mode="trailerPreviewAnchorMode"
+      :disabled="!trailerPreviewEnabled"
+      :movie="trailerPreviewMovie"
+      :reference="trailerPreviewReference"
+      :trailer-cache="trailerPreviewCache"
+      @preview-enter="keepTrailerPreviewOpen"
+      @preview-leave="closeTrailerPreview"
+    />
   </ScrollArea>
 </template>
 

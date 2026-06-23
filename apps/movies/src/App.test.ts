@@ -177,6 +177,8 @@ function trailerResult(
 
 const APP_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
 const APP_SOURCE_PREFERENCE_STORAGE_KEY = `movies:${MOVIES_SOURCE_PREFERENCE_KV_KEY}`;
+const TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS = 1_900;
+const TRAILER_PREVIEW_TEST_OPEN_DELAY_MS = 2_100;
 
 function persistAppProgress(
   key: string,
@@ -468,6 +470,16 @@ async function flushReka(): Promise<void> {
   await flushPromises();
 }
 
+function waitForMs(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function waitForTrailerPreviewOpen(): Promise<void> {
+  await waitForMs(TRAILER_PREVIEW_TEST_OPEN_DELAY_MS);
+  await flushPromises();
+  await nextTick();
+}
+
 function menuItems(): HTMLElement[] {
   return Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
 }
@@ -502,13 +514,25 @@ function stubHoverPreviewCapability(matches = true): () => void {
   };
 }
 
-async function hoverFirstHomeRailCard(wrapper: VueWrapper): Promise<void> {
+async function hoverFirstHomeRailCard(
+  wrapper: VueWrapper,
+  options: { readonly waitForPreview?: boolean } = {},
+): Promise<void> {
   const card = wrapper.get(".movies-home__rail .movie-card");
   await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
   await card.trigger("pointermove", { clientX: 244, clientY: 184, pointerType: "mouse" });
-  await new Promise((resolve) => window.setTimeout(resolve, 360));
-  await flushPromises();
-  await nextTick();
+  if (options.waitForPreview !== false) {
+    await waitForTrailerPreviewOpen();
+  } else {
+    await nextTick();
+  }
+}
+
+async function hoverFirstListCard(wrapper: VueWrapper): Promise<void> {
+  const card = wrapper.get(".movies-list__grid .movie-card");
+  await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
+  await card.trigger("pointermove", { clientX: 244, clientY: 184, pointerType: "mouse" });
+  await waitForTrailerPreviewOpen();
 }
 
 function rect(bounds: { left: number; top: number; width: number; height: number }): DOMRect {
@@ -790,6 +814,34 @@ describe("Movies app", () => {
     restoreHoverPreview();
   });
 
+  it("waits two seconds before opening a Home rail trailer preview", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
+    await card.trigger("pointermove", { clientX: 244, clientY: 184, pointerType: "mouse" });
+    await waitForMs(TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS);
+    await flushPromises();
+    await nextTick();
+
+    expect(fetchMovieTrailer).not.toHaveBeenCalled();
+    expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
+
+    await waitForMs(
+      TRAILER_PREVIEW_TEST_OPEN_DELAY_MS - TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS,
+    );
+    await flushPromises();
+    await nextTick();
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    restoreHoverPreview();
+  });
+
   it("keeps the trailer preview anchored after it appears", async () => {
     const restoreHoverPreview = stubHoverPreviewCapability();
     const TrailerPreviewProbe = defineComponent({
@@ -826,7 +878,7 @@ describe("Movies app", () => {
 
     await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
     await card.trigger("pointermove", { clientX: 300, clientY: 220, pointerType: "mouse" });
-    await new Promise((resolve) => window.setTimeout(resolve, 360));
+    await waitForTrailerPreviewOpen();
     await nextTick();
 
     const probe = wrapper.get(".preview-anchor-probe");
@@ -860,9 +912,7 @@ describe("Movies app", () => {
 
     await card.trigger("pointerenter", { clientX: 120, clientY: 100, pointerType: "mouse" });
     await card.trigger("pointermove", { clientX: 260, clientY: 320, pointerType: "mouse" });
-    await new Promise((resolve) => window.setTimeout(resolve, 360));
-    await flushPromises();
-    await nextTick();
+    await waitForTrailerPreviewOpen();
 
     const centerLayer = document.body.querySelector(
       ".movies-trailer-hover-card__center",
@@ -890,13 +940,13 @@ describe("Movies app", () => {
 
     await card.trigger("pointerleave", { pointerType: "mouse" });
     preview!.dispatchEvent(new Event("pointerenter"));
-    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    await waitForMs(180);
     await nextTick();
 
     expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
 
     preview!.dispatchEvent(new Event("pointerleave"));
-    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    await waitForMs(180);
     await nextTick();
 
     expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
@@ -915,7 +965,7 @@ describe("Movies app", () => {
     elementFromPoint.mockReturnValue(card.element);
 
     await card.trigger("pointerleave", { clientX: 244, clientY: 184, pointerType: "mouse" });
-    await new Promise((resolve) => window.setTimeout(resolve, 420));
+    await waitForMs(420);
     await nextTick();
 
     expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
@@ -945,7 +995,7 @@ describe("Movies app", () => {
       pointerType: { value: "mouse" },
     });
     preview!.dispatchEvent(leaveEvent);
-    await new Promise((resolve) => window.setTimeout(resolve, 420));
+    await waitForMs(420);
     await nextTick();
 
     expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
@@ -1005,9 +1055,7 @@ describe("Movies app", () => {
       .mockReturnValue(rect({ height: 270, left: 320, top: 80, width: 180 }));
 
     await cards[0]!.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
-    await new Promise((resolve) => window.setTimeout(resolve, 360));
-    await flushPromises();
-    await nextTick();
+    await waitForTrailerPreviewOpen();
 
     expect(document.body.querySelectorAll(".movies-trailer-hover-card")).toHaveLength(1);
     expect(document.body.querySelector(".movies-trailer-hover-card")?.textContent).toContain(
@@ -1022,7 +1070,7 @@ describe("Movies app", () => {
     expect(centerLayer?.style.transform).toBe("translate3d(190px, 215px, 0) translate(-50%, -50%)");
 
     await cards[1]!.trigger("pointermove", { clientX: 420, clientY: 180, pointerType: "mouse" });
-    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    await waitForMs(120);
     await flushPromises();
     await nextTick();
 
@@ -1061,7 +1109,7 @@ describe("Movies app", () => {
 
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
-    await hoverFirstHomeRailCard(wrapper);
+    await hoverFirstHomeRailCard(wrapper, { waitForPreview: false });
 
     expect(fetchMovieTrailer).not.toHaveBeenCalled();
     expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
@@ -1075,7 +1123,7 @@ describe("Movies app", () => {
 
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
-    await hoverFirstHomeRailCard(wrapper);
+    await hoverFirstHomeRailCard(wrapper, { waitForPreview: false });
 
     expect(fetchMovieTrailer).not.toHaveBeenCalled();
     expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
@@ -1953,6 +2001,27 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Planet Cinema");
   });
 
+  it("loads and renders a trailer preview when hovering a catalog list card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    await wrapper
+      .findAll(".movies-toolbar__menu-button")
+      .find((button) => button.text().trim() === "Movies")!
+      .trigger("click");
+    await settle();
+    await hoverFirstListCard(wrapper);
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    const preview = document.body.querySelector(".movies-trailer-hover-card");
+    expect(preview).not.toBeNull();
+    expect(preview?.textContent).toContain("Fight Club");
+
+    restoreHoverPreview();
+  });
+
   it("keeps the load more button visible with a spinner while fetching the next page", async () => {
     const wrapper = mount(App, { attachTo: document.body });
     await settle();
@@ -2045,6 +2114,37 @@ describe("Movies app", () => {
     expect(wrapper.find('.movies-list__results[aria-busy="false"]').exists()).toBe(true);
     expect(wrapper.find(".movies-list__loading").exists()).toBe(false);
     expect(wrapper.text()).toContain("The Matrix");
+  });
+
+  it("loads and renders a trailer preview when hovering a search result card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    await wrapper.get(".movies-toolbar__search-button").trigger("click");
+    await settle();
+
+    const moviesApp = wrapper.get(".movies-app").element;
+    const searchInput = moviesApp.querySelector<HTMLInputElement>(
+      'input[type="search"][aria-label="Search movies"]',
+    );
+    expect(searchInput).toBeInstanceOf(HTMLInputElement);
+    searchInput!.value = "Fight";
+    searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+
+    const searchForm = moviesApp.querySelector<HTMLFormElement>('form[role="search"]');
+    expect(searchForm).toBeInstanceOf(HTMLFormElement);
+    searchForm!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await settle();
+    await hoverFirstListCard(wrapper);
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
+    const preview = document.body.querySelector(".movies-trailer-hover-card");
+    expect(preview).not.toBeNull();
+    expect(preview?.textContent).toContain("Fight Club");
+
+    restoreHoverPreview();
   });
 
   it("opens a clear keyword search list from toolbar search and switches media tabs", async () => {
