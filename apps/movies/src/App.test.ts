@@ -300,7 +300,10 @@ function tvDetail(overrides: Partial<MovieDetail> = {}): MovieDetail {
   });
 }
 
-function list(items: readonly MovieSummary[]): MoviesListResult {
+function list(
+  items: readonly MovieSummary[],
+  pagination: Partial<MoviesListResult["pagination"]> = {},
+): MoviesListResult {
   return {
     items,
     pagination: {
@@ -308,6 +311,7 @@ function list(items: readonly MovieSummary[]): MoviesListResult {
       totalItemsPerPage: 24,
       currentPage: 1,
       totalPages: 1,
+      ...pagination,
     },
   };
 }
@@ -1947,6 +1951,55 @@ describe("Movies app", () => {
     expect(wrapper.find('.movies-list__results[aria-busy="false"]').exists()).toBe(true);
     expect(wrapper.find(".movies-list__loading").exists()).toBe(false);
     expect(wrapper.text()).toContain("Planet Cinema");
+  });
+
+  it("keeps the load more button visible with a spinner while fetching the next page", async () => {
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+
+    vi.mocked(fetchMoviesList).mockResolvedValueOnce(
+      list([movie()], {
+        totalItems: 2,
+        currentPage: 1,
+        totalPages: 2,
+      }),
+    );
+
+    await wrapper
+      .findAll(".movies-toolbar__menu-button")
+      .find((button) => button.text().trim() === "Movies")!
+      .trigger("click");
+    await settle();
+
+    let resolveNextPage!: (result: MoviesListResult) => void;
+    const nextPageResult = new Promise<MoviesListResult>((resolve) => {
+      resolveNextPage = resolve;
+    });
+    vi.mocked(fetchMoviesList).mockImplementationOnce(() => nextPageResult);
+
+    await wrapper.get(".movies-list__load-more").trigger("click");
+    await nextTick();
+
+    const loadingButton = wrapper.get<HTMLButtonElement>(".movies-list__load-more");
+    expect(loadingButton.attributes("aria-busy")).toBe("true");
+    expect(loadingButton.element.disabled).toBe(true);
+    expect(loadingButton.classes()).toContain("ds-button--loading");
+    expect(loadingButton.find(".ds-button__spinner").exists()).toBe(true);
+    expect(loadingButton.text()).toBe("");
+    expect(loadingButton.attributes("aria-label")).toBe("Load more");
+    expect(wrapper.text()).toContain("Fight Club");
+
+    resolveNextPage(
+      list([movie({ id: "movie-551", name: "Page Two", tmdbId: 551 })], {
+        totalItems: 2,
+        currentPage: 2,
+        totalPages: 2,
+      }),
+    );
+    await settle();
+
+    expect(wrapper.text()).toContain("Page Two");
+    expect(wrapper.find(".movies-list__load-more").exists()).toBe(false);
   });
 
   it("keeps search controls visible while search results are loading", async () => {

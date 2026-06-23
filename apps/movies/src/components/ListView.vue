@@ -36,6 +36,7 @@ const {
   isSearchList,
   items,
   loadingInitial,
+  loadingMore,
   loadMore,
   mediaQuery,
   popularCountries,
@@ -199,13 +200,14 @@ const {
 
           <div class="movies-list__footer">
             <Button
-              v-if="canLoadMore"
+              v-if="canLoadMore || loadingMore"
               class="movies-list__load-more"
               size="sm"
-              :loading="state === 'loading'"
+              :loading="loadingMore"
+              :aria-label="loadingMore ? t('movies.action.loadMore') : undefined"
               @click="loadMore"
             >
-              {{ t("movies.action.loadMore") }}
+              {{ loadingMore ? "" : t("movies.action.loadMore") }}
             </Button>
           </div>
         </template>

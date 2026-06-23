@@ -58,6 +58,7 @@ export interface UseMoviesListViewBindings {
   readonly isSearchList: Ref<boolean>;
   readonly items: Ref<readonly MovieSummary[]>;
   readonly loadingInitial: Ref<boolean>;
+  readonly loadingMore: Ref<boolean>;
   readonly popularCountries: Ref<MoviesFiltersResult["countries"]>;
   readonly searchDraft: Ref<string>;
   readonly searchMediaOptions: Ref<ReturnType<typeof localizedSearchMediaTabs>>;
@@ -135,6 +136,7 @@ export function useMoviesListView({
     ];
   });
   const loadingInitial = computed(() => state.value === "loading" && items.value.length === 0);
+  const loadingMore = computed(() => state.value === "loading" && items.value.length > 0);
   const canLoadMore = computed(
     () =>
       state.value !== "loading" &&
@@ -463,6 +465,7 @@ export function useMoviesListView({
     isSearchList,
     items,
     loadingInitial,
+    loadingMore,
     loadMore,
     mediaQuery,
     popularCountries,

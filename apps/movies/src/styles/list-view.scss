@@ -236,7 +236,7 @@
   display: flex;
   justify-content: center;
   min-block-size: var(--control-height-lg);
-  padding-block-start: var(--space-sm);
+  padding-block-start: var(--space-2xl);
 }
 
 .movies-list__footer :deep(.movies-list__load-more.ds-button) {
