@@ -119,6 +119,7 @@ const emit = defineEmits<{
 }>();
 
 const playerShell = ref<HTMLElement | null>(null);
+const topbarControlsRoot = ref<HTMLElement | null>(null);
 const backControlsRoot = ref<HTMLElement | null>(null);
 const controlsRoot = ref<HTMLElement | null>(null);
 const progressRoot = ref<HTMLElement | null>(null);
@@ -546,6 +547,7 @@ function playerControlsContain(target: EventTarget | null): boolean {
   return (
     target instanceof Node &&
     (controlsRoot.value?.contains(target) === true ||
+      topbarControlsRoot.value?.contains(target) === true ||
       backControlsRoot.value?.contains(target) === true ||
       isSettingsMenuTarget(target))
   );
@@ -1656,6 +1658,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
 
       <div
         v-if="!pictureInPicture"
+        ref="topbarControlsRoot"
         class="movies-hls-player__topbar"
         :class="{
           'movies-hls-player__topbar--hidden': controlsHidden,
@@ -1692,6 +1695,30 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
           <span v-if="sourceStatusText" class="movies-hls-player__source-status">
             {{ sourceStatusText }}
           </span>
+        </div>
+
+        <div
+          class="movies-hls-player__top-actions"
+          @focusin="
+            controlsFocused = true;
+            showControls();
+          "
+          @focusout="onControlsFocusOut"
+          @click.stop
+          @dblclick.stop
+          @pointerdown="showControls"
+          @pointermove="showControls"
+          @touchstart="showControls"
+        >
+          <IconButton
+            class="movies-hls-player__button movies-hls-player__top-volume-button"
+            :icon="muteIcon"
+            :label="muteLabel"
+            size="sm"
+            variant="subtle"
+            :disabled="playbackError.length > 0"
+            @click="toggleMute"
+          />
         </div>
       </div>
 
@@ -2099,6 +2126,13 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
   pointer-events: none;
 }
 
+.movies-hls-player__top-actions {
+  display: none;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  pointer-events: auto;
+}
+
 .movies-hls-player__back-action {
   flex: 0 0 auto;
   pointer-events: auto;
@@ -2307,6 +2341,14 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
 
   block-size: 104px;
   inline-size: 20px;
+}
+
+:global(html[data-shell="mobile"] .movies-hls-player__top-actions) {
+  display: inline-grid;
+}
+
+:global(html[data-shell="mobile"] .movies-hls-player__volume-control) {
+  display: none;
 }
 
 :global(.movies-hls-player__settings-menu.ds-dropdown-menu) {

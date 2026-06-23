@@ -437,6 +437,14 @@ function menuRadioItem(label: string): Element {
   return item;
 }
 
+function bottomVolumeButton(wrapper: VueWrapper, label: "Mute" | "Unmute") {
+  return wrapper.get(`.movies-hls-player__volume-control button[aria-label="${label}"]`);
+}
+
+function topbarVolumeButton(wrapper: VueWrapper, label: "Mute" | "Unmute") {
+  return wrapper.get(`.movies-hls-player__top-actions button[aria-label="${label}"]`);
+}
+
 describe("MovieHlsPlayer", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -853,6 +861,9 @@ content-c.ts
     const video = wrapper.get("video").element as HTMLVideoElement;
     const volumeSlider = sliderRoots(wrapper)[1]!;
 
+    expect(wrapper.find(".movies-hls-player__volume-control").exists()).toBe(true);
+    expect(wrapper.find(".movies-hls-player__volume-popover").exists()).toBe(true);
+    expect(wrapper.find(".movies-hls-player__top-volume-button").exists()).toBe(true);
     expect(volumeSlider.props("orientation")).toBe("vertical");
 
     volumeSlider.vm.$emit("update:modelValue", [35]);
@@ -860,14 +871,37 @@ content-c.ts
 
     expect(video.volume).toBe(0.35);
 
-    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Mute"]').element);
+    click(bottomVolumeButton(wrapper, "Mute").element);
     await settle();
     expect(video.muted).toBe(true);
 
-    click(wrapper.get('.movies-hls-player__control-row button[aria-label="Unmute"]').element);
+    click(bottomVolumeButton(wrapper, "Unmute").element);
     await settle();
     expect(video.muted).toBe(false);
     expect(video.volume).toBe(0.35);
+  });
+
+  it("toggles mute from the mobile topbar action", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    expect(wrapper.find(".movies-hls-player__top-actions").exists()).toBe(true);
+    expect(
+      wrapper
+        .find(".movies-hls-player__top-actions .movies-hls-player__volume-popover")
+        .exists(),
+    ).toBe(false);
+
+    click(topbarVolumeButton(wrapper, "Mute").element);
+    await settle();
+
+    expect(video.muted).toBe(true);
+
+    click(topbarVolumeButton(wrapper, "Unmute").element);
+    await settle();
+
+    expect(video.muted).toBe(false);
   });
 
   it("toggles picture-in-picture from the control row when supported", async () => {
@@ -906,9 +940,7 @@ content-c.ts
     await settle();
     playerVideo = wrapper.get("video").element as HTMLVideoElement;
 
-    expect(wrapper.get('.movies-hls-player__control-row button[aria-label="Mute"]').exists()).toBe(
-      true,
-    );
+    expect(bottomVolumeButton(wrapper, "Mute").exists()).toBe(true);
     expect(
       wrapper
         .find('.movies-hls-player__control-row button[aria-label="Enter fullscreen"]')
