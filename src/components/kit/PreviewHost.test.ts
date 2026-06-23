@@ -40,12 +40,14 @@ describe("PreviewHost", () => {
     expect(wrapper.find(".preview-probe").text()).toBe("blog.embed:M7lc1UVf-VE:url");
   });
 
-  it("forwards preview aspect ratio changes from the provider component", async () => {
+  it("forwards preview lifecycle events from the provider component", async () => {
     const input: AppPreviewInput = { kind: "url", url: "https://youtu.be/M7lc1UVf-VE" };
     const PreviewComponent = defineComponent({
-      emits: ["aspect-ratio-change"],
+      emits: ["aspect-ratio-change", "ended", "playing"],
       mounted() {
         this.$emit("aspect-ratio-change", 0.5625);
+        this.$emit("playing");
+        this.$emit("ended");
       },
       template: '<div class="preview-probe" />',
     });
@@ -71,6 +73,8 @@ describe("PreviewHost", () => {
     await nextTick();
 
     expect(wrapper.emitted("aspect-ratio-change")).toEqual([[0.5625]]);
+    expect(wrapper.emitted("playing")).toEqual([[]]);
+    expect(wrapper.emitted("ended")).toEqual([[]]);
   });
 
   it("renders the fallback when no provider matches", () => {

@@ -4,6 +4,7 @@ import { computed } from "vue";
 import type { AppPreviewInput, AppPreviewSurface } from "@daopk/sdk";
 
 import YouTubePlayerSurface from "./YouTubePlayerSurface.vue";
+import type { AspectRatioFit, AspectRatioOverscan } from "../utils/aspectRatio";
 import {
   autoplayFromLaunchArgs,
   videoIdFromLaunchArgs,
@@ -18,6 +19,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "aspect-ratio-change": [aspectRatio: number | null];
+  ended: [];
+  playing: [];
 }>();
 
 const videoId = computed(
@@ -31,6 +34,22 @@ const autoplayRevision = computed(() =>
 );
 const controlsEnabled = computed(() => !isMoviesTrailer.value);
 const privacyEnhanced = computed(() => isMoviesTrailer.value);
+const fit = computed<AspectRatioFit>(() =>
+  isMoviesTrailer.value && previewUrlParam(props.input, "fit") === "cover" ? "cover" : "contain",
+);
+const overscan = computed<AspectRatioOverscan>(() => (fit.value === "cover" ? "auto" : 1));
+
+function previewUrlParam(input: AppPreviewInput, key: string): string | null {
+  if (input.kind !== "url") {
+    return null;
+  }
+
+  try {
+    return new URL(input.url).searchParams.get(key);
+  } catch {
+    return null;
+  }
+}
 </script>
 
 <template>
@@ -40,8 +59,12 @@ const privacyEnhanced = computed(() => isMoviesTrailer.value);
       :video-id="videoId"
       :autoplay-revision="autoplayRevision"
       :controls-enabled="controlsEnabled"
+      :fit="fit"
+      :overscan="overscan"
       :privacy-enhanced="privacyEnhanced"
       @aspect-ratio-change="emit('aspect-ratio-change', $event)"
+      @ended="emit('ended')"
+      @playing="emit('playing')"
     />
     <div v-else class="youtube-video-preview__state" role="status">Video unavailable</div>
   </div>

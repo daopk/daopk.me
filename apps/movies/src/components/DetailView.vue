@@ -11,6 +11,7 @@ import DetailHero from "./detail/DetailHero.vue";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
   fetchMovieDetail,
+  fetchMovieTrailer,
   type MovieDetail,
   type MovieEpisodeTarget,
   type MovieMediaType,
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
 const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
+const trailerKey = ref<string | null>(null);
 const { locale, t } = useMoviesI18n();
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
@@ -65,20 +67,31 @@ onUnmounted(() => {
 
 async function loadDetail(): Promise<void> {
   abortController?.abort();
-  abortController = new AbortController();
+  const controller = new AbortController();
+  abortController = controller;
   state.value = "loading";
   detail.value = null;
   resumeProgress.value = null;
+  trailerKey.value = null;
 
   try {
-    const nextDetail = await fetchMovieDetail(props.mediaType, props.tmdbId, {
-      signal: abortController.signal,
-    });
+    const [nextDetail, trailerResult] = await Promise.all([
+      fetchMovieDetail(props.mediaType, props.tmdbId, {
+        signal: controller.signal,
+      }),
+      fetchMovieTrailer(props.mediaType, props.tmdbId, {
+        signal: controller.signal,
+      }).catch(() => ({ trailer: null })),
+    ]);
+    if (controller.signal.aborted) {
+      return;
+    }
     detail.value = nextDetail;
+    trailerKey.value = trailerResult.trailer?.key ?? null;
     refreshResumeProgress();
     state.value = "ready";
   } catch {
-    if (abortController.signal.aborted) {
+    if (controller.signal.aborted) {
       return;
     }
     state.value = "error";
@@ -130,7 +143,12 @@ function startWatching(): void {
     </EmptyState>
 
     <template v-else-if="detail">
-      <DetailHero :detail="detail" :resume-progress="resumeProgress" @watch="startWatching" />
+      <DetailHero
+        :detail="detail"
+        :resume-progress="resumeProgress"
+        :trailer-key="trailerKey"
+        @watch="startWatching"
+      />
       <DetailContent
         :detail="detail"
         @open-detail="$emit('open-detail', $event)"

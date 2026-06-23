@@ -54,6 +54,8 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
       playerState.value === YOUTUBE_PLAYER_STATES.playing ||
       playerState.value === YOUTUBE_PLAYER_STATES.buffering,
   );
+  const videoPlaying = computed(() => playerState.value === YOUTUBE_PLAYER_STATES.playing);
+  const ended = computed(() => playerState.value === YOUTUBE_PLAYER_STATES.ended);
   const controlsDisabled = computed(() => !ready.value);
   const mutedOrSilent = computed(() => muted.value || volume.value <= 0);
   const sliderMax = computed(() => Math.max(1, Math.ceil(duration.value)));
@@ -345,6 +347,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     controlsDisabled,
     currentTime,
     duration,
+    ended,
     hasVideo,
     loadedFraction,
     muted,
@@ -359,6 +362,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     sliderMax,
     toggleMute,
     togglePlayback,
+    videoPlaying,
     videoTitle,
     volume,
     volumeValueText,

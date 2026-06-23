@@ -1,26 +1,51 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from "vue";
 
 import {
+  autoCoverAspectRatioOverscan,
+  coverAspectRatioBox,
   DEFAULT_VIDEO_ASPECT_RATIO,
   fitAspectRatioBox,
   normalizedAspectRatio,
+  type AspectRatioFit,
+  type AspectRatioOverscan,
   type BoxSize,
 } from "../utils/aspectRatio";
 
 export function useAspectFitBox(
   container: Readonly<Ref<HTMLElement | null>>,
   aspectRatio: Readonly<Ref<number | null>>,
+  fit: Readonly<Ref<AspectRatioFit>> | AspectRatioFit = "contain",
+  overscan: Readonly<Ref<AspectRatioOverscan>> | AspectRatioOverscan = 1,
 ) {
   const containerSize = ref<BoxSize>({ width: 0, height: 0 });
 
   let resizeObserver: ResizeObserver | null = null;
 
+  const fitMode = computed(() => (typeof fit === "string" ? fit : fit.value));
+  const overscanMultiplier = computed(() => {
+    const value = typeof overscan === "object" ? overscan.value : overscan;
+    if (value === "auto") {
+      return fitMode.value === "cover"
+        ? autoCoverAspectRatioOverscan(containerSize.value, resolvedAspectRatio.value)
+        : 1;
+    }
+
+    if (!Number.isFinite(value)) {
+      return 1;
+    }
+
+    return Math.max(1, Math.min(value, 2));
+  });
   const resolvedAspectRatio = computed(
     () => normalizedAspectRatio(aspectRatio.value) ?? DEFAULT_VIDEO_ASPECT_RATIO,
   );
-  const fittedBox = computed(() =>
-    fitAspectRatioBox(containerSize.value, resolvedAspectRatio.value),
-  );
+  const fittedBox = computed(() => {
+    if (fitMode.value === "cover") {
+      return coverAspectRatioBox(containerSize.value, resolvedAspectRatio.value);
+    }
+
+    return fitAspectRatioBox(containerSize.value, resolvedAspectRatio.value);
+  });
   const style = computed<Record<string, string>>(() => {
     const nextStyle: Record<string, string> = {
       "--youtube-player-aspect-ratio": resolvedAspectRatio.value.toString(),
@@ -31,8 +56,8 @@ export function useAspectFitBox(
       return nextStyle;
     }
 
-    nextStyle.inlineSize = `${box.width.toString()}px`;
-    nextStyle.blockSize = `${box.height.toString()}px`;
+    nextStyle.inlineSize = `${(box.width * overscanMultiplier.value).toString()}px`;
+    nextStyle.blockSize = `${(box.height * overscanMultiplier.value).toString()}px`;
 
     return nextStyle;
   });

@@ -22,6 +22,8 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   "aspect-ratio-change": [aspectRatio: number | null];
+  ended: [];
+  playing: [];
 }>();
 
 const kernel = useKernel();
@@ -80,6 +82,8 @@ const PreviewHostError = defineComponent({
       :input="input"
       :surface="surface"
       @aspect-ratio-change="emit('aspect-ratio-change', $event)"
+      @ended="emit('ended')"
+      @playing="emit('playing')"
     />
     <EmptyState
       v-else

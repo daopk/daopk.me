@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject, ref, watch } from "vue";
 
 import { Play } from "@daopk/icons";
+import { PreviewHost } from "@daopk/kit";
+import { KernelInjectionKey, type AppPreviewInput, type AppPreviewSurface } from "@daopk/sdk";
 
 import type { MovieDetail } from "../../moviesApi";
 import type { MoviesPlaybackProgressEntry } from "../../moviesPlaybackProgress";
@@ -12,10 +14,12 @@ import { detailMetaLabel } from "./detailFormatters";
 interface DetailHeroProps {
   detail: MovieDetail;
   resumeProgress?: MoviesPlaybackProgressEntry | null;
+  trailerKey?: string | null;
 }
 
 const props = withDefaults(defineProps<DetailHeroProps>(), {
   resumeProgress: null,
+  trailerKey: null,
 });
 
 defineEmits<{
@@ -23,6 +27,10 @@ defineEmits<{
 }>();
 
 const { t } = useMoviesI18n();
+const kernel = inject(KernelInjectionKey, null);
+const trailerPreviewSurface: AppPreviewSurface = "movies.trailer";
+const trailerEnded = ref(false);
+const trailerPlaying = ref(false);
 const detailMeta = computed(() => detailMetaLabel(props.detail, t));
 const canWatch = computed(() => props.detail.mediaType === "movie" && props.detail.play !== null);
 const playButtonLabel = computed(
@@ -31,6 +39,42 @@ const playButtonLabel = computed(
       props.detail.name
     }`,
 );
+const hasTrailerKey = computed(
+  () => typeof props.trailerKey === "string" && props.trailerKey.length > 0,
+);
+const trailerPreviewInput = computed<AppPreviewInput>(() => ({
+  kind: "url",
+  url: `youtube-player://video/${encodeURIComponent(props.trailerKey ?? "")}?autoplay=1&fit=cover`,
+}));
+const trailerPreviewResolution = computed(() =>
+  hasTrailerKey.value && kernel !== null
+    ? kernel.previews.resolve(trailerPreviewInput.value, { surface: trailerPreviewSurface })
+    : null,
+);
+const shouldRenderTrailerPreview = computed(() => trailerPreviewResolution.value !== null);
+const shouldShowTrailerPreview = computed(
+  () => shouldRenderTrailerPreview.value && !trailerEnded.value,
+);
+const shouldRevealTrailerPreview = computed(
+  () => shouldShowTrailerPreview.value && trailerPlaying.value,
+);
+
+watch(
+  [() => props.detail.mediaType, () => props.detail.tmdbId, () => props.trailerKey],
+  () => {
+    trailerEnded.value = false;
+    trailerPlaying.value = false;
+  },
+);
+
+function revealTrailerAfterPlaybackStarts(): void {
+  trailerPlaying.value = true;
+}
+
+function showCoverAfterTrailerEnd(): void {
+  trailerEnded.value = true;
+  trailerPlaying.value = false;
+}
 </script>
 
 <template>
@@ -43,6 +87,20 @@ const playButtonLabel = computed(
       <source v-if="detail.posterUrl" media="(max-width: 700px)" :srcset="detail.posterUrl" />
       <img :src="detail.backdropUrl || detail.posterUrl" alt="" />
     </picture>
+    <div
+      v-if="shouldShowTrailerPreview"
+      class="movies-detail-hero__backdrop movies-detail-hero__trailer"
+      :class="{ 'movies-detail-hero__trailer--visible': shouldRevealTrailerPreview }"
+      aria-hidden="true"
+    >
+      <PreviewHost
+        class="movies-detail-hero__trailer-preview"
+        :input="trailerPreviewInput"
+        :surface="trailerPreviewSurface"
+        @ended="showCoverAfterTrailerEnd"
+        @playing="revealTrailerAfterPlaybackStarts"
+      />
+    </div>
     <div class="movies-detail-hero__shade" />
     <div class="movies-detail-hero__content">
       <div class="movies-detail-hero__overview">
@@ -107,6 +165,22 @@ const playButtonLabel = computed(
 .movies-detail-hero__backdrop img {
   display: block;
   object-fit: cover;
+}
+
+.movies-detail-hero__trailer {
+  background: color-mix(in srgb, var(--color-fg) 10%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 420ms var(--ease);
+}
+
+.movies-detail-hero__trailer--visible {
+  opacity: 1;
+}
+
+.movies-detail-hero__trailer-preview {
+  block-size: 100%;
+  inline-size: 100%;
 }
 
 .movies-detail-hero__shade {
@@ -251,6 +325,12 @@ const playButtonLabel = computed(
   color: var(--color-fg);
   font-size: var(--font-size-xs);
   padding: var(--space-2xs) var(--space-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movies-detail-hero__trailer {
+    transition: none;
+  }
 }
 
 @media (max-width: 700px) {

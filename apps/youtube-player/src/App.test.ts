@@ -637,6 +637,37 @@ describe("YouTube Player App", () => {
     wrapper.unmount();
   });
 
+  it("overscans cover-fit stages to crop embedded preview bars", async () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 500,
+      height: 500,
+      left: 0,
+      right: 1000,
+      top: 0,
+      width: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const wrapper = mount(YouTubePlayerSurface, {
+      props: {
+        controlsEnabled: false,
+        fit: "cover",
+        overscan: "auto",
+        videoId: "IQsLEaj89bg",
+      },
+    });
+
+    await vi.waitFor(() => {
+      const style = wrapper.get(".youtube-player__stage").attributes("style");
+      expect(style).toContain("inline-size: 1140px");
+      expect(style).toContain("block-size: 641.25px");
+    });
+
+    wrapper.unmount();
+    rectSpy.mockRestore();
+  });
+
   it("requests a content-size update when the loaded thumbnail changes the player ratio", async () => {
     const contentSizes: Array<AppChromeContentSize | null> = [];
     const appChrome: AppChromeController = {
@@ -781,6 +812,38 @@ describe("YouTube Player App", () => {
     expect(url.searchParams.get("fs")).toBe("0");
     expect(url.searchParams.get("iv_load_policy")).toBe("3");
     expect(url.searchParams.get("rel")).toBe("0");
+
+    wrapper.unmount();
+  });
+
+  it("emits playback lifecycle events from player state changes", async () => {
+    const wrapper = mount(YouTubePlayerSurface, {
+      props: {
+        videoId: "IQsLEaj89bg",
+      },
+    });
+    const player = await waitForPlayer();
+    player.options.events?.onReady?.({ target: player } as YouTubePlayerEvent);
+    await nextTick();
+
+    expect(wrapper.emitted("playing")).toBeUndefined();
+    expect(wrapper.emitted("ended")).toBeUndefined();
+
+    player.options.events?.onStateChange?.({
+      target: player,
+      data: youtubeApi.states.playing,
+    } as YouTubePlayerStateChangeEvent);
+    await nextTick();
+
+    expect(wrapper.emitted("playing")).toEqual([[]]);
+
+    player.options.events?.onStateChange?.({
+      target: player,
+      data: youtubeApi.states.ended,
+    } as YouTubePlayerStateChangeEvent);
+    await nextTick();
+
+    expect(wrapper.emitted("ended")).toEqual([[]]);
 
     wrapper.unmount();
   });

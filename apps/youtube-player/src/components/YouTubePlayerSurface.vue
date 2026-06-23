@@ -13,7 +13,11 @@ import { useAspectFitBox } from "../composables/useAspectFitBox";
 import { useAutoHideControls } from "../composables/useAutoHideControls";
 import { usePlayerFullscreen } from "../composables/usePlayerFullscreen";
 import { useYouTubePlayer } from "../composables/useYouTubePlayer";
-import { fitAspectRatioBox } from "../utils/aspectRatio";
+import {
+  fitAspectRatioBox,
+  type AspectRatioFit,
+  type AspectRatioOverscan,
+} from "../utils/aspectRatio";
 import { playerStatusMessage } from "../utils/playerStatus";
 import { fetchYouTubeVideoAspectRatio } from "../utils/youtubeOEmbed";
 import { videoIdFromUserInput } from "../utils/youtubeVideo";
@@ -24,6 +28,8 @@ const props = withDefaults(
   defineProps<{
     readonly autoplayRevision?: number;
     readonly controlsEnabled?: boolean;
+    readonly fit?: AspectRatioFit;
+    readonly overscan?: AspectRatioOverscan;
     readonly privacyEnhanced?: boolean;
     readonly resizeToAspectRatio?: boolean;
     readonly videoId: string | null;
@@ -31,6 +37,8 @@ const props = withDefaults(
   {
     autoplayRevision: 0,
     controlsEnabled: true,
+    fit: "contain",
+    overscan: 1,
     privacyEnhanced: false,
     resizeToAspectRatio: false,
   },
@@ -39,6 +47,8 @@ const props = withDefaults(
 const emit = defineEmits<{
   "aspect-ratio-change": [aspectRatio: number | null];
   "content-size-change": [size: AppChromeContentSize | null];
+  ended: [];
+  playing: [];
   "title-change": [title: string];
   "video-request": [videoId: string];
 }>();
@@ -61,6 +71,7 @@ const {
   controlsDisabled,
   currentTime,
   duration,
+  ended,
   hasVideo,
   loadedFraction,
   mutedOrSilent,
@@ -74,6 +85,7 @@ const {
   sliderMax,
   toggleMute,
   togglePlayback,
+  videoPlaying,
   videoTitle,
   volume,
   volumeValueText,
@@ -83,7 +95,14 @@ const {
   playerHost,
 });
 const { fullscreen, toggleFullscreen } = usePlayerFullscreen(playerShell);
-const { style: playerStageStyle } = useAspectFitBox(playerViewport, videoAspectRatio);
+const fitMode = computed(() => props.fit);
+const overscan = computed(() => props.overscan);
+const { style: playerStageStyle } = useAspectFitBox(
+  playerViewport,
+  videoAspectRatio,
+  fitMode,
+  overscan,
+);
 const { controlsHidden, controlsVisible, setControlsFocused, showControls } = useAutoHideControls({
   playing,
 });
@@ -100,6 +119,18 @@ onUnmounted(() => {
 });
 
 watch(surfaceTitle, (nextTitle) => emit("title-change", nextTitle), { immediate: true });
+
+watch(ended, (nextEnded) => {
+  if (nextEnded) {
+    emit("ended");
+  }
+});
+
+watch(videoPlaying, (nextPlaying) => {
+  if (nextPlaying) {
+    emit("playing");
+  }
+});
 
 watch(
   () => props.videoId,
@@ -332,6 +363,7 @@ function submitManualVideo(): void {
   min-block-size: 0;
   min-inline-size: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .youtube-player__stage {
@@ -339,10 +371,13 @@ function submitManualVideo(): void {
   background: color-mix(in srgb, var(--color-bg) 92%, black);
   block-size: 100%;
   display: grid;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
   inline-size: 100%;
   min-block-size: 0;
   overflow: hidden;
-  position: relative;
+  position: absolute;
+  transform: translate(-50%, -50%);
 }
 
 .youtube-player__interaction-layer {

@@ -1900,13 +1900,15 @@ describe("Movies app", () => {
     await settle();
 
     expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550, expect.anything());
     expect(window.location.pathname).toBe("/movie/550-fight-club");
     expect(wrapper.text()).toContain("Fight Club");
     expect(wrapper.text()).toContain("Details");
-    expect(wrapper.get(".movies-detail-hero__backdrop img").attributes("src")).toBe(
+    expect(wrapper.find(".movies-detail-hero__trailer").exists()).toBe(false);
+    expect(wrapper.get("picture.movies-detail-hero__backdrop img").attributes("src")).toBe(
       "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
     );
-    expect(wrapper.get(".movies-detail-hero__backdrop source").attributes()).toMatchObject({
+    expect(wrapper.get("picture.movies-detail-hero__backdrop source").attributes()).toMatchObject({
       media: "(max-width: 700px)",
       srcset: "https://image.tmdb.org/t/p/w500/poster.jpg",
     });
@@ -1920,6 +1922,128 @@ describe("Movies app", () => {
       false,
     );
     expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
+  });
+
+  it("uses a resolved trailer preview as the Detail hero cover", async () => {
+    const PreviewComponent = defineComponent({
+      emits: ["ended", "playing"],
+      props: ["args", "input", "surface"],
+      template:
+        '<div><span class="preview-probe">{{ surface }}:{{ args.videoId }}:{{ args.autoplay }}:{{ input.kind }}</span><button class="preview-playing" type="button" @click="$emit(\'playing\')">Playing</button><button class="preview-ended" type="button" @click="$emit(\'ended\')">Ended</button></div>',
+    });
+    const provider = {
+      id: "youtube-player:video-preview",
+      manifestId: "youtube-player",
+      surfaces: ["movies.trailer"],
+      component: () => Promise.resolve({ default: PreviewComponent }),
+      match: vi.fn(),
+    };
+    const resolve = vi.fn(() => ({
+      args: { autoplay: true, videoId: "M7lc1UVf-VE" },
+      provider,
+    }));
+    const kernel = {
+      events: { emit: vi.fn() },
+      previews: { resolve },
+    } as unknown as Kernel;
+    vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
+
+    const wrapper = mount(App, {
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+    await nextTick();
+
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(wrapper.find(".movies-detail-hero__trailer").exists()).toBe(true);
+    expect(wrapper.get(".movies-detail-hero__trailer").classes()).not.toContain(
+      "movies-detail-hero__trailer--visible",
+    );
+    expect(wrapper.get("picture.movies-detail-hero__backdrop img").attributes("src")).toBe(
+      "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+    );
+    expect(resolve).toHaveBeenCalledWith(
+      {
+        kind: "url",
+        url: "youtube-player://video/M7lc1UVf-VE?autoplay=1&fit=cover",
+      },
+      { surface: "movies.trailer" },
+    );
+    expect(wrapper.get(".preview-probe").text()).toBe("movies.trailer:M7lc1UVf-VE:true:url");
+
+    await wrapper.get(".preview-playing").trigger("click");
+    await nextTick();
+
+    expect(wrapper.get(".movies-detail-hero__trailer").classes()).toContain(
+      "movies-detail-hero__trailer--visible",
+    );
+    expect(wrapper.find("picture.movies-detail-hero__backdrop").exists()).toBe(true);
+
+    await wrapper.get(".preview-ended").trigger("click");
+    await nextTick();
+
+    expect(wrapper.find(".movies-detail-hero__trailer").exists()).toBe(false);
+    expect(wrapper.get("picture.movies-detail-hero__backdrop img").attributes("src")).toBe(
+      "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+    );
+  });
+
+  it("falls back to the Detail backdrop when no trailer preview provider resolves", async () => {
+    const resolve = vi.fn(() => null);
+    const kernel = {
+      events: { emit: vi.fn() },
+      previews: { resolve },
+    } as unknown as Kernel;
+    vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
+
+    const wrapper = mount(App, {
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    expect(resolve).toHaveBeenCalledWith(
+      {
+        kind: "url",
+        url: "youtube-player://video/M7lc1UVf-VE?autoplay=1&fit=cover",
+      },
+      { surface: "movies.trailer" },
+    );
+    expect(wrapper.find(".movies-detail-hero__trailer").exists()).toBe(false);
+    expect(wrapper.get("picture.movies-detail-hero__backdrop img").attributes("src")).toBe(
+      "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+    );
+  });
+
+  it("keeps Detail rendered with the image cover when trailer loading fails", async () => {
+    vi.mocked(fetchMovieTrailer).mockRejectedValueOnce(new Error("Trailer failed"));
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper.get(".movie-card").trigger("click");
+    await settle();
+
+    expect(fetchMovieDetail).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550, expect.anything());
+    expect(wrapper.text()).toContain("Fight Club");
+    expect(wrapper.find(".movies-detail-hero__trailer").exists()).toBe(false);
+    expect(wrapper.get("picture.movies-detail-hero__backdrop img").attributes("src")).toBe(
+      "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+    );
   });
 
   it("opens WatchView from Detail thumbnail when a movie has a play source", async () => {

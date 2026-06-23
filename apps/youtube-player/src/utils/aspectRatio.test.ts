@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  autoCoverAspectRatioOverscan,
+  coverAspectRatioBox,
   DEFAULT_VIDEO_ASPECT_RATIO,
   fitAspectRatioBox,
   normalizedAspectRatio,
@@ -33,5 +35,34 @@ describe("aspect ratio utils", () => {
       width: 500 * DEFAULT_VIDEO_ASPECT_RATIO,
       height: 500,
     });
+  });
+
+  it("covers a wider container by width", () => {
+    expect(coverAspectRatioBox({ width: 1000, height: 500 }, 16 / 9)).toEqual({
+      width: 1000,
+      height: 1000 / (16 / 9),
+    });
+  });
+
+  it("covers a taller container by height", () => {
+    expect(coverAspectRatioBox({ width: 500, height: 1000 }, 16 / 9)).toEqual({
+      width: 1000 * (16 / 9),
+      height: 1000,
+    });
+  });
+
+  it("adds modest automatic cover overscan for widescreen videos in wider containers", () => {
+    expect(autoCoverAspectRatioOverscan({ width: 1118, height: 520 }, 16 / 9)).toBeCloseTo(
+      2.39 / (1118 / 520),
+    );
+  });
+
+  it("caps automatic cover overscan", () => {
+    expect(autoCoverAspectRatioOverscan({ width: 1000, height: 500 }, 16 / 9)).toBe(1.14);
+  });
+
+  it("does not auto overscan when the detected video ratio already differs from widescreen", () => {
+    expect(autoCoverAspectRatioOverscan({ width: 1118, height: 520 }, 2.39)).toBe(1);
+    expect(autoCoverAspectRatioOverscan({ width: 1118, height: 520 }, 1)).toBe(1);
   });
 });
