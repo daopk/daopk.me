@@ -54,6 +54,7 @@ const emit = defineEmits<{
 const state = ref<LoadState>("loading");
 const movieDetail = ref<MovieDetail | null>(null);
 const episodeDetail = ref<MovieEpisodeDetail | null>(null);
+const playbackSpeed = ref(1);
 const selectedSourceIndex = ref(0);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
 const scrollAreaRef = ref<{ element: HTMLElement | null } | null>(null);
@@ -328,6 +329,7 @@ defineExpose({
         :autoplay="autoplay"
         :next-episode-label="nextEpisodeLabel"
         :play="play"
+        v-model:playback-speed="playbackSpeed"
         :poster-url="posterUrl"
         :progress-key="progressKey"
         show-back-button

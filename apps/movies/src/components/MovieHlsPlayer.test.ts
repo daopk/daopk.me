@@ -1106,7 +1106,20 @@ content-c.ts
     await settle();
 
     expect(video.playbackRate).toBe(1.5);
+    expect(wrapper.emitted("update:playbackSpeed")).toEqual([[1.5]]);
     expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.5x");
+  });
+
+  it("applies playback speed changes from the parent prop", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    await wrapper.setProps({ playbackSpeed: 1.25 });
+    await settle();
+
+    expect(video.playbackRate).toBe(1.25);
+    expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.25x");
   });
 
   it("keeps playback active when playback speed changes from the settings menu", async () => {
@@ -1131,6 +1144,40 @@ content-c.ts
     expect(video.playbackRate).toBe(1.25);
     expect(pause).not.toHaveBeenCalled();
     expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.25x");
+  });
+
+  it("keeps the selected playback speed when switching sources", async () => {
+    const wrapper = mountPlayer({
+      play: playInfo({
+        sources: [
+          playInfo().sources[0]!,
+          {
+            embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+            filename: "fight-club-alt.m3u8",
+            m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+            name: "Alt",
+            serverName: "Server 2",
+            slug: "alt",
+          },
+        ],
+      }),
+    });
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    await openSettings(wrapper);
+    click(menuRadioItem("1.5x"));
+    await settle();
+
+    expect(video.playbackRate).toBe(1.5);
+
+    await wrapper.setProps({ sourceIndex: 1 });
+    await settle();
+
+    expect(video.playbackRate).toBe(1.5);
+    expect(hlsMock.instances[1]!.loadSource).toHaveBeenCalledWith(
+      "https://stream.example.test/fight-club/alt.m3u8",
+    );
   });
 
   it("keeps the settings menu inside the fullscreen player stage", async () => {

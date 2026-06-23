@@ -41,6 +41,7 @@ interface MovieHlsPlayerProps {
   autoplay?: boolean;
   nextEpisodeLabel?: string;
   play: MoviePlayInfo;
+  playbackSpeed?: number;
   posterUrl?: string;
   progressKey?: string;
   showBackButton?: boolean;
@@ -104,6 +105,7 @@ const KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS = 1200;
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
   nextEpisodeLabel: "",
+  playbackSpeed: 1,
   posterUrl: "",
   progressKey: "",
   showBackButton: false,
@@ -113,6 +115,7 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
 const emit = defineEmits<{
   back: [];
   "next-episode": [];
+  "update:playbackSpeed": [speed: number];
 }>();
 
 const playerShell = ref<HTMLElement | null>(null);
@@ -130,7 +133,7 @@ const bufferedEnd = ref(0);
 const volume = ref(1);
 const previousVolume = ref(1);
 const muted = ref(false);
-const playbackSpeed = ref(1);
+const playbackSpeed = ref(normalizedPlaybackSpeed(props.playbackSpeed));
 const playing = ref(false);
 const waiting = ref(false);
 const metadataLoaded = ref(false);
@@ -311,6 +314,20 @@ watch(
     if (autoplay && metadataLoaded.value && !playing.value && currentTime.value === 0) {
       void playVideo();
     }
+  },
+);
+
+watch(
+  () => props.playbackSpeed,
+  (nextSpeed) => {
+    const speed = normalizedPlaybackSpeed(nextSpeed);
+    if (playbackSpeed.value === speed) {
+      applyPlaybackSpeed(videoElement.value);
+      return;
+    }
+
+    playbackSpeed.value = speed;
+    applyPlaybackSpeed(videoElement.value);
   },
 );
 
@@ -607,7 +624,6 @@ function syncMediaState(): void {
   duration.value = safeMediaNumber(video.duration);
   muted.value = video.muted;
   volume.value = clamp(video.volume, 0, 1);
-  playbackSpeed.value = normalizedPlaybackSpeed(video.playbackRate);
   updateBufferedEnd();
 
   if (!seeking.value) {
@@ -903,6 +919,7 @@ function setPlaybackSpeed(nextSpeed: number): void {
   const speed = normalizedPlaybackSpeed(nextSpeed);
   playbackSpeed.value = speed;
   applyPlaybackSpeed(videoElement.value);
+  emit("update:playbackSpeed", speed);
   showControls({ force: true });
 }
 

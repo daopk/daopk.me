@@ -54,13 +54,14 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
       autoplay: { default: false, type: Boolean },
       nextEpisodeLabel: { default: "", type: String },
       play: { required: true, type: Object },
+      playbackSpeed: { default: 1, type: Number },
       posterUrl: { default: "", type: String },
       progressKey: { default: "", type: String },
       showBackButton: { default: false, type: Boolean },
       sourceIndex: { default: 0, type: Number },
       title: { required: true, type: String },
     },
-    emits: ["back", "next-episode"],
+    emits: ["back", "next-episode", "update:playbackSpeed"],
     setup(_props: unknown, { expose }: { expose: (exposed: Record<string, unknown>) => void }) {
       expose({ handleAppKeydown: movieHlsPlayerHandleAppKeydown });
       return {};
@@ -70,6 +71,7 @@ vi.mock("./components/MovieHlsPlayer.vue", () => ({
         class="movies-hls-player"
         :data-autoplay="autoplay ? 'true' : 'false'"
         :data-next-episode-label="nextEpisodeLabel"
+        :data-playback-speed="String(playbackSpeed)"
         :data-progress-key="progressKey"
         :data-source-index="String(sourceIndex)"
         :data-title="title"
@@ -2462,6 +2464,9 @@ describe("Movies app", () => {
       "Next episode: Episode 2 - The Edit",
     );
 
+    wrapper.getComponent({ name: "MovieHlsPlayer" }).vm.$emit("update:playbackSpeed", 1.5);
+    await settle();
+
     await wrapper.get(".movies-hls-player__next-episode-button").trigger("click");
     await settle();
 
@@ -2470,6 +2475,7 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
       episodePlaybackProgressKey(1399, 1, 2),
     );
+    expect(wrapper.get(".movies-hls-player").attributes("data-playback-speed")).toBe("1.5");
     expect(wrapper.get(".movies-hls-player").attributes("data-title")).toBe("The Edit");
     expect(wrapper.find(".movies-hls-player__next-episode-button").exists()).toBe(false);
   });
