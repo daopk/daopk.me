@@ -218,8 +218,7 @@ onUnmounted(() => {
   sourcePreferenceStore.dispose();
 });
 
-// Publish the watch viewport height so the player can letterbox itself to the
-// visible area (see `--movies-player-fit-block-size` in MovieHlsPlayer.vue),
+// Publish the watch viewport height so the player can fit the visible area,
 // keeping the controls/progress bar on-screen when the window is short.
 function applyViewportBlockSize(element: HTMLElement, blockSize: number): void {
   const rounded = Math.round(blockSize);
@@ -438,6 +437,10 @@ defineExpose({
 }
 
 .movies-watch__player {
+  --movies-player-stage-block-size: var(--movies-player-fit-block-size, auto);
+  --movies-player-stage-inline-size: 100%;
+  --movies-player-video-fit: cover;
+
   inline-size: 100%;
 }
 
