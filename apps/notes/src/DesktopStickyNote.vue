@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref, toRef } from "vue";
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
 import { AppContextInjectionKey, NOTES_ROOT, useKernel, useVfs, type VfsPath } from "@daopk/sdk";
@@ -11,78 +11,18 @@ import {
   parseNoteSource,
 } from "./useNotes";
 import {
-  DEFAULT_PINNED_DESKTOP_NOTE_COLOR,
-  PINNED_DESKTOP_NOTE_COLORS,
   type PinnedDesktopNote,
   type PinnedDesktopNoteColor,
   usePinnedDesktopNotes,
 } from "./usePinnedDesktopNotes";
+import {
+  colorOptions,
+  NOTE_HEIGHT,
+  NOTE_WIDTH,
+  useDesktopStickyNoteTheme,
+} from "./useDesktopStickyNoteTheme";
 
-const NOTE_WIDTH = 260;
-const NOTE_HEIGHT = 228;
 const DRAG_CLICK_THRESHOLD_PX = 3;
-
-interface StickyNoteColorTheme {
-  readonly label: string;
-  readonly background: string;
-  readonly border: string;
-  readonly foreground: string;
-  readonly muted: string;
-  readonly swatch: string;
-}
-
-const STICKY_NOTE_COLOR_THEMES: Record<PinnedDesktopNoteColor, StickyNoteColorTheme> = {
-  yellow: {
-    label: "Yellow",
-    background:
-      "linear-gradient(180deg, rgba(255, 247, 179, 0.96), rgba(255, 236, 139, 0.94)), #ffed8a",
-    border: "rgba(120, 96, 20, 0.22)",
-    foreground: "#332b0d",
-    muted: "rgba(51, 43, 13, 0.6)",
-    swatch: "#ffdc4d",
-  },
-  rose: {
-    label: "Rose",
-    background:
-      "linear-gradient(180deg, rgba(255, 214, 228, 0.96), rgba(249, 177, 203, 0.94)), #f8b5cb",
-    border: "rgba(136, 43, 76, 0.24)",
-    foreground: "#4a1730",
-    muted: "rgba(74, 23, 48, 0.62)",
-    swatch: "#f38caf",
-  },
-  blue: {
-    label: "Blue",
-    background:
-      "linear-gradient(180deg, rgba(205, 234, 255, 0.96), rgba(157, 210, 248, 0.94)), #a7d9fb",
-    border: "rgba(38, 86, 132, 0.24)",
-    foreground: "#12324f",
-    muted: "rgba(18, 50, 79, 0.62)",
-    swatch: "#73bdf4",
-  },
-  green: {
-    label: "Green",
-    background:
-      "linear-gradient(180deg, rgba(213, 244, 219, 0.96), rgba(169, 224, 178, 0.94)), #b4e5bd",
-    border: "rgba(45, 105, 56, 0.24)",
-    foreground: "#173d21",
-    muted: "rgba(23, 61, 33, 0.62)",
-    swatch: "#82cf8e",
-  },
-  purple: {
-    label: "Purple",
-    background:
-      "linear-gradient(180deg, rgba(228, 220, 255, 0.96), rgba(199, 186, 246, 0.94)), #cfc2fa",
-    border: "rgba(76, 55, 134, 0.24)",
-    foreground: "#2d2251",
-    muted: "rgba(45, 34, 81, 0.62)",
-    swatch: "#a995ee",
-  },
-};
-
-const colorOptions = PINNED_DESKTOP_NOTE_COLORS.map((id) => ({
-  id,
-  ...STICKY_NOTE_COLOR_THEMES[id],
-}));
 
 const props = defineProps<{
   note: PinnedDesktopNote;
@@ -108,18 +48,10 @@ let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
 let savePromise: Promise<void> | undefined;
 
 const position = computed(() => dragging.value ?? { x: props.note.x, y: props.note.y });
-const noteColor = computed(() => props.note.color ?? DEFAULT_PINNED_DESKTOP_NOTE_COLOR);
-const noteTheme = computed(() => STICKY_NOTE_COLOR_THEMES[noteColor.value]);
-const noteStyle = computed(() => ({
-  inlineSize: `${NOTE_WIDTH}px`,
-  blockSize: `${NOTE_HEIGHT}px`,
-  transform: `translate3d(${position.value.x}px, ${position.value.y}px, 0)`,
-  zIndex: String(props.note.z),
-  "--desktop-sticky-note-bg": noteTheme.value.background,
-  "--desktop-sticky-note-border": noteTheme.value.border,
-  "--desktop-sticky-note-fg": noteTheme.value.foreground,
-  "--desktop-sticky-note-muted": noteTheme.value.muted,
-}));
+const { noteColor, noteStyle } = useDesktopStickyNoteTheme({
+  note: toRef(props, "note"),
+  position,
+});
 
 const statusText = computed(() => {
   switch (status.value) {
@@ -399,110 +331,4 @@ function setNoteColor(color: PinnedDesktopNoteColor): void {
   </ContextMenu>
 </template>
 
-<style scoped lang="scss">
-.desktop-sticky-note {
-  background: var(--desktop-sticky-note-bg);
-  border: 1px solid var(--desktop-sticky-note-border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 18px 42px rgba(35, 30, 16, 0.22);
-  color: var(--desktop-sticky-note-fg);
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  inset: 0 auto auto 0;
-  overflow: hidden;
-  position: absolute;
-  user-select: none;
-}
-
-.desktop-sticky-note[data-dragging] {
-  cursor: grabbing;
-}
-
-.desktop-sticky-note__header {
-  cursor: grab;
-  display: grid;
-  gap: 2px;
-  padding: 10px 12px 8px;
-}
-
-.desktop-sticky-note__title,
-.desktop-sticky-note__body {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  inline-size: 100%;
-  min-inline-size: 0;
-  outline: none;
-  user-select: text;
-}
-
-.desktop-sticky-note__title {
-  cursor: grab;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.desktop-sticky-note[data-dragging] .desktop-sticky-note__title {
-  cursor: grabbing;
-}
-
-.desktop-sticky-note__status {
-  color: var(--desktop-sticky-note-muted);
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.desktop-sticky-note__body {
-  line-height: 1.5;
-  min-block-size: 0;
-  padding: 0 12px 12px;
-  resize: none;
-}
-
-.desktop-sticky-note__color-menu {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-  padding: 6px 8px 7px;
-}
-
-.desktop-sticky-note__color-dot[role="menuitem"] {
-  background: var(--desktop-sticky-note-dot);
-  block-size: 20px;
-  border: 1px solid color-mix(in srgb, var(--color-fg) 18%, transparent);
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
-  cursor: pointer;
-  display: block;
-  flex: 0 0 auto;
-  gap: 0;
-  inline-size: 20px;
-  line-height: 1;
-  min-block-size: 20px;
-  padding: 0;
-  transition:
-    box-shadow var(--duration-fast) var(--ease),
-    transform var(--duration-fast) var(--ease);
-}
-
-.desktop-sticky-note__color-dot[role="menuitem"]:hover,
-.desktop-sticky-note__color-dot[role="menuitem"][data-highlighted] {
-  background: var(--desktop-sticky-note-dot);
-  transform: scale(1.08);
-}
-
-.desktop-sticky-note__color-dot[role="menuitem"][data-selected] {
-  box-shadow:
-    0 0 0 2px var(--color-bg-elevated),
-    0 0 0 4px var(--color-accent),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.42);
-}
-
-@media (pointer: coarse) {
-  .desktop-sticky-note__color-dot[role="menuitem"] {
-    min-block-size: 28px;
-  }
-}
-</style>
+<style scoped lang="scss" src="./styles/desktop-sticky-note.scss"></style>
