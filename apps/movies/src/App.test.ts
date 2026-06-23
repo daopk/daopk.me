@@ -17,6 +17,7 @@ import type {
   MovieEpisodeDetail,
   MoviePersonDetail,
   MoviePlayInfo,
+  MoviePlaySource,
   MovieSeasonDetail,
   MovieTrailerResult,
   MoviesFiltersResult,
@@ -30,6 +31,11 @@ import {
   type MoviesPlaybackProgressEntry,
   type MoviesPlaybackProgressState,
 } from "./moviesPlaybackProgress";
+import {
+  MOVIES_SOURCE_PREFERENCE_KV_KEY,
+  moviesSourcePreferenceSnapshot,
+  type MoviesSourcePreferenceState,
+} from "./moviesSourcePreference";
 
 const movieHlsPlayerHandleAppKeydown = vi.hoisted(() => vi.fn());
 
@@ -151,6 +157,13 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
   };
 }
 
+function playSource(overrides: Partial<MoviePlaySource> = {}): MoviePlaySource {
+  return {
+    ...playInfo().sources[0]!,
+    ...overrides,
+  };
+}
+
 function trailerResult(
   overrides: Partial<NonNullable<MovieTrailerResult["trailer"]>> = {},
 ): MovieTrailerResult {
@@ -163,6 +176,7 @@ function trailerResult(
 }
 
 const APP_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
+const APP_SOURCE_PREFERENCE_STORAGE_KEY = `movies:${MOVIES_SOURCE_PREFERENCE_KV_KEY}`;
 
 function persistAppProgress(
   key: string,
@@ -195,6 +209,20 @@ function readAppProgressState(): MoviesPlaybackProgressState {
   }
 
   return (JSON.parse(raw) as { data: MoviesPlaybackProgressState }).data;
+}
+
+function persistAppSourcePreference(source: MoviePlaySource, index: number): void {
+  const state: MoviesSourcePreferenceState = {
+    source: moviesSourcePreferenceSnapshot(source, index),
+    updatedAt: Date.now(),
+  };
+  localStorage.setItem(
+    APP_SOURCE_PREFERENCE_STORAGE_KEY,
+    JSON.stringify({
+      __v: 1,
+      data: state,
+    }),
+  );
 }
 
 function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
@@ -1527,6 +1555,164 @@ describe("Movies app", () => {
     await settle();
 
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("0");
+  });
+
+  it("uses the last manually selected source when opening another movie", async () => {
+    const primarySource = playSource({
+      filename: "fight-club-main.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/main.m3u8",
+      name: "Full",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const backupSource = playSource({
+      filename: "fight-club-backup.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    const nextPrimarySource = playSource({
+      filename: "matrix-main.m3u8",
+      m3u8Url: "https://stream.example.test/matrix/main.m3u8",
+      name: "Full",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const nextBackupSource = playSource({
+      filename: "matrix-backup.m3u8",
+      m3u8Url: "https://stream.example.test/matrix/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    const matrix = movie({
+      canonicalPath: "/movie/551-the-matrix",
+      id: "movie-551",
+      name: "The Matrix",
+      slug: "the-matrix",
+      tmdbId: 551,
+    });
+    vi.mocked(fetchMovieDetail).mockImplementation(async (_mediaType, tmdbId) =>
+      tmdbId === 551
+        ? detail({
+            ...matrix,
+            play: playInfo({ slug: "the-matrix", sources: [nextPrimarySource, nextBackupSource] }),
+          })
+        : detail({ play: playInfo({ sources: [primarySource, backupSource] }) }),
+    );
+    window.history.replaceState(null, "", "/movie/550-fight-club");
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper
+      .get('button.movies-detail-hero__poster-shell--button[aria-label="Play Fight Club"]')
+      .trigger("click");
+    await settle();
+    await wrapper.findAll(".movies-watch__sources-list button")[1]!.trigger("click");
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
+
+    wrapper.unmount();
+    window.history.replaceState(null, "", "/movie/551-the-matrix");
+
+    const nextWrapper = mount(App);
+    await settle();
+
+    await nextWrapper
+      .get('button.movies-detail-hero__poster-shell--button[aria-label="Play The Matrix"]')
+      .trigger("click");
+    await settle();
+
+    expect(nextWrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
+  });
+
+  it("keeps the item progress source ahead of the global source preference", async () => {
+    const primarySource = playSource({
+      filename: "fight-club-main.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/main.m3u8",
+      name: "Full",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const backupSource = playSource({
+      filename: "fight-club-backup.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    vi.mocked(fetchMovieDetail).mockResolvedValue(
+      detail({ play: playInfo({ sources: [primarySource, backupSource] }) }),
+    );
+    persistAppSourcePreference(backupSource, 1);
+    persistAppProgress(moviePlaybackProgressKey(550), {
+      currentTime: 42,
+      duration: 120,
+      source: {
+        filename: primarySource.filename,
+        index: 0,
+        m3u8Url: primarySource.m3u8Url,
+        name: primarySource.name,
+        serverName: primarySource.serverName,
+        slug: primarySource.slug,
+      },
+      updatedAt: Date.now(),
+    });
+    window.history.replaceState(null, "", "/movie/550-fight-club");
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper
+      .get('button.movies-detail-hero__poster-shell--button[aria-label="Continue Fight Club"]')
+      .trigger("click");
+    await settle();
+
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("0");
+  });
+
+  it("falls back to the first source when the global source preference is unavailable", async () => {
+    const primarySource = playSource({
+      filename: "fight-club-main.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/main.m3u8",
+      name: "Full",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const backupSource = playSource({
+      filename: "fight-club-backup.m3u8",
+      m3u8Url: "https://stream.example.test/fight-club/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    persistAppSourcePreference(
+      playSource({
+        filename: "missing.m3u8",
+        m3u8Url: "https://stream.example.test/missing.m3u8",
+        name: "Missing",
+        serverName: "Server 9",
+        slug: "missing",
+      }),
+      1,
+    );
+    vi.mocked(fetchMovieDetail).mockResolvedValue(
+      detail({ play: playInfo({ sources: [primarySource, backupSource] }) }),
+    );
+    window.history.replaceState(null, "", "/movie/550-fight-club");
+
+    const wrapper = mount(App);
+    await settle();
+
+    await wrapper
+      .get('button.movies-detail-hero__poster-shell--button[aria-label="Play Fight Club"]')
+      .trigger("click");
+    await settle();
+
     expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("0");
   });
 

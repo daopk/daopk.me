@@ -30,6 +30,11 @@ import {
   moviePlaybackProgressKey,
   resolveMoviesPlaybackProgressSourceIndex,
 } from "../moviesPlaybackProgress";
+import {
+  createMoviesSourcePreferenceStore,
+  moviesSourcePreferenceSnapshot,
+  resolveMoviesPreferredSourceIndex,
+} from "../moviesSourcePreference";
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
 type LoadState = "loading" | "ready" | "error";
@@ -63,6 +68,7 @@ let abortController: AbortController | null = null;
 let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
 const playbackProgressStore = createMoviesPlaybackProgressStore();
+const sourcePreferenceStore = createMoviesSourcePreferenceStore();
 
 const play = computed<MoviePlayInfo | null>(() => {
   if (props.target.kind === "movie") {
@@ -209,6 +215,7 @@ onUnmounted(() => {
   viewportObserver?.disconnect();
   viewportObserver = null;
   playbackProgressStore.dispose();
+  sourcePreferenceStore.dispose();
 });
 
 // Publish the watch viewport height so the player can letterbox itself to the
@@ -259,13 +266,25 @@ async function loadTarget(): Promise<void> {
 
 function restoreSavedSourceIndex(): void {
   const currentPlay = play.value;
+  if (currentPlay === null) {
+    selectedSourceIndex.value = 0;
+    return;
+  }
+
+  const progress = playbackProgressStore.get(progressKey.value);
   selectedSourceIndex.value =
-    currentPlay === null
-      ? 0
-      : resolveMoviesPlaybackProgressSourceIndex(
-          playbackProgressStore.get(progressKey.value),
-          currentPlay.sources,
-        );
+    progress?.source === undefined
+      ? resolveMoviesPreferredSourceIndex(sourcePreferenceStore.get(), currentPlay.sources)
+      : resolveMoviesPlaybackProgressSourceIndex(progress, currentPlay.sources);
+}
+
+function selectSource(index: number): void {
+  selectedSourceIndex.value = index;
+
+  const source = play.value?.sources[index];
+  if (source !== undefined) {
+    sourcePreferenceStore.save(moviesSourcePreferenceSnapshot(source, index));
+  }
 }
 
 function watchNextEpisode(): void {
@@ -352,7 +371,7 @@ defineExpose({
             size="sm"
             :variant="selectedSourceIndex === source.index ? 'primary' : 'secondary'"
             :aria-pressed="selectedSourceIndex === source.index"
-            @click="selectedSourceIndex = source.index"
+            @click="selectSource(source.index)"
           >
             {{ source.label }}
           </Button>
