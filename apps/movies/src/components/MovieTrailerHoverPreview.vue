@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 
-import { PreviewHost, Spinner } from "@daopk/kit";
 import type { AppPreviewInput } from "@daopk/sdk";
 import { HoverCard } from "@daopk/ui";
 
@@ -12,6 +11,7 @@ import type {
 import { mediaLabel } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import { fetchMovieTrailer, type MovieSummary, type MovieTrailerResult } from "../moviesApi";
+import MovieTrailerPreviewCard from "./MovieTrailerPreviewCard.vue";
 
 type TrailerPreviewState = "idle" | "loading" | "ready" | "error";
 
@@ -38,6 +38,7 @@ const emit = defineEmits<{
 }>();
 
 const localTrailerCache = new Map<string, Promise<MovieTrailerResult>>();
+const emptyStyle: Record<string, string> = {};
 
 const { locale, t } = useMoviesI18n();
 const state = ref<TrailerPreviewState>("idle");
@@ -50,8 +51,8 @@ const cacheKey = computed(() =>
 const open = computed(
   () => !props.disabled && props.movie !== null && props.reference !== undefined,
 );
-const popoverAlign = computed(() => (props.anchorMode === "cursor" ? "start" : "center"));
-const popoverSide = computed(() => (props.anchorMode === "cursor" ? "right" : "top"));
+const centerPreviewOpen = computed(() => open.value && props.anchorMode === "center");
+const hoverCardOpen = computed(() => open.value && props.anchorMode === "element");
 const previewImageUrl = computed(() =>
   props.movie === null
     ? ""
@@ -71,7 +72,7 @@ const trailerPreviewInput = computed<AppPreviewInput | null>(() => {
 const trailerPreviewStyle = computed<Record<string, string>>(() => {
   const aspectRatio = trailerPreviewAspectRatio.value;
   if (aspectRatio === null) {
-    return {};
+    return emptyStyle;
   }
 
   return {
@@ -95,6 +96,24 @@ const previewLabel = computed(() =>
     ? t("movies.home.trailerPreview.unavailable")
     : t("movies.home.trailerPreview.ariaLabel", { title: props.movie.name }),
 );
+const centerPreviewStyle = computed<Record<string, string>>(() => {
+  if (!centerPreviewOpen.value || props.reference === undefined) {
+    return emptyStyle;
+  }
+
+  const rect = props.reference.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  if (!Number.isFinite(centerX) || !Number.isFinite(centerY)) {
+    return emptyStyle;
+  }
+
+  return {
+    "--movies-trailer-preview-center-x": `${centerX}px`,
+    "--movies-trailer-preview-center-y": `${centerY}px`,
+    transform: `translate3d(${centerX}px, ${centerY}px, 0) translate(-50%, -50%)`,
+  };
+});
 
 watch(
   [cacheKey, open],
@@ -155,12 +174,13 @@ function setTrailerPreviewAspectRatio(nextAspectRatio: number | null): void {
 
 <template>
   <HoverCard
-    :open="open"
+    v-if="anchorMode === 'element'"
+    :open="hoverCardOpen"
     :disabled="disabled || movie === null || reference === undefined"
     :portal-to="portalTo"
     content-class="movies-trailer-hover-card__content"
-    :side="popoverSide"
-    :align="popoverAlign"
+    side="top"
+    align="center"
     :open-delay="0"
     :close-delay="0"
     :prioritize-position="true"
@@ -169,58 +189,39 @@ function setTrailerPreviewAspectRatio(nextAspectRatio: number | null): void {
     <span class="movies-trailer-hover-card__anchor" aria-hidden="true" />
 
     <template #content>
-      <article
+      <MovieTrailerPreviewCard
         v-if="movie !== null"
-        class="movies-trailer-hover-card"
-        :aria-label="previewLabel"
-        :style="trailerPreviewStyle"
-        @pointerenter="emit('preview-enter')"
-        @pointerleave="emit('preview-leave', $event)"
-      >
-        <div class="movies-trailer-hover-card__media">
-          <PreviewHost
-            v-if="trailerPreviewInput !== null"
-            class="movies-trailer-hover-card__preview"
-            :input="trailerPreviewInput"
-            surface="movies.trailer"
-            :fallback-title="t('movies.home.trailerPreview.unavailable')"
-            fallback-description=""
-            @aspect-ratio-change="setTrailerPreviewAspectRatio"
-          />
-          <img
-            v-else-if="previewImageUrl"
-            class="movies-trailer-hover-card__image"
-            :src="previewImageUrl"
-            :alt="movie.name"
-            loading="lazy"
-            decoding="async"
-          />
-          <span v-else class="movies-trailer-hover-card__image" aria-hidden="true" />
-
-          <span v-if="state === 'loading'" class="movies-trailer-hover-card__status">
-            <Spinner size="md" :label="t('movies.home.trailerPreview.loading')" />
-          </span>
-          <span
-            v-else-if="state === 'ready' && trailer === null"
-            class="movies-trailer-hover-card__status movies-trailer-hover-card__status--text"
-          >
-            {{ t("movies.home.trailerPreview.unavailable") }}
-          </span>
-          <span
-            v-else-if="state === 'error'"
-            class="movies-trailer-hover-card__status movies-trailer-hover-card__status--text"
-          >
-            {{ t("movies.home.trailerPreview.error") }}
-          </span>
-        </div>
-
-        <div class="movies-trailer-hover-card__body">
-          <strong>{{ movie.name }}</strong>
-          <span v-if="metaLabel">{{ metaLabel }}</span>
-        </div>
-      </article>
+        :meta-label="metaLabel"
+        :movie="movie"
+        :preview-image-url="previewImageUrl"
+        :preview-input="trailerPreviewInput"
+        :preview-label="previewLabel"
+        :preview-style="trailerPreviewStyle"
+        :state="state"
+        @aspect-ratio-change="setTrailerPreviewAspectRatio"
+        @preview-enter="emit('preview-enter')"
+        @preview-leave="emit('preview-leave', $event)"
+      />
     </template>
   </HoverCard>
+  <span v-else class="movies-trailer-hover-card__anchor" aria-hidden="true" />
+
+  <Teleport v-if="centerPreviewOpen && movie !== null" :to="portalTo">
+    <div class="movies-trailer-hover-card__center" :style="centerPreviewStyle">
+      <MovieTrailerPreviewCard
+        :meta-label="metaLabel"
+        :movie="movie"
+        :preview-image-url="previewImageUrl"
+        :preview-input="trailerPreviewInput"
+        :preview-label="previewLabel"
+        :preview-style="trailerPreviewStyle"
+        :state="state"
+        @aspect-ratio-change="setTrailerPreviewAspectRatio"
+        @preview-enter="emit('preview-enter')"
+        @preview-leave="emit('preview-leave', $event)"
+      />
+    </div>
+  </Teleport>
 </template>
 
 <style lang="scss">
@@ -236,6 +237,26 @@ function setTrailerPreviewAspectRatio(nextAspectRatio: number | null): void {
 
 .movies-trailer-hover-card__content {
   pointer-events: auto;
+}
+
+.movies-trailer-hover-card__center {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  pointer-events: none;
+  position: fixed;
+  transition: transform 180ms var(--ease);
+  transform: translate3d(0, 0, 0) translate(-50%, -50%);
+  will-change: transform;
+  z-index: var(--tooltip-z);
+}
+
+.movies-trailer-hover-card__center .movies-trailer-hover-card {
+  animation: movies-trailer-hover-card-center-in 180ms var(--ease) both;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  transform-origin: center;
 }
 
 .movies-trailer-hover-card {
@@ -313,5 +334,26 @@ span.movies-trailer-hover-card__image {
   color: var(--color-fg-muted);
   font-size: var(--font-size-xs);
   line-height: var(--leading-snug);
+}
+
+@keyframes movies-trailer-hover-card-center-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movies-trailer-hover-card__center {
+    transition-duration: 0ms;
+  }
+
+  .movies-trailer-hover-card__center .movies-trailer-hover-card {
+    animation-duration: 0ms;
+  }
 }
 </style>

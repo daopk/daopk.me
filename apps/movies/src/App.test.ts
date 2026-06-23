@@ -477,6 +477,21 @@ async function hoverFirstHomeRailCard(wrapper: VueWrapper): Promise<void> {
   await nextTick();
 }
 
+function rect(bounds: { left: number; top: number; width: number; height: number }): DOMRect {
+  const { left, top, width, height } = bounds;
+  return {
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    top,
+    width,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
 describe("Movies app", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -747,9 +762,9 @@ describe("Movies app", () => {
       name: "MovieTrailerHoverPreview",
       props: ["anchorMode", "disabled", "movie", "reference", "trailerCache"],
       setup(props) {
-        function rectValue(axis: "left" | "top"): string {
+        function rectValue(axis: "height" | "left" | "top" | "width"): string {
           const reference = props.reference as
-            | { getBoundingClientRect: () => Pick<DOMRect, "left" | "top"> }
+            | { getBoundingClientRect: () => Pick<DOMRect, "height" | "left" | "top" | "width"> }
             | undefined;
           return reference === undefined ? "" : String(reference.getBoundingClientRect()[axis]);
         }
@@ -757,7 +772,7 @@ describe("Movies app", () => {
         return { rectValue };
       },
       template:
-        '<div class="preview-anchor-probe" :data-left="rectValue(\'left\')" :data-top="rectValue(\'top\')" />',
+        '<div class="preview-anchor-probe" :data-anchor-mode="anchorMode" :data-height="rectValue(\'height\')" :data-left="rectValue(\'left\')" :data-top="rectValue(\'top\')" :data-width="rectValue(\'width\')" />',
     });
 
     const wrapper = mount(App, {
@@ -771,21 +786,60 @@ describe("Movies app", () => {
     await settle();
 
     const card = wrapper.get(".movies-home__rail .movie-card");
+    const rectSpy = vi
+      .spyOn(card.element, "getBoundingClientRect")
+      .mockReturnValue(rect({ height: 270, left: 100, top: 80, width: 180 }));
+
     await card.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
     await card.trigger("pointermove", { clientX: 300, clientY: 220, pointerType: "mouse" });
     await new Promise((resolve) => window.setTimeout(resolve, 360));
     await nextTick();
 
     const probe = wrapper.get(".preview-anchor-probe");
-    expect(probe.attributes("data-left")).toBe("300");
-    expect(probe.attributes("data-top")).toBe("220");
+    expect(probe.attributes("data-anchor-mode")).toBe("center");
+    expect(probe.attributes("data-left")).toBe("100");
+    expect(probe.attributes("data-top")).toBe("80");
+    expect(probe.attributes("data-width")).toBe("180");
+    expect(probe.attributes("data-height")).toBe("270");
 
     await card.trigger("pointermove", { clientX: 460, clientY: 260, pointerType: "mouse" });
     await nextTick();
 
-    expect(probe.attributes("data-left")).toBe("300");
-    expect(probe.attributes("data-top")).toBe("220");
+    expect(probe.attributes("data-left")).toBe("100");
+    expect(probe.attributes("data-top")).toBe("80");
+    expect(probe.attributes("data-width")).toBe("180");
+    expect(probe.attributes("data-height")).toBe("270");
 
+    rectSpy.mockRestore();
+    restoreHoverPreview();
+  });
+
+  it("centers the trailer preview layer over the hovered Home rail card", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+
+    const wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    const rectSpy = vi
+      .spyOn(card.element, "getBoundingClientRect")
+      .mockReturnValue(rect({ height: 270, left: 100, top: 80, width: 180 }));
+
+    await card.trigger("pointerenter", { clientX: 120, clientY: 100, pointerType: "mouse" });
+    await card.trigger("pointermove", { clientX: 260, clientY: 320, pointerType: "mouse" });
+    await new Promise((resolve) => window.setTimeout(resolve, 360));
+    await flushPromises();
+    await nextTick();
+
+    const centerLayer = document.body.querySelector(
+      ".movies-trailer-hover-card__center",
+    ) as HTMLElement | null;
+    expect(centerLayer).toBeInstanceOf(HTMLElement);
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-x")).toBe("190px");
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-y")).toBe("215px");
+    expect(centerLayer?.style.transform).toBe("translate3d(190px, 215px, 0) translate(-50%, -50%)");
+    expect(centerLayer?.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    rectSpy.mockRestore();
     restoreHoverPreview();
   });
 
@@ -909,6 +963,13 @@ describe("Movies app", () => {
     await settle();
 
     const cards = wrapper.findAll(".movies-home__rail .movie-card");
+    const firstRectSpy = vi
+      .spyOn(cards[0]!.element, "getBoundingClientRect")
+      .mockReturnValue(rect({ height: 270, left: 100, top: 80, width: 180 }));
+    const secondRectSpy = vi
+      .spyOn(cards[1]!.element, "getBoundingClientRect")
+      .mockReturnValue(rect({ height: 270, left: 320, top: 80, width: 180 }));
+
     await cards[0]!.trigger("pointerenter", { clientX: 240, clientY: 180, pointerType: "mouse" });
     await new Promise((resolve) => window.setTimeout(resolve, 360));
     await flushPromises();
@@ -918,19 +979,32 @@ describe("Movies app", () => {
     expect(document.body.querySelector(".movies-trailer-hover-card")?.textContent).toContain(
       "Fight Club",
     );
+    const centerLayer = document.body.querySelector(
+      ".movies-trailer-hover-card__center",
+    ) as HTMLElement | null;
+    expect(centerLayer).toBeInstanceOf(HTMLElement);
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-x")).toBe("190px");
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-y")).toBe("215px");
+    expect(centerLayer?.style.transform).toBe("translate3d(190px, 215px, 0) translate(-50%, -50%)");
 
-    await cards[1]!.trigger("pointerenter", { clientX: 420, clientY: 180, pointerType: "mouse" });
+    await cards[1]!.trigger("pointermove", { clientX: 420, clientY: 180, pointerType: "mouse" });
     await new Promise((resolve) => window.setTimeout(resolve, 120));
     await flushPromises();
     await nextTick();
 
     expect(document.body.querySelectorAll(".movies-trailer-hover-card")).toHaveLength(1);
+    expect(document.body.querySelector(".movies-trailer-hover-card__center")).toBe(centerLayer);
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-x")).toBe("410px");
+    expect(centerLayer?.style.getPropertyValue("--movies-trailer-preview-center-y")).toBe("215px");
+    expect(centerLayer?.style.transform).toBe("translate3d(410px, 215px, 0) translate(-50%, -50%)");
     expect(document.body.querySelector(".movies-trailer-hover-card")?.textContent).toContain(
       "Se7en",
     );
     expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 550);
     expect(fetchMovieTrailer).toHaveBeenCalledWith("movie", 551);
 
+    firstRectSpy.mockRestore();
+    secondRectSpy.mockRestore();
     restoreHoverPreview();
   });
 

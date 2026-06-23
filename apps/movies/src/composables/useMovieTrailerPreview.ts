@@ -21,7 +21,7 @@ const TRAILER_PREVIEW_POINTER_CLOSE_DELAY_MS = 360;
 const TRAILER_PREVIEW_OPEN_DELAY_MS = 280;
 const TRAILER_PREVIEW_SWITCH_DELAY_MS = 80;
 
-export type MovieTrailerPreviewAnchorMode = "cursor" | "element";
+export type MovieTrailerPreviewAnchorMode = "center" | "element";
 export type MovieTrailerPreviewReference =
   | Element
   | {
@@ -56,7 +56,7 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
   let closeTimer: number | undefined;
   let lastPointerPoint: { readonly x: number; readonly y: number } | null = null;
   let openTimer: number | undefined;
-  let pendingAnchorMode: MovieTrailerPreviewAnchorMode = "cursor";
+  let pendingAnchorMode: MovieTrailerPreviewAnchorMode = "center";
   let pendingMovieId: string | null = null;
   let pendingReference: MovieTrailerPreviewReference | undefined;
   let stopShellChangedListener: (() => void) | undefined;
@@ -102,7 +102,7 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
     }
     pendingMovieId = null;
     pendingReference = undefined;
-    pendingAnchorMode = "cursor";
+    pendingAnchorMode = "center";
   }
 
   function refreshEnvironment(): void {
@@ -139,7 +139,11 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
     }
 
     trackPointer(event);
-    const nextReference = referenceFromPointer(event);
+    const nextReference = referenceFromTarget(event);
+    if (nextReference === undefined) {
+      return;
+    }
+
     if (closeTimer !== undefined) {
       window.clearTimeout(closeTimer);
       closeTimer = undefined;
@@ -151,12 +155,12 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
     }
 
     if (pendingMovieId === nextMovie.id) {
-      setPendingReference(nextMovie, nextReference, "cursor");
+      setPendingReference(nextMovie, nextReference, "center");
       return;
     }
 
     clearOpenTimer();
-    setPendingReference(nextMovie, nextReference, "cursor");
+    setPendingReference(nextMovie, nextReference, "center");
     openTimer = window.setTimeout(
       () => {
         if (pendingMovieId === nextMovie.id && pendingReference !== undefined) {
@@ -165,7 +169,7 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
         openTimer = undefined;
         pendingMovieId = null;
         pendingReference = undefined;
-        pendingAnchorMode = "cursor";
+        pendingAnchorMode = "center";
       },
       movie.value === null ? TRAILER_PREVIEW_OPEN_DELAY_MS : TRAILER_PREVIEW_SWITCH_DELAY_MS,
     );
@@ -177,13 +181,15 @@ export function useMovieTrailerPreview(): UseMovieTrailerPreviewBindings {
     }
 
     trackPointer(event);
-    const nextReference = referenceFromPointer(event);
     if (pendingMovieId === nextMovie.id) {
-      setPendingReference(nextMovie, nextReference, "cursor");
+      const nextReference = referenceFromTarget(event);
+      if (nextReference !== undefined) {
+        setPendingReference(nextMovie, nextReference, "center");
+      }
       return;
     }
 
-    if (movie.value === null) {
+    if (movie.value?.id !== nextMovie.id) {
       showFromPointer(nextMovie, event);
     }
   }
@@ -324,28 +330,6 @@ function detectTrailerPreviewCapability(): boolean {
   }
 
   return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-}
-
-function pointRect(x: number, y: number): DOMRect {
-  return {
-    bottom: y,
-    height: 0,
-    left: x,
-    right: x,
-    top: y,
-    width: 0,
-    x,
-    y,
-    toJSON: () => ({ bottom: y, height: 0, left: x, right: x, top: y, width: 0, x, y }),
-  } as DOMRect;
-}
-
-function referenceFromPointer(event: PointerEvent): MovieTrailerPreviewReference {
-  const x = event.clientX;
-  const y = event.clientY;
-  return {
-    getBoundingClientRect: () => pointRect(x, y),
-  };
 }
 
 function referenceFromTarget(event: Event): MovieTrailerPreviewReference | undefined {
