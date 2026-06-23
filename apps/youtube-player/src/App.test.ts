@@ -816,6 +816,32 @@ describe("YouTube Player App", () => {
     wrapper.unmount();
   });
 
+  it("mutes requested autoplay before starting playback", async () => {
+    const wrapper = mount(YouTubePlayerSurface, {
+      props: {
+        autoplayRevision: 1,
+        controlsEnabled: false,
+        muted: true,
+        privacyEnhanced: true,
+        videoId: "IQsLEaj89bg",
+      },
+    });
+    const player = await waitForPlayer();
+    player.options.events?.onReady?.({ target: player } as YouTubePlayerEvent);
+    await nextTick();
+
+    expect(player.mute).toHaveBeenCalled();
+    expect(player.playVideo).toHaveBeenCalledTimes(1);
+    expect(player.mute.mock.invocationCallOrder[0]!).toBeLessThan(
+      player.playVideo.mock.invocationCallOrder[0]!,
+    );
+
+    const url = new URL(wrapper.get("iframe").attributes("src")!);
+    expect(url.searchParams.get("mute")).toBe("1");
+
+    wrapper.unmount();
+  });
+
   it("emits playback lifecycle events from player state changes", async () => {
     const wrapper = mount(YouTubePlayerSurface, {
       props: {

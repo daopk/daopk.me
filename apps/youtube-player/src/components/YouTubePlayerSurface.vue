@@ -29,6 +29,7 @@ const props = withDefaults(
     readonly autoplayRevision?: number;
     readonly controlsEnabled?: boolean;
     readonly fit?: AspectRatioFit;
+    readonly muted?: boolean;
     readonly overscan?: AspectRatioOverscan;
     readonly privacyEnhanced?: boolean;
     readonly resizeToAspectRatio?: boolean;
@@ -38,6 +39,7 @@ const props = withDefaults(
     autoplayRevision: 0,
     controlsEnabled: true,
     fit: "contain",
+    muted: false,
     overscan: 1,
     privacyEnhanced: false,
     resizeToAspectRatio: false,
@@ -62,6 +64,7 @@ const videoAspectRatio = ref<number | null>(null);
 const videoAspectRatioSource = ref<"metadata" | "poster" | null>(null);
 const activeVideoId = computed(() => props.videoId);
 const activeAutoplayRevision = computed(() => props.autoplayRevision);
+const activeMuted = computed(() => props.muted);
 let videoAspectRatioRequest: AbortController | null = null;
 
 const {
@@ -91,6 +94,7 @@ const {
   volumeValueText,
 } = useYouTubePlayer({
   autoplayRevision: activeAutoplayRevision,
+  muted: activeMuted,
   videoId: activeVideoId,
   playerHost,
 });
@@ -232,6 +236,7 @@ function submitManualVideo(): void {
         <YouTubeEmbed
           :has-video="hasVideo"
           :interactive="props.controlsEnabled"
+          :muted="props.muted"
           :privacy-enhanced="privacyEnhanced"
           :video-id="videoId"
           @host-change="setPlayerHost"

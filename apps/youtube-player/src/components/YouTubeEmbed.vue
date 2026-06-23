@@ -5,11 +5,13 @@ const props = withDefaults(
   defineProps<{
     hasVideo: boolean;
     interactive?: boolean;
+    muted?: boolean;
     privacyEnhanced?: boolean;
     videoId: string | null;
   }>(),
   {
     interactive: true,
+    muted: false,
     privacyEnhanced: false,
   },
 );
@@ -36,6 +38,10 @@ const embedSrc = computed(() => {
 
   if (typeof window !== "undefined") {
     params.set("origin", window.location.origin);
+  }
+
+  if (props.muted) {
+    params.set("mute", "1");
   }
 
   const origin = props.privacyEnhanced

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref } from "vue";
 
-import type { AppPreviewInput, AppPreviewSurface } from "@daopk/sdk";
+import { KernelInjectionKey, type AppPreviewInput, type AppPreviewSurface } from "@daopk/sdk";
 
 import YouTubePlayerSurface from "./YouTubePlayerSurface.vue";
 import type { AspectRatioFit, AspectRatioOverscan } from "../utils/aspectRatio";
@@ -23,6 +23,12 @@ const emit = defineEmits<{
   playing: [];
 }>();
 
+type ShellId = "desktop" | "mobile";
+
+const kernel = inject(KernelInjectionKey, null);
+const activeShellId = ref<ShellId>(detectActiveShell());
+let stopShellChangedListener: (() => void) | undefined;
+
 const videoId = computed(
   () =>
     videoIdFromLaunchArgs(props.args) ??
@@ -34,10 +40,22 @@ const autoplayRevision = computed(() =>
 );
 const controlsEnabled = computed(() => !isMoviesTrailer.value);
 const privacyEnhanced = computed(() => isMoviesTrailer.value);
+const muted = computed(() => isMoviesTrailer.value && activeShellId.value === "mobile");
 const fit = computed<AspectRatioFit>(() =>
   isMoviesTrailer.value && previewUrlParam(props.input, "fit") === "cover" ? "cover" : "contain",
 );
 const overscan = computed<AspectRatioOverscan>(() => (fit.value === "cover" ? "auto" : 1));
+
+onMounted(() => {
+  activeShellId.value = detectActiveShell();
+  stopShellChangedListener = kernel?.events.on?.("shell.changed", (payload) => {
+    activeShellId.value = payload.shellId;
+  });
+});
+
+onUnmounted(() => {
+  stopShellChangedListener?.();
+});
 
 function previewUrlParam(input: AppPreviewInput, key: string): string | null {
   if (input.kind !== "url") {
@@ -50,6 +68,15 @@ function previewUrlParam(input: AppPreviewInput, key: string): string | null {
     return null;
   }
 }
+
+function detectActiveShell(): ShellId {
+  if (typeof document === "undefined") {
+    return "desktop";
+  }
+
+  const shellId = document.documentElement.dataset.shell;
+  return shellId === "mobile" || shellId === "desktop" ? shellId : "desktop";
+}
 </script>
 
 <template>
@@ -60,6 +87,7 @@ function previewUrlParam(input: AppPreviewInput, key: string): string | null {
       :autoplay-revision="autoplayRevision"
       :controls-enabled="controlsEnabled"
       :fit="fit"
+      :muted="muted"
       :overscan="overscan"
       :privacy-enhanced="privacyEnhanced"
       @aspect-ratio-change="emit('aspect-ratio-change', $event)"

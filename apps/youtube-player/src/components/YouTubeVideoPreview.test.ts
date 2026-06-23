@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { defineComponent } from "vue";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import YouTubeVideoPreview from "./YouTubeVideoPreview.vue";
 
@@ -19,6 +19,10 @@ const YouTubePlayerSurfaceStub = defineComponent({
       default: "contain",
       type: String,
     },
+    muted: {
+      default: false,
+      type: Boolean,
+    },
     overscan: {
       default: 1,
       type: Number,
@@ -33,10 +37,14 @@ const YouTubePlayerSurfaceStub = defineComponent({
     },
   },
   template:
-    '<div class="shared-youtube-player" :data-autoplay-revision="String(autoplayRevision)" :data-controls-enabled="String(controlsEnabled)" :data-fit="fit" :data-overscan="String(overscan)" :data-privacy-enhanced="String(privacyEnhanced)" :data-video-id="videoId" @click="$emit(\'aspect-ratio-change\', 0.5625)" @dblclick="$emit(\'ended\')" @pointerdown="$emit(\'playing\')" />',
+    '<div class="shared-youtube-player" :data-autoplay-revision="String(autoplayRevision)" :data-controls-enabled="String(controlsEnabled)" :data-fit="fit" :data-muted="String(muted)" :data-overscan="String(overscan)" :data-privacy-enhanced="String(privacyEnhanced)" :data-video-id="videoId" @click="$emit(\'aspect-ratio-change\', 0.5625)" @dblclick="$emit(\'ended\')" @pointerdown="$emit(\'playing\')" />',
 });
 
 describe("YouTubeVideoPreview", () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.shell;
+  });
+
   it("renders the shared YouTube player surface for a video URL", () => {
     const wrapper = mount(YouTubeVideoPreview, {
       props: {
@@ -55,6 +63,7 @@ describe("YouTubeVideoPreview", () => {
     expect(wrapper.find(".shared-youtube-player").attributes("data-autoplay-revision")).toBe("0");
     expect(wrapper.find(".shared-youtube-player").attributes("data-controls-enabled")).toBe("true");
     expect(wrapper.find(".shared-youtube-player").attributes("data-fit")).toBe("contain");
+    expect(wrapper.find(".shared-youtube-player").attributes("data-muted")).toBe("false");
     expect(wrapper.find(".shared-youtube-player").attributes("data-overscan")).toBe("1");
     expect(wrapper.find(".shared-youtube-player").attributes("data-privacy-enhanced")).toBe(
       "false",
@@ -137,7 +146,33 @@ describe("YouTubeVideoPreview", () => {
       "data-autoplay-revision": "1",
       "data-controls-enabled": "false",
       "data-fit": "contain",
+      "data-muted": "false",
       "data-overscan": "1",
+      "data-privacy-enhanced": "true",
+      "data-video-id": "M7lc1UVf-VE",
+    });
+  });
+
+  it("mutes Movies trailer previews in the mobile shell", () => {
+    document.documentElement.dataset.shell = "mobile";
+
+    const wrapper = mount(YouTubeVideoPreview, {
+      props: {
+        input: { kind: "url", url: "youtube-player://video/M7lc1UVf-VE?autoplay=1&fit=cover" },
+        args: { autoplay: true, videoId: "M7lc1UVf-VE" },
+        surface: "movies.trailer",
+      },
+      global: {
+        stubs: {
+          YouTubePlayerSurface: YouTubePlayerSurfaceStub,
+        },
+      },
+    });
+
+    expect(wrapper.find(".shared-youtube-player").attributes()).toMatchObject({
+      "data-controls-enabled": "false",
+      "data-fit": "cover",
+      "data-muted": "true",
       "data-privacy-enhanced": "true",
       "data-video-id": "M7lc1UVf-VE",
     });
@@ -161,6 +196,7 @@ describe("YouTubeVideoPreview", () => {
       "data-autoplay-revision": "1",
       "data-controls-enabled": "false",
       "data-fit": "cover",
+      "data-muted": "false",
       "data-overscan": "auto",
       "data-privacy-enhanced": "true",
       "data-video-id": "M7lc1UVf-VE",
@@ -184,6 +220,7 @@ describe("YouTubeVideoPreview", () => {
     expect(wrapper.find(".shared-youtube-player").attributes()).toMatchObject({
       "data-autoplay-revision": "0",
       "data-controls-enabled": "true",
+      "data-muted": "false",
       "data-privacy-enhanced": "false",
       "data-video-id": "M7lc1UVf-VE",
     });

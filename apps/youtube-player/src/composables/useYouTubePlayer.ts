@@ -24,6 +24,7 @@ const SEEK_SETTLE_TOLERANCE_SECONDS = 1;
 
 export interface UseYouTubePlayerOptions {
   readonly autoplayRevision?: Readonly<Ref<number>>;
+  readonly muted?: Readonly<Ref<boolean>>;
   readonly videoId: Readonly<Ref<string | null>>;
   readonly playerHost: Ref<HTMLIFrameElement | null>;
 }
@@ -48,6 +49,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
   let lastAutoplayRevision = 0;
 
   const autoplayRevision = computed(() => options.autoplayRevision?.value ?? 0);
+  const requestedMuted = computed(() => options.muted?.value === true);
   const hasVideo = computed(() => options.videoId.value !== null);
   const playing = computed(
     () =>
@@ -92,10 +94,19 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     { immediate: true, flush: "post" },
   );
 
+  const stopMutedWatch = watch(
+    [ready, requestedMuted],
+    () => {
+      applyRequestedMute();
+    },
+    { immediate: true, flush: "post" },
+  );
+
   onBeforeUnmount(() => {
     initRun += 1;
     stopPlayerWatch();
     stopAutoplayWatch();
+    stopMutedWatch();
     destroyPlayer();
   });
 
@@ -177,6 +188,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
     syncVideoTitle();
     syncSnapshot();
     startPolling();
+    applyRequestedMute();
     maybeAutoplay();
   }
 
@@ -244,10 +256,20 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
       player.pauseVideo();
     } else {
       notice.value = null;
+      applyRequestedMute();
       player.playVideo();
     }
 
     syncSnapshot();
+  }
+
+  function applyRequestedMute(): void {
+    if (player === null || !ready.value || !requestedMuted.value || muted.value) {
+      return;
+    }
+
+    player.mute();
+    muted.value = true;
   }
 
   function maybeAutoplay(): void {
@@ -262,6 +284,7 @@ export function useYouTubePlayer(options: UseYouTubePlayerOptions) {
 
     lastAutoplayRevision = revision;
     notice.value = null;
+    applyRequestedMute();
     player.playVideo();
     syncSnapshot();
   }
