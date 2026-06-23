@@ -21,11 +21,16 @@ import {
 } from "~/core/routing/appBrowserPaths";
 import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
-import { documentPathFor, normalizeDocumentOpenPath } from "~/shells/shared/documentOpenRouting";
+import { documentPathFor } from "~/shells/shared/documentOpenRouting";
+import {
+  normalizeShellOpenRequestPath,
+  preferredManifestFrame,
+} from "~/shells/shared/shellOpenRequests";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import { useMobileNavigation } from "./useMobileNavigation";
 import { useAppViewTitle } from "./useAppViewTitle";
+import { useMobileLaunchState } from "./useMobileLaunchState";
 import type { AppManifest } from "~/types/app";
 
 const kernel = useKernel();
@@ -143,9 +148,13 @@ watch(
 
 useShellBrowserChromeSync(activeBrowserPath, activeBrowserTitle);
 
-const lastLaunchedManifestId = ref<string | null>(null);
-
-const launchingManifestIds = ref<ReadonlySet<string>>(new Set<string>());
+const {
+  addLaunching,
+  clearLaunching,
+  commitLaunched,
+  lastLaunchedManifestId,
+  launchingManifestIds,
+} = useMobileLaunchState();
 
 function manifestFor(manifestId: string): AppManifest | null {
   return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
@@ -171,21 +180,6 @@ function notifyUnsupportedManifest(manifest: AppManifest): void {
     title: "Not available on mobile",
     description: appUnsupportedShellMessage(manifest, "mobile"),
   });
-}
-
-function addLaunching(manifestId: string): void {
-  const next = new Set(launchingManifestIds.value);
-  next.add(manifestId);
-  launchingManifestIds.value = next;
-}
-
-function clearLaunching(manifestId: string): void {
-  if (!launchingManifestIds.value.has(manifestId)) {
-    return;
-  }
-  const next = new Set(launchingManifestIds.value);
-  next.delete(manifestId);
-  launchingManifestIds.value = next;
 }
 
 function onLaunch(
@@ -225,7 +219,7 @@ function onLaunch(
           emitAppResume(kernel.events, emission);
         }
       }
-      lastLaunchedManifestId.value = manifestId;
+      commitLaunched(manifestId);
     },
     () => {
       clearLaunching(manifestId);
@@ -246,7 +240,7 @@ function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>
   void nav.spawnNew(manifestId, args).then(
     () => {
       clearLaunching(manifestId);
-      lastLaunchedManifestId.value = manifestId;
+      commitLaunched(manifestId);
     },
     () => {
       clearLaunching(manifestId);
@@ -283,14 +277,14 @@ async function onEditorOpenRequested(path: string): Promise<void> {
       handleId: emptyFrame.handleId,
       path: normalizedPath,
     });
-    lastLaunchedManifestId.value = "editor";
+    commitLaunched("editor");
     return;
   }
 
   addLaunching("editor");
   try {
     await nav.spawnNew("editor", { path: normalizedPath });
-    lastLaunchedManifestId.value = "editor";
+    commitLaunched("editor");
   } finally {
     clearLaunching("editor");
   }
@@ -326,7 +320,7 @@ async function onBlogPostOpenRequested(path: string, slug: string): Promise<void
   addLaunching("blog");
   try {
     await nav.spawnNew("blog", { path: normalizedPath, slug });
-    lastLaunchedManifestId.value = "blog";
+    commitLaunched("blog");
   } finally {
     clearLaunching("blog");
   }
@@ -359,7 +353,7 @@ async function onPdfViewerOpenRequested(path: string): Promise<void> {
   addLaunching("pdf-viewer");
   try {
     await nav.spawnNew("pdf-viewer", { path: normalizedPath });
-    lastLaunchedManifestId.value = "pdf-viewer";
+    commitLaunched("pdf-viewer");
   } finally {
     clearLaunching("pdf-viewer");
   }
@@ -370,7 +364,7 @@ function normalizeEditorOpenPath(path: string): string | null {
 }
 
 function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  return normalizeDocumentOpenPath("[mobile-shell]", eventName, path);
+  return normalizeShellOpenRequestPath("[mobile-shell]", eventName, path);
 }
 
 function topmostEditorFrame(
@@ -383,17 +377,7 @@ function topmostFrameForManifest(
   manifestId: string,
   predicate: (frame: (typeof nav.stack)[number]) => boolean,
 ): (typeof nav.stack)[number] | null {
-  const candidates = nav.stack.filter(
-    (frame) => frame.manifestId === manifestId && predicate(frame),
-  );
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  return (
-    candidates.find((frame) => frame.frameId === nav.foreground.value) ??
-    candidates[candidates.length - 1]!
-  );
+  return preferredManifestFrame(nav.stack, nav.foreground.value, manifestId, predicate);
 }
 
 function onBack(): void {

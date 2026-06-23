@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, reactive, ref, useTemplateRef, watch } from "vue";
-import { useElementBounding, useResizeObserver } from "@vueuse/core";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 
 import { useToast } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
@@ -16,8 +15,11 @@ import {
   HOME_BROWSER_PATH,
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
-import { dockReveal, measureDockReveal } from "~/shells/desktop/dock/dockReveal";
-import { documentPathFor, normalizeDocumentOpenPath } from "~/shells/shared/documentOpenRouting";
+import { documentPathFor } from "~/shells/shared/documentOpenRouting";
+import {
+  normalizeShellOpenRequestPath,
+  topmostManifestRecord,
+} from "~/shells/shared/shellOpenRequests";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
 import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
@@ -25,16 +27,8 @@ import type { CommandContext } from "~/types/command";
 
 import SnapPreview from "./SnapPreview.vue";
 import Window from "./Window.vue";
-import {
-  DEFAULT_H,
-  DEFAULT_W,
-  MIN_H,
-  MIN_W,
-  TITLEBAR_HEIGHT,
-  useWindowManager,
-  type SnapEdge,
-  type StageSize,
-} from "./useWindowManager";
+import { TITLEBAR_HEIGHT, useWindowManager, type SnapEdge } from "./useWindowManager";
+import { useDesktopWindowStage } from "./useDesktopWindowStage";
 
 type AppLaunchSource = KernelEventPayloads["app.launch.requested"]["source"];
 
@@ -53,27 +47,14 @@ function notifyLaunchFailed(manifest: AppManifest): void {
   });
 }
 
-const hostRef = useTemplateRef<HTMLElement>("hostRef");
-const stageBounds = reactive({ width: 0, height: 0 });
-
-useResizeObserver(hostRef, (entries) => {
-  const entry = entries[0];
-
-  if (!entry) {
-    return;
-  }
-
-  stageBounds.width = entry.contentRect.width;
-  stageBounds.height = entry.contentRect.height;
-});
-
-// Stage offset is reactive on purpose — a future theme toggle / chrome change
-// (`ResizeObserver` + scroll), which never fire during a normal pointermove.
-const hostBounds = useElementBounding(hostRef);
-const stageOffset = computed(() => ({
-  x: hostBounds.left.value,
-  y: hostBounds.top.value,
-}));
+const {
+  centeredInitialPosition,
+  maximizeStageSize,
+  measuredStageSize,
+  stageBounds,
+  stageForSnap,
+  stageOffset,
+} = useDesktopWindowStage();
 
 function defaultWindowSize(manifest: AppManifest): { width: number; height: number } | undefined {
   return manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
@@ -104,77 +85,9 @@ function onSnapIntent(id: string, edge: SnapEdge | null): void {
   activeSnap.value = { id, edge };
 }
 
-function measuredStageSize(): StageSize {
-  if (stageBounds.width > 0 && stageBounds.height > 0) {
-    return { width: stageBounds.width, height: stageBounds.height };
-  }
-
-  const rect = hostRef.value?.getBoundingClientRect();
-  return {
-    width: rect?.width ?? 0,
-    height: rect?.height ?? 0,
-  };
-}
-
-function maximizeStageSize(): StageSize {
-  const stage = measuredStageSize();
-  const host = hostRef.value;
-
-  if (host === null || stage.width <= 0 || stage.height <= 0) {
-    return stage;
-  }
-
-  if (!dockReveal.present || !dockReveal.occupiesStage) {
-    return stage;
-  }
-
-  const dockRect = measureDockReveal();
-  if (dockRect === null) {
-    return stage;
-  }
-
-  const hostRect = host.getBoundingClientRect();
-  const dockTop = dockRect.top - hostRect.top;
-
-  if (dockRect.height <= 0 || dockTop <= 0 || dockTop >= stage.height) {
-    return stage;
-  }
-
-  return {
-    width: stage.width,
-    height: dockTop,
-  };
-}
-
-function stageForSnap(edge: SnapEdge): StageSize {
-  return edge === "max" ? maximizeStageSize() : stageBounds;
-}
-
 const snapPreviewStage = computed(() =>
   activeSnap.value?.edge === "max" ? maximizeStageSize() : stageBounds,
 );
-
-function centeredInitialPosition(
-  source: AppLaunchSource,
-  size?: { width: number; height: number },
-): { x: number; y: number } | undefined {
-  if (source !== "deeplink") {
-    return undefined;
-  }
-
-  const stage = measuredStageSize();
-  if (stage.width <= 0 || stage.height <= 0) {
-    return undefined;
-  }
-
-  const width = Math.max(size?.width ?? DEFAULT_W, MIN_W);
-  const height = Math.max(size?.height ?? DEFAULT_H, MIN_H);
-
-  return {
-    x: Math.max(0, Math.floor((stage.width - width) / 2)),
-    y: Math.max(0, Math.floor((stage.height - height) / 2)),
-  };
-}
 
 watch(
   () => [stageBounds.width, stageBounds.height] as const,
@@ -547,7 +460,7 @@ function normalizeEditorOpenPath(path: string): string | null {
 }
 
 function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  return normalizeDocumentOpenPath("[window-host]", eventName, path);
+  return normalizeShellOpenRequestPath("[window-host]", eventName, path);
 }
 
 function topmostEditorWindow(
@@ -560,18 +473,7 @@ function topmostWindowForManifest(
   manifestId: string,
   predicate: (record: DesktopWindowRecord) => boolean,
 ): DesktopWindowRecord | null {
-  let topmost: DesktopWindowRecord | null = null;
-
-  for (const record of windowManager.windows) {
-    if (record.manifestId !== manifestId || !predicate(record)) {
-      continue;
-    }
-    if (topmost === null || record.z > topmost.z) {
-      topmost = record;
-    }
-  }
-
-  return topmost;
+  return topmostManifestRecord(windowManager.windows, manifestId, predicate);
 }
 
 async function openNewEditorWindow(path: string): Promise<void> {
