@@ -16,7 +16,13 @@
   cursor: pointer;
   inline-size: var(
     --movies-player-stage-inline-size,
-    min(100%, calc(var(--movies-player-fit-block-size, 100%) * 16 / 9))
+    min(
+      100%,
+      calc(
+        var(--movies-player-fit-block-size, 100%) *
+          var(--movies-player-stage-aspect-ratio-value, 1.777778)
+      )
+    )
   );
   min-block-size: 0;
   min-inline-size: 0;

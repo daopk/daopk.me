@@ -437,9 +437,7 @@ defineExpose({
 }
 
 .movies-watch__player {
-  --movies-player-stage-block-size: var(--movies-player-fit-block-size, auto);
-  --movies-player-stage-inline-size: 100%;
-  --movies-player-video-fit: cover;
+  --movies-player-video-fit: contain;
 
   inline-size: 100%;
 }

@@ -63,6 +63,7 @@ const SURFACE_CLICK_DELAY_MS = 220;
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const VOLUME_STEP = 0.1;
 const KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS = 1200;
+const MAX_ASPECT_RATIO_PRECISION = 6;
 
 const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   autoplay: false,
@@ -410,6 +411,7 @@ onBeforeUnmount(() => {
 function resetPlaybackState(): void {
   clearPlaybackError();
   resetHlsSourceState();
+  resetVideoAspectRatio();
   currentTime.value = 0;
   duration.value = 0;
   bufferedEnd.value = 0;
@@ -611,8 +613,40 @@ function updateBufferedEnd(): void {
 
 function onLoadedMetadata(): void {
   metadataLoaded.value = true;
+  syncVideoAspectRatio();
   syncMediaState();
   applySavedPlaybackProgress();
+}
+
+function syncVideoAspectRatio(): void {
+  const stage = playerShell.value;
+  const video = videoElement.value;
+  if (stage === null || video === null) {
+    return;
+  }
+
+  const width = video.videoWidth;
+  const height = video.videoHeight;
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    resetVideoAspectRatio();
+    return;
+  }
+
+  stage.style.setProperty("--movies-player-stage-aspect-ratio", `${width} / ${height}`);
+  stage.style.setProperty(
+    "--movies-player-stage-aspect-ratio-value",
+    String(Number((width / height).toFixed(MAX_ASPECT_RATIO_PRECISION))),
+  );
+}
+
+function resetVideoAspectRatio(): void {
+  const stage = playerShell.value;
+  if (stage === null) {
+    return;
+  }
+
+  stage.style.removeProperty("--movies-player-stage-aspect-ratio");
+  stage.style.removeProperty("--movies-player-stage-aspect-ratio-value");
 }
 
 function onTimeUpdate(): void {
@@ -911,6 +945,7 @@ function adMarkerGradientLayer(marker: HlsPlaybackAdMarker, totalDurationSeconds
         @playing="onVideoCanPlay"
         @progress="onProgress"
         @ratechange="syncMediaState"
+        @resize="syncVideoAspectRatio"
         @timeupdate="onTimeUpdate"
         @volumechange="syncMediaState"
         @waiting="onVideoWaiting"

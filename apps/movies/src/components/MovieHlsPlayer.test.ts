@@ -388,6 +388,20 @@ function setMediaMetrics(
   video.dispatchEvent(new Event("progress"));
 }
 
+function setVideoDimensions(
+  video: HTMLVideoElement,
+  options: { height: number; width: number },
+): void {
+  Object.defineProperty(video, "videoWidth", {
+    configurable: true,
+    value: options.width,
+  });
+  Object.defineProperty(video, "videoHeight", {
+    configurable: true,
+    value: options.height,
+  });
+}
+
 function setProgressRect(element: Element, options: { left?: number; width?: number } = {}): void {
   const left = options.left ?? 0;
   const width = options.width ?? 216;
@@ -496,6 +510,20 @@ describe("MovieHlsPlayer", () => {
       "https://stream.example.test/fight-club/master.m3u8",
     );
     expect(hlsMock.instances[0]!.attachMedia).toHaveBeenCalledWith(video);
+  });
+
+  it("sizes the player stage from the loaded video dimensions", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+
+    const stage = wrapper.get(".movies-hls-player__stage").element as HTMLElement;
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setVideoDimensions(video, { height: 1920, width: 1080 });
+    video.dispatchEvent(new Event("loadedmetadata"));
+    await settle();
+
+    expect(stage.style.getPropertyValue("--movies-player-stage-aspect-ratio")).toBe("1080 / 1920");
+    expect(stage.style.getPropertyValue("--movies-player-stage-aspect-ratio-value")).toBe("0.5625");
   });
 
   it("renders HLS ad markers on the seek track", async () => {
@@ -888,9 +916,7 @@ content-c.ts
 
     expect(wrapper.find(".movies-hls-player__top-actions").exists()).toBe(true);
     expect(
-      wrapper
-        .find(".movies-hls-player__top-actions .movies-hls-player__volume-popover")
-        .exists(),
+      wrapper.find(".movies-hls-player__top-actions .movies-hls-player__volume-popover").exists(),
     ).toBe(false);
 
     click(topbarVolumeButton(wrapper, "Mute").element);
