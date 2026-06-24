@@ -437,6 +437,7 @@ async function playVideo(options: { ignoreBlocked?: boolean } = {}): Promise<voi
   }
 
   try {
+    applyPlaybackSpeed(video);
     await video.play();
     playing.value = true;
     scheduleAutoHideControls();
@@ -613,6 +614,7 @@ function updateBufferedEnd(): void {
 
 function onLoadedMetadata(): void {
   metadataLoaded.value = true;
+  applyPlaybackSpeed(videoElement.value);
   syncVideoAspectRatio();
   syncMediaState();
   applySavedPlaybackProgress();
@@ -659,6 +661,7 @@ function onProgress(): void {
 }
 
 function onVideoPlay(): void {
+  applyPlaybackSpeed(videoElement.value);
   playing.value = true;
   waiting.value = false;
   scheduleAutoHideControls();
@@ -680,6 +683,7 @@ function onVideoWaiting(): void {
 }
 
 function onVideoCanPlay(): void {
+  applyPlaybackSpeed(videoElement.value);
   waiting.value = false;
   suppressControlsRevealUntilMs = 0;
   syncMediaState();

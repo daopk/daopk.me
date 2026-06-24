@@ -68,6 +68,10 @@ const fullscreenDescriptors = {
     HTMLVideoElement.prototype,
     "disablePictureInPicture",
   ),
+  videoDefaultPlaybackRate: Object.getOwnPropertyDescriptor(
+    HTMLMediaElement.prototype,
+    "defaultPlaybackRate",
+  ),
   videoRequestPictureInPicture: Object.getOwnPropertyDescriptor(
     HTMLVideoElement.prototype,
     "requestPictureInPicture",
@@ -299,6 +303,11 @@ function restoreFullscreenProperties(): void {
     fullscreenDescriptors.videoDisablePictureInPicture,
   );
   restoreProperty(
+    HTMLMediaElement.prototype,
+    "defaultPlaybackRate",
+    fullscreenDescriptors.videoDefaultPlaybackRate,
+  );
+  restoreProperty(
     HTMLVideoElement.prototype,
     "requestPictureInPicture",
     fullscreenDescriptors.videoRequestPictureInPicture,
@@ -343,6 +352,11 @@ function setMediaSupport(options: { nativeHls: boolean; hlsJs: boolean }): void 
     writable: true,
   });
   Object.defineProperty(HTMLMediaElement.prototype, "playbackRate", {
+    configurable: true,
+    value: 1,
+    writable: true,
+  });
+  Object.defineProperty(HTMLMediaElement.prototype, "defaultPlaybackRate", {
     configurable: true,
     value: 1,
     writable: true,
@@ -1236,6 +1250,42 @@ content-c.ts
     expect(hlsMock.instances[1]!.loadSource).toHaveBeenCalledWith(
       "https://stream.example.test/fight-club/alt.m3u8",
     );
+  });
+
+  it("reapplies playback speed if the media element resets after loading a new source", async () => {
+    const wrapper = mountPlayer({
+      play: playInfo({
+        sources: [
+          playInfo().sources[0]!,
+          {
+            embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+            filename: "fight-club-alt.m3u8",
+            m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+            name: "Alt",
+            serverName: "Server 2",
+            slug: "alt",
+          },
+        ],
+      }),
+    });
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    await openSettings(wrapper);
+    click(menuRadioItem("1.5x"));
+    await settle();
+
+    await wrapper.setProps({ sourceIndex: 1 });
+    await settle();
+    video.playbackRate = 1;
+    video.defaultPlaybackRate = 1;
+
+    video.dispatchEvent(new Event("loadedmetadata"));
+    await settle();
+
+    expect(video.defaultPlaybackRate).toBe(1.5);
+    expect(video.playbackRate).toBe(1.5);
+    expect(wrapper.get(".movies-hls-player__source-status").text()).toContain("1.5x");
   });
 
   it("keeps the settings menu inside the fullscreen player stage", async () => {

@@ -27,6 +27,7 @@ import type {
 import {
   episodePlaybackProgressKey,
   moviePlaybackProgressKey,
+  moviesPlaybackProgressSourceSnapshot,
   MOVIES_PLAYBACK_PROGRESS_KV_KEY,
   type MoviesPlaybackProgressEntry,
   type MoviesPlaybackProgressState,
@@ -830,9 +831,7 @@ describe("Movies app", () => {
     expect(fetchMovieTrailer).not.toHaveBeenCalled();
     expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
 
-    await waitForMs(
-      TRAILER_PREVIEW_TEST_OPEN_DELAY_MS - TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS,
-    );
+    await waitForMs(TRAILER_PREVIEW_TEST_OPEN_DELAY_MS - TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS);
     await flushPromises();
     await nextTick();
 
@@ -2782,8 +2781,48 @@ describe("Movies app", () => {
     window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/1");
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
     const season = seasonDetail();
-    const firstEpisode = { ...season.episodes[0]!, play: playInfo({ slug: "planet-cinema-1" }) };
-    const secondEpisode = { ...season.episodes[1]!, play: playInfo({ slug: "planet-cinema-2" }) };
+    const firstPrimarySource = playSource({
+      filename: "planet-cinema-e1-main.m3u8",
+      m3u8Url: "https://stream.example.test/planet-cinema/e1/main.m3u8",
+      name: "Main",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const firstBackupSource = playSource({
+      filename: "planet-cinema-e1-backup.m3u8",
+      m3u8Url: "https://stream.example.test/planet-cinema/e1/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    const secondPrimarySource = playSource({
+      filename: "planet-cinema-e2-main.m3u8",
+      m3u8Url: "https://stream.example.test/planet-cinema/e2/main.m3u8",
+      name: "Main",
+      serverName: "Server 1",
+      slug: "main",
+    });
+    const secondBackupSource = playSource({
+      filename: "planet-cinema-e2-backup.m3u8",
+      m3u8Url: "https://stream.example.test/planet-cinema/e2/backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    });
+    const firstEpisode = {
+      ...season.episodes[0]!,
+      play: playInfo({
+        slug: "planet-cinema-1",
+        sources: [firstPrimarySource, firstBackupSource],
+      }),
+    };
+    const secondEpisode = {
+      ...season.episodes[1]!,
+      play: playInfo({
+        slug: "planet-cinema-2",
+        sources: [secondPrimarySource, secondBackupSource],
+      }),
+    };
     const playableSeason = { ...season, episodes: [firstEpisode, secondEpisode] };
     vi.mocked(fetchMovieEpisode).mockImplementation(async (_tmdbId, _seasonNumber, episodeNumber) =>
       episodeDetail({
@@ -2791,6 +2830,12 @@ describe("Movies app", () => {
         season: playableSeason,
       }),
     );
+    persistAppProgress(episodePlaybackProgressKey(1399, 1, 1), {
+      currentTime: 42,
+      duration: 120,
+      source: moviesPlaybackProgressSourceSnapshot(firstBackupSource, 1),
+      updatedAt: Date.now(),
+    });
 
     const wrapper = mount(App);
     await settle();
@@ -2802,6 +2847,7 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-next-episode-label")).toBe(
       "Next episode: Episode 2 - The Edit",
     );
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
 
     wrapper.getComponent({ name: "MovieHlsPlayer" }).vm.$emit("update:playbackSpeed", 1.5);
     await settle();
@@ -2814,6 +2860,7 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
       episodePlaybackProgressKey(1399, 1, 2),
     );
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
     expect(wrapper.get(".movies-hls-player").attributes("data-playback-speed")).toBe("1.5");
     expect(wrapper.get(".movies-hls-player").attributes("data-title")).toBe("The Edit");
     expect(wrapper.find(".movies-hls-player__next-episode-button").exists()).toBe(false);

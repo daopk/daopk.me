@@ -104,6 +104,7 @@ export function useMoviePlaybackState({
 
   function applyPlaybackSpeed(video: HTMLVideoElement | null): void {
     if (video !== null) {
+      video.defaultPlaybackRate = playbackSpeed.value;
       video.playbackRate = playbackSpeed.value;
     }
   }

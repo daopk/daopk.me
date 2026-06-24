@@ -279,16 +279,20 @@ function restoreSavedSourceIndex(): void {
 
 function selectSource(index: number): void {
   selectedSourceIndex.value = index;
+  saveSelectedSourcePreference();
+}
 
-  const source = play.value?.sources[index];
+function saveSelectedSourcePreference(): void {
+  const source = play.value?.sources[selectedSourceIndex.value];
   if (source !== undefined) {
-    sourcePreferenceStore.save(moviesSourcePreferenceSnapshot(source, index));
+    sourcePreferenceStore.save(moviesSourcePreferenceSnapshot(source, selectedSourceIndex.value));
   }
 }
 
 function watchNextEpisode(): void {
   const target = nextEpisodeTarget.value;
   if (target !== null) {
+    saveSelectedSourcePreference();
     emit("watch-episode", target);
   }
 }
@@ -299,6 +303,7 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
     return;
   }
 
+  saveSelectedSourcePreference();
   emit("watch-episode", {
     episodeNumber: episode.episodeNumber,
     seasonNumber: episode.seasonNumber,
