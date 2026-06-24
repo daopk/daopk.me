@@ -18,7 +18,7 @@ import type { ShellId } from "~/types/shell";
 
 const TRAILER_PREVIEW_CLOSE_DELAY_MS = 120;
 const TRAILER_PREVIEW_POINTER_CLOSE_DELAY_MS = 360;
-const TRAILER_PREVIEW_OPEN_DELAY_MS = 2_000;
+const TRAILER_PREVIEW_OPEN_DELAY_MS = 1_000;
 const TRAILER_PREVIEW_SWITCH_DELAY_MS = 80;
 
 export type MovieTrailerPreviewAnchorMode = "center" | "element";

@@ -177,8 +177,8 @@ function trailerResult(
 
 const APP_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
 const APP_SOURCE_PREFERENCE_STORAGE_KEY = `movies:${MOVIES_SOURCE_PREFERENCE_KV_KEY}`;
-const TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS = 1_900;
-const TRAILER_PREVIEW_TEST_OPEN_DELAY_MS = 2_100;
+const TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS = 900;
+const TRAILER_PREVIEW_TEST_OPEN_DELAY_MS = 1_100;
 
 function persistAppProgress(
   key: string,
@@ -814,7 +814,7 @@ describe("Movies app", () => {
     restoreHoverPreview();
   });
 
-  it("waits two seconds before opening a Home rail trailer preview", async () => {
+  it("waits one second before opening a Home rail trailer preview", async () => {
     const restoreHoverPreview = stubHoverPreviewCapability();
 
     const wrapper = mount(App, { attachTo: document.body });
