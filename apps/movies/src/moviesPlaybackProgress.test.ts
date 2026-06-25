@@ -222,6 +222,38 @@ describe("moviesPlaybackProgress", () => {
     ).toBe(1);
   });
 
+  it("resolves saved source snapshots by server before slug-only matches", () => {
+    const savedSource = playSource({
+      m3u8Url: "https://stream.example.test/fight-club/old-backup.m3u8",
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "shared",
+    });
+    const progress = {
+      currentTime: 30,
+      duration: 120,
+      source: moviesPlaybackProgressSourceSnapshot(savedSource, 1),
+      updatedAt: 2_000,
+    };
+
+    expect(
+      resolveMoviesPlaybackProgressSourceIndex(progress, [
+        playSource({
+          m3u8Url: "https://stream.example.test/fight-club/new-main.m3u8",
+          name: "Full",
+          serverName: "Server 1",
+          slug: "shared",
+        }),
+        playSource({
+          m3u8Url: "https://stream.example.test/fight-club/new-backup.m3u8",
+          name: "Alternate",
+          serverName: "Server 2",
+          slug: "alternate",
+        }),
+      ]),
+    ).toBe(1);
+  });
+
   it("falls back to the first source when saved source is unavailable", () => {
     const progress = {
       currentTime: 30,

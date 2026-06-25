@@ -168,6 +168,26 @@ export function resolveMoviesPlaybackProgressSourceIndex(
     return slugServerMatch;
   }
 
+  const serverNameMatch = sourceIndexBy(
+    sources,
+    (source) =>
+      savedSource.serverName.length > 0 &&
+      savedSource.name.length > 0 &&
+      source.serverName === savedSource.serverName &&
+      source.name === savedSource.name,
+  );
+  if (serverNameMatch !== null) {
+    return serverNameMatch;
+  }
+
+  const serverOnlyMatch = sourceIndexBy(
+    sources,
+    (source) => savedSource.serverName.length > 0 && source.serverName === savedSource.serverName,
+  );
+  if (serverOnlyMatch !== null) {
+    return serverOnlyMatch;
+  }
+
   const slugMatch = sourceIndexBy(
     sources,
     (source) => savedSource.slug.length > 0 && source.slug === savedSource.slug,

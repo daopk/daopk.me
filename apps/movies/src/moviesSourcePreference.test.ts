@@ -86,6 +86,34 @@ describe("moviesSourcePreference", () => {
     ).toBe(1);
   });
 
+  it("prefers server matches before slug-only matches", () => {
+    const preference = moviesSourcePreferenceSnapshot(
+      playSource({ name: "Backup", serverName: "Server 2", slug: "shared" }),
+      1,
+    );
+
+    expect(
+      resolveMoviesPreferredSourceIndex(preference, [
+        playSource({ name: "Full", serverName: "Server 1", slug: "shared" }),
+        playSource({ name: "Backup", serverName: "Server 2", slug: "episode-backup" }),
+      ]),
+    ).toBe(1);
+  });
+
+  it("falls back to the same server when the source label changes", () => {
+    const preference = moviesSourcePreferenceSnapshot(
+      playSource({ name: "Backup", serverName: "Server 2", slug: "backup" }),
+      1,
+    );
+
+    expect(
+      resolveMoviesPreferredSourceIndex(preference, [
+        playSource({ name: "Full", serverName: "Server 1", slug: "backup" }),
+        playSource({ name: "Alternate", serverName: "Server 2", slug: "alternate" }),
+      ]),
+    ).toBe(1);
+  });
+
   it("falls back to server and name when slug is unavailable", () => {
     const preference = moviesSourcePreferenceSnapshot(
       playSource({ name: "Backup", serverName: "Server 2", slug: "" }),

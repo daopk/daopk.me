@@ -199,6 +199,34 @@ describe("moviesRoutes", () => {
     ).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 
+  it("keeps transient source preference on watch views without changing the public path", () => {
+    const view = movieEpisodeWatchViewFromTarget(
+      {
+        episodeNumber: 2,
+        seasonNumber: 1,
+        slug: "planet-cinema",
+        tmdbId: 1399,
+      },
+      {
+        sourcePreference: {
+          filename: "backup.m3u8",
+          index: 1,
+          name: "Backup",
+          serverName: "Server 2",
+          slug: "backup",
+        },
+      },
+    );
+
+    expect(view).toEqual(
+      expect.objectContaining({
+        name: "watch",
+        sourcePreference: expect.objectContaining({ serverName: "Server 2" }),
+      }),
+    );
+    expect(moviesPathForView(view)).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+  });
+
   it("builds person routes from credits and ignores missing TMDB ids", () => {
     const person: MoviePersonCredit = {
       episodeCount: null,

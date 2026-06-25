@@ -55,14 +55,6 @@ export function resolveMoviesPreferredSourceIndex(
     return slugServerMatch;
   }
 
-  const slugMatch = sourceIndexBy(
-    sources,
-    (source) => preference.slug.length > 0 && source.slug === preference.slug,
-  );
-  if (slugMatch !== null) {
-    return slugMatch;
-  }
-
   const serverNameMatch = sourceIndexBy(
     sources,
     (source) =>
@@ -71,7 +63,23 @@ export function resolveMoviesPreferredSourceIndex(
       source.serverName === preference.serverName &&
       source.name === preference.name,
   );
-  return serverNameMatch ?? 0;
+  if (serverNameMatch !== null) {
+    return serverNameMatch;
+  }
+
+  const serverOnlyMatch = sourceIndexBy(
+    sources,
+    (source) => preference.serverName.length > 0 && source.serverName === preference.serverName,
+  );
+  if (serverOnlyMatch !== null) {
+    return serverOnlyMatch;
+  }
+
+  const slugMatch = sourceIndexBy(
+    sources,
+    (source) => preference.slug.length > 0 && source.slug === preference.slug,
+  );
+  return slugMatch ?? 0;
 }
 
 export function createMoviesSourcePreferenceStore(

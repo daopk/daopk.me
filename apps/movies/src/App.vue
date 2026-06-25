@@ -14,7 +14,8 @@ import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 import { useMoviesI18n } from "./i18n/useMoviesI18n";
-import type { MoviesListQuery } from "./moviesApi";
+import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
+import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
 
 type WatchViewInstance = InstanceType<typeof WatchView> & {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
@@ -22,6 +23,11 @@ type WatchViewInstance = InstanceType<typeof WatchView> & {
 
 interface AppFrameRef {
   element: HTMLElement | null;
+}
+
+interface WatchEpisodeRequest {
+  readonly sourcePreference: MoviesSourcePreferenceSnapshot | null;
+  readonly target: MovieEpisodeTarget;
 }
 
 const ctx = inject(AppContextInjectionKey, null);
@@ -85,6 +91,14 @@ function onMoviesKeydown(event: KeyboardEvent): void {
 
 function openToolbarList(query: MoviesListQuery): void {
   openList(query, { replace: view.value.name === "list" });
+}
+
+function openWatchEpisode(request: WatchEpisodeRequest): void {
+  openEpisodeWatch(request.target, {
+    autoplay: true,
+    replace: true,
+    sourcePreference: request.sourcePreference,
+  });
 }
 
 onMounted(() => {
@@ -179,10 +193,11 @@ onUnmounted(() => {
       v-else-if="view.name === 'watch'"
       ref="watchViewRef"
       :autoplay="view.autoplay === true"
+      :source-preference="view.sourcePreference ?? null"
       :target="view.target"
       @scroll="updateToolbarSolid"
       @back="goBack"
-      @watch-episode="openEpisodeWatch($event, { autoplay: true, replace: true })"
+      @watch-episode="openWatchEpisode"
     />
     <PersonView
       v-else

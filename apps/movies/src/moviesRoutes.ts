@@ -6,6 +6,7 @@ import {
   type MovieSummary,
   type MoviesListQuery,
 } from "./moviesApi";
+import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
 import { movieSlugFromText } from "./utils/movieSlug";
 
 export type MoviesView =
@@ -39,7 +40,12 @@ export type MoviesView =
       readonly title?: string;
       readonly tmdbId: number;
     }
-  | { readonly autoplay?: boolean; readonly name: "watch"; readonly target: MoviesWatchTarget };
+  | {
+      readonly autoplay?: boolean;
+      readonly name: "watch";
+      readonly sourcePreference?: MoviesSourcePreferenceSnapshot;
+      readonly target: MoviesWatchTarget;
+    };
 
 export type MoviesWatchTarget =
   | {
@@ -120,10 +126,16 @@ export function movieEpisodeViewFromTarget(request: MovieEpisodeTarget): MoviesV
 
 export function movieWatchViewFromSummary(
   movie: MovieSummary,
-  options: { readonly autoplay?: boolean } = {},
+  options: {
+    readonly autoplay?: boolean;
+    readonly sourcePreference?: MoviesSourcePreferenceSnapshot | null;
+  } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
+    ...(options.sourcePreference === undefined || options.sourcePreference === null
+      ? {}
+      : { sourcePreference: options.sourcePreference }),
     name: "watch",
     target: {
       kind: "movie",
@@ -136,10 +148,16 @@ export function movieWatchViewFromSummary(
 
 export function movieEpisodeWatchViewFromTarget(
   request: MovieEpisodeTarget,
-  options: { readonly autoplay?: boolean } = {},
+  options: {
+    readonly autoplay?: boolean;
+    readonly sourcePreference?: MoviesSourcePreferenceSnapshot | null;
+  } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
+    ...(options.sourcePreference === undefined || options.sourcePreference === null
+      ? {}
+      : { sourcePreference: options.sourcePreference }),
     name: "watch",
     target: {
       episodeNumber: request.episodeNumber,

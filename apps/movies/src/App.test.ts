@@ -2830,11 +2830,19 @@ describe("Movies app", () => {
         season: playableSeason,
       }),
     );
-    persistAppProgress(episodePlaybackProgressKey(1399, 1, 1), {
-      currentTime: 42,
-      duration: 120,
-      source: moviesPlaybackProgressSourceSnapshot(firstBackupSource, 1),
-      updatedAt: Date.now(),
+    persistAppProgressEntries({
+      [episodePlaybackProgressKey(1399, 1, 1)]: {
+        currentTime: 42,
+        duration: 120,
+        source: moviesPlaybackProgressSourceSnapshot(firstBackupSource, 1),
+        updatedAt: Date.now(),
+      },
+      [episodePlaybackProgressKey(1399, 1, 2)]: {
+        currentTime: 42,
+        duration: 120,
+        source: moviesPlaybackProgressSourceSnapshot(secondPrimarySource, 0),
+        updatedAt: Date.now(),
+      },
     });
 
     const wrapper = mount(App);

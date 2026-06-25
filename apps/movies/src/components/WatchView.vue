@@ -34,6 +34,7 @@ import {
   createMoviesSourcePreferenceStore,
   moviesSourcePreferenceSnapshot,
   resolveMoviesPreferredSourceIndex,
+  type MoviesSourcePreferenceSnapshot,
 } from "../moviesSourcePreference";
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
@@ -44,16 +45,23 @@ type MovieHlsPlayerInstance = InstanceType<typeof MovieHlsPlayer> & {
 
 interface WatchViewProps {
   autoplay?: boolean;
+  sourcePreference?: MoviesSourcePreferenceSnapshot | null;
   target: MoviesWatchTarget;
 }
 
 const props = withDefaults(defineProps<WatchViewProps>(), {
   autoplay: false,
+  sourcePreference: null,
 });
+
+interface WatchEpisodeRequest {
+  readonly sourcePreference: MoviesSourcePreferenceSnapshot | null;
+  readonly target: MovieEpisodeTarget;
+}
 
 const emit = defineEmits<{
   back: [];
-  "watch-episode": [request: MovieEpisodeTarget];
+  "watch-episode": [request: WatchEpisodeRequest];
 }>();
 
 const state = ref<LoadState>("loading");
@@ -188,7 +196,7 @@ const nextEpisodeLabel = computed(() => {
 });
 
 watch(
-  () => [props.target, locale.value] as const,
+  () => [props.target, props.sourcePreference, locale.value] as const,
   () => {
     void loadTarget();
   },
@@ -253,7 +261,7 @@ async function loadTarget(): Promise<void> {
         { signal: controller.signal },
       );
     }
-    restoreSavedSourceIndex();
+    restoreSavedSourceIndex(props.sourcePreference);
     state.value = "ready";
   } catch {
     if (controller.signal.aborted) {
@@ -263,7 +271,9 @@ async function loadTarget(): Promise<void> {
   }
 }
 
-function restoreSavedSourceIndex(): void {
+function restoreSavedSourceIndex(
+  sourcePreferenceOverride: MoviesSourcePreferenceSnapshot | null = null,
+): void {
   const currentPlay = play.value;
   if (currentPlay === null) {
     selectedSourceIndex.value = 0;
@@ -272,9 +282,11 @@ function restoreSavedSourceIndex(): void {
 
   const progress = playbackProgressStore.get(progressKey.value);
   selectedSourceIndex.value =
-    progress?.source === undefined
-      ? resolveMoviesPreferredSourceIndex(sourcePreferenceStore.get(), currentPlay.sources)
-      : resolveMoviesPlaybackProgressSourceIndex(progress, currentPlay.sources);
+    sourcePreferenceOverride !== null
+      ? resolveMoviesPreferredSourceIndex(sourcePreferenceOverride, currentPlay.sources)
+      : progress?.source === undefined
+        ? resolveMoviesPreferredSourceIndex(sourcePreferenceStore.get(), currentPlay.sources)
+        : resolveMoviesPlaybackProgressSourceIndex(progress, currentPlay.sources);
 }
 
 function selectSource(index: number): void {
@@ -282,18 +294,24 @@ function selectSource(index: number): void {
   saveSelectedSourcePreference();
 }
 
-function saveSelectedSourcePreference(): void {
+function saveSelectedSourcePreference(): MoviesSourcePreferenceSnapshot | null {
   const source = play.value?.sources[selectedSourceIndex.value];
-  if (source !== undefined) {
-    sourcePreferenceStore.save(moviesSourcePreferenceSnapshot(source, selectedSourceIndex.value));
+  if (source === undefined) {
+    return null;
   }
+
+  const preference = moviesSourcePreferenceSnapshot(source, selectedSourceIndex.value);
+  sourcePreferenceStore.save(preference);
+  return preference;
 }
 
 function watchNextEpisode(): void {
   const target = nextEpisodeTarget.value;
   if (target !== null) {
-    saveSelectedSourcePreference();
-    emit("watch-episode", target);
+    emit("watch-episode", {
+      sourcePreference: saveSelectedSourcePreference(),
+      target,
+    });
   }
 }
 
@@ -303,12 +321,14 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
     return;
   }
 
-  saveSelectedSourcePreference();
   emit("watch-episode", {
-    episodeNumber: episode.episodeNumber,
-    seasonNumber: episode.seasonNumber,
-    slug: currentEpisodeDetail.series.slug,
-    tmdbId: props.target.tmdbId,
+    sourcePreference: saveSelectedSourcePreference(),
+    target: {
+      episodeNumber: episode.episodeNumber,
+      seasonNumber: episode.seasonNumber,
+      slug: currentEpisodeDetail.series.slug,
+      tmdbId: props.target.tmdbId,
+    },
   });
 }
 
