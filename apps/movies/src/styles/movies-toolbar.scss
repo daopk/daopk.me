@@ -1,9 +1,14 @@
 .movies-toolbar {
+  --movies-toolbar-control-bg: rgb(15 16 24 / 44%);
+  --movies-toolbar-control-bg-hover: rgb(52 55 71 / 76%);
+  --movies-toolbar-control-fg: rgb(247 247 251 / 76%);
+  --movies-toolbar-control-fg-strong: #f7f7fb;
+
   align-items: center;
   backdrop-filter: none;
   background: transparent;
   border-block-end: 1px solid transparent;
-  color: var(--color-fg);
+  color: var(--movies-toolbar-control-fg-strong);
   display: grid;
   gap: var(--space-sm);
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -33,7 +38,7 @@
 
 .movies-toolbar__history {
   align-items: center;
-  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
+  background: var(--movies-toolbar-control-bg);
   border-radius: var(--radius-full);
   display: inline-flex;
   gap: var(--space-2xs);
@@ -45,15 +50,15 @@
 .movies-toolbar__history :deep(.ds-kit-icon-button),
 .movies-toolbar__history-menu-button {
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  color: var(--movies-toolbar-control-fg);
 }
 
 .movies-toolbar__history :deep(.ds-kit-icon-button:hover),
 .movies-toolbar__history :deep(.ds-kit-icon-button:focus-visible),
 .movies-toolbar__history-menu-button:hover,
 .movies-toolbar__history-menu-button:focus-visible {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  color: var(--color-fg);
+  background: var(--movies-toolbar-control-bg-hover);
+  color: var(--movies-toolbar-control-fg-strong);
 }
 
 .movies-toolbar__history-menu-button {
@@ -99,10 +104,10 @@
 
 .movies-toolbar__menu-button {
   align-items: center;
-  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
+  background: var(--movies-toolbar-control-bg);
   border: 0;
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  color: var(--movies-toolbar-control-fg);
   display: inline-flex;
   flex: 0 0 auto;
   font: inherit;
@@ -122,8 +127,8 @@
 
 .movies-toolbar__menu-button:hover,
 .movies-toolbar__menu-button:focus-visible {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  color: var(--color-fg);
+  background: var(--movies-toolbar-control-bg-hover);
+  color: var(--movies-toolbar-control-fg-strong);
 }
 
 .movies-toolbar__menu-icon {
@@ -141,14 +146,14 @@
 
 .movies-toolbar__search-button {
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
-  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  background: var(--movies-toolbar-control-bg);
+  color: var(--movies-toolbar-control-fg);
 }
 
 .movies-toolbar__search-button:hover,
 .movies-toolbar__search-button:focus-visible {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  color: var(--color-fg);
+  background: var(--movies-toolbar-control-bg-hover);
+  color: var(--movies-toolbar-control-fg-strong);
 }
 
 .movies-toolbar__search-form {
@@ -162,15 +167,15 @@
 }
 
 .movies-toolbar__close {
-  background: color-mix(in srgb, var(--color-bg) 36%, transparent);
+  background: var(--movies-toolbar-control-bg);
   border-radius: var(--radius-full);
-  color: color-mix(in srgb, var(--color-fg) 74%, transparent);
+  color: var(--movies-toolbar-control-fg);
 }
 
 .movies-toolbar__close:hover,
 .movies-toolbar__close:focus-visible {
-  background: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
-  color: var(--color-fg);
+  background: var(--movies-toolbar-control-bg-hover);
+  color: var(--movies-toolbar-control-fg-strong);
 }
 
 @media (max-width: 760px) {
