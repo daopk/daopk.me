@@ -217,15 +217,60 @@ onUnmounted(() => {
     var(--movies-content-max-inline-size) + var(--movies-content-outer-padding-inline) +
       var(--movies-content-outer-padding-inline)
   );
-  --movies-surface-bg: color-mix(in srgb, var(--color-bg) 84%, var(--color-fg) 16%);
+  --movies-card-edge-base: var(--movies-home-bg-deep);
+  --movies-home-bg-base: color-mix(in srgb, var(--color-bg) 94%, var(--color-accent) 6%);
+  --movies-home-bg-bridge: color-mix(
+    in srgb,
+    var(--color-bg-elevated) 88%,
+    var(--color-accent) 12%
+  );
+  --movies-home-bg-deep: color-mix(in srgb, var(--movies-home-bg-base) 90%, var(--color-fg) 10%);
+  --movies-home-bg-lift: color-mix(
+    in srgb,
+    var(--movies-home-bg-base) 74%,
+    var(--color-bg-elevated) 26%
+  );
+  --movies-home-bg-top: var(--movies-home-bg-bridge);
+  --movies-surface-bg: color-mix(in srgb, var(--color-bg) 96%, var(--color-accent) 4%);
+  --movies-toolbar-control-bg: color-mix(in srgb, var(--color-bg-elevated) 78%, transparent);
+  --movies-toolbar-control-bg-hover: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+  --movies-toolbar-control-fg: color-mix(in srgb, var(--color-fg) 72%, transparent);
+  --movies-toolbar-control-fg-strong: var(--color-fg);
+  --movies-toolbar-solid-bg: color-mix(in srgb, var(--color-bg-elevated) 82%, transparent);
+  --movies-toolbar-solid-border: color-mix(in srgb, var(--color-fg) 12%, transparent);
   --movies-toolbar-content-offset: calc(var(--control-height-md) + var(--space-xl));
 
   background: var(--movies-surface-bg);
   block-size: 100%;
   color: var(--color-fg);
+  color-scheme: light;
   min-block-size: 0;
   overflow: hidden;
   position: relative;
+}
+
+:global([data-theme="dark"] .movies-app) {
+  --color-bg: rgb(32 34 49);
+  --color-bg-elevated: rgb(52 55 71);
+  --color-bg-subtle: rgb(255 255 255 / 9%);
+  --color-border: rgb(255 255 255 / 16%);
+  --color-error-soft: rgb(255 157 157);
+  --color-fg: rgb(247 247 251);
+  --color-fg-muted: rgb(247 247 251 / 68%);
+  --color-fg-subtle: rgb(247 247 251 / 48%);
+  --movies-home-bg-base: rgb(40 43 58);
+  --movies-home-bg-bridge: rgb(48 49 58);
+  --movies-home-bg-deep: color-mix(in srgb, var(--movies-home-bg-base) 82%, var(--color-bg));
+  --movies-home-bg-lift: color-mix(in srgb, var(--movies-home-bg-base) 94%, var(--color-fg));
+  --movies-surface-bg: rgb(32 34 49);
+  --movies-toolbar-control-bg: rgb(15 16 24 / 44%);
+  --movies-toolbar-control-bg-hover: rgb(52 55 71 / 76%);
+  --movies-toolbar-control-fg: rgb(247 247 251 / 76%);
+  --movies-toolbar-control-fg-strong: rgb(247 247 251);
+  --movies-toolbar-solid-bg: color-mix(in srgb, var(--color-bg) 76%, transparent);
+  --movies-toolbar-solid-border: color-mix(in srgb, var(--color-fg) 12%, transparent);
+
+  color-scheme: dark;
 }
 
 .movies-app :deep(img) {

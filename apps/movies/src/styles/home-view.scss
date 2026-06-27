@@ -1,17 +1,5 @@
 .movies-home {
-  --color-bg: #202231;
-  --color-bg-elevated: #343747;
-  --color-bg-subtle: rgb(255 255 255 / 9%);
-  --color-border: rgb(255 255 255 / 16%);
-  --color-error-soft: #ff9d9d;
-  --color-fg: #f7f7fb;
-  --color-fg-muted: rgb(247 247 251 / 68%);
-  --movies-home-bg-base: #282b3a;
-  --movies-home-bg-bridge: #30313a;
-  --movies-home-bg-deep: color-mix(in srgb, var(--movies-home-bg-base) 82%, var(--color-bg));
-  --movies-home-bg-lift: color-mix(in srgb, var(--movies-home-bg-base) 94%, var(--color-fg));
-  --movies-home-bg-top: var(--movies-home-bg-bridge);
-  --movies-card-edge-base: var(--movies-home-bg-deep);
+  --movies-card-edge-base: var(--movies-home-bg-deep, var(--movies-surface-bg, var(--color-bg)));
 
   background:
     radial-gradient(
