@@ -9,6 +9,31 @@
   "categories": {
     "correctness": "error"
   },
+  "jsPlugins": ["./scripts/oxlint-plugin-daopk.js"],
   "ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"],
+  "overrides": [
+    {
+      "files": [
+        "apps/*/src/**/*.js",
+        "apps/*/src/**/*.jsx",
+        "apps/*/src/**/*.ts",
+        "apps/*/src/**/*.tsx",
+        "apps/*/src/**/*.vue"
+      ],
+      "excludeFiles": [
+        "apps/*/src/**/*.test.js",
+        "apps/*/src/**/*.test.jsx",
+        "apps/*/src/**/*.test.ts",
+        "apps/*/src/**/*.test.tsx",
+        "apps/*/src/**/*.integration.test.js",
+        "apps/*/src/**/*.integration.test.jsx",
+        "apps/*/src/**/*.integration.test.ts",
+        "apps/*/src/**/*.integration.test.tsx"
+      ],
+      "rules": {
+        "daopk/no-private-host-imports": "error"
+      }
+    }
+  ],
   "rules": {}
 }
