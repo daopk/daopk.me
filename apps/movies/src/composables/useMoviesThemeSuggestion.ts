@@ -1,19 +1,20 @@
-import { onMounted, onUnmounted, ref, watch, type Ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, type Ref } from "vue";
 
 import { activeProfileKvNamespace, KVStore, type Kernel } from "@daopk/sdk";
-
-import { useActiveShell } from "~/composables/useActiveShell";
 
 const MOVIES_THEME_SUGGESTION_KV_NAMESPACE = "movies";
 const MOVIES_THEME_SUGGESTION_KV_KEY = "theme-suggestion";
 const DATE_PART_PAD_LENGTH = 2;
+const MOBILE_BREAKPOINT_WIDTH = 768;
+
+type MoviesThemeSuggestionShellId = "desktop" | "mobile";
 
 interface MoviesThemeSuggestionState {
   readonly lastPromptDate: string;
 }
 
 export interface UseMoviesThemeSuggestionOptions {
-  readonly kernel: Pick<Kernel, "theme"> | null;
+  readonly kernel: Pick<Kernel, "events" | "theme"> | null;
   readonly now?: () => Date;
   readonly storageNamespace?: string;
 }
@@ -29,9 +30,11 @@ export function useMoviesThemeSuggestion({
   now = () => new Date(),
   storageNamespace = activeProfileKvNamespace(MOVIES_THEME_SUGGESTION_KV_NAMESPACE),
 }: UseMoviesThemeSuggestionOptions): UseMoviesThemeSuggestionBindings {
-  const { isDesktop } = useActiveShell();
+  const activeShellId = ref<MoviesThemeSuggestionShellId>(detectActiveShell());
+  const isDesktop = computed(() => activeShellId.value === "desktop");
   const open = ref(false);
   const kv = new KVStore<MoviesThemeSuggestionState>(storageNamespace, { version: 1 });
+  let stopShellChangedListener: (() => void) | undefined;
 
   function shouldShow(): boolean {
     const theme = kernel?.theme;
@@ -69,13 +72,28 @@ export function useMoviesThemeSuggestion({
     return `${today.getFullYear()}-${month}-${day}`;
   }
 
+  function refreshActiveShell(): void {
+    activeShellId.value = detectActiveShell();
+  }
+
   onMounted(() => {
+    refreshActiveShell();
+    stopShellChangedListener = kernel?.events.on("shell.changed", (payload) => {
+      activeShellId.value = payload.shellId;
+    });
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", refreshActiveShell);
+    }
     if (shouldShow()) {
       show();
     }
   });
 
   onUnmounted(() => {
+    stopShellChangedListener?.();
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", refreshActiveShell);
+    }
     kv.dispose();
   });
 
@@ -90,4 +108,19 @@ export function useMoviesThemeSuggestion({
     setOpen,
     switchSystemThemeToDark,
   };
+}
+
+function detectActiveShell(): MoviesThemeSuggestionShellId {
+  if (typeof document !== "undefined") {
+    const shellId = document.documentElement.dataset.shell;
+    if (shellId === "mobile" || shellId === "desktop") {
+      return shellId;
+    }
+  }
+
+  if (typeof window !== "undefined" && window.innerWidth < MOBILE_BREAKPOINT_WIDTH) {
+    return "mobile";
+  }
+
+  return "desktop";
 }
