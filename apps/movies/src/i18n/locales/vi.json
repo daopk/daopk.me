@@ -182,5 +182,9 @@
   "movies.sort.newest": "Mới nhất",
   "movies.sort.popular": "Phổ biến",
   "movies.sort.topRated": "Đánh giá cao",
-  "movies.tmdbMedia": "TMDB {media}"
+  "movies.tmdbMedia": "TMDB {media}",
+  "movies.themeSuggestion.description": "Movies được tinh chỉnh cho giao diện tối kiểu rạp phim. Chuyển theme hệ thống sang dark mode để có trải nghiệm xem tốt nhất.",
+  "movies.themeSuggestion.later": "Để sau",
+  "movies.themeSuggestion.switch": "Bật dark mode",
+  "movies.themeSuggestion.title": "Xem Movies bằng dark mode?"
 }

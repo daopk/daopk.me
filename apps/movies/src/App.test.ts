@@ -1,4 +1,4 @@
-import { flushPromises, mount, type VueWrapper } from "@vue/test-utils";
+import { config, flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, nextTick, onMounted } from "vue";
@@ -485,6 +485,39 @@ function menuItems(): HTMLElement[] {
   return Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
 }
 
+function setViewportWidth(width: number): void {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: width,
+  });
+}
+
+function kernelWithTheme(theme: "dark" | "light", setTheme = vi.fn()): Kernel {
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+
+  return {
+    events: {
+      emit: vi.fn((event: string, payload: unknown) => {
+        for (const handler of listeners.get(event) ?? []) {
+          handler(payload);
+        }
+      }),
+      on: vi.fn((event: string, handler: (payload: unknown) => void) => {
+        const nextListeners = listeners.get(event) ?? new Set<(payload: unknown) => void>();
+        nextListeners.add(handler);
+        listeners.set(event, nextListeners);
+        return () => {
+          nextListeners.delete(handler);
+        };
+      }),
+    },
+    theme: {
+      current: vi.fn(() => theme),
+      setTheme,
+    },
+  } as unknown as Kernel;
+}
+
 function activeHeroLoopLabel(wrapper: VueWrapper): string | undefined {
   return wrapper
     .get(".movies-home__hero-loop .movies-home__hero-slide--active .movies-home__hero-card")
@@ -555,6 +588,10 @@ describe("Movies app", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    setViewportWidth(1280);
+    config.global.provide = {
+      [KernelInjectionKey as symbol]: kernelWithTheme("dark"),
+    };
     delete document.documentElement.dataset.shell;
     localStorage.clear();
     window.history.replaceState(null, "", "/apps/movies");
@@ -580,6 +617,7 @@ describe("Movies app", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    config.global.provide = {};
     delete document.documentElement.dataset.shell;
     localStorage.clear();
   });
@@ -754,6 +792,105 @@ describe("Movies app", () => {
     expect(dragEvent.defaultPrevented).toBe(true);
   });
 
+  it("suggests switching the system theme to dark mode when opened in light mode", async () => {
+    const setTheme = vi.fn();
+    const kernel = kernelWithTheme("light", setTheme);
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+    await flushReka();
+
+    expect(wrapper.text()).toContain("Watch Movies in dark mode?");
+    expect(wrapper.text()).toContain("Switch the system theme to dark mode");
+
+    const switchButton = wrapper
+      .findAll("button")
+      .find((button) => button.text().includes("Switch to dark mode"));
+    expect(switchButton).toBeDefined();
+
+    await switchButton?.trigger("click");
+    await nextTick();
+
+    expect(setTheme).toHaveBeenCalledWith("dark");
+    expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
+  });
+
+  it("does not suggest dark mode when Movies opens in dark mode", async () => {
+    const kernel = kernelWithTheme("dark");
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+    await flushReka();
+
+    expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
+    expect(kernel.theme.setTheme).not.toHaveBeenCalled();
+  });
+
+  it("does not suggest dark mode in the mobile shell", async () => {
+    setViewportWidth(390);
+    const kernel = kernelWithTheme("light");
+
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernel,
+        },
+      },
+    });
+    await settle();
+    await flushReka();
+
+    expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
+    expect(localStorage.getItem("movies:theme-suggestion")).toBeNull();
+  });
+
+  it("suggests dark mode only once per day", async () => {
+    const first = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernelWithTheme("light"),
+        },
+      },
+    });
+    await settle();
+    await flushReka();
+
+    expect(first.text()).toContain("Watch Movies in dark mode?");
+    expect(localStorage.getItem("movies:theme-suggestion")).not.toBeNull();
+
+    first.unmount();
+    await flushReka();
+
+    const second = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: {
+          [KernelInjectionKey as symbol]: kernelWithTheme("light"),
+        },
+      },
+    });
+    await settle();
+    await flushReka();
+
+    expect(second.text()).not.toContain("Watch Movies in dark mode?");
+  });
+
   it("loads and renders a trailer preview when hovering a Home rail card", async () => {
     const restoreHoverPreview = stubHoverPreviewCapability();
     const PreviewComponent = defineComponent({
@@ -777,7 +914,7 @@ describe("Movies app", () => {
       provider,
     }));
     const kernel = {
-      events: { emit: vi.fn() },
+      ...kernelWithTheme("dark"),
       previews: { resolve },
     } as unknown as Kernel;
     vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
@@ -1018,7 +1155,7 @@ describe("Movies app", () => {
       template: '<div class="preview-probe">{{ surface }}:{{ args.videoId }}</div>',
     });
     const kernel = {
-      events: { emit: vi.fn() },
+      ...kernelWithTheme("dark"),
       previews: {
         resolve: vi.fn(() => ({
           args: { autoplay: true, videoId: "M7lc1UVf-VE" },
@@ -1169,8 +1306,8 @@ describe("Movies app", () => {
   });
 
   it("emits app URL changes for the initial home view and detail navigation", async () => {
-    const emit = vi.fn();
-    const kernel = { events: { emit } } as unknown as Kernel;
+    const kernel = kernelWithTheme("dark");
+    const emit = vi.mocked(kernel.events.emit);
     const appContext: AppContext = Object.freeze({
       manifestId: "movies",
       handleId: "h-movies-test",
@@ -2283,7 +2420,7 @@ describe("Movies app", () => {
       provider,
     }));
     const kernel = {
-      events: { emit: vi.fn() },
+      ...kernelWithTheme("dark"),
       previews: { resolve },
     } as unknown as Kernel;
     vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());
@@ -2338,7 +2475,7 @@ describe("Movies app", () => {
   it("falls back to the Detail backdrop when no trailer preview provider resolves", async () => {
     const resolve = vi.fn(() => null);
     const kernel = {
-      events: { emit: vi.fn() },
+      ...kernelWithTheme("dark"),
       previews: { resolve },
     } as unknown as Kernel;
     vi.mocked(fetchMovieTrailer).mockResolvedValue(trailerResult());

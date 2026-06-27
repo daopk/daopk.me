@@ -182,5 +182,9 @@
   "movies.sort.newest": "Newest",
   "movies.sort.popular": "Popular",
   "movies.sort.topRated": "Top Rated",
-  "movies.tmdbMedia": "TMDB {media}"
+  "movies.tmdbMedia": "TMDB {media}",
+  "movies.themeSuggestion.description": "Movies is tuned for a darker, cinema-style interface. Switch the system theme to dark mode for the best viewing experience.",
+  "movies.themeSuggestion.later": "Later",
+  "movies.themeSuggestion.switch": "Switch to dark mode",
+  "movies.themeSuggestion.title": "Watch Movies in dark mode?"
 }

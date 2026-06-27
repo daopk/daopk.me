@@ -2,6 +2,8 @@
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 
 import { AppFrame } from "@daopk/kit";
+import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Palette } from "@daopk/icons";
 import { AppContextInjectionKey, KernelInjectionKey } from "@daopk/sdk";
 
 import DetailView from "./components/DetailView.vue";
@@ -13,6 +15,7 @@ import PersonView from "./components/PersonView.vue";
 import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
+import { useMoviesThemeSuggestion } from "./composables/useMoviesThemeSuggestion";
 import { useMoviesI18n } from "./i18n/useMoviesI18n";
 import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
 import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
@@ -57,6 +60,13 @@ const {
   updateToolbarSolid,
   view,
 } = useMoviesNavigation({ appContext: ctx, kernel });
+
+const darkThemeSuggestionPortalTarget = computed(() => rootElement.value ?? "body");
+const {
+  open: darkThemeSuggestionOpen,
+  setOpen: setDarkThemeSuggestionOpen,
+  switchSystemThemeToDark,
+} = useMoviesThemeSuggestion({ kernel });
 
 function moviesAppRoot(): Element | null {
   return rootElement.value;
@@ -206,6 +216,30 @@ onUnmounted(() => {
       @back="goBack"
       @open-detail="openDetail"
     />
+
+    <Dialog
+      :open="darkThemeSuggestionOpen"
+      :title="t('movies.themeSuggestion.title')"
+      :description="t('movies.themeSuggestion.description')"
+      :portal-to="darkThemeSuggestionPortalTarget"
+      scope="container"
+      @update:open="setDarkThemeSuggestionOpen"
+    >
+      <DialogActions align="stretch">
+        <Button type="button" variant="secondary" @click="setDarkThemeSuggestionOpen(false)">
+          {{ t("movies.themeSuggestion.later") }}
+        </Button>
+        <Button
+          class="movies-app__theme-suggestion-primary"
+          type="button"
+          variant="primary"
+          :icon-start="Palette"
+          @click="switchSystemThemeToDark"
+        >
+          {{ t("movies.themeSuggestion.switch") }}
+        </Button>
+      </DialogActions>
+    </Dialog>
   </AppFrame>
 </template>
 
@@ -276,6 +310,10 @@ onUnmounted(() => {
 .movies-app :deep(img) {
   user-select: none;
   -webkit-user-drag: none;
+}
+
+.movies-app__theme-suggestion-primary {
+  white-space: nowrap;
 }
 
 @media (max-width: 1120px) {
