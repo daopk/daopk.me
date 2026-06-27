@@ -1,5 +1,7 @@
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 
+import { clampNumber } from "../utils/number";
+
 export const MOVIE_PLAYBACK_SPEED_OPTIONS: readonly number[] = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 interface UseMoviePlaybackStateOptions {
@@ -55,7 +57,7 @@ export function useMoviePlaybackState({
 
   function setVolume(nextVolume: number): void {
     const video = videoElement.value;
-    const normalized = clamp(nextVolume, 0, 1);
+    const normalized = clampNumber(nextVolume, 0, 1);
     volume.value = normalized;
     if (normalized > 0) {
       previousVolume.value = normalized;
@@ -111,7 +113,7 @@ export function useMoviePlaybackState({
 
   function syncVolumeState(video: HTMLVideoElement): void {
     muted.value = video.muted;
-    volume.value = clamp(video.volume, 0, 1);
+    volume.value = clampNumber(video.volume, 0, 1);
   }
 
   return {
@@ -127,8 +129,4 @@ export function useMoviePlaybackState({
     syncVolumeState,
     toggleMute,
   };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }

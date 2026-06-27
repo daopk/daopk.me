@@ -1,5 +1,7 @@
 import type { ComputedRef, Ref } from "vue";
 
+import { clampNumber } from "../utils/number";
+
 const SEEK_STEP_SECONDS = 10;
 
 interface UseMoviePlayerSeekOptions {
@@ -86,7 +88,7 @@ export function useMoviePlayerSeek({
     }
 
     seeking.value = true;
-    seekPosition.value = Math.round(clamp(nextValue, 0, duration.value));
+    seekPosition.value = Math.round(clampNumber(nextValue, 0, duration.value));
   }
 
   function commitSeek(
@@ -99,7 +101,7 @@ export function useMoviePlayerSeek({
     }
 
     const video = videoElement.value;
-    const nextTime = clamp(nextValue, 0, duration.value);
+    const nextTime = clampNumber(nextValue, 0, duration.value);
     if (video !== null) {
       video.currentTime = nextTime;
     }
@@ -189,9 +191,9 @@ export function useMoviePlayerSeek({
     const trackStartPx = seekPreviewThumbSizePx / 2;
     const trackWidthPx = rect.width - seekPreviewThumbSizePx;
     const trackEndPx = trackStartPx + trackWidthPx;
-    const pointerX = clamp(event.clientX - rect.left, trackStartPx, trackEndPx);
+    const pointerX = clampNumber(event.clientX - rect.left, trackStartPx, trackEndPx);
     const fraction = (pointerX - trackStartPx) / trackWidthPx;
-    const seconds = Math.round(clamp(fraction, 0, 1) * duration.value);
+    const seconds = Math.round(clampNumber(fraction, 0, 1) * duration.value);
 
     return { leftPx: pointerX, seconds };
   }
@@ -268,8 +270,4 @@ export function useMoviePlayerSeek({
     previewSeek,
     seekBy,
   };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
