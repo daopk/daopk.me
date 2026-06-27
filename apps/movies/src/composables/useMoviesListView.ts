@@ -1,4 +1,4 @@
-import { computed, nextTick, onUnmounted, ref, watch, type Ref } from "vue";
+import { computed, nextTick, onUnmounted, ref, useTemplateRef, watch, type Ref } from "vue";
 
 import {
   catalogMediaOptions,
@@ -51,10 +51,8 @@ export interface UseMoviesListViewBindings {
   readonly canLoadMore: Ref<boolean>;
   readonly catalogMedia: Ref<MoviesSearchMedia>;
   readonly catalogMediaSelectOptions: Ref<ReturnType<typeof catalogMediaOptions>>;
-  readonly countrySelect: Ref<HTMLSelectElement | null>;
   readonly currentFilters: Ref<MoviesFiltersResult | null>;
   readonly currentFilterState: Ref<FilterLoadState>;
-  readonly genreSelect: Ref<HTMLSelectElement | null>;
   readonly isSearchList: Ref<boolean>;
   readonly items: Ref<readonly MovieSummary[]>;
   readonly loadingInitial: Ref<boolean>;
@@ -90,8 +88,8 @@ export function useMoviesListView({
     movie: "idle",
     tv: "idle",
   });
-  const genreSelect = ref<HTMLSelectElement | null>(null);
-  const countrySelect = ref<HTMLSelectElement | null>(null);
+  const genreSelect = useTemplateRef<HTMLSelectElement>("genreSelect");
+  const countrySelect = useTemplateRef<HTMLSelectElement>("countrySelect");
   let abortController: AbortController | null = null;
   const filtersAbortControllers: Record<MovieMediaType, AbortController | null> = {
     movie: null,
@@ -458,10 +456,8 @@ export function useMoviesListView({
     canLoadMore,
     catalogMedia,
     catalogMediaSelectOptions,
-    countrySelect,
     currentFilters,
     currentFilterState,
-    genreSelect,
     isSearchList,
     items,
     loadingInitial,
