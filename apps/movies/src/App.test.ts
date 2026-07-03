@@ -1910,6 +1910,7 @@ describe("Movies app", () => {
     vi.mocked(fetchMovieEpisode).mockResolvedValue(
       episodeDetail({ episode, season: { ...season, episodes: [episode, season.episodes[1]!] } }),
     );
+    vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
     persistAppProgress(episodePlaybackProgressKey(1399, 1, 1));
 
     const wrapper = mount(App);
@@ -1935,6 +1936,22 @@ describe("Movies app", () => {
     expect(episodeInfo.text()).toContain("Pilot");
     expect(episodeInfo.text()).toContain("Episode 1 · 2024-01-01 · 42 min · 7.8 rating");
     expect(episodeInfo.text()).toContain("Pilot overview.");
+
+    await wrapper.get("select.movies-season-episodes__season-select").setValue("2");
+    await settle();
+
+    expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());
+    expect(wrapper.text()).toContain("Second Premiere");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/1");
+
+    await wrapper.get(".movies-watch__series-link").trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-watch").exists()).toBe(false);
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Seasons");
+    expect(wrapper.text()).toContain("Season 2");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
   });
 
   it("hides Continue Watching when progress hydration fails", async () => {
@@ -2872,6 +2889,22 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-episode-list__media").exists()).toBe(true);
     expect(wrapper.find(".movies-episode-list__overview").text()).toBe("Pilot overview.");
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+
+    await wrapper.get("select.movies-season-episodes__season-select").setValue("2");
+    await settle();
+
+    expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());
+    expect(wrapper.text()).toContain("Second Premiere");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+
+    await wrapper.get(".movies-episode__series-link").trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-episode").exists()).toBe(false);
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Seasons");
+    expect(wrapper.text()).toContain("Season 2");
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
   });
 
   it("opens WatchView from an episode detail route with a play source", async () => {

@@ -185,6 +185,7 @@ onUnmounted(() => {
       :tmdb-id="view.tmdbId"
       @scroll="updateToolbarSolid"
       @back="goBack"
+      @open-detail="openDetail"
       @open-episode="openEpisode($event, { replace: true })"
       @open-person="openPerson"
       @watch="openEpisodeWatch($event, { autoplay: true })"
@@ -207,6 +208,7 @@ onUnmounted(() => {
       :target="view.target"
       @scroll="updateToolbarSolid"
       @back="goBack"
+      @open-detail="openDetail"
       @watch-episode="openWatchEpisode"
     />
     <PersonView

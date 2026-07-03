@@ -3,17 +3,12 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft, Play } from "@daopk/icons";
+import { ArrowLeft, Layers2, Play } from "@daopk/icons";
 
-import EpisodeList from "./EpisodeList.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
+import SeasonEpisodesSection from "./SeasonEpisodesSection.vue";
 import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
-import {
-  episodeLabel,
-  episodeMetaLabel,
-  seasonLabel,
-  seasonMetaLabel,
-} from "./detail/detailFormatters";
+import { episodeLabel, episodeMetaLabel, seasonLabel } from "./detail/detailFormatters";
 import { moviesText } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
@@ -22,6 +17,7 @@ import {
   type MovieEpisodeTarget,
   type MoviePersonCredit,
   type MovieSeasonEpisode,
+  type MovieSummary,
 } from "../moviesApi";
 
 type LoadState = "loading" | "ready" | "error";
@@ -37,6 +33,7 @@ const props = defineProps<EpisodeViewProps>();
 
 const emit = defineEmits<{
   back: [];
+  "open-detail": [movie: MovieSummary];
   "open-episode": [request: MovieEpisodeTarget];
   "open-person": [person: MoviePersonCredit];
   watch: [request: MovieEpisodeTarget];
@@ -51,7 +48,14 @@ const detail = computed(() => episodeDetail.value?.series ?? null);
 const season = computed(() => episodeDetail.value?.season ?? null);
 const episode = computed<MovieSeasonEpisode | null>(() => episodeDetail.value?.episode ?? null);
 const heroImageUrl = computed(() => episode.value?.stillUrl || detail.value?.backdropUrl || "");
-const seasonMeta = computed(() => (season.value === null ? "" : seasonMetaLabel(season.value, t)));
+const canChooseAnotherSeason = computed(() => {
+  const currentDetail = detail.value;
+  if (currentDetail === null) {
+    return false;
+  }
+
+  return currentDetail.seasons.some((entry) => entry.seasonNumber !== props.seasonNumber);
+});
 const facts = computed(() => {
   const currentEpisode = episode.value;
   const currentSeason = season.value;
@@ -115,6 +119,13 @@ function watchEpisode(): void {
   });
 }
 
+function openSeriesDetail(): void {
+  const currentDetail = detail.value;
+  if (currentDetail !== null) {
+    emit("open-detail", currentDetail);
+  }
+}
+
 async function loadEpisode(): Promise<void> {
   abortController?.abort();
   abortController = new AbortController();
@@ -122,12 +133,13 @@ async function loadEpisode(): Promise<void> {
   episodeDetail.value = null;
 
   try {
-    episodeDetail.value = await fetchMovieEpisode(
+    const nextDetail = await fetchMovieEpisode(
       props.tmdbId,
       props.seasonNumber,
       props.episodeNumber,
       { signal: abortController.signal },
     );
+    episodeDetail.value = nextDetail;
     state.value = "ready";
   } catch {
     if (abortController.signal.aborted) {
@@ -194,6 +206,16 @@ async function loadEpisode(): Promise<void> {
           </p>
           <p v-else class="movies-episode__subtitle">{{ episodeLabel(episode, t) }}</p>
           <p v-if="episode.overview" class="movies-episode__overview">{{ episode.overview }}</p>
+          <Button
+            v-if="canChooseAnotherSeason"
+            class="movies-episode__series-link"
+            size="sm"
+            variant="secondary"
+            :icon-start="Layers2"
+            @click="openSeriesDetail"
+          >
+            {{ t("movies.action.seriesOverview") }}
+          </Button>
         </div>
       </header>
 
@@ -207,20 +229,16 @@ async function loadEpisode(): Promise<void> {
         </dl>
       </section>
 
-      <section class="movies-episode__section">
-        <span class="movies-episode__section-heading">
-          <h2>{{ season.name }}</h2>
-          <p v-if="seasonMeta">{{ seasonMeta }}</p>
-        </span>
-        <p v-if="season.overview" class="movies-episode__season-overview">
-          {{ season.overview }}
-        </p>
-        <EpisodeList
-          :episodes="season.episodes"
-          :active-episode-number="episode.episodeNumber"
-          @open="openSeasonEpisode"
-        />
-      </section>
+      <SeasonEpisodesSection
+        class="movies-episode__section"
+        heading-size="xl"
+        show-overview
+        :active-episode-number="episode.episodeNumber"
+        :initial-season="season"
+        :series="detail"
+        :tmdb-id="props.tmdbId"
+        @open="openSeasonEpisode"
+      />
 
       <DetailPeopleSection
         :title="t('movies.section.seriesCast')"
@@ -335,8 +353,7 @@ async function loadEpisode(): Promise<void> {
 }
 
 .movies-episode__eyebrow,
-.movies-episode__subtitle,
-.movies-episode__section-heading p {
+.movies-episode__subtitle {
   color: var(--color-fg-muted);
   margin: 0;
 }
@@ -353,11 +370,15 @@ async function loadEpisode(): Promise<void> {
   margin: 0;
 }
 
-.movies-episode__overview,
-.movies-episode__season-overview {
+.movies-episode__overview {
   line-height: var(--leading-relaxed);
   margin: 0;
   max-inline-size: 78ch;
+}
+
+.movies-episode__series-link {
+  justify-self: start;
+  margin-block-start: var(--space-xs);
 }
 
 .movies-episode__section {

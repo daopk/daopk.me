@@ -3,11 +3,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft } from "@daopk/icons";
+import { ArrowLeft, Layers2 } from "@daopk/icons";
 
-import EpisodeList from "./EpisodeList.vue";
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
+import SeasonEpisodesSection from "./SeasonEpisodesSection.vue";
 import {
   episodeLabel as formatEpisodeLabel,
   episodeMetaLabel,
@@ -22,6 +22,7 @@ import {
   type MovieEpisodeDetail,
   type MovieEpisodeTarget,
   type MoviePlayInfo,
+  type MovieSummary,
   type MovieSeasonEpisode,
 } from "../moviesApi";
 import {
@@ -61,6 +62,7 @@ interface WatchEpisodeRequest {
 
 const emit = defineEmits<{
   back: [];
+  "open-detail": [movie: MovieSummary];
   "watch-episode": [request: WatchEpisodeRequest];
 }>();
 
@@ -140,19 +142,21 @@ const episodeInfo = computed(() => {
     title: episode.name,
   };
 });
-const seasonEpisodes = computed<readonly MovieSeasonEpisode[]>(() => {
-  if (props.target.kind !== "episode") {
-    return [];
-  }
-  return episodeDetail.value?.season.episodes ?? [];
+const activeEpisodeNumber = computed(() => {
+  const target = props.target;
+  return target.kind === "episode" ? target.episodeNumber : null;
 });
-const seasonEpisodesLabel = computed(() => {
+const canChooseAnotherSeason = computed(() => {
+  const target = props.target;
   const currentEpisodeDetail = episodeDetail.value;
-  return currentEpisodeDetail === null ? "" : seasonLabel(currentEpisodeDetail.season, t);
+  if (target.kind !== "episode" || currentEpisodeDetail === null) {
+    return false;
+  }
+
+  return currentEpisodeDetail.series.seasons.some(
+    (season) => season.seasonNumber !== target.seasonNumber,
+  );
 });
-const activeEpisodeNumber = computed(() =>
-  props.target.kind === "episode" ? props.target.episodeNumber : null,
-);
 const nextEpisode = computed<MovieSeasonEpisode | null>(() => {
   const target = props.target;
   const currentEpisodeDetail = episodeDetail.value;
@@ -332,6 +336,13 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
   });
 }
 
+function openSeriesDetail(): void {
+  const series = episodeDetail.value?.series ?? null;
+  if (series !== null) {
+    emit("open-detail", series);
+  }
+}
+
 function handleKeyboardEvent(event: KeyboardEvent): void {
   playerRef.value?.handleAppKeydown?.(event);
 }
@@ -418,22 +429,27 @@ defineExpose({
         <p v-if="episodeInfo.overview" class="movies-watch__episode-overview">
           {{ episodeInfo.overview }}
         </p>
+        <Button
+          v-if="canChooseAnotherSeason"
+          class="movies-watch__series-link"
+          size="sm"
+          variant="secondary"
+          :icon-start="Layers2"
+          @click="openSeriesDetail"
+        >
+          {{ t("movies.action.seriesOverview") }}
+        </Button>
       </section>
 
-      <section
-        v-if="seasonEpisodes.length > 0"
+      <SeasonEpisodesSection
+        v-if="episodeDetail !== null"
         class="movies-watch__episodes"
-        :aria-label="t('movies.section.episode')"
-      >
-        <h2 class="movies-watch__episodes-heading">
-          {{ seasonEpisodesLabel || t("movies.section.episode") }}
-        </h2>
-        <EpisodeList
-          :episodes="seasonEpisodes"
-          :active-episode-number="activeEpisodeNumber"
-          @open="watchSeasonEpisode"
-        />
-      </section>
+        :active-episode-number="activeEpisodeNumber"
+        :initial-season="episodeDetail.season"
+        :series="episodeDetail.series"
+        :tmdb-id="props.target.tmdbId"
+        @open="watchSeasonEpisode"
+      />
     </article>
   </ScrollArea>
 </template>
@@ -519,12 +535,6 @@ defineExpose({
     clamp(var(--space-xl), 10vh, 96px);
 }
 
-.movies-watch__episodes-heading {
-  font-size: var(--font-size-lg);
-  line-height: var(--leading-tight);
-  margin: 0;
-}
-
 .movies-watch__episode-eyebrow,
 .movies-watch__episode-meta {
   color: var(--color-fg-muted);
@@ -547,5 +557,10 @@ defineExpose({
   line-height: var(--leading-relaxed);
   margin: 0;
   max-inline-size: 78ch;
+}
+
+.movies-watch__series-link {
+  justify-self: start;
+  margin-block-start: var(--space-xs);
 }
 </style>
