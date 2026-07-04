@@ -1,10 +1,11 @@
-import type { ANIMAL_KINDS, STICKER_SETS } from "./babyTouchStickerSets";
+import type { ANIMAL_KINDS, SOFT_ANIMAL_KINDS, STICKER_SETS } from "./babyTouchStickerSets";
 
 export type BabyTouchScene = (typeof STICKER_SETS)[number]["scene"];
 export type BabyTouchIntensity = "gentle" | "lively";
 export type BabyTouchBackground = "sky" | "grass" | "candy" | "night";
 export type BabyTouchFamily = (typeof STICKER_SETS)[number]["family"];
 export type BabyTouchAnimalKind = (typeof ANIMAL_KINDS)[number];
+export type BabyTouchSoftAnimalKind = (typeof SOFT_ANIMAL_KINDS)[number];
 
 export interface BabyTouchSettings {
   readonly background: BabyTouchBackground;

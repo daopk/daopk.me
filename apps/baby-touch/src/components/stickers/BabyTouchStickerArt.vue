@@ -4,6 +4,7 @@ import { computed } from "vue";
 
 import type { BabyTouchFamily } from "../../babyTouchTypes";
 import AnimalStickerArt from "./AnimalStickerArt.vue";
+import SoftAnimalStickerArt from "./SoftAnimalStickerArt.vue";
 
 const props = defineProps<{
   readonly family: BabyTouchFamily;
@@ -12,6 +13,7 @@ const props = defineProps<{
 
 const stickerArtComponents: Record<BabyTouchFamily, Component> = {
   animal: AnimalStickerArt,
+  "soft-animal": SoftAnimalStickerArt,
 };
 
 const stickerArtComponent = computed<Component>(() => stickerArtComponents[props.family]);

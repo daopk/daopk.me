@@ -102,16 +102,44 @@
 
 .baby-touch__gallery-card {
   align-items: center;
+  appearance: none;
   background: rgb(255 255 255 / 0.76);
   border: 1px solid rgb(255 255 255 / 0.84);
   border-radius: 8px;
   box-shadow: 0 12px 22px rgb(31 28 42 / 0.12);
+  color: inherit;
+  cursor: pointer;
   display: grid;
+  font: inherit;
   gap: var(--space-xs);
   justify-items: center;
   min-block-size: 190px;
   min-inline-size: 0;
   padding: var(--space-sm);
+  text-align: center;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    transform var(--duration-fast) var(--ease);
+}
+
+.baby-touch__gallery-card:hover,
+.baby-touch__gallery-card:focus-visible {
+  border-color: rgb(255 255 255 / 0.96);
+  box-shadow: 0 16px 26px rgb(31 28 42 / 0.16);
+  transform: translateY(-1px);
+}
+
+.baby-touch__gallery-card:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.baby-touch__gallery-card--selected {
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 0.92),
+    0 16px 26px rgb(31 28 42 / 0.16);
 }
 
 .baby-touch__gallery-art {

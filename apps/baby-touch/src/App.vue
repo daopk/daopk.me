@@ -2,7 +2,8 @@
 import { AppFrame, useAppChrome } from "@daopk/kit";
 import { computed, ref } from "vue";
 
-import type { BabyTouchBackground } from "./babyTouchTypes";
+import { STICKER_SETS } from "./babyTouchStickerSets";
+import type { BabyTouchBackground, BabyTouchScene } from "./babyTouchTypes";
 import BabyTouchGallery from "./components/BabyTouchGallery.vue";
 import BabyTouchHome from "./components/BabyTouchHome.vue";
 import BabyTouchPlaySurface from "./components/BabyTouchPlaySurface.vue";
@@ -34,6 +35,14 @@ const appClasses = computed(() => [
   `baby-touch--${settings.value.intensity}`,
   forceLandscapeRight.value && "baby-touch--landscape-right",
 ]);
+const selectedStickerSet = computed(
+  () =>
+    STICKER_SETS.find((stickerSet) => stickerSet.scene === settings.value.scene) ?? STICKER_SETS[0],
+);
+const homeSticker = computed(() => ({
+  family: selectedStickerSet.value.family,
+  kind: selectedStickerSet.value.featuredKind,
+}));
 
 function startWithBackground(next: BabyTouchBackground): void {
   updateSettings({ background: next });
@@ -46,6 +55,10 @@ function startGame(): void {
 
 function openGallery(): void {
   screen.value = "gallery";
+}
+
+function pickScene(next: BabyTouchScene): void {
+  updateSettings({ scene: next });
 }
 
 function returnHome(): void {
@@ -76,12 +89,18 @@ function hideApp(): void {
       <div class="baby-touch__orientation-frame">
         <BabyTouchHome
           v-if="screen === 'home'"
+          :featured-sticker="homeSticker"
           @hide="hideApp"
           @open-gallery="openGallery"
           @pick-background="startWithBackground"
         />
 
-        <BabyTouchGallery v-else-if="screen === 'gallery'" @back="returnHome" />
+        <BabyTouchGallery
+          v-else-if="screen === 'gallery'"
+          :selected-scene="settings.scene"
+          @back="returnHome"
+          @pick-scene="pickScene"
+        />
 
         <BabyTouchPlaySurface
           v-else

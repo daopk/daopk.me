@@ -1,5 +1,5 @@
 import { STICKER_SETS } from "./babyTouchStickerSets";
-import type { BabyTouchFamily } from "./babyTouchTypes";
+import type { BabyTouchFamily, BabyTouchScene } from "./babyTouchTypes";
 
 export interface BabyTouchStickerCatalogItem {
   readonly id: string;
@@ -12,6 +12,7 @@ export interface BabyTouchStickerCatalogItem {
 export interface BabyTouchStickerCategory {
   readonly id: BabyTouchFamily;
   readonly label: string;
+  readonly scene: BabyTouchScene;
   readonly stickers: readonly BabyTouchStickerCatalogItem[];
 }
 
@@ -41,6 +42,7 @@ export const babyTouchStickerCategories: readonly BabyTouchStickerCategory[] = S
   (stickerSet) => ({
     id: stickerSet.family,
     label: stickerSet.label,
+    scene: stickerSet.scene,
     stickers: stickerSet.kinds.map((kind, index) =>
       buildSticker(stickerSet.family, kind, index, stickerSet.hueStart),
     ),

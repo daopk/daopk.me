@@ -31,7 +31,7 @@ describe("useBabyTouchSettings", () => {
     const first = mountBabyTouchSettingsHarness(localStorage);
 
     first.api.updateSettings({
-      scene: "animals",
+      scene: "soft-animals",
       intensity: "lively",
       soundEnabled: true,
       volume: 72,
@@ -43,11 +43,12 @@ describe("useBabyTouchSettings", () => {
 
     expect(second.api.settings.value).toEqual({
       background: "sky",
-      scene: "animals",
+      scene: "soft-animals",
       intensity: "lively",
       soundEnabled: true,
       volume: 72,
     });
+    expect(second.api.settingsLabel.value).toBe("Soft Animals scene");
 
     second.wrapper.unmount();
   });

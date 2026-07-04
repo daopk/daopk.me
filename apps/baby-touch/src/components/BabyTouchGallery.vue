@@ -5,10 +5,16 @@ import {
   babyTouchStickerCategories,
   type BabyTouchStickerCatalogItem,
 } from "../babyTouchStickerCatalog";
+import type { BabyTouchScene } from "../babyTouchTypes";
 import BabyTouchStickerArt from "./stickers/BabyTouchStickerArt.vue";
+
+defineProps<{
+  readonly selectedScene: BabyTouchScene;
+}>();
 
 const emit = defineEmits<{
   (event: "back"): void;
+  (event: "pick-scene", value: BabyTouchScene): void;
 }>();
 
 function stickerStyle(sticker: BabyTouchStickerCatalogItem): Record<string, string> {
@@ -43,6 +49,7 @@ function stickerStyle(sticker: BabyTouchStickerCatalogItem): Record<string, stri
         v-for="category in babyTouchStickerCategories"
         :key="category.id"
         class="baby-touch__gallery-category"
+        :class="{ 'baby-touch__gallery-category--selected': category.scene === selectedScene }"
         data-testid="baby-touch-gallery-category"
         :aria-labelledby="`baby-touch-gallery-${category.id}`"
       >
@@ -52,11 +59,16 @@ function stickerStyle(sticker: BabyTouchStickerCatalogItem): Record<string, stri
         </header>
 
         <div class="baby-touch__gallery-grid">
-          <article
+          <button
             v-for="sticker in category.stickers"
             :key="sticker.id"
+            type="button"
             class="baby-touch__gallery-card"
+            :class="{ 'baby-touch__gallery-card--selected': category.scene === selectedScene }"
             data-testid="baby-touch-gallery-sticker"
+            :aria-label="`Use ${category.label} collection`"
+            :aria-pressed="category.scene === selectedScene"
+            @click="emit('pick-scene', category.scene)"
           >
             <div
               class="baby-touch__gallery-art"
@@ -72,7 +84,7 @@ function stickerStyle(sticker: BabyTouchStickerCatalogItem): Record<string, stri
             </div>
 
             <span class="baby-touch__gallery-label">{{ sticker.label }}</span>
-          </article>
+          </button>
         </div>
       </section>
     </div>

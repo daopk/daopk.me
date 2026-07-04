@@ -113,6 +113,7 @@ describe("Baby Touch App", () => {
       expectedStickerCount,
     );
     expect(wrapper.text()).toContain("Animals");
+    expect(wrapper.text()).toContain("Soft Animals");
     expect(wrapper.text()).toContain("Bear");
     expect(wrapper.text()).not.toContain("Shapes");
 
@@ -121,6 +122,47 @@ describe("Baby Touch App", () => {
 
     expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="baby-touch-gallery"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it("uses the selected soft animals collection for home art and spawned stickers", async () => {
+    const wrapper = mount(BabyTouchApp);
+
+    await wrapper.find('[data-testid="baby-touch-open-gallery"]').trigger("click");
+    await nextTick();
+
+    const softAnimalsButton = wrapper
+      .findAll('[data-testid="baby-touch-gallery-sticker"]')
+      .find((button) => button.attributes("aria-label") === "Use Soft Animals collection");
+
+    expect(softAnimalsButton).toBeDefined();
+    await softAnimalsButton!.trigger("click");
+    await nextTick();
+
+    expect(softAnimalsButton!.attributes("aria-pressed")).toBe("true");
+
+    await wrapper.find('[data-testid="baby-touch-gallery-back"]').trigger("click");
+    await nextTick();
+
+    expect(
+      wrapper
+        .find('[data-testid="baby-touch-home-art"] .baby-touch__soft-animal--soft-animal-01')
+        .exists(),
+    ).toBe(true);
+
+    await startGameFromBackground(wrapper);
+    setSurfaceRect(wrapper);
+
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 50,
+      clientY: 25,
+      pointerId: 1,
+    });
+
+    const sticker = wrapper.find('[data-testid="baby-touch-sticker"]');
+    expect(sticker.classes()).toContain("baby-touch__sticker--soft-animal");
+    expect(sticker.find("img.baby-touch__soft-animal").exists()).toBe(true);
 
     wrapper.unmount();
   });
