@@ -61,9 +61,7 @@ function onPointerDown(event: PointerEvent): void {
   capturePointer(event);
   event.preventDefault();
 
-  if (props.handleParentCornerDown(event.pointerId, point)) {
-    return;
-  }
+  props.handleParentCornerDown(event.pointerId, point);
 
   const sticker = spawnSticker(point, stageSize);
   props.playTapTone(sticker);

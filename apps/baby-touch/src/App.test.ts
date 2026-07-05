@@ -233,6 +233,38 @@ describe("Baby Touch App", () => {
     wrapper.unmount();
   });
 
+  it("keeps forced landscape-right parent hold corners tappable", async () => {
+    document.documentElement.dataset.shell = "mobile";
+    const wrapper = mount(BabyTouchApp, { attachTo: document.body });
+    setOrientationViewportRect(wrapper, 100, 200);
+    window.dispatchEvent(new Event("resize"));
+    await nextTick();
+
+    await startGameFromBackground(wrapper);
+    setSurfaceRect(wrapper, 100, 200);
+
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 92,
+      clientY: 8,
+      pointerId: 1,
+    });
+    await wrapper.find('[data-testid="baby-touch-surface"]').trigger("pointerdown", {
+      clientX: 92,
+      clientY: 192,
+      pointerId: 2,
+    });
+
+    expect(wrapper.findAll('[data-testid="baby-touch-sticker"]')).toHaveLength(2);
+
+    await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS);
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="baby-touch-home"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="baby-touch-surface"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("returns home as soon as the game home slider is dragged far enough", async () => {
     const wrapper = mount(BabyTouchApp, { attachTo: document.body });
     await startGameFromBackground(wrapper);
@@ -333,6 +365,9 @@ describe("Baby Touch App", () => {
       clientY: 8,
       pointerId: 2,
     });
+
+    expect(wrapper.findAll('[data-testid="baby-touch-sticker"]')).toHaveLength(2);
+
     await vi.advanceTimersByTimeAsync(PARENT_HOLD_MS);
     await nextTick();
 
