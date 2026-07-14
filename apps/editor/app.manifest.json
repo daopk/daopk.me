@@ -1,7 +1,7 @@
 {
   "id": "editor",
   "name": "Editor",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "productivity",
   "singleton": false,
   "permissions": ["vfs.read", "vfs.write"],

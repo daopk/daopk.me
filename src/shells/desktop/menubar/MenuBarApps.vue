@@ -92,9 +92,9 @@ function visibleApps(): AppManifest[] {
 }
 
 .apps-menu__icon {
-  block-size: 16px;
+  block-size: 20px;
   flex: 0 0 auto;
-  inline-size: 16px;
+  inline-size: 20px;
 }
 
 @media (prefers-reduced-motion: reduce) {

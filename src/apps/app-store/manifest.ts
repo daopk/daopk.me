@@ -1,4 +1,4 @@
-import { AppStoreAppIcon } from "~/icons/fluentColor";
+import { AppStoreAppIcon } from "~/icons/appIcons";
 
 import type { AppManifest } from "~/types/app";
 

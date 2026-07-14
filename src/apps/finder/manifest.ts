@@ -1,6 +1,6 @@
 import type { AppManifest } from "@daopk/sdk";
 
-import { FinderAppIcon } from "~/icons/fluentColor";
+import { FinderAppIcon } from "~/icons/appIcons";
 
 export const finderManifest: AppManifest = {
   id: "finder",

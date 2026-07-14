@@ -199,9 +199,9 @@ const dragStyle = computed(() =>
 }
 
 .dock-item__icon {
-  block-size: calc(var(--dock-icon-size) * 0.6);
+  block-size: calc(var(--dock-icon-size) * 0.75);
   filter: var(--dock-icon-shadow);
-  inline-size: calc(var(--dock-icon-size) * 0.6);
+  inline-size: calc(var(--dock-icon-size) * 0.75);
   transition: filter var(--duration-fast) var(--ease);
 }
 

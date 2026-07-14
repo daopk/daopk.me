@@ -90,7 +90,7 @@ export function defineDaopkApp(id: string, options: DaopkAppOptions = {}): UserC
     build: {
       target: "es2022",
       cssCodeSplit: false,
-      // Copy each app's `public/` (its `icon.svg` lives there) into `dist/` so
+      // Copy each app's `public/` (its identity icon lives there) into `dist/` so
       // the publish workflow uploads it alongside the entry module and the host
       // can serve it at the app's release-pinned URL.
       copyPublicDir: true,

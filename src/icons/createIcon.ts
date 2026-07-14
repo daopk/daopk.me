@@ -51,7 +51,7 @@ export function createIcon(icon: IconifyIcon, componentName: string): Component 
 
 /**
  * Build an icon component that renders an app-owned image (e.g. a release-pinned
- * `icon.svg` served from the app's catalog directory). Accepts the same
+ * `icon.png` served from the app's catalog directory). Accepts the same
  * `size`/`strokeWidth` props as the iconify-backed factories so it is a drop-in
  * for `<component :is>` icon slots; `strokeWidth` is ignored for raster/SVG
  * images. Rendering as `<img>` means the SVG cannot execute script or reach the

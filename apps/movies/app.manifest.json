@@ -1,7 +1,7 @@
 {
   "id": "movies",
   "name": "Movies",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "media",
   "singleton": true,
   "permissions": ["network.fetch"],

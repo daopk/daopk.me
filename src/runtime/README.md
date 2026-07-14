@@ -36,18 +36,18 @@ module, and marks shared runtime surfaces as Rollup externals:
 {
   "id": "notes",
   "name": "Notes",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "productivity",
   "permissions": ["vfs.read", "vfs.write"]
 }
 ```
 
-The app owns its identity icon: ship the asset at `apps/<id>/public/icon.svg`
-(raster formats such as `.png` are allowed too) and reference it from the
+The app owns its identity icon: ship the asset at `apps/<id>/public/icon.png`
+(SVG assets are allowed too) and reference it from the
 manifest with a flat relative filename — no `/` or `..`. The build copies
 `public/` into `dist/`, the publish workflow uploads it next to the entry
 module, and the shell resolves it to a release-pinned URL on the same trusted
-origin as the module (`/apps/<id>/<version+build>/icon.svg`) and renders it as
+origin as the module (`/apps/<id>/<version+build>/icon.png`) and renders it as
 an `<img>`. Changing an app icon is therefore an app release, not a shell
 change.
 
@@ -118,7 +118,7 @@ composition should be verified with `pnpm build` plus `pnpm preview`.
 3. Launch a first-party app from the App Store or shell and confirm the module
    loads from its `/_api/public/apps/<id>/...` catalog URL, and that its dock /
    home / spotlight icon loads as an `<img>` from the matching
-   `/_api/public/apps/<id>/<version+build>/icon.svg` URL.
+   `/_api/public/apps/<id>/<version+build>/icon.png` URL.
 4. In DevTools Network, confirm one shared Vue runtime chunk is used by both the
    shell and launched app.
 5. Confirm `useKernel()`, `useVfs()`, and injected `AppContext` work inside the

@@ -1,7 +1,7 @@
 {
   "id": "browser",
   "name": "Browser",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "productivity",
   "singleton": false,
   "defaultWindow": { "width": 980, "height": 640, "centered": true },

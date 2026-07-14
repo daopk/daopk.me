@@ -1,7 +1,7 @@
 {
   "id": "pdf-viewer",
   "name": "PDF Viewer",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "productivity",
   "singleton": false,
   "permissions": ["vfs.read"],

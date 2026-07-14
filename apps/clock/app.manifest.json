@@ -1,7 +1,7 @@
 {
   "id": "clock",
   "name": "Clock",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "category": "productivity",
   "singleton": true,
   "permissions": ["storage.write"],

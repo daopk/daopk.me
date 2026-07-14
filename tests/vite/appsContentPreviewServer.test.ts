@@ -90,14 +90,16 @@ describe("buildFirstPartyPreviewCatalog", () => {
 });
 
 describe("appsContentPreviewServer dev asset middleware", () => {
-  it("serves an app-owned icon from public/ at its release-pinned URL with the svg content type", async () => {
+  it("serves an app-owned icon from public/ at its release-pinned URL with the png content type", async () => {
     const middleware = captureMiddleware("configureServer");
 
-    const result = await runMiddleware(middleware, "/apps/notes/1.0.1+0/icon.svg");
+    const result = await runMiddleware(middleware, "/apps/notes/1.0.1+0/icon.png");
 
     expect(result.nextCalled).toBe(false);
-    expect(result.headers["content-type"]).toBe("image/svg+xml");
-    expect(Buffer.isBuffer(result.body) ? result.body.toString("utf8") : "").toContain("<svg");
+    expect(result.headers["content-type"]).toBe("image/png");
+    expect(Buffer.isBuffer(result.body) ? result.body.subarray(0, 8).toString("hex") : "").toBe(
+      "89504e470d0a1a0a",
+    );
   });
 
   it("falls through to Vite for non-image paths so app source is never shadowed", async () => {
@@ -112,7 +114,7 @@ describe("appsContentPreviewServer dev asset middleware", () => {
   it("falls through to Vite when the requested asset does not exist", async () => {
     const middleware = captureMiddleware("configureServer");
 
-    const result = await runMiddleware(middleware, "/apps/notes/1.0.1+0/missing-icon.svg");
+    const result = await runMiddleware(middleware, "/apps/notes/1.0.1+0/missing-icon.png");
 
     expect(result.nextCalled).toBe(true);
   });

@@ -1,4 +1,4 @@
-import { TrashAppIcon } from "~/icons/fluentColor";
+import { TrashAppIcon } from "~/icons/appIcons";
 
 import type { AppManifest } from "~/types/app";
 

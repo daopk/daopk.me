@@ -5,9 +5,9 @@
  * apps reuse the host's already-bundled per-icon components instead of
  * shipping their own icon copies.
  *
- * App identity is not shipped through this surface: built-in apps import a
- * Fluent Color glyph directly, while first-party apps declare a flat icon
- * filename (e.g. `icon.svg`) that the host resolves to a release-pinned image
+ * App identity is not shipped through this surface: built-in apps import their
+ * generated image glyphs directly, while first-party apps declare a flat icon
+ * filename (e.g. `icon.png`) that the host resolves to a release-pinned image
  * at registration. This runtime surface stays focused on in-app lucide glyphs
  * shared by independently-published app modules.
  *

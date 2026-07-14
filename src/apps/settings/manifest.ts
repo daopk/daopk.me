@@ -1,4 +1,4 @@
-import { SettingsAppIcon } from "~/icons/fluentColor";
+import { SettingsAppIcon } from "~/icons/appIcons";
 
 import type { AppManifest } from "~/types/app";
 

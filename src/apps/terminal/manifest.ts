@@ -1,4 +1,4 @@
-import { TerminalAppIcon } from "~/icons/fluentColor";
+import { TerminalAppIcon } from "~/icons/appIcons";
 
 import type { AppManifest } from "~/types/app";
 

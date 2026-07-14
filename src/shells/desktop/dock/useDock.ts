@@ -2,8 +2,7 @@ import { computed, type ComputedRef } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { debugLog } from "~/core/debug";
-import { TrashAppIcon as TrashIcon } from "~/icons/fluentColor";
-import { Search as SearchIcon } from "~/icons/lucide";
+import { SpotlightAppIcon as SpotlightIcon, TrashAppIcon as TrashIcon } from "~/icons/appIcons";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 import type { AppManifest } from "~/types/app";
 
@@ -200,7 +199,7 @@ const spotlightDockItem: SystemDockItem = {
   kind: "system",
   action: "spotlight",
   name: "Spotlight",
-  icon: SearchIcon,
+  icon: SpotlightIcon,
 };
 
 const trashDockItem: SystemDockItem = {
