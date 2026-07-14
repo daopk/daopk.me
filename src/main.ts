@@ -1,5 +1,5 @@
 import { createPinia } from "pinia";
-import { createApp } from "vue";
+import { createApp, vaporInteropPlugin } from "vue";
 
 import "~/core/boot/syncPreflightTheme";
 import "~/assets/scss/base.scss";
@@ -25,6 +25,7 @@ import { KernelInjectionKey } from "~/types/kernel";
 const app = createApp(App);
 const disposePwaInstallPrompt = registerPwaInstallPrompt();
 
+app.use(vaporInteropPlugin);
 app.use(createPinia());
 
 const kernel = bootstrapKernel();

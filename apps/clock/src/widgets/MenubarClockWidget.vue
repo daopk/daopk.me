@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" vapor>
 import { useClockNow } from "../useClockNow";
 
 const { minute, datetime } = useClockNow();
