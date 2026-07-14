@@ -1,7 +1,5 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
-import everestDesktopUrl from "~/assets/wallpapers/everest-desktop.webp";
-import everestPhoneUrl from "~/assets/wallpapers/everest-phone.webp";
 import { useBreakpoint } from "~/composables/useBreakpoint";
 import { useKernel } from "~/composables/useKernel";
 import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService";
@@ -9,6 +7,10 @@ import { ProfileStore } from "~/core/profile/ProfileStore";
 import { migrateGlobalDataToProfile } from "~/core/profile/migration";
 import { setActiveProfileSession, useActiveProfileSession } from "~/core/profile/ProfileSession";
 import { hasAutoGuestLoginUrlIntent } from "~/core/routing/appUrlIntents";
+import {
+  DEFAULT_WALLPAPER_DESKTOP_URL,
+  DEFAULT_WALLPAPER_MOBILE_URL,
+} from "~/core/theme/wallpapers";
 import type { ActiveProfileSession, GuestProfileRecord, ProfileRecord } from "~/types/profile";
 
 import { profileMeta } from "./authGateLabels";
@@ -60,7 +62,9 @@ export function useAuthGate({ onAuthenticated }: UseAuthGateOptions) {
   const authGateStyle = computed<Record<string, string>>(() => ({
     backgroundImage: [
       "linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 34%, transparent) 0%, color-mix(in srgb, var(--color-bg) 72%, transparent) 100%)",
-      `url("${breakpoint.isMobile.value ? everestPhoneUrl : everestDesktopUrl}")`,
+      `url("${
+        breakpoint.isMobile.value ? DEFAULT_WALLPAPER_MOBILE_URL : DEFAULT_WALLPAPER_DESKTOP_URL
+      }")`,
     ].join(", "),
   }));
   const panelLabel = computed(() =>

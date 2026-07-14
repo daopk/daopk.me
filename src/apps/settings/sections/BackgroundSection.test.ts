@@ -175,7 +175,7 @@ describe("BackgroundSection (M2b.6)", () => {
 
     const tiles = wrapper.findAll(".background__tile");
     expect(tiles.length).toBe(builtinWallpapers.length);
-    expect(tiles[0]?.text()).toContain("Everest");
+    expect(tiles[0]?.text()).toContain("Liquid Glass");
 
     wrapper.unmount();
   });
@@ -233,7 +233,7 @@ describe("BackgroundSection (M2b.6)", () => {
     const activeTile = wrapper
       .findAll(".background__tile")
       .find((tile) => tile.classes().includes("background__tile--active"));
-    expect(activeTile?.text()).toContain("Everest");
+    expect(activeTile?.text()).toContain("Liquid Glass");
 
     wrapper.unmount();
   });

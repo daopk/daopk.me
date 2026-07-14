@@ -12,17 +12,25 @@ describe("wallpapers", () => {
     expect(builtinWallpapers.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("registers Everest as the default responsive image built-in", () => {
-    const everest = builtinWallpapers[0];
-    expect(everest?.id).toBe(DEFAULT_WALLPAPER_ID);
-    expect(everest?.name).toBe("Everest");
-    expect(everest?.type).toBe("image");
-    expect(everest?.preferredTheme).toBeUndefined();
-    expect(resolveWallpaperValue(everest!, "desktop")).toMatch(/\.webp(\?.*)?$/i);
-    expect(resolveWallpaperValue(everest!, "mobile")).toMatch(/\.webp(\?.*)?$/i);
-    expect(resolveWallpaperValue(everest!, "desktop")).not.toBe(
-      resolveWallpaperValue(everest!, "mobile"),
-    );
+  it("registers the responsive wallpaper collection with Liquid Glass as default", () => {
+    expect(builtinWallpapers.map((wallpaper) => wallpaper.name)).toEqual([
+      "Liquid Glass",
+      "Aurora Fjord",
+      "Coastal Dawn",
+    ]);
+
+    const defaultWallpaper = builtinWallpapers[0];
+    expect(defaultWallpaper?.id).toBe(DEFAULT_WALLPAPER_ID);
+    expect(defaultWallpaper?.preferredTheme).toBeUndefined();
+
+    for (const wallpaper of builtinWallpapers) {
+      expect(wallpaper.type).toBe("image");
+      expect(resolveWallpaperValue(wallpaper, "desktop")).toMatch(/\.webp(\?.*)?$/i);
+      expect(resolveWallpaperValue(wallpaper, "mobile")).toMatch(/\.webp(\?.*)?$/i);
+      expect(resolveWallpaperValue(wallpaper, "desktop")).not.toBe(
+        resolveWallpaperValue(wallpaper, "mobile"),
+      );
+    }
   });
 
   it("does not ship the removed Framer wallpaper", () => {

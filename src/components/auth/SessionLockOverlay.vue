@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
-import everestDesktopUrl from "~/assets/wallpapers/everest-desktop.webp";
-import everestPhoneUrl from "~/assets/wallpapers/everest-phone.webp";
 import { Button } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
 import AuthAutoUpdateScreen from "~/components/auth/AuthAutoUpdateScreen.vue";
 import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService";
 import { ProfileStore } from "~/core/profile/ProfileStore";
+import {
+  DEFAULT_WALLPAPER_DESKTOP_URL,
+  DEFAULT_WALLPAPER_MOBILE_URL,
+} from "~/core/theme/wallpapers";
 import { useKernel } from "~/composables/useKernel";
 import { Lock, LogOut, Unlock } from "~/icons/lucide";
 
@@ -33,7 +35,9 @@ const subtitle = computed(() =>
 const lockScreenStyle = computed<Record<string, string>>(() => ({
   backgroundImage: [
     "linear-gradient(180deg, color-mix(in srgb, var(--color-bg) 34%, transparent) 0%, color-mix(in srgb, var(--color-bg) 72%, transparent) 100%)",
-    `url("${shellId.value === "mobile" ? everestPhoneUrl : everestDesktopUrl}")`,
+    `url("${
+      shellId.value === "mobile" ? DEFAULT_WALLPAPER_MOBILE_URL : DEFAULT_WALLPAPER_DESKTOP_URL
+    }")`,
   ].join(", "),
 }));
 

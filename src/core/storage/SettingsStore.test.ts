@@ -444,6 +444,25 @@ describe("useSettingsStore", () => {
     expect(s.mobileWallpaperActiveId).toBe(DEFAULT_WALLPAPER_ID);
   });
 
+  it("normalizes the removed Everest wallpaper id to the current default on hydrate", () => {
+    localStorage.setItem(
+      SETTINGS_PHYSICAL_STORAGE_KEY,
+      JSON.stringify({
+        __v: 1,
+        data: {
+          desktopWallpaperActiveId: "everest",
+          mobileWallpaperActiveId: "everest",
+        },
+      }),
+    );
+
+    const s = useSettingsStore();
+    s.hydrate();
+
+    expect(s.desktopWallpaperActiveId).toBe(DEFAULT_WALLPAPER_ID);
+    expect(s.mobileWallpaperActiveId).toBe(DEFAULT_WALLPAPER_ID);
+  });
+
   it("migrates legacy custom wallpaper id to both shell settings", () => {
     localStorage.setItem(
       SETTINGS_PHYSICAL_STORAGE_KEY,
