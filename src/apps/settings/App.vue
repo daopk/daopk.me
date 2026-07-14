@@ -11,7 +11,7 @@ import {
   SettingsDockIcon as DockIcon,
   SettingsLanguageIcon as LanguageIcon,
   SettingsPrivacyIcon as PrivacyIcon,
-} from "~/icons/fluentColor";
+} from "~/icons/settingsMenuIcons";
 import { useResizeObserver } from "@vueuse/core";
 
 import AccountSection from "./sections/AccountSection.vue";

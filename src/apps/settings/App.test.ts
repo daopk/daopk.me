@@ -267,6 +267,7 @@ describe("Settings App.vue", () => {
       "Privacy",
       "About",
     ]);
+    expect(items.every((item) => item.find("img.settings__nav-icon").exists())).toBe(true);
 
     wrapper.unmount();
   });
