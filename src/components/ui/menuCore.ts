@@ -90,6 +90,7 @@ export function useMenuTriggerAria(
   trigger: Readonly<Ref<HTMLElement | null>>,
   open: () => boolean,
   contentId: string,
+  disclosure = true,
 ): void {
   let boundElement: HTMLElement | null = null;
   let snapshot: AttributeSnapshot | null = null;
@@ -125,10 +126,15 @@ export function useMenuTriggerAria(
       }
       if (!element) return;
       element.setAttribute("aria-haspopup", "menu");
-      element.setAttribute("aria-expanded", String(isOpen));
       element.dataset.state = isOpen ? "open" : "closed";
-      if (isOpen) element.setAttribute("aria-controls", contentId);
-      else element.removeAttribute("aria-controls");
+      if (disclosure) {
+        element.setAttribute("aria-expanded", String(isOpen));
+        if (isOpen) element.setAttribute("aria-controls", contentId);
+        else element.removeAttribute("aria-controls");
+      } else {
+        element.removeAttribute("aria-expanded");
+        element.removeAttribute("aria-controls");
+      }
     },
     { flush: "post", immediate: true },
   );

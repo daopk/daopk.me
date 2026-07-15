@@ -8,7 +8,7 @@ export { default as DropdownMenuSeparator } from "./MenuSeparator.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useId } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
 import {
   useDropdownMenu,
   type DropdownMenuItem as RopavDropdownMenuItem,
@@ -79,17 +79,15 @@ const {
   contentStyle,
   isVisible,
   menuRef: content,
-  onMenuKeydown,
   rootRef,
 } = useDropdownMenu(ropavProps, { openChange: onOpenChange });
 const setContentRef = (value: unknown) => (content.value = toHTMLElement(value));
-const setRootRef = (value: unknown) => (rootRef.value = toHTMLElement(value));
 
 provideMenuContext({ contentId });
 useMenuTriggerAria(trigger, () => isVisible.value, contentId);
 
 const surface = useMenuSurface({
-  close: (restoreFocus) => close({ focusTrigger: restoreFocus }),
+  close: closeMenu,
   content,
   modal: () => props.modal,
   open: () => isVisible.value,
@@ -128,31 +126,48 @@ async function focusItems(edge: "first" | "last"): Promise<void> {
 }
 
 function onContentKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu(true);
+    return;
+  }
   surface.onKeydown(event);
-  if (event.key === "Escape" && !event.defaultPrevented) onMenuKeydown(event);
 }
 
-onBeforeUnmount(() => content.value?.remove());
+function closeMenu(restoreFocus: boolean): void {
+  close({ focusTrigger: restoreFocus });
+}
+
+onMounted(() => {
+  rootRef.value = document.body;
+});
+onBeforeUnmount(() => {
+  rootRef.value = null;
+});
 </script>
 
 <template>
-  <span :ref="setRootRef" class="ds-menu-root">
+  <span class="ds-menu-root">
     <span ref="triggerHost" class="ds-menu-trigger"><slot name="trigger" /></span>
-    <Teleport v-if="isVisible" :to="resolvedPortalTo">
-      <div
-        :id="contentId"
-        :ref="setContentRef"
-        role="menu"
-        tabindex="-1"
-        :data-side="actualPlacement.split('-')[0]"
-        :style="contentStyle"
-        :class="['ds-dropdown-menu', contentClass]"
-        @ds-menu-select="surface.onSelect"
-        @focusin="surface.onFocusin"
-        @keydown="onContentKeydown"
-        @pointermove="surface.onPointermove"
-      >
-        <slot name="items" />
+    <Teleport :to="resolvedPortalTo">
+      <div class="ds-menu-portal">
+        <div
+          v-if="isVisible"
+          :id="contentId"
+          :ref="setContentRef"
+          role="menu"
+          tabindex="-1"
+          :data-side="actualPlacement.split('-')[0]"
+          :style="contentStyle"
+          :class="['ds-dropdown-menu', contentClass]"
+          @ds-menu-select="surface.onSelect"
+          @focusin="surface.onFocusin"
+          @keydown="onContentKeydown"
+          @pointermove="surface.onPointermove"
+        >
+          <slot name="items" />
+        </div>
       </div>
     </Teleport>
   </span>
@@ -160,7 +175,8 @@ onBeforeUnmount(() => content.value?.remove());
 
 <style lang="scss">
 .ds-menu-root,
-.ds-menu-trigger {
+.ds-menu-trigger,
+.ds-menu-portal {
   display: contents;
 }
 
