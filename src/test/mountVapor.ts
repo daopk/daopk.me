@@ -5,6 +5,7 @@ import {
   vaporInteropPlugin,
   type Component,
   type InjectionKey,
+  type Slots,
 } from "vue";
 
 type VaporProvide = readonly [InjectionKey<unknown> | string, unknown];
@@ -12,11 +13,14 @@ type VaporProvide = readonly [InjectionKey<unknown> | string, unknown];
 export interface VaporMountOptions {
   readonly props?: Readonly<Record<string, unknown>>;
   readonly provide?: readonly VaporProvide[];
+  readonly slots?: Readonly<Slots>;
 }
 
 export interface VaporMount {
   readonly element: HTMLElement;
   find<T extends Element = Element>(selector: string): T;
+  findAll<T extends Element = Element>(selector: string): T[];
+  html(): string;
   unmount(): void;
 }
 
@@ -31,7 +35,10 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
 
   const VaporTestHost = defineComponent({
     name: "VaporTestHost",
-    render: () => h("div", { "data-vapor-test-host": "" }, [h(component, options.props)]),
+    render: () =>
+      h("div", { "data-vapor-test-host": "" }, [
+        h(component, options.props ?? null, options.slots),
+      ]),
   });
 
   const app = createApp(VaporTestHost);
@@ -49,6 +56,12 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
         throw new Error(`Vapor test element not found: ${selector}`);
       }
       return match;
+    },
+    findAll<T extends Element = Element>(selector: string): T[] {
+      return Array.from(element.querySelectorAll<T>(selector));
+    },
+    html(): string {
+      return element.innerHTML;
     },
     unmount(): void {
       app.unmount();
