@@ -25,6 +25,8 @@
 
   --rp-color-text: var(--color-fg);
   --rp-color-dimmed: var(--color-fg-muted);
+  --rp-color-default: var(--color-bg-elevated);
+  --rp-color-default-border: var(--color-border);
   --rp-color-control-bg: var(--color-bg-elevated);
   --rp-color-control-track-bg: var(--color-bg-subtle);
   --rp-color-control-thumb-bg: var(--color-bg-elevated);
@@ -33,5 +35,13 @@
   --rp-color-control-selected-bg: var(--color-accent);
   --rp-color-control-selected-fg: var(--color-fg-on-accent);
   --rp-color-focus-ring: var(--color-accent);
+  --rp-color-blue-light-color: var(--color-accent);
+  --rp-color-blue-outline: var(--color-accent);
+  --rp-color-green-light-color: var(--color-success);
+  --rp-color-green-outline: var(--color-success);
+  --rp-color-red-light-color: var(--color-error-soft);
+  --rp-color-red-outline: var(--color-error-soft);
+  --rp-color-yellow-light-color: var(--color-accent-sheen);
+  --rp-color-yellow-outline: var(--color-accent-sheen);
   --rp-opacity-disabled: 0.6;
 }

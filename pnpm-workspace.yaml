@@ -9,6 +9,8 @@ allowBuilds:
 catalog:
   "@vue/server-renderer": 3.6.0-beta.17
   vue: 3.6.0-beta.17
+minimumReleaseAgeExclude:
+  - ropav@0.0.10
 packages:
   - .
   - apps/*

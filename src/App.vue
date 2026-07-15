@@ -3,6 +3,7 @@ import { computed, inject, onMounted, reactive, ref, watch } from "vue";
 
 import AuthGate from "~/components/auth/AuthGate.vue";
 import BootHost from "~/components/boot/BootHost.vue";
+import ToastHost from "~/components/ui/ToastHost.vue";
 import { APP_OVERLAY_PORTAL_ID } from "~/components/ui/portalTarget";
 
 import type { BootManager } from "~/core";
@@ -105,6 +106,7 @@ watch(
         @retry="handleBootRetry"
       />
       <ShellHost v-else-if="showShellHost" key="shell-hosted" />
+      <ToastHost />
 
       <Transition name="auth-gate-lift">
         <AuthGate

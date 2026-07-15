@@ -173,16 +173,14 @@ describe("ToastHost", () => {
     const wrapper = mount(ToastHost);
     await settle();
 
-    const items = wrapper.findAll<HTMLElement>(".ds-toast");
+    const items = wrapper.findAll<HTMLElement>(".rp-toast");
     expect(items).toHaveLength(2);
     expect(items[0]?.getAttribute("role")).toBe("status");
-    expect(items[0]?.getAttribute("aria-live")).toBe("polite");
     expect(items[1]?.getAttribute("role")).toBe("alert");
-    expect(items[1]?.getAttribute("aria-live")).toBe("assertive");
 
-    wrapper.find<HTMLButtonElement>(".ds-toast__close").click();
-    await nextTick();
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
+    wrapper.find<HTMLButtonElement>(".rp-toast__close").click();
+    await vi.advanceTimersByTimeAsync(250);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(1);
   });
 
   it("auto-dismisses while pausing the remaining timer on hover and focus", async () => {
@@ -190,28 +188,30 @@ describe("ToastHost", () => {
     useToast().info({ title: "Paused", duration: 100 });
     const wrapper = mount(ToastHost);
     await settle();
-    const item = wrapper.find<HTMLElement>(".ds-toast");
+    const item = wrapper.find<HTMLElement>(".rp-toast");
 
     await vi.advanceTimersByTimeAsync(40);
-    pointer(item, "pointerenter");
+    item.dispatchEvent(new MouseEvent("mouseenter"));
     await vi.advanceTimersByTimeAsync(200);
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(1);
 
-    pointer(item, "pointerleave");
+    item.dispatchEvent(new MouseEvent("mouseleave"));
     await vi.advanceTimersByTimeAsync(59);
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(0);
 
     useToast().warning({ title: "Focus paused", duration: 50 });
     await nextTick();
-    const close = wrapper.find<HTMLButtonElement>(".ds-toast__close");
+    const close = wrapper.find<HTMLButtonElement>(".rp-toast__close");
     close.focus();
     await vi.advanceTimersByTimeAsync(100);
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(1);
     close.blur();
     await vi.advanceTimersByTimeAsync(50);
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(0);
   });
 
   it("dismisses a toast after a rightward swipe", async () => {
@@ -219,16 +219,17 @@ describe("ToastHost", () => {
     useToast().info({ title: "Swipe me", duration: 10_000 });
     const wrapper = mount(ToastHost);
     await settle();
-    const item = wrapper.find<HTMLElement>(".ds-toast");
+    const item = wrapper.find<HTMLElement>(".rp-toast");
+    const swipeItem = wrapper.find<HTMLElement>(".ds-toast-viewport__item");
 
     pointer(item, "pointerdown", 10);
     pointer(item, "pointermove", 90);
     await nextTick();
-    expect(item.dataset.swipe).toBe("move");
-    expect(item.style.getPropertyValue("--ds-toast-swipe-move-x")).toBe("80px");
+    expect(swipeItem.dataset.swipe).toBe("move");
+    expect(swipeItem.style.getPropertyValue("--ds-toast-swipe-move-x")).toBe("80px");
     pointer(item, "pointerup", 90);
-    await nextTick();
-    expect(wrapper.findAll(".ds-toast")).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(wrapper.findAll(".rp-toast")).toHaveLength(0);
   });
 
   it("has no serious accessibility violations with both live priorities", async () => {

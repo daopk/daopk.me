@@ -7,14 +7,16 @@ classes while the rest of the repository migrates incrementally.
 
 The implementation is intentionally hybrid:
 
-- `Switch`, `Slider` and radio controls adapt `ropav@0.0.9` through
+- `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
+  `ropav@0.0.10` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip, hover card and menu positioning use the local Vapor composables plus
   `@floating-ui/dom`.
 - Dialog behavior is local Vapor DOM with `Teleport`, `focus-trap`, stack-aware
   dismissal, background inerting and scroll locking.
-- Toast state remains the module-level `useToast` singleton and is rendered by
-  local Vapor components.
+- Toast calls retain the stable module-level `useToast` facade and viewport,
+  while the Ropav toast item owns rendering, timers, live-region roles and
+  dismissal.
 
 `src/runtime/ui.ts` re-exports `src/components/ui/index.ts`; public exports must
 not bypass those files. Internal DOM structure, implementation component names
@@ -52,7 +54,7 @@ Props in **bold** are required.
 | `DialogActions`        | local Vapor                | `align`                                                                                                                       | default slot                                |
 | `DropdownMenu` + items | local Vapor + Floating UI  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
 | `ContextMenu` + items  | local Vapor + virtual ref  | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
-| `ToastHost`            | local Vapor singleton host | none; mount once globally                                                                                                     | renders the `useToast` queue                |
+| `ToastHost`            | `ropav/toast` item adapter | none; mount once globally                                                                                                     | renders the `useToast` queue                |
 
 Menu exports include item, separator, label, radio group/item and item
 indicator. Item `select` receives a cancelable `Event`; calling
@@ -74,7 +76,7 @@ slot VNodes. Supply exactly one element as a trigger.
 
 ## Toasts
 
-Mount one `<ToastHost />` (the shell already does) and enqueue from any app:
+Mount one `<ToastHost />` (the root app already does) and enqueue from any app:
 
 ```ts
 import { useToast } from "@daopk/ui";
@@ -86,10 +88,10 @@ toast.dismiss(id); // or toast.clear()
 ```
 
 `show(options)` returns the toast id; `info`, `success`, `warning` and `error`
-are tone shortcuts. Error/warning use assertive live regions; info/success use
-polite live regions. Timers pause on hover/focus, and toasts support manual and
-rightward-swipe dismissal. The fixed viewport respects the bottom safe area and
-`--toast-z`.
+are tone shortcuts. The adapter maps tones to Ropav colors; error/warning use
+alert roles while info/success use status roles. Ropav owns item timers,
+hover/focus pause and manual dismissal. The host retains rightward-swipe
+dismissal, the bottom safe area and `--toast-z` integration.
 
 ## Verification
 

@@ -2,7 +2,6 @@
 import { nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
-import ToastHost from "~/components/ui/ToastHost.vue";
 import { useToast } from "~/components/ui";
 import { runAutorunManifests } from "~/core/boot/autorun";
 import {
@@ -151,7 +150,6 @@ function focusShellMain(rootEl: Element): void {
       <component :is="picked.component" :key="picked.shellId" />
     </Transition>
     <SessionLockOverlay />
-    <ToastHost />
   </div>
 </template>
 
