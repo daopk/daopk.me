@@ -1,5 +1,5 @@
 import { getActivePinia } from "pinia";
-import { reactive, watch } from "vue";
+import { effectScope, reactive, watch, type EffectScope } from "vue";
 
 import type { CommandContext } from "~/types/command";
 import type { ResolvedTheme } from "~/types/theme";
@@ -118,6 +118,8 @@ const permissionsInternal = new PermissionLedger({
 
 let themeManager: ThemeManager | undefined;
 
+let kernelEffectScope: EffectScope | undefined;
+
 let stopEffectiveThemeWatcher: undefined | (() => void);
 
 let stopBuiltinCommands: undefined | (() => void);
@@ -219,18 +221,27 @@ function buildKernel(): Kernel {
         vfsInternal.dispose();
         vfsInternal = createKernelVfs(profile);
 
+        // Boot may start from a component event handler. Keep kernel-owned
+        // watchers out of that component's scope so unmounting the boot/auth
+        // UI cannot silently stop live settings updates.
+        kernelEffectScope?.stop();
+        const effects = effectScope(true);
+        kernelEffectScope = effects;
+
         const store = useSettingsStore(requirePinia());
 
-        store.hydrate({
-          storageNamespace: profileKvNamespace(profile.profileId, "settings"),
+        effects.run(() => {
+          store.hydrate({
+            storageNamespace: profileKvNamespace(profile.profileId, "settings"),
 
-          onSettingsChanged: (key: keyof SettingsState): void => {
-            bus.emit("settings.changed", { key });
-          },
+            onSettingsChanged: (key: keyof SettingsState): void => {
+              bus.emit("settings.changed", { key });
+            },
 
-          onStorageSynced: (): void => {
-            bus.emit("settings.synced", { source: "storage" });
-          },
+            onStorageSynced: (): void => {
+              bus.emit("settings.synced", { source: "storage" });
+            },
+          });
         });
 
         themeManager ??= new ThemeManager({
@@ -255,22 +266,24 @@ function buildKernel(): Kernel {
 
         stopEffectiveThemeWatcher?.();
 
-        stopEffectiveThemeWatcher = watch(
-          (): ResolvedTheme => store.effectiveTheme,
+        stopEffectiveThemeWatcher = effects.run(() =>
+          watch(
+            (): ResolvedTheme => store.effectiveTheme,
 
-          (t: ResolvedTheme): void => {
-            if (!themeManager) {
-              return;
-            }
+            (t: ResolvedTheme): void => {
+              if (!themeManager) {
+                return;
+              }
 
-            themeManager.applyToDocument(t);
+              themeManager.applyToDocument(t);
 
-            themeManager.notifyResolved(t);
+              themeManager.notifyResolved(t);
 
-            bus.emit("theme.changed", { theme: t });
-          },
+              bus.emit("theme.changed", { theme: t });
+            },
 
-          { flush: "post" },
+            { flush: "post" },
+          ),
         );
 
         // **Event ordering contract** — `tokens.changed` MUST fire AFTER
@@ -280,53 +293,57 @@ function buildKernel(): Kernel {
 
         let lastTokenSnapshot: Record<string, string> = {};
 
-        overridesStore.hydrate({
-          storageNamespace: profileKvNamespace(profile.profileId, "tokens"),
+        effects.run(() => {
+          overridesStore.hydrate({
+            storageNamespace: profileKvNamespace(profile.profileId, "tokens"),
 
-          onStorageSynced: (): void => {
-            // Cross-tab path. `applyKvPayload` has already mutated
-            const next = overridesStore.snapshot();
-            const mutated = themeManager?.applyOverrides(next) ?? false;
-            if (mutated) {
-              bus.emit("tokens.changed", {
-                keys: Object.keys(next),
-                source: "sync",
-              });
-              lastTokenSnapshot = { ...next };
-            }
-          },
+            onStorageSynced: (): void => {
+              // Cross-tab path. `applyKvPayload` has already mutated
+              const next = overridesStore.snapshot();
+              const mutated = themeManager?.applyOverrides(next) ?? false;
+              if (mutated) {
+                bus.emit("tokens.changed", {
+                  keys: Object.keys(next),
+                  source: "sync",
+                });
+                lastTokenSnapshot = { ...next };
+              }
+            },
+          });
         });
 
         lastTokenSnapshot = overridesStore.snapshot();
         themeManager.applyOverrides(lastTokenSnapshot);
 
         stopTokenOverridesWatcher?.();
-        stopTokenOverridesWatcher = watch(
-          (): Record<string, string> => overridesStore.overrides,
-          (next): void => {
-            if (!themeManager) {
-              return;
-            }
-            const changedKeys: string[] = [];
-            const allKeys = new Set([...Object.keys(next), ...Object.keys(lastTokenSnapshot)]);
-            for (const k of allKeys) {
-              if (next[k] !== lastTokenSnapshot[k]) {
-                changedKeys.push(k);
+        stopTokenOverridesWatcher = effects.run(() =>
+          watch(
+            (): Record<string, string> => overridesStore.overrides,
+            (next): void => {
+              if (!themeManager) {
+                return;
               }
-            }
+              const changedKeys: string[] = [];
+              const allKeys = new Set([...Object.keys(next), ...Object.keys(lastTokenSnapshot)]);
+              for (const k of allKeys) {
+                if (next[k] !== lastTokenSnapshot[k]) {
+                  changedKeys.push(k);
+                }
+              }
 
-            const mutated = themeManager.applyOverrides(next);
+              const mutated = themeManager.applyOverrides(next);
 
-            lastTokenSnapshot = { ...next };
+              lastTokenSnapshot = { ...next };
 
-            if (mutated && changedKeys.length > 0) {
-              bus.emit("tokens.changed", {
-                keys: changedKeys,
-                source: "local",
-              });
-            }
-          },
-          { flush: "post", deep: true },
+              if (mutated && changedKeys.length > 0) {
+                bus.emit("tokens.changed", {
+                  keys: changedKeys,
+                  source: "local",
+                });
+              }
+            },
+            { flush: "post", deep: true },
+          ),
         );
 
         const wallpaperStore = useWallpaperStore(requirePinia());
@@ -394,6 +411,10 @@ function buildKernel(): Kernel {
       stopEffectiveThemeWatcher?.();
 
       stopEffectiveThemeWatcher = undefined;
+
+      kernelEffectScope?.stop();
+
+      kernelEffectScope = undefined;
 
       themeManager?.dispose();
 
