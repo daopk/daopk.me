@@ -6,26 +6,26 @@ import { useFocusTrap } from "./useFocusTrap";
 
 const focusTrapMocks = vi.hoisted(() => ({
   activate: vi.fn(),
-  create: vi.fn(),
   deactivate: vi.fn(),
+  use: vi.fn(),
 }));
 
-vi.mock("focus-trap", () => ({
-  createFocusTrap: focusTrapMocks.create,
+vi.mock("ropav/focus-trap", () => ({
+  useFocusTrap: focusTrapMocks.use,
 }));
 
 describe("useFocusTrap", () => {
   beforeEach(() => {
     focusTrapMocks.activate.mockReset();
-    focusTrapMocks.create.mockReset();
     focusTrapMocks.deactivate.mockReset();
-    focusTrapMocks.create.mockReturnValue({
+    focusTrapMocks.use.mockReset();
+    focusTrapMocks.use.mockReturnValue({
       activate: focusTrapMocks.activate,
       deactivate: focusTrapMocks.deactivate,
     });
   });
 
-  it("activates a DOM trap when the template ref is bound", async () => {
+  it("delegates to Ropav while preserving the facade defaults", async () => {
     const Harness = defineComponent({
       setup() {
         const target = ref<HTMLElement | null>(null);
@@ -38,9 +38,9 @@ describe("useFocusTrap", () => {
     await nextTick();
 
     const element = wrapper.get("div").element;
-    expect(focusTrapMocks.create).toHaveBeenCalledOnce();
-    expect(focusTrapMocks.create).toHaveBeenCalledWith(
-      element,
+    expect(focusTrapMocks.use).toHaveBeenCalledOnce();
+    expect(focusTrapMocks.use).toHaveBeenCalledWith(
+      expect.any(Object),
       expect.objectContaining({
         allowOutsideClick: true,
         escapeDeactivates: false,
@@ -50,25 +50,36 @@ describe("useFocusTrap", () => {
     );
     expect(focusTrapMocks.activate).toHaveBeenCalledOnce();
 
-    const options = focusTrapMocks.create.mock.calls[0]?.[1];
+    const target = focusTrapMocks.use.mock.calls[0]?.[0];
+    const options = focusTrapMocks.use.mock.calls[0]?.[1];
+    expect(target?.value).toBe(element);
     expect(options?.fallbackFocus()).toBe(element);
 
     wrapper.unmount();
   });
 
-  it("deactivates the trap when its component scope is disposed", async () => {
+  it("maps a reactive enabled input to Ropav activation", async () => {
+    const enabled = ref(false);
     const Harness = defineComponent({
       setup() {
         const target = ref<HTMLElement | null>(null);
-        useFocusTrap(target);
+        useFocusTrap(target, {}, enabled);
         return () => h("div", { ref: target, tabindex: -1 });
       },
     });
 
     const wrapper = mount(Harness, { attachTo: document.body });
     await nextTick();
-    wrapper.unmount();
-
     expect(focusTrapMocks.deactivate).toHaveBeenCalledOnce();
+
+    enabled.value = true;
+    await nextTick();
+    expect(focusTrapMocks.activate).toHaveBeenCalledOnce();
+
+    enabled.value = false;
+    await nextTick();
+    expect(focusTrapMocks.deactivate).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
   });
 });

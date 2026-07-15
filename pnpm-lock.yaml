@@ -41,9 +41,6 @@ importers:
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
-      focus-trap:
-        specifier: ^8.2.2
-        version: 8.2.2
       idb:
         specifier: ^8.0.3
         version: 8.0.3

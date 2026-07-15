@@ -12,8 +12,8 @@ The implementation is intentionally hybrid:
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip, hover card and menu positioning use the local Vapor composables plus
   `@floating-ui/dom`.
-- Dialog behavior is local Vapor DOM with `Teleport`, `focus-trap`, stack-aware
-  dismissal, background inerting and scroll locking.
+- Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
+  composable, stack-aware dismissal, background inerting and scroll locking.
 - Toast calls retain the stable module-level `useToast` facade and viewport,
   while the Ropav toast item owns rendering, timers, live-region roles and
   dismissal.

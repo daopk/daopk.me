@@ -34,7 +34,6 @@
     "@shikijs/themes": "^4.3.0",
     "@vueuse/core": "^14.3.0",
     "comlink": "^4.4.2",
-    "focus-trap": "^8.2.2",
     "idb": "^8.0.3",
     "minisearch": "^7.2.0",
     "pinia": "^3.0.4",
