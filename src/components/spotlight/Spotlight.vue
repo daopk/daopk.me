@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { FocusTrap } from "focus-trap-vue";
 import {
   FinderFileIcon,
   FinderFolderIcon,
@@ -9,10 +8,10 @@ import {
 } from "~/icons/fluentColor";
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { Search as SearchIcon } from "~/icons/lucide";
-import { Motion } from "motion-v";
-import { computed, nextTick, ref, useId, watch, type Component } from "vue";
+import { computed, ref, useId, watch, type Component } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
+import { useFocusTrap } from "~/components/ui/useFocusTrap";
 import type { AppManifest } from "~/types/app";
 import type { CommandManifest } from "~/types/command";
 import type { SearchHit, SearchKind, SearchVfsMetadata } from "~/types/search";
@@ -46,7 +45,14 @@ const headingId = useId();
 const inputId = useId();
 const listboxId = useId();
 const optionIdPrefix = useId();
+const spotlightRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
+
+useFocusTrap(spotlightRef, {
+  escapeDeactivates: false,
+  initialFocus: () => inputRef.value ?? spotlightRef.value ?? false,
+  preventScroll: true,
+});
 
 interface Row {
   kind: SearchKind;
@@ -252,106 +258,84 @@ function onRowClick(index: number): void {
 function onRowHover(index: number): void {
   activeIndex.value = index;
 }
-
-const onTrapActivate = (): void => {
-  nextTick(() => {
-    inputRef.value?.focus();
-  });
-};
-
-const motionTransition = computed(() => {
-  if (reduced.value) {
-    return { duration: 0.12, ease: "linear" } as const;
-  }
-  return { type: "spring", stiffness: 360, damping: 32 } as const;
-});
 </script>
 
 <template>
-  <FocusTrap
-    :active="true"
-    :initial-focus="`#${inputId}`"
-    :return-focus-on-deactivate="true"
-    @activate="onTrapActivate"
+  <div
+    ref="spotlightRef"
+    class="spotlight"
+    :class="{ 'spotlight--reduced': reduced }"
+    role="presentation"
+    tabindex="-1"
+    @mousedown="onScrimMousedown"
   >
-    <div class="spotlight" role="presentation" @mousedown="onScrimMousedown">
-      <Motion
-        :initial="reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -8 }"
-        :animate="reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }"
-        :exit="reduced ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -8 }"
-        :transition="motionTransition"
-        class="spotlight__panel"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="headingId"
-        @keydown="onKeydown"
-      >
-        <h2 :id="headingId" class="spotlight__sr-only">Spotlight</h2>
-        <div class="spotlight__inputRow">
-          <SearchIcon
-            class="spotlight__inputIcon"
-            :size="18"
-            :stroke-width="2"
-            aria-hidden="true"
-          />
-          <input
-            :id="inputId"
-            ref="inputRef"
-            class="spotlight__input"
-            type="text"
-            role="combobox"
-            :placeholder="placeholder ?? 'Search apps and commands'"
-            :value="query"
-            :aria-expanded="rows.length > 0"
-            :aria-controls="rows.length > 0 ? listboxId : undefined"
-            :aria-activedescendant="activeRowId ?? undefined"
-            aria-autocomplete="list"
-            autocomplete="off"
-            spellcheck="false"
-            @input="onInput"
-          />
-        </div>
-        <div class="spotlight__results">
-          <p v-if="rows.length === 0" class="spotlight__empty">
-            {{ isQueryEmpty ? "Start typing to search" : "No results" }}
-          </p>
-          <ul v-else :id="listboxId" class="spotlight__listbox" role="listbox">
-            <template v-for="(row, index) in rows" :key="`${row.kind}:${row.id}`">
-              <li v-if="row.sectionLabel" class="spotlight__sectionLabel" role="presentation">
-                {{ row.sectionLabel }}
-              </li>
-              <li
-                :id="rowDomId(index)"
-                role="option"
-                class="spotlight__option"
-                :class="{ 'spotlight__option--active': index === activeIndex }"
-                :aria-selected="index === activeIndex"
-                @mousedown.prevent="onRowClick(index)"
-                @mousemove="onRowHover(index)"
-              >
-                <AppIcon
-                  v-if="row.icon"
-                  :icon="row.icon"
-                  class="spotlight__optionIcon"
-                  :size="18"
-                  :stroke-width="2"
-                  aria-hidden="true"
-                />
-                <span class="spotlight__optionText">
-                  <span class="spotlight__optionTitle">{{ row.title }}</span>
-                  <span v-if="row.hint" class="spotlight__optionHint">{{ row.hint }}</span>
-                  <span v-if="row.snippet" class="spotlight__optionSnippet">{{ row.snippet }}</span>
-                </span>
-                <span class="spotlight__optionKindBadge">
-                  {{ row.badge }}
-                </span>
-              </li>
-            </template>
-          </ul>
-        </div>
-      </Motion>
+    <div
+      class="spotlight__panel"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="headingId"
+      @keydown="onKeydown"
+    >
+      <h2 :id="headingId" class="spotlight__sr-only">Spotlight</h2>
+      <div class="spotlight__inputRow">
+        <SearchIcon class="spotlight__inputIcon" :size="18" :stroke-width="2" aria-hidden="true" />
+        <input
+          :id="inputId"
+          ref="inputRef"
+          class="spotlight__input"
+          type="text"
+          role="combobox"
+          :placeholder="placeholder ?? 'Search apps and commands'"
+          :value="query"
+          :aria-expanded="rows.length > 0"
+          :aria-controls="rows.length > 0 ? listboxId : undefined"
+          :aria-activedescendant="activeRowId ?? undefined"
+          aria-autocomplete="list"
+          autocomplete="off"
+          spellcheck="false"
+          @input="onInput"
+        />
+      </div>
+      <div class="spotlight__results">
+        <p v-if="rows.length === 0" class="spotlight__empty">
+          {{ isQueryEmpty ? "Start typing to search" : "No results" }}
+        </p>
+        <ul v-else :id="listboxId" class="spotlight__listbox" role="listbox">
+          <template v-for="(row, index) in rows" :key="`${row.kind}:${row.id}`">
+            <li v-if="row.sectionLabel" class="spotlight__sectionLabel" role="presentation">
+              {{ row.sectionLabel }}
+            </li>
+            <li
+              :id="rowDomId(index)"
+              role="option"
+              class="spotlight__option"
+              :class="{ 'spotlight__option--active': index === activeIndex }"
+              :aria-selected="index === activeIndex"
+              @mousedown.prevent="onRowClick(index)"
+              @mousemove="onRowHover(index)"
+            >
+              <AppIcon
+                v-if="row.icon"
+                :icon="row.icon"
+                class="spotlight__optionIcon"
+                :size="18"
+                :stroke-width="2"
+                aria-hidden="true"
+              />
+              <span class="spotlight__optionText">
+                <span class="spotlight__optionTitle">{{ row.title }}</span>
+                <span v-if="row.hint" class="spotlight__optionHint">{{ row.hint }}</span>
+                <span v-if="row.snippet" class="spotlight__optionSnippet">{{ row.snippet }}</span>
+              </span>
+              <span class="spotlight__optionKindBadge">
+                {{ row.badge }}
+              </span>
+            </li>
+          </template>
+        </ul>
+      </div>
     </div>
-  </FocusTrap>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -366,6 +350,45 @@ const motionTransition = computed(() => {
   padding-block-start: 12vh;
   position: fixed;
   z-index: var(--spotlight-z);
+}
+
+.spotlight-presence-enter-active,
+.spotlight-presence-leave-active {
+  transition: opacity 220ms var(--ease);
+
+  .spotlight__panel {
+    transition:
+      opacity 220ms var(--ease),
+      transform 220ms var(--ease);
+  }
+}
+
+.spotlight-presence-enter-from,
+.spotlight-presence-leave-to {
+  opacity: 0;
+
+  .spotlight__panel {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+.spotlight--reduced {
+  &.spotlight-presence-enter-active,
+  &.spotlight-presence-leave-active {
+    transition: opacity var(--duration-fast) linear;
+
+    .spotlight__panel {
+      transition: opacity var(--duration-fast) linear;
+    }
+  }
+
+  &.spotlight-presence-enter-from,
+  &.spotlight-presence-leave-to {
+    .spotlight__panel {
+      transform: none;
+    }
+  }
 }
 
 .spotlight__panel {

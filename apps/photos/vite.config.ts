@@ -1,5 +1,5 @@
 import { defineDaopkApp } from "../_shared/viteApp";
 
-// `focus-trap-vue` (+ its `focus-trap` core) is an app-only dependency, so it is
-// bundled INTO this app rather than externalized to the host runtime.
+// Shared UI behavior (including the renderer-independent focus trap composable)
+// resolves from the host's `@daopk/ui` runtime entry.
 export default defineDaopkApp("photos");

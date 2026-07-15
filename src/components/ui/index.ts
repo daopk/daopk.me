@@ -19,5 +19,7 @@ export { default as Slider } from "./Slider.vue";
 export { default as Switch } from "./Switch.vue";
 export { default as ToastHost } from "./ToastHost.vue";
 export { default as Tooltip } from "./Tooltip.vue";
+export { useFocusTrap } from "./useFocusTrap";
+export type { FocusTrapControls, FocusTrapTarget, UseFocusTrapOptions } from "./useFocusTrap";
 export { useToast } from "./useToast";
 export type { ToastApi, ToastOptions, ToastRecord, ToastTone } from "./useToast";

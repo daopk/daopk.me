@@ -10,7 +10,7 @@ import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
 vi.mock("~/core/debug", () => ({ debugWarn: vi.fn(), debugLog: vi.fn() }));
 
-// without dragging in FocusTrap + the full a11y wiring (covered
+// without dragging in the focus trap + the full a11y wiring (covered
 vi.mock("~/components/spotlight/Spotlight.vue", () => ({
   default: defineComponent({
     name: "SpotlightStub",
@@ -18,21 +18,6 @@ vi.mock("~/components/spotlight/Spotlight.vue", () => ({
     emits: ["update:query", "dispatch", "close"],
     setup() {
       return () => h("div", { "data-testid": "spotlight-stub" }, "spotlight");
-    },
-  }),
-}));
-
-vi.mock("motion-v", () => ({
-  AnimatePresence: defineComponent({
-    name: "AnimatePresenceStub",
-    setup(_, { slots }) {
-      return () => slots.default?.();
-    },
-  }),
-  Motion: defineComponent({
-    name: "MotionStub",
-    setup(_, { slots }) {
-      return () => h("div", { "data-testid": "motion-stub" }, slots.default?.());
     },
   }),
 }));
@@ -130,6 +115,20 @@ describe("MobileSpotlightHost", () => {
     await nextTick();
 
     expect(wrapper.find('[data-testid="spotlight-stub"]').exists()).toBe(true);
+    unmount();
+  });
+
+  it("maps pull progress directly onto the renderer-independent peek styles", async () => {
+    const { scrollEl, wrapper, unmount } = mountHost();
+
+    scrollEl.dispatchEvent(pointerEvent("pointerdown", { clientY: 0 }));
+    scrollEl.dispatchEvent(pointerEvent("pointermove", { clientY: 40 }));
+    await nextTick();
+
+    const peek = wrapper.get(".mobile-spotlight-host__peek");
+    expect(peek.attributes("style")).toContain("opacity: 0.5");
+    expect(peek.attributes("style")).toContain("transform: translateY(6px)");
+
     unmount();
   });
 

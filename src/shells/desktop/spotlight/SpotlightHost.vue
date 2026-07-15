@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { AnimatePresence } from "motion-v";
 import { onScopeDispose } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";
@@ -47,7 +46,7 @@ function onClose(): void {
 </script>
 
 <template>
-  <AnimatePresence>
+  <Transition name="spotlight-presence">
     <Spotlight
       v-if="open"
       :query="query"
@@ -57,5 +56,5 @@ function onClose(): void {
       @dispatch="onDispatch"
       @close="onClose"
     />
-  </AnimatePresence>
+  </Transition>
 </template>

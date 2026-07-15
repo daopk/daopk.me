@@ -12,9 +12,6 @@
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
-  "dependencies": {
-    "focus-trap-vue": "^4.1.0"
-  },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",
     "@vue/tsconfig": "^0.9.1",

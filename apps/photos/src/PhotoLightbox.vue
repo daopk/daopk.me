@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { FocusTrap } from "focus-trap-vue";
 import { computed, ref, watch } from "vue";
 
 import { IconButton } from "@daopk/kit";
 import { ChevronLeft, ChevronRight, X as CloseIcon } from "@daopk/icons";
+import { useFocusTrap } from "@daopk/ui";
 
 import { photoLabel } from "./photoLabel";
 import type { Photo } from "./usePhotos";
@@ -52,6 +52,17 @@ function onScrimClick(event: MouseEvent): void {
 
 const stage = ref<HTMLElement | null>(null);
 const image = ref<HTMLImageElement | null>(null);
+const lightbox = ref<HTMLElement | null>(null);
+
+useFocusTrap(lightbox, {
+  escapeDeactivates: false,
+  initialFocus: () =>
+    lightbox.value?.querySelector<HTMLElement>(".photos__lightbox-close") ??
+    lightbox.value ??
+    false,
+  preventScroll: true,
+});
+
 const { transformStyle, isZoomed, reset } = useLightboxGestures(stage, {
   content: image,
   onPrev: showPrevious,
@@ -68,65 +79,61 @@ watch(
 </script>
 
 <template>
-  <FocusTrap
+  <div
     v-if="activePhoto"
-    :active="true"
-    :initial-focus="'.photos__lightbox-close'"
-    :return-focus-on-deactivate="true"
-    @deactivate="close"
+    ref="lightbox"
+    class="photos__lightbox"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="label"
+    tabindex="-1"
+    @click="onScrimClick"
+    @keydown.esc.prevent.stop="close"
+    @keydown.left.prevent="showPrevious"
+    @keydown.right.prevent="showNext"
   >
-    <div
-      class="photos__lightbox"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="label"
-      @click="onScrimClick"
-      @keydown.left.prevent="showPrevious"
-      @keydown.right.prevent="showNext"
-    >
-      <div class="photos__lightbox-bar">
-        <span class="photos__lightbox-title">{{ photoLabel(activePhoto.key) }}</span>
-        <IconButton
-          class="photos__lightbox-close"
-          label="Close photo viewer"
-          :icon="CloseIcon"
-          variant="subtle"
-          @click="close"
-        />
-      </div>
-
-      <button
-        v-if="hasPrevious"
-        type="button"
-        class="photos__nav photos__nav--prev"
-        aria-label="Previous photo"
-        @click.stop="showPrevious"
-      >
-        <ChevronLeft :size="30" aria-hidden="true" />
-      </button>
-
-      <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
-        <img
-          ref="image"
-          class="photos__lightbox-image"
-          :style="transformStyle"
-          :src="activePhoto.url"
-          :alt="photoLabel(activePhoto.key)"
-          draggable="false"
-        />
-      </div>
-
-      <button
-        v-if="hasNext"
-        type="button"
-        class="photos__nav photos__nav--next"
-        aria-label="Next photo"
-        @click.stop="showNext"
-      >
-        <ChevronRight :size="30" aria-hidden="true" />
-      </button>
+    <div class="photos__lightbox-bar">
+      <span class="photos__lightbox-title">{{ photoLabel(activePhoto.key) }}</span>
+      <IconButton
+        class="photos__lightbox-close"
+        label="Close photo viewer"
+        :icon="CloseIcon"
+        variant="subtle"
+        @click="close"
+      />
     </div>
-  </FocusTrap>
+
+    <button
+      v-if="hasPrevious"
+      type="button"
+      class="photos__nav photos__nav--prev"
+      aria-label="Previous photo"
+      @click.stop="showPrevious"
+    >
+      <ChevronLeft :size="30" aria-hidden="true" />
+    </button>
+
+    <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
+      <img
+        ref="image"
+        class="photos__lightbox-image"
+        :style="transformStyle"
+        :src="activePhoto.url"
+        :alt="photoLabel(activePhoto.key)"
+        draggable="false"
+      />
+    </div>
+
+    <button
+      v-if="hasNext"
+      type="button"
+      class="photos__nav photos__nav--next"
+      aria-label="Next photo"
+      @click.stop="showNext"
+    >
+      <ChevronRight :size="30" aria-hidden="true" />
+    </button>
+  </div>
 </template>
 
 <style scoped lang="scss">

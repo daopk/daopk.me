@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { FocusTrap } from "focus-trap-vue";
 import { Trash2 as DismissAllIcon, X as CloseIcon } from "~/icons/lucide";
-import { computed, useId, type Component } from "vue";
+import { computed, ref, useId, type Component } from "vue";
 
+import { useFocusTrap } from "~/components/ui/useFocusTrap";
 import { useKernel } from "~/composables/useKernel";
 
 import type { NavigationFrame } from "../navigation";
@@ -21,6 +21,16 @@ const emit = defineEmits<{
 
 const headingId = useId();
 const kernel = useKernel();
+const appSwitcherRef = ref<HTMLElement | null>(null);
+
+useFocusTrap(appSwitcherRef, {
+  escapeDeactivates: false,
+  initialFocus: () =>
+    appSwitcherRef.value?.querySelector<HTMLElement>(".app-switcher__close") ??
+    appSwitcherRef.value ??
+    false,
+  preventScroll: true,
+});
 
 interface ResolvedFrame extends NavigationFrame {
   name: string;
@@ -77,59 +87,55 @@ function onScrimClick(event: MouseEvent): void {
 </script>
 
 <template>
-  <FocusTrap
-    :active="true"
-    :initial-focus="'.app-switcher__close'"
-    :return-focus-on-deactivate="true"
-    @deactivate="onClose"
+  <div
+    ref="appSwitcherRef"
+    class="app-switcher"
+    role="dialog"
+    aria-modal="true"
+    :aria-labelledby="headingId"
+    tabindex="-1"
+    @click="onScrimClick"
+    @keydown.esc.prevent.stop="onClose"
   >
-    <div
-      class="app-switcher"
-      role="dialog"
-      aria-modal="true"
-      :aria-labelledby="headingId"
-      @click="onScrimClick"
-    >
-      <div class="app-switcher__panel">
-        <header class="app-switcher__header">
-          <button
-            type="button"
-            class="app-switcher__close"
-            aria-label="Close recent apps"
-            @click="onClose"
-          >
-            <CloseIcon :size="18" :stroke-width="2" aria-hidden="true" />
-          </button>
-          <h2 :id="headingId" class="app-switcher__title">Recent apps</h2>
-          <button
-            type="button"
-            class="app-switcher__dismiss-all"
-            aria-label="Close all recent apps"
-            :disabled="!canDismissAll"
-            @click="onDismissAll"
-          >
-            <DismissAllIcon :size="18" :stroke-width="2" aria-hidden="true" />
-          </button>
-        </header>
-        <div class="app-switcher__body">
-          <p v-if="cards.length === 0" class="app-switcher__empty">No running apps</p>
-          <ul v-else class="app-switcher__list">
-            <li v-for="card in cards" :key="card.frameId" class="app-switcher__item">
-              <AppSwitcherCard
-                :frame-id="card.frameId"
-                :handle-id="card.handleId"
-                :manifest-id="card.manifestId"
-                :name="card.name"
-                :icon="card.icon"
-                @select="onSelect"
-                @dismiss="onDismiss"
-              />
-            </li>
-          </ul>
-        </div>
+    <div class="app-switcher__panel">
+      <header class="app-switcher__header">
+        <button
+          type="button"
+          class="app-switcher__close"
+          aria-label="Close recent apps"
+          @click="onClose"
+        >
+          <CloseIcon :size="18" :stroke-width="2" aria-hidden="true" />
+        </button>
+        <h2 :id="headingId" class="app-switcher__title">Recent apps</h2>
+        <button
+          type="button"
+          class="app-switcher__dismiss-all"
+          aria-label="Close all recent apps"
+          :disabled="!canDismissAll"
+          @click="onDismissAll"
+        >
+          <DismissAllIcon :size="18" :stroke-width="2" aria-hidden="true" />
+        </button>
+      </header>
+      <div class="app-switcher__body">
+        <p v-if="cards.length === 0" class="app-switcher__empty">No running apps</p>
+        <ul v-else class="app-switcher__list">
+          <li v-for="card in cards" :key="card.frameId" class="app-switcher__item">
+            <AppSwitcherCard
+              :frame-id="card.frameId"
+              :handle-id="card.handleId"
+              :manifest-id="card.manifestId"
+              :name="card.name"
+              :icon="card.icon"
+              @select="onSelect"
+              @dismiss="onDismiss"
+            />
+          </li>
+        </ul>
       </div>
     </div>
-  </FocusTrap>
+  </div>
 </template>
 
 <style scoped lang="scss">

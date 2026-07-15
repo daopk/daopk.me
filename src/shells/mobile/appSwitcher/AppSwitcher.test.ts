@@ -123,6 +123,18 @@ describe("AppSwitcher", () => {
     wrapper.unmount();
   });
 
+  it("emits `close` when Escape is pressed inside the dialog", async () => {
+    const wrapper = mount(AppSwitcher, {
+      props: { frames: [] },
+      attachTo: document.body,
+    });
+
+    await wrapper.get(".app-switcher").trigger("keydown", { key: "Escape" });
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it("emits `dismiss-all` when the close-all header button is clicked", async () => {
     const wrapper = mount(AppSwitcher, {
       props: { frames: [{ frameId: "f-1", handleId: "h-1", manifestId: "alpha" }] },

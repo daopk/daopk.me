@@ -1,15 +1,15 @@
 import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
-import { defineComponent } from "vue";
+import { afterEach, describe, expect, it } from "vitest";
 
 import PhotoLightbox from "./PhotoLightbox.vue";
 import type { Photo } from "./usePhotos";
 
-const FocusTrapStub = defineComponent({
-  name: "FocusTrap",
-  setup(_props, { slots }) {
-    return () => slots.default?.();
-  },
+const mountedLightboxes: Array<ReturnType<typeof mount>> = [];
+
+afterEach(() => {
+  for (const wrapper of mountedLightboxes.splice(0)) {
+    wrapper.unmount();
+  }
 });
 
 function photo(key: string): Photo {
@@ -24,10 +24,12 @@ function photo(key: string): Photo {
 
 function mountLightbox(index: number) {
   const photos = [photo("a.jpg"), photo("2026/sunset.jpg"), photo("c.png")];
-  return mount(PhotoLightbox, {
+  const wrapper = mount(PhotoLightbox, {
     props: { photos, index },
-    global: { stubs: { FocusTrap: FocusTrapStub } },
+    attachTo: document.body,
   });
+  mountedLightboxes.push(wrapper);
+  return wrapper;
 }
 
 describe("PhotoLightbox", () => {
@@ -44,6 +46,14 @@ describe("PhotoLightbox", () => {
     const wrapper = mountLightbox(0);
 
     await wrapper.get('[aria-label="Close photo viewer"]').trigger("click");
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+  });
+
+  it("emits close when Escape is pressed inside the lightbox", async () => {
+    const wrapper = mountLightbox(0);
+
+    await wrapper.get(".photos__lightbox").trigger("keydown", { key: "Escape" });
 
     expect(wrapper.emitted("close")).toHaveLength(1);
   });

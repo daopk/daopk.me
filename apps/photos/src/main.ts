@@ -4,6 +4,6 @@
  * versioned URL (see the host's first-party app loader). Vue and the `@daopk/*`
  * runtime surface are marked `external` (vite.config.ts) and resolve to the
  * host via the import map, so this module shares the host's single Vue
- * instance, injection keys, and design system. `focus-trap-vue` is bundled in.
+ * instance, injection keys, design system, and shared DOM behavior.
  */
 export { default } from "./App.vue";

@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { AnimatePresence, Motion } from "motion-v";
 import { Search as SearchIcon } from "~/icons/lucide";
-import { ref, toRef, type Ref } from "vue";
+import { computed, ref, toRef, type CSSProperties, type Ref } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";
 import { useGesture } from "~/composables/useGesture";
@@ -22,6 +21,10 @@ const PULL_DISTANCE_PX = 80;
 const PULL_VELOCITY_PX_PER_MS = 0.3;
 
 const pullProgress = ref(0);
+const peekStyle = computed<CSSProperties>(() => ({
+  opacity: pullProgress.value,
+  transform: reduced.value ? "translateY(0)" : `translateY(${pullProgress.value * 12}px)`,
+}));
 
 useGesture(toRef(props, "scrollContainer") as Ref<HTMLElement | null>, {
   acceptMouse: false,
@@ -71,31 +74,25 @@ defineExpose({ openSpotlight, closeSpotlight });
 <template>
   <!--
     Peek pill — visual feedback during the pull. Always present in the
-    DOM so motion-v can tween back to rest on gesture abandon (no
+    DOM so CSS can tween back to rest on gesture abandon (no
     v-if churn). `pointer-events: none` keeps icons fully tappable
     underneath. `aria-hidden` because it's a transient hint, not a
     discoverable affordance — the eventual Spotlight overlay carries
     the actual semantic role.
   -->
-  <Motion
+  <div
     class="mobile-spotlight-host__peek"
+    :class="{ 'mobile-spotlight-host__peek--reduced': reduced }"
+    :style="peekStyle"
     aria-hidden="true"
-    :initial="false"
-    :animate="{
-      opacity: pullProgress,
-      y: reduced ? 0 : pullProgress * 12,
-    }"
-    :transition="
-      reduced ? { duration: 0.12, ease: 'linear' } : { type: 'spring', stiffness: 380, damping: 30 }
-    "
   >
     <span class="mobile-spotlight-host__peek-pill">
       <SearchIcon :size="14" :stroke-width="2" aria-hidden="true" />
       <span class="mobile-spotlight-host__peek-label">Search</span>
     </span>
-  </Motion>
+  </div>
 
-  <AnimatePresence>
+  <Transition name="spotlight-presence">
     <Spotlight
       v-if="open"
       :query="query"
@@ -105,7 +102,7 @@ defineExpose({ openSpotlight, closeSpotlight });
       @dispatch="onDispatch"
       @close="onClose"
     />
-  </AnimatePresence>
+  </Transition>
 </template>
 
 <style scoped lang="scss">
@@ -118,7 +115,15 @@ defineExpose({ openSpotlight, closeSpotlight });
   justify-content: center;
   pointer-events: none;
   position: absolute;
+  transition:
+    opacity 180ms var(--ease),
+    transform 220ms var(--ease);
+  will-change: opacity, transform;
   z-index: var(--spotlight-z);
+}
+
+.mobile-spotlight-host__peek--reduced {
+  transition: opacity var(--duration-fast) linear;
 }
 
 .mobile-spotlight-host__peek-pill {

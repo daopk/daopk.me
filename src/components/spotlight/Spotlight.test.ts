@@ -88,6 +88,14 @@ describe("Spotlight.vue", () => {
   });
 
   describe("a11y wiring", () => {
+    it("moves initial focus into the search input", async () => {
+      const w = makeSpotlight({});
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(document.activeElement).toBe(w.get('input[role="combobox"]').element);
+      w.unmount();
+    });
+
     it("exposes role=dialog + aria-modal=true + aria-labelledby on the panel", () => {
       const w = makeSpotlight({});
       const dialog = w.find('[role="dialog"]');

@@ -32,15 +32,6 @@ vi.mock("~/components/spotlight/Spotlight.vue", () => ({
   }),
 }));
 
-vi.mock("motion-v", () => ({
-  AnimatePresence: defineComponent({
-    name: "AnimatePresenceStub",
-    setup(_, { slots }) {
-      return () => slots.default?.();
-    },
-  }),
-}));
-
 function dispatchKey(init: KeyboardEventInit & { key: string }): void {
   window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ...init }));
 }
