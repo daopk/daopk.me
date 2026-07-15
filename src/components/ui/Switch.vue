@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, useAttrs } from "vue";
+import { computed, useAttrs, type InputHTMLAttributes } from "vue";
 
 import { RopavSwitch } from "./ropavAdapter";
 
@@ -7,15 +7,27 @@ defineOptions({ inheritAttrs: false });
 
 interface SwitchProps {
   modelValue: boolean;
+  id?: string;
+  name?: string;
   disabled?: boolean;
+  required?: boolean;
+  invalid?: boolean;
   ariaLabel?: string;
   ariaLabelledby?: string;
+  ariaDescribedby?: string;
+  inputAttrs?: InputHTMLAttributes;
 }
 
 const props = withDefaults(defineProps<SwitchProps>(), {
+  id: undefined,
+  name: undefined,
   disabled: false,
+  required: false,
+  invalid: false,
   ariaLabel: undefined,
   ariaLabelledby: undefined,
+  ariaDescribedby: undefined,
+  inputAttrs: undefined,
 });
 
 const attrs = useAttrs();
@@ -26,6 +38,9 @@ const switchClassNames = {
 const resolvedAriaLabel = computed(() => props.ariaLabel ?? stringAttr(attrs["aria-label"]));
 const resolvedAriaLabelledby = computed(
   () => props.ariaLabelledby ?? stringAttr(attrs["aria-labelledby"]),
+);
+const resolvedAriaDescribedby = computed(
+  () => props.ariaDescribedby ?? stringAttr(attrs["aria-describedby"]),
 );
 
 function stringAttr(value: unknown): string | undefined {
@@ -40,10 +55,16 @@ defineEmits<{
 <template>
   <RopavSwitch
     v-bind="attrs"
+    :id="id"
+    :name="name"
     :model-value="modelValue"
     :disabled="disabled"
+    :required="required"
+    :invalid="invalid"
     :aria-label="resolvedAriaLabel"
     :labelledby="resolvedAriaLabelledby"
+    :describedby="resolvedAriaDescribedby"
+    :input-attrs="inputAttrs"
     :class-names="switchClassNames"
     class="ds-switch"
     @update:model-value="$emit('update:modelValue', $event)"

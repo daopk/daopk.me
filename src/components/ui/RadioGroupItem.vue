@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, inject } from "vue";
+import { computed, inject, type InputHTMLAttributes } from "vue";
 
 import { radioGroupAdapterKey } from "./radioGroupContext";
 import { RopavRadio } from "./ropavAdapter";
@@ -10,12 +10,24 @@ interface RadioGroupItemProps {
   /** Visible label; the `default` slot overrides it for richer content. */
   label?: string;
   id?: string;
+  required?: boolean;
+  invalid?: boolean;
+  ariaLabel?: string;
+  ariaLabelledby?: string;
+  ariaDescribedby?: string;
+  inputAttrs?: InputHTMLAttributes;
 }
 
 const props = withDefaults(defineProps<RadioGroupItemProps>(), {
   disabled: false,
   label: undefined,
   id: undefined,
+  required: undefined,
+  invalid: undefined,
+  ariaLabel: undefined,
+  ariaLabelledby: undefined,
+  ariaDescribedby: undefined,
+  inputAttrs: undefined,
 });
 
 const injectedGroup = inject(radioGroupAdapterKey);
@@ -26,6 +38,8 @@ const group = injectedGroup;
 const radioClassNames = { indicator: "ds-radio__indicator" } as const;
 
 const resolvedDisabled = computed(() => props.disabled || group.disabled);
+const resolvedRequired = computed(() => props.required ?? group.required);
+const resolvedInvalid = computed(() => props.invalid ?? group.invalid);
 
 function onSelect(): void {
   group.select(props.value);
@@ -40,6 +54,12 @@ function onSelect(): void {
     :value="value"
     :checked="group.modelValue === value"
     :disabled="resolvedDisabled"
+    :required="resolvedRequired"
+    :invalid="resolvedInvalid"
+    :aria-label="ariaLabel"
+    :labelledby="ariaLabelledby"
+    :describedby="ariaDescribedby"
+    :input-attrs="inputAttrs"
     :class-names="radioClassNames"
     variant="outline"
     @change="onSelect"

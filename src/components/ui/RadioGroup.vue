@@ -6,18 +6,28 @@ import { RopavRadioGroup } from "./ropavAdapter";
 
 interface RadioGroupProps {
   modelValue?: string;
+  id?: string;
   disabled?: boolean;
+  required?: boolean;
+  invalid?: boolean;
   orientation?: "horizontal" | "vertical";
   /** Accessible group label (sets `aria-label` on the radiogroup). */
   label?: string;
+  ariaLabelledby?: string;
+  ariaDescribedby?: string;
   name?: string;
 }
 
 const props = withDefaults(defineProps<RadioGroupProps>(), {
   modelValue: undefined,
+  id: undefined,
   disabled: false,
+  required: false,
+  invalid: false,
   orientation: "vertical",
   label: undefined,
+  ariaLabelledby: undefined,
+  ariaDescribedby: undefined,
   name: undefined,
 });
 
@@ -32,11 +42,17 @@ provide(radioGroupAdapterKey, {
   get disabled() {
     return props.disabled;
   },
+  get invalid() {
+    return props.invalid;
+  },
   get modelValue() {
     return props.modelValue;
   },
   get name() {
     return resolvedName.value;
+  },
+  get required() {
+    return props.required;
   },
   select(value) {
     emit("update:modelValue", value);
@@ -46,12 +62,18 @@ provide(radioGroupAdapterKey, {
 
 <template>
   <RopavRadioGroup
+    :id="id"
     class="ds-radio-group"
     :class="`ds-radio-group--${orientation}`"
     :model-value="modelValue ?? null"
     :disabled="disabled"
+    :required="required"
+    :invalid="invalid"
+    :orientation="orientation"
     :name="resolvedName"
     :aria-label="label"
+    :labelledby="ariaLabelledby"
+    :describedby="ariaDescribedby"
   >
     <slot />
   </RopavRadioGroup>

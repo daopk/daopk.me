@@ -78,6 +78,33 @@ describe("Switch", () => {
     expect(input.checked).toBe(true);
     expect(input.getAttribute("aria-checked")).toBe("true");
   });
+
+  it("forwards native form and validation attributes", () => {
+    const wrapper = mount(Switch, {
+      props: {
+        modelValue: false,
+        id: "notifications",
+        name: "notifications",
+        required: true,
+        invalid: true,
+        ariaDescribedby: "notifications-error",
+        inputAttrs: {
+          form: "preferences",
+          autocomplete: "off",
+          "data-native-control": "notifications",
+        },
+      },
+    });
+    const input = wrapper.find<HTMLInputElement>('input[type="checkbox"]');
+
+    expect(input.id).toBe("notifications");
+    expect(input.name).toBe("notifications");
+    expect(input.required).toBe(true);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-describedby")).toBe("notifications-error");
+    expect(input.getAttribute("form")).toBe("preferences");
+    expect(input.dataset.nativeControl).toBe("notifications");
+  });
 });
 
 describe("Slider", () => {
@@ -129,6 +156,25 @@ describe("Slider", () => {
     expect(input.getAttribute("aria-orientation")).toBe("vertical");
     expect(input.getAttribute("aria-labelledby")).toBe("dim-label");
     expect(input.getAttribute("aria-valuetext")).toBe("100% darkening");
+  });
+
+  it("forwards native range form attributes", () => {
+    const wrapper = mount(Slider, {
+      props: {
+        modelValue: 25,
+        id: "volume",
+        name: "volume",
+        ariaDescribedby: "volume-help",
+        inputAttrs: { form: "player-settings", list: "volume-marks" },
+      },
+    });
+    const input = wrapper.find<HTMLInputElement>('input[type="range"]');
+
+    expect(input.id).toBe("volume");
+    expect(input.name).toBe("volume");
+    expect(input.getAttribute("aria-describedby")).toBe("volume-help");
+    expect(input.getAttribute("form")).toBe("player-settings");
+    expect(input.getAttribute("list")).toBe("volume-marks");
   });
 });
 
@@ -182,5 +228,39 @@ describe("RadioGroup", () => {
 
     expect(wrapper.find(".ds-radio-group").classList).toContain("ds-radio-group--horizontal");
     expect(wrapper.find(".ds-radio__label").textContent).toBe("Comfortable");
+  });
+
+  it("forwards group validation and item-level native attributes", () => {
+    const wrapper = mount(RadioGroup, {
+      props: {
+        id: "density-group",
+        modelValue: undefined,
+        name: "density",
+        label: "Density",
+        required: true,
+        invalid: true,
+        ariaDescribedby: "density-error",
+      },
+      slots: {
+        default: () =>
+          h(RadioGroupItem, {
+            value: "compact",
+            label: "Compact",
+            inputAttrs: { form: "appearance", autocomplete: "off" },
+          }),
+      },
+    });
+    const group = wrapper.find<HTMLElement>('[role="radiogroup"]');
+    const input = wrapper.find<HTMLInputElement>('input[type="radio"]');
+
+    expect(group.id).toBe("density-group");
+    expect(group.getAttribute("aria-orientation")).toBe("vertical");
+    expect(group.getAttribute("aria-required")).toBe("true");
+    expect(group.getAttribute("aria-invalid")).toBe("true");
+    expect(group.getAttribute("aria-describedby")).toBe("density-error");
+    expect(input.name).toBe("density");
+    expect(input.required).toBe(true);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("form")).toBe("appearance");
   });
 });

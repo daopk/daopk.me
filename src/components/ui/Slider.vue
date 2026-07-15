@@ -1,8 +1,12 @@
 <script setup vapor lang="ts">
+import type { InputHTMLAttributes } from "vue";
+
 import { RopavSlider } from "./ropavAdapter";
 
 interface SliderProps {
   modelValue: number;
+  id?: string;
+  name?: string;
   min?: number;
   max?: number;
   step?: number;
@@ -11,10 +15,14 @@ interface SliderProps {
   disabled?: boolean;
   ariaLabel?: string;
   ariaLabelledby?: string;
+  ariaDescribedby?: string;
   ariaValuetext?: string;
+  inputAttrs?: InputHTMLAttributes;
 }
 
 const props = withDefaults(defineProps<SliderProps>(), {
+  id: undefined,
+  name: undefined,
   min: 0,
   max: 100,
   step: 1,
@@ -23,7 +31,9 @@ const props = withDefaults(defineProps<SliderProps>(), {
   disabled: false,
   ariaLabel: undefined,
   ariaLabelledby: undefined,
+  ariaDescribedby: undefined,
   ariaValuetext: undefined,
+  inputAttrs: undefined,
 });
 
 const emit = defineEmits<{
@@ -58,6 +68,8 @@ function onCommit(event: Event): void {
     :data-thumb-alignment="thumbAlignment"
   >
     <RopavSlider
+      :id="id"
+      :name="name"
       :model-value="clamp(modelValue)"
       :min="min"
       :max="max"
@@ -67,7 +79,9 @@ function onCommit(event: Event): void {
       :tooltip="false"
       :aria-label="ariaLabel ?? 'Slider thumb'"
       :labelledby="ariaLabelledby"
+      :describedby="ariaDescribedby"
       :aria-value-text="ariaValuetext"
+      :input-attrs="inputAttrs"
       :class-names="sliderClassNames"
       class="ds-slider__root"
       @change="onCommit"
