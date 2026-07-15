@@ -2,7 +2,7 @@
 import { computed, inject } from "vue";
 
 import { radioGroupAdapterKey } from "./radioGroupContext";
-import { RopavRadio, RopavRadioGroup } from "./ropavAdapter";
+import { RopavRadio } from "./ropavAdapter";
 
 interface RadioGroupItemProps {
   value: string;
@@ -26,39 +26,29 @@ const group = injectedGroup;
 
 const resolvedDisabled = computed(() => props.disabled || group.disabled);
 
-function onSelect(next: string | number | null): void {
-  if (next !== null) group.select(String(next));
+function onSelect(): void {
+  group.select(props.value);
 }
 </script>
 
 <template>
-  <RopavRadioGroup
-    :model-value="group.modelValue ?? null"
+  <RopavRadio
+    :id="id"
+    class="ds-radio"
     :name="group.name"
-    :disabled="group.disabled"
-    class="ds-radio__provider"
-    role="presentation"
-    @update:model-value="onSelect"
+    :value="value"
+    :checked="group.modelValue === value"
+    :disabled="resolvedDisabled"
+    variant="outline"
+    @change="onSelect"
   >
-    <RopavRadio
-      :id="id"
-      class="ds-radio"
-      :value="value"
-      :disabled="resolvedDisabled"
-      variant="outline"
-    >
-      <span v-if="label || $slots.default" class="ds-radio__label">
-        <slot>{{ label }}</slot>
-      </span>
-    </RopavRadio>
-  </RopavRadioGroup>
+    <span v-if="label || $slots.default" class="ds-radio__label">
+      <slot>{{ label }}</slot>
+    </span>
+  </RopavRadio>
 </template>
 
 <style scoped lang="scss">
-.ds-radio__provider {
-  display: contents;
-}
-
 .ds-radio {
   --_rp-radio-dot: 10px;
   --_rp-radio-font-size: var(--font-size-sm);

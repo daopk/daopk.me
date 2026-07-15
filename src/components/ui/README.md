@@ -8,7 +8,7 @@ classes while the rest of the repository migrates incrementally.
 The implementation is intentionally hybrid:
 
 - `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
-  `ropav@0.0.10` through
+  `ropav@0.0.11` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip, hover card and menu positioning use the local Vapor composables plus
   `@floating-ui/dom`.

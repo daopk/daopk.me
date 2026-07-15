@@ -155,7 +155,7 @@ describe("RadioGroup", () => {
 
     expect(group.getAttribute("aria-label")).toBe("Density");
     expect(wrapper.findAll('[role="radiogroup"]')).toHaveLength(1);
-    expect(wrapper.findAll('[role="presentation"]')).toHaveLength(3);
+    expect(wrapper.findAll('[role="presentation"]')).toHaveLength(0);
     expect(radios).toHaveLength(3);
     expect(radios[0]?.checked).toBe(true);
     expect(radios[0]?.name).toBe("density");

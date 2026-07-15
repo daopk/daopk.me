@@ -72,8 +72,8 @@ importers:
         specifier: ^11.1.2
         version: 11.1.2
       ropav:
-        specifier: 0.0.10
-        version: 0.0.10(vue@3.6.0-beta.17(typescript@6.0.3))
+        specifier: 0.0.11
+        version: 0.0.11(vue@3.6.0-beta.17(typescript@6.0.3))
       shiki:
         specifier: ^4.3.0
         version: 4.3.0
@@ -1196,11 +1196,20 @@ packages:
   '@floating-ui/core@1.7.5':
     resolution: {integrity: sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==}
 
+  '@floating-ui/core@1.8.0':
+    resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
+
   '@floating-ui/dom@1.7.6':
     resolution: {integrity: sha512-9gZSAI5XM36880PPMm//9dfiEngYoC6Am2izES1FF406YFsjvyBMmeJ2g4SAju3xWwtuynNRFL2s9hgxpLI5SQ==}
 
+  '@floating-ui/dom@1.8.0':
+    resolution: {integrity: sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg==}
+
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@floating-ui/utils@0.2.12':
+    resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
   '@iconify-icons/lucide@1.2.135':
     resolution: {integrity: sha512-t2Dya1a+PInBmHScbbGyseze7rrGHRW/dYF4GTR6f51N08sCg6KrtE4zmplnZE1ul2NyC+sxKpXRCv48hEgaQw==}
@@ -3622,8 +3631,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  ropav@0.0.10:
-    resolution: {integrity: sha512-f1W/b2krsQRY779OusjUnY0ApLqGlyh55u9mYJ9FXlNdds/hVcLzUzuvakHjLGsbdUDAW/xFlHyxC++Mjt2jEA==}
+  ropav@0.0.11:
+    resolution: {integrity: sha512-Jh8QP+nHPRYSEl3ZNgciTCMVQsLHwkeDw3SjxWbZlcU2ibYiMBGFjXg48oi2b4ht30pMQeLJx89E/ZP3EBVP/g==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.0.0}
     peerDependencies:
       vue: ^3.6.0-beta.4
@@ -5142,12 +5151,23 @@ snapshots:
     dependencies:
       '@floating-ui/utils': 0.2.11
 
+  '@floating-ui/core@1.8.0':
+    dependencies:
+      '@floating-ui/utils': 0.2.12
+
   '@floating-ui/dom@1.7.6':
     dependencies:
       '@floating-ui/core': 1.7.5
       '@floating-ui/utils': 0.2.11
 
+  '@floating-ui/dom@1.8.0':
+    dependencies:
+      '@floating-ui/core': 1.8.0
+      '@floating-ui/utils': 0.2.12
+
   '@floating-ui/utils@0.2.11': {}
+
+  '@floating-ui/utils@0.2.12': {}
 
   '@iconify-icons/lucide@1.2.135':
     dependencies:
@@ -7640,8 +7660,10 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.62.2
       fsevents: 2.3.3
 
-  ropav@0.0.10(vue@3.6.0-beta.17(typescript@6.0.3)):
+  ropav@0.0.11(vue@3.6.0-beta.17(typescript@6.0.3)):
     dependencies:
+      '@floating-ui/dom': 1.8.0
+      focus-trap: 8.2.2
       vue: 3.6.0-beta.17(typescript@6.0.3)
 
   rxjs@7.8.2:
