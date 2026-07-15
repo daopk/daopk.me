@@ -8,17 +8,16 @@ export { default as DropdownMenuSeparator } from "./MenuSeparator.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId } from "vue";
-
+import { computed, nextTick, onBeforeUnmount, ref, useId } from "vue";
 import {
-  focusMenuEdge,
-  provideMenuContext,
-  restoreMenuTrigger,
-  useMenuSurface,
-  useMenuTriggerAria,
-} from "./menuCore";
+  useDropdownMenu,
+  type DropdownMenuItem as RopavDropdownMenuItem,
+  type DropdownMenuPlacement,
+  type DropdownMenuProps as RopavDropdownMenuProps,
+} from "ropav/dropdown-menu";
+
+import { focusMenuEdge, provideMenuContext, useMenuSurface, useMenuTriggerAria } from "./menuCore";
 import { resolvePortalTarget } from "./portalTarget";
-import { useFloatingPosition } from "./useFloatingPosition";
 import { useSlotTrigger } from "./useSlotTrigger";
 
 interface DropdownMenuProps {
@@ -39,92 +38,118 @@ const props = withDefaults(defineProps<DropdownMenuProps>(), {
 
 const emit = defineEmits<{ "update:open": [next: boolean] }>();
 const contentId = `ds-dropdown-menu-${useId()}`;
-const isOpen = ref(false);
 const triggerHost = ref<HTMLElement | null>(null);
-const content = ref<HTMLElement | null>(null);
-const noArrow = shallowRef<HTMLElement | null>(null);
 const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
+const placement = computed<DropdownMenuPlacement>(() =>
+  props.align === "center" ? "bottom" : `bottom-${props.align}`,
+);
 const trigger = useSlotTrigger(triggerHost, {
-  click: onTriggerClick,
-  keydown: onTriggerKeydown,
+  click: recordFirstItemFocus,
+  keydown: recordKeyboardFocus,
 });
+const emptyItems: RopavDropdownMenuItem[] = [];
+let pendingFocus: "first" | "last" = "first";
+
+const ropavProps: Readonly<RopavDropdownMenuProps> = {
+  get id() {
+    return contentId;
+  },
+  items: emptyItems,
+  get modal() {
+    return props.modal;
+  },
+  get offset() {
+    return props.sideOffset;
+  },
+  get placement() {
+    return placement.value;
+  },
+  get portalTo() {
+    return resolvedPortalTo.value;
+  },
+  strategy: "fixed",
+  get target() {
+    return trigger.value;
+  },
+};
+
+const {
+  actualPlacement,
+  close,
+  contentStyle,
+  isVisible,
+  menuRef: content,
+  onMenuKeydown,
+  rootRef,
+} = useDropdownMenu(ropavProps, { openChange: onOpenChange });
+const setContentRef = (value: unknown) => (content.value = toHTMLElement(value));
+const setRootRef = (value: unknown) => (rootRef.value = toHTMLElement(value));
 
 provideMenuContext({ contentId });
-useMenuTriggerAria(trigger, () => isOpen.value, contentId);
-
-function triggerDisabled(): boolean {
-  const element = trigger.value;
-  return (
-    element === null ||
-    (element instanceof HTMLButtonElement && element.disabled) ||
-    element.getAttribute("aria-disabled") === "true"
-  );
-}
-
-function closeMenu(restoreFocus: boolean): void {
-  if (!isOpen.value) return;
-  isOpen.value = false;
-  emit("update:open", false);
-  if (restoreFocus) void restoreMenuTrigger(trigger.value);
-}
-
-async function openMenu(edge: "first" | "last" = "first"): Promise<void> {
-  if (isOpen.value || triggerDisabled()) return;
-  isOpen.value = true;
-  emit("update:open", true);
-  await nextTick();
-  if (isOpen.value) focusMenuEdge(content.value, edge);
-}
-
-function onTriggerClick(event: Event): void {
-  if (event.defaultPrevented || triggerDisabled()) return;
-  if (isOpen.value) closeMenu(false);
-  else void openMenu("first");
-}
-
-function onTriggerKeydown(event: Event): void {
-  const keyboardEvent = event as KeyboardEvent;
-  if (keyboardEvent.key !== "ArrowDown" && keyboardEvent.key !== "ArrowUp") return;
-  keyboardEvent.preventDefault();
-  void openMenu(keyboardEvent.key === "ArrowDown" ? "first" : "last");
-}
+useMenuTriggerAria(trigger, () => isVisible.value, contentId);
 
 const surface = useMenuSurface({
-  close: closeMenu,
+  close: (restoreFocus) => close({ focusTrigger: restoreFocus }),
   content,
   modal: () => props.modal,
-  open: () => isOpen.value,
+  open: () => isVisible.value,
   trigger,
 });
 
-const { floatingStyle, resolvedSide } = useFloatingPosition({
-  align: () => props.align,
-  arrow: noArrow,
-  floating: content,
-  open: () => isOpen.value,
-  reference: () => trigger.value,
-  side: () => "bottom",
-  sideOffset: () => props.sideOffset,
-});
+function recordFirstItemFocus(): void {
+  pendingFocus = "first";
+}
+
+function toHTMLElement(value: unknown): HTMLElement | null {
+  return value instanceof HTMLElement ? value : null;
+}
+
+function recordKeyboardFocus(event: Event): void {
+  const keyboardEvent = event as KeyboardEvent;
+  if (keyboardEvent.key === "ArrowUp") pendingFocus = "last";
+  else if (
+    keyboardEvent.key === "ArrowDown" ||
+    keyboardEvent.key === "Enter" ||
+    keyboardEvent.key === " "
+  ) {
+    pendingFocus = "first";
+  }
+}
+
+function onOpenChange(next: boolean): void {
+  emit("update:open", next);
+  if (next) void focusItems(pendingFocus);
+}
+
+async function focusItems(edge: "first" | "last"): Promise<void> {
+  await nextTick();
+  await nextTick();
+  if (isVisible.value) focusMenuEdge(content.value, edge);
+}
+
+function onContentKeydown(event: KeyboardEvent): void {
+  surface.onKeydown(event);
+  if (event.key === "Escape" && !event.defaultPrevented) onMenuKeydown(event);
+}
 
 onBeforeUnmount(() => content.value?.remove());
 </script>
 
 <template>
-  <span class="ds-menu-root">
+  <span :ref="setRootRef" class="ds-menu-root">
     <span ref="triggerHost" class="ds-menu-trigger"><slot name="trigger" /></span>
-    <Teleport v-if="isOpen" :to="resolvedPortalTo">
+    <Teleport v-if="isVisible" :to="resolvedPortalTo">
       <div
         :id="contentId"
-        ref="content"
-        :class="['ds-dropdown-menu', contentClass]"
-        :data-side="resolvedSide"
-        :style="floatingStyle"
+        :ref="setContentRef"
         role="menu"
         tabindex="-1"
+        :data-side="actualPlacement.split('-')[0]"
+        :style="contentStyle"
+        :class="['ds-dropdown-menu', contentClass]"
         @ds-menu-select="surface.onSelect"
         @focusin="surface.onFocusin"
-        @keydown="surface.onKeydown"
+        @keydown="onContentKeydown"
         @pointermove="surface.onPointermove"
       >
         <slot name="items" />

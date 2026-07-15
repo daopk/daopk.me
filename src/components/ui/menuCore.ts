@@ -1,12 +1,4 @@
-import {
-  inject,
-  nextTick,
-  onBeforeUnmount,
-  provide,
-  watch,
-  type InjectionKey,
-  type Ref,
-} from "vue";
+import { inject, onBeforeUnmount, provide, watch, type InjectionKey, type Ref } from "vue";
 
 export const MENU_ITEM_SELECTOR =
   '[role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"]';
@@ -151,6 +143,7 @@ function itemFromEvent(content: HTMLElement, event: Event): HTMLElement | null {
   return item && content.contains(item) ? item : null;
 }
 
+/** Item navigation retained by the facade; Ropav owns disclosure and positioning. */
 export function useMenuSurface(options: MenuSurfaceOptions) {
   let typeahead = "";
   let typeaheadTimer: number | undefined;
@@ -258,24 +251,12 @@ export function useMenuSurface(options: MenuSurfaceOptions) {
     options.close(false);
   }
 
-  function onDocumentKeydown(event: KeyboardEvent): void {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
-    event.preventDefault();
-    event.stopPropagation();
-    options.close(true);
-  }
-
   watch(
     options.open,
     (open) => {
       document.removeEventListener("pointerdown", onDocumentPointerdown, true);
-      document.removeEventListener("keydown", onDocumentKeydown, true);
-      if (!open) {
-        clearTypeahead();
-        return;
-      }
-      document.addEventListener("pointerdown", onDocumentPointerdown, true);
-      document.addEventListener("keydown", onDocumentKeydown, true);
+      if (open) document.addEventListener("pointerdown", onDocumentPointerdown, true);
+      else clearTypeahead();
     },
     { immediate: true },
   );
@@ -283,15 +264,7 @@ export function useMenuSurface(options: MenuSurfaceOptions) {
   onBeforeUnmount(() => {
     clearTypeahead();
     document.removeEventListener("pointerdown", onDocumentPointerdown, true);
-    document.removeEventListener("keydown", onDocumentKeydown, true);
   });
 
   return { onFocusin, onKeydown, onPointermove, onSelect };
-}
-
-export async function restoreMenuTrigger(trigger: HTMLElement | null): Promise<void> {
-  await nextTick();
-  if (trigger?.isConnected && trigger.getAttribute("aria-disabled") !== "true") {
-    trigger.focus({ preventScroll: true });
-  }
 }

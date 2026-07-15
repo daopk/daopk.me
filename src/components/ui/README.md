@@ -10,8 +10,10 @@ The implementation is intentionally hybrid:
 - `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
   `ropav@0.0.11` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
-- Tooltip, hover card and menu positioning use the local Vapor composables plus
-  `@floating-ui/dom`.
+- Tooltip and hover card positioning use the local Vapor composables plus
+  `@floating-ui/dom`. Menus use Ropav's public `useDropdownMenu` composable for
+  disclosure, collision-aware positioning and outside interactions while the
+  facade retains its slot-based item API and pointerdown compatibility.
 - Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
   composable, stack-aware dismissal, background inerting and scroll locking.
 - Toast calls retain the stable module-level `useToast` facade and viewport,
@@ -52,8 +54,8 @@ Props in **bold** are required.
 | `HoverCard`            | local Vapor + Floating UI  | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
 | `Dialog`               | local Vapor + focus trap   | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
 | `DialogActions`        | local Vapor                | `align`                                                                                                                       | default slot                                |
-| `DropdownMenu` + items | local Vapor + Floating UI  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
-| `ContextMenu` + items  | local Vapor + virtual ref  | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
+| `DropdownMenu` + items | Ropav composable adapter   | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
+| `ContextMenu` + items  | Ropav composable adapter   | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
 | `ToastHost`            | `ropav/toast` item adapter | none; mount once globally                                                                                                     | renders the `useToast` queue                |
 
 Menu exports include item, separator, label, radio group/item and item

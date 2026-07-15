@@ -4,7 +4,7 @@
  * `@daopk/ui` specifier at this entry's hashed chunk so first-party apps reuse
  * the host's ONE copy of the behaviorally-complex primitives (Button, Dialog,
  * ContextMenu, ...). The facade remains stable while the implementation is a
- * Vapor-native hybrid of ropav form controls and local DOM/Floating UI layers.
+ * Vapor-native hybrid of Ropav adapters and local DOM layers.
  *
  * See `src/runtime/kit.ts` for the build-entry / `preserveEntrySignatures`
  * rationale.
