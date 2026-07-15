@@ -465,7 +465,7 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
@@ -805,7 +805,7 @@ describe("Movies app", () => {
       },
     });
     await settle();
-    await flushReka();
+    await flushOverlay();
 
     expect(wrapper.text()).toContain("Watch Movies in dark mode?");
     expect(wrapper.text()).toContain("Switch the system theme to dark mode");
@@ -834,7 +834,7 @@ describe("Movies app", () => {
       },
     });
     await settle();
-    await flushReka();
+    await flushOverlay();
 
     expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
     expect(kernel.theme.setTheme).not.toHaveBeenCalled();
@@ -853,7 +853,7 @@ describe("Movies app", () => {
       },
     });
     await settle();
-    await flushReka();
+    await flushOverlay();
 
     expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
     expect(localStorage.getItem("movies:theme-suggestion")).toBeNull();
@@ -869,13 +869,13 @@ describe("Movies app", () => {
       },
     });
     await settle();
-    await flushReka();
+    await flushOverlay();
 
     expect(first.text()).toContain("Watch Movies in dark mode?");
     expect(localStorage.getItem("movies:theme-suggestion")).not.toBeNull();
 
     first.unmount();
-    await flushReka();
+    await flushOverlay();
 
     const second = mount(App, {
       attachTo: document.body,
@@ -886,7 +886,7 @@ describe("Movies app", () => {
       },
     });
     await settle();
-    await flushReka();
+    await flushOverlay();
 
     expect(second.text()).not.toContain("Watch Movies in dark mode?");
   });
@@ -1635,14 +1635,14 @@ describe("Movies app", () => {
     expect(continueEpisode).toBeDefined();
 
     dispatchContextMenu(continueEpisode!.element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Remove from Continue Watching",
     ]);
 
     menuItems()[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     const cards = wrapper.findAll(".movies-home__continue-card");
     expect(cards).toHaveLength(1);

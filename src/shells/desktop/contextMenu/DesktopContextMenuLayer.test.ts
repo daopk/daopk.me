@@ -74,7 +74,7 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
@@ -90,7 +90,7 @@ describe("DesktopContextMenuLayer", () => {
     const { wrapper } = mountLayer();
 
     dispatchContextMenu(wrapper.get(".desktop-context-menu-layer").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -106,11 +106,11 @@ describe("DesktopContextMenuLayer", () => {
     const { wrapper, dispatch } = mountLayer();
 
     dispatchContextMenu(wrapper.get(".desktop-context-menu-layer").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
     items[1]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dispatch).toHaveBeenCalledWith("app:spawnNew", {
       source: "menu",
@@ -134,7 +134,7 @@ describe("DesktopContextMenuLayer", () => {
     ]);
 
     dispatchContextMenu(wrapper.get(".desktop-context-menu-layer").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -147,7 +147,7 @@ describe("DesktopContextMenuLayer", () => {
     ]);
 
     items[2]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(spawn).toHaveBeenCalledWith("notes", {
       contributionId: "notes:new-desktop-note",

@@ -162,7 +162,7 @@ function pointerEvent(
   return ev;
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
 }
@@ -321,7 +321,7 @@ describe("Dock", () => {
     const button = buttonByLabel(dock, "Launch ONE");
 
     dispatchContextMenu(button);
-    await flushReka();
+    await flushOverlay();
 
     expect(button.dataset.contextMenuOpen).toBe("true");
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
@@ -332,7 +332,7 @@ describe("Dock", () => {
     ]);
 
     (items[1] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.dispatchSpy).toHaveBeenCalledWith("app:spawnNew", {
       source: "menu",
@@ -347,13 +347,13 @@ describe("Dock", () => {
     const button = buttonByLabel(dock, "Launch ONE");
 
     dispatchContextMenu(button);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toContain("Remove from Dock");
 
     (items[2] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.setSettingSpy).toHaveBeenCalledWith("dockPinnedAppIds", []);
     expect(dock.firstButton()?.getAttribute("aria-label")).toBe("Open Spotlight");
@@ -366,7 +366,7 @@ describe("Dock", () => {
     const button = buttonByLabel(dock, "Launch ONE");
 
     dispatchContextMenu(button);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -378,7 +378,7 @@ describe("Dock", () => {
     ]);
 
     (items[4] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.setSettingSpy).toHaveBeenCalledWith("dockPinnedAppIds", ["two", "one"]);
 
@@ -493,7 +493,7 @@ describe("Dock", () => {
     expect(button).not.toBeUndefined();
 
     dispatchContextMenu(button!);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -503,7 +503,7 @@ describe("Dock", () => {
     ]);
 
     (items[2] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.setSettingSpy).toHaveBeenCalledWith("dockPinnedAppIds", ["one", "two"]);
 
@@ -517,7 +517,7 @@ describe("Dock", () => {
     expect(button).not.toBeNull();
 
     dispatchContextMenu(button!);
-    await flushReka();
+    await flushOverlay();
 
     expect(zone.dataset.revealed).toBe("true");
 
@@ -534,7 +534,7 @@ describe("Dock", () => {
     const button = buttonByLabel(dock, "Launch SETTINGS");
 
     dispatchContextMenu(button);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -551,13 +551,13 @@ describe("Dock", () => {
     expect(button).not.toBeNull();
 
     dispatchContextMenu(button!);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual(["Open Spotlight"]);
 
     (items[0] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.dispatchSpy).toHaveBeenCalledWith("spotlight:open", {
       source: "menu",
@@ -585,13 +585,13 @@ describe("Dock", () => {
     const trash = buttonByLabel(dock, "Open Trash");
 
     dispatchContextMenu(trash);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual(["Open Trash"]);
 
     (items[0] as HTMLElement).click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dock.emitSpy).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "trash",

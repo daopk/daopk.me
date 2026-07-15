@@ -302,7 +302,7 @@ function makePointerEvent(type: string, init: PointerInit = {}): PointerEvent {
   return ev;
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
@@ -447,11 +447,11 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
     const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in Editor");
     expect(openItem).toBeDefined();
     openItem!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("editor.open.requested", {
       source: "api",
@@ -469,7 +469,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open in Blog",
@@ -481,7 +481,7 @@ describe("Finder App.vue", () => {
     expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(5);
 
     menuItems()[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("blog.post.open.requested", {
       source: "api",
@@ -500,7 +500,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open in Notes",
@@ -512,7 +512,7 @@ describe("Finder App.vue", () => {
     expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(5);
 
     menuItems()[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "notes",
@@ -535,11 +535,11 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
     const openItem = menuItems().find((item) => item.textContent?.trim() === "Open in PDF Viewer");
     expect(openItem).toBeDefined();
     openItem!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("pdf-viewer.open.requested", {
       source: "api",
@@ -696,7 +696,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.findAll(".finder__entry")[1]!.element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open in Editor",
@@ -724,9 +724,9 @@ describe("Finder App.vue", () => {
       .element.dispatchEvent(
         makePointerEvent("pointerdown", { pointerId: 9, clientX: 18, clientY: 32 }),
       );
-    await flushReka();
+    await flushOverlay();
     await vi.advanceTimersByTimeAsync(700);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open in Editor",
@@ -748,9 +748,9 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual(["note.txt"]);
 
@@ -765,7 +765,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__browser").element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "New Folder",
@@ -775,7 +775,7 @@ describe("Finder App.vue", () => {
     expect(document.body.querySelectorAll(".finder__context-icon")).toHaveLength(3);
 
     menuItems()[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.vfs.mkdir).toHaveBeenCalledWith("/Untitled Folder", {
       handleId: "finder-handle",
@@ -794,9 +794,9 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.findAll(".finder__entry")[0]!.element);
-    await flushReka();
+    await flushOverlay();
     menuItems().at(-1)!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.trash.moveToTrash).not.toHaveBeenCalled();
 
@@ -808,7 +808,7 @@ describe("Finder App.vue", () => {
     expect(deleteButton).toBeDefined();
 
     deleteButton!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.trash.moveToTrash).toHaveBeenCalledWith("/a.txt", {
       handleId: "finder-handle",
@@ -827,7 +827,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = menuItems();
     expect(
@@ -852,7 +852,7 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__browser").element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems()[0]?.textContent?.trim()).toBe("New Folder");
     expect(menuItems()[0]?.hasAttribute("data-disabled")).toBe(true);
@@ -874,9 +874,9 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".finder__entry").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[1]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(writeText).toHaveBeenCalledWith("/a.txt");
 
@@ -891,9 +891,9 @@ describe("Finder App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(failingWrapper.get(".finder__browser").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[2]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(failingWrapper.text()).toContain("Finder could not copy the path.");
 

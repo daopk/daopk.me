@@ -92,7 +92,7 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
 }
@@ -151,7 +151,7 @@ describe("Window context menu", () => {
     const { wrapper, dispatch } = mountWindow();
 
     dispatchContextMenu(wrapper.get(".window__titlebar").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -161,7 +161,7 @@ describe("Window context menu", () => {
     ]);
 
     items[0]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dispatch).toHaveBeenCalledWith("desktop:window.minimize", {
       source: "menu",
@@ -173,7 +173,7 @@ describe("Window context menu", () => {
     const { wrapper } = mountWindow(makeRecord({ maximized: true }));
 
     dispatchContextMenu(wrapper.get(".window__titlebar").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual(["Minimize", "Restore", "Close"]);
@@ -185,7 +185,7 @@ describe("Window context menu", () => {
     ]);
 
     dispatchContextMenu(wrapper.get(".window__titlebar").element);
-    await flushReka();
+    await flushOverlay();
 
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
     expect(items.map((node) => node.textContent?.trim())).toEqual([
@@ -196,7 +196,7 @@ describe("Window context menu", () => {
     ]);
 
     items[2]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(dispatch).toHaveBeenCalledWith("desktop:window.openSettings", {
       source: "menu",

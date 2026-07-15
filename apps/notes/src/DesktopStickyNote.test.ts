@@ -102,7 +102,7 @@ function pointerEvent(
   return ev;
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
@@ -217,13 +217,13 @@ describe("DesktopStickyNote", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".desktop-sticky-note").element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems()[0]?.classList.contains("desktop-sticky-note__color-dot")).toBe(true);
     expect(menuItems()[5]?.textContent?.trim()).toBe("Open in Notes");
 
     document.body.querySelector<HTMLElement>('[aria-label="Change note color to Blue"]')?.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(store.notes.value[0]?.color).toBe("blue");
 

@@ -331,7 +331,7 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       return target.dispatchEvent(ev);
     }
 
-    async function flushReka(): Promise<void> {
+    async function flushOverlay(): Promise<void> {
       await nextTick();
       await nextTick();
     }
@@ -344,7 +344,7 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       const el = slotEl(wrapper);
 
       dispatchContextMenu(el);
-      await flushReka();
+      await flushOverlay();
 
       const menu = document.body.querySelector('[role="menu"]');
       expect(menu).not.toBeNull();
@@ -361,12 +361,12 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       const el = slotEl(wrapper);
 
       dispatchContextMenu(el);
-      await flushReka();
+      await flushOverlay();
 
       const item = document.body.querySelector('[role="menuitem"]') as HTMLElement | null;
       expect(item).not.toBeNull();
       item!.click();
-      await flushReka();
+      await flushOverlay();
 
       expect(placements.isEnabled("desktop", "wp:clock")).toBe(false);
     });
@@ -380,9 +380,9 @@ describe("DesktopWidgetSlot (M3.7)", () => {
       const el = slotEl(wrapper);
 
       dispatchContextMenu(el);
-      await flushReka();
+      await flushOverlay();
       (document.body.querySelector('[role="menuitem"]') as HTMLElement).click();
-      await flushReka();
+      await flushOverlay();
 
       expect(placements.isEnabled("desktop", "wp:clock")).toBe(false);
       expect(placements.list()["wp:clock"]).toEqual({ gridX: 3, gridY: 5 });

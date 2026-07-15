@@ -34,7 +34,7 @@ function click(element: Element): void {
   );
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
 }
@@ -81,7 +81,7 @@ describe("MenuBarApps", () => {
     const wrapper = mountApps(makeKernel([app("finder", "Finder"), app("settings", "Settings")]));
 
     click(wrapper.get(".apps-trigger").element);
-    await flushReka();
+    await flushOverlay();
 
     const itemLabels = Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) =>
       item.textContent?.trim(),
@@ -97,7 +97,7 @@ describe("MenuBarApps", () => {
     );
 
     click(wrapper.get(".apps-trigger").element);
-    await flushReka();
+    await flushOverlay();
 
     const itemLabels = Array.from(document.body.querySelectorAll('[role="menuitem"]')).map((item) =>
       item.textContent?.trim(),
@@ -112,7 +112,7 @@ describe("MenuBarApps", () => {
     const wrapper = mountApps(kernel);
 
     click(wrapper.get(".apps-trigger").element);
-    await flushReka();
+    await flushOverlay();
 
     const settingsItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
       (item) => item.textContent?.includes("Settings"),
@@ -120,7 +120,7 @@ describe("MenuBarApps", () => {
     expect(settingsItem).not.toBeUndefined();
 
     click(settingsItem!);
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "settings",

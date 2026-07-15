@@ -34,7 +34,7 @@ function click(element: Element): void {
   );
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
 }
@@ -347,7 +347,7 @@ describe("PDF Viewer App.vue", () => {
     });
 
     click(wrapper.get('button[aria-label="Select page 1 / 3"]').element);
-    await flushReka();
+    await flushOverlay();
 
     expect(document.body.querySelector('[role="listbox"]')).toBeInstanceOf(HTMLElement);
     expect(
@@ -357,7 +357,7 @@ describe("PDF Viewer App.vue", () => {
     ).toEqual(["Page 1", "Page 2", "Page 3"]);
 
     click(sheetOption("Page 2"));
-    await flushReka();
+    await flushOverlay();
 
     expect(viewer.setPage).toHaveBeenCalledWith(2);
     expect(document.body.querySelector('[role="listbox"]')).toBeNull();
@@ -382,9 +382,9 @@ describe("PDF Viewer App.vue", () => {
       .mockImplementation(() => {});
 
     async function openMoreMenu(): Promise<void> {
-      await flushReka();
+      await flushOverlay();
       click(wrapper.get('button[aria-label="More PDF tools"]').element);
-      await flushReka();
+      await flushOverlay();
     }
 
     await openMoreMenu();
@@ -395,22 +395,22 @@ describe("PDF Viewer App.vue", () => {
     ).toEqual(["Open PDF", "Zoom out", "Zoom in", "Fit width", "Rotate clockwise", "Download PDF"]);
 
     click(menuItem("Open PDF"));
-    await flushReka();
+    await flushOverlay();
     await openMoreMenu();
     click(menuItem("Zoom out"));
-    await flushReka();
+    await flushOverlay();
     await openMoreMenu();
     click(menuItem("Zoom in"));
-    await flushReka();
+    await flushOverlay();
     await openMoreMenu();
     click(menuItem("Fit width"));
-    await flushReka();
+    await flushOverlay();
     await openMoreMenu();
     click(menuItem("Rotate clockwise"));
-    await flushReka();
+    await flushOverlay();
     await openMoreMenu();
     click(menuItem("Download PDF"));
-    await flushReka();
+    await flushOverlay();
 
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(viewer.zoomOut).toHaveBeenCalledTimes(1);

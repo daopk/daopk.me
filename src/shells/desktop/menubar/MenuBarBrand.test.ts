@@ -18,7 +18,7 @@ function click(element: Element): void {
   );
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
 }
@@ -47,7 +47,7 @@ function mountBrand(kernel = makeKernel()) {
 
 async function openMenu(wrapper: VueWrapper): Promise<void> {
   click(wrapper.get("button.brand").element);
-  await flushReka();
+  await flushOverlay();
 }
 
 function menuItem(label: string): Element {
@@ -80,7 +80,7 @@ describe("MenuBarBrand", () => {
 
     await openMenu(wrapper);
     click(menuItem("System Settings"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "settings",
@@ -95,7 +95,7 @@ describe("MenuBarBrand", () => {
 
     await openMenu(wrapper);
     click(menuItem("About"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.commands.dispatch).toHaveBeenCalledWith("settings:openSection", {
       source: "menu",
@@ -110,7 +110,7 @@ describe("MenuBarBrand", () => {
 
     await openMenu(wrapper);
     click(menuItem("Spotlight"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("spotlight.open.requested", {
       source: "menu",
@@ -136,21 +136,21 @@ describe("MenuBarBrand", () => {
     ]);
 
     click(menuItem("Toggle Theme"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.commands.dispatch).toHaveBeenCalledWith("theme:toggle", { source: "menu" });
 
     click(wrapper.get("button.brand").element);
-    await flushReka();
+    await flushOverlay();
     click(menuItem("Lock Desktop"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.commands.dispatch).toHaveBeenCalledWith("system:lock", { source: "menu" });
 
     click(wrapper.get("button.brand").element);
-    await flushReka();
+    await flushOverlay();
     click(menuItem("Sign Out"));
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.commands.dispatch).toHaveBeenCalledWith("system:signOut", { source: "menu" });
 

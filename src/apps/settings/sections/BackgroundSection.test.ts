@@ -145,7 +145,7 @@ describe("BackgroundSection (M2b.6)", () => {
   beforeEach(async () => {
     setActivePinia(createPinia());
     localStorage.clear();
-    // happy-dom doesn't implement ResizeObserver; reka-ui's SliderRoot
+    // happy-dom doesn't implement ResizeObserver; stub range geometry observers.
     vi.stubGlobal(
       "ResizeObserver",
       class {

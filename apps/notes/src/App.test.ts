@@ -224,7 +224,7 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
-async function flushReka(): Promise<void> {
+async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
@@ -525,7 +525,7 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.findAll(".notes__note-button")[1]!.element);
-    await flushReka();
+    await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
       "Open",
@@ -553,9 +553,9 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".notes__note-button").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[2]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(localStorage.getItem("notes-desktop:pinned")).toContain("/home/notes/a.md");
 
@@ -576,9 +576,9 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".notes__note-button").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[1]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.vfs.writeText).toHaveBeenLastCalledWith(
       "/home/notes/a copy.md",
@@ -608,9 +608,9 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.get(".notes__note-button").element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[3]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.events.emit).toHaveBeenCalledWith("app.launch.requested", {
       manifestId: "finder",
@@ -641,9 +641,9 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
     dispatchContextMenu(wrapper.findAll(".notes__note-button")[0]!.element);
-    await flushReka();
+    await flushOverlay();
     menuItems()[4]!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.trash.moveToTrash).not.toHaveBeenCalled();
 
@@ -655,7 +655,7 @@ describe("Notes App.vue", () => {
     expect(deleteButton).not.toBeUndefined();
 
     deleteButton!.click();
-    await flushReka();
+    await flushOverlay();
 
     expect(kernel.trash.moveToTrash).toHaveBeenCalledWith("/home/notes/a.md", {
       handleId: "notes-handle",

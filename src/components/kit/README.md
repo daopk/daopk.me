@@ -11,10 +11,10 @@ directly; there is no shared barrel and `kit` never re-exports `ui`.
 
 ## kit vs ui — which layer?
 
-| Layer | Prefix     | Owns                                                                                  | Examples                                                                                                                                                                                                                                                                                                                                                               |
-| ----- | ---------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui`  | `ds-*`     | Stateful / behaviorally complex primitives, the **only** place that imports `reka-ui` | `Button`, `Card`, `Dialog`, `DialogActions`, `Switch`, `Slider`, `DropdownMenu`, `ContextMenu`, `RadioGroup`, `Tooltip`, `ToastHost` (+ `useToast`)                                                                                                                                                                                                                    |
-| `kit` | `ds-kit-*` | Layout, app chrome, and plain-HTML form / list / nav controls                         | `AppFrame`, `AppToolbar`, `ToolbarGroup`, `ToolbarTitle`, `Panel`, `SectionHeader`, `GroupLabel`, `ScrollArea`, `Separator`, `Spinner`, `Badge`, `StatusBanner`, `EmptyState`, `DataTable`, `ActionRow`, `ListButton`, `IconButton`, `FormField`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `Progress`, `SegmentedControl`, `TabList`, `ChoiceCard`, `ChoiceGrid` |
+| Layer | Prefix     | Owns                                                          | Examples                                                                                                                                                                                                                                                                                                                                                               |
+| ----- | ---------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui`  | `ds-*`     | Vapor-native stateful / behaviorally complex primitives       | `Button`, `Card`, `Dialog`, `DialogActions`, `Switch`, `Slider`, `DropdownMenu`, `ContextMenu`, `RadioGroup`, `Tooltip`, `ToastHost` (+ `useToast`)                                                                                                                                                                                                                    |
+| `kit` | `ds-kit-*` | Layout, app chrome, and plain-HTML form / list / nav controls | `AppFrame`, `AppToolbar`, `ToolbarGroup`, `ToolbarTitle`, `Panel`, `SectionHeader`, `GroupLabel`, `ScrollArea`, `Separator`, `Spinner`, `Badge`, `StatusBanner`, `EmptyState`, `DataTable`, `ActionRow`, `ListButton`, `IconButton`, `FormField`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `Progress`, `SegmentedControl`, `TabList`, `ChoiceCard`, `ChoiceGrid` |
 
 A live, interactive reference for every primitive ships as the dev-only **Kit
 Gallery** app ([`src/apps/_kit-gallery`](../../apps/_kit-gallery)). For ui-layer
@@ -22,11 +22,12 @@ API details see [`src/components/ui/README.md`](../ui/README.md).
 
 Rules of thumb:
 
-- Needs `reka-ui` or non-trivial interaction state (focus traps, popovers,
-  drag) → **ui**.
+- Needs non-trivial interaction state (focus traps, floating layers, composite
+  keyboard navigation, drag) → **ui**.
 - Pure layout, app chrome, or a thin wrapper over a native form control →
   **kit**.
-- Apps **never** import `reka-ui` directly; go through `ui`.
+- Apps consume these primitives through `@daopk/ui`; implementation dependencies
+  stay private to the `ui` layer.
 
 ## Tokens
 

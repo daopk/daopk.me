@@ -1,54 +1,80 @@
 # `ui` layer
 
-Stateful / behaviorally complex primitives. This is the **only** layer allowed
-to import [`reka-ui`](https://reka-ui.com); everything here wraps a reka
-primitive (or composes one) and dresses it in design-system tokens. Plain-HTML
-layout, chrome, and simple form controls live in the sibling
-[`kit`](../kit/README.md) layer — read its README first for the token system,
-density / safe-area rules, and the kit↔ui boundary.
+Stateful and behaviorally complex primitives exposed through the stable
+`@daopk/ui` facade. Every SFC in this directory compiles in Vue Vapor mode;
+apps can keep using the existing exports, props, events, slots and `ds-*`
+classes while the rest of the repository migrates incrementally.
+
+The implementation is intentionally hybrid:
+
+- `Switch`, `Slider` and radio controls adapt `ropav@0.0.9` through
+  `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
+- Tooltip, hover card and menu positioning use the local Vapor composables plus
+  `@floating-ui/dom`.
+- Dialog behavior is local Vapor DOM with `Teleport`, `focus-trap`, stack-aware
+  dismissal, background inerting and scroll locking.
+- Toast state remains the module-level `useToast` singleton and is rendered by
+  local Vapor components.
+
+`src/runtime/ui.ts` re-exports `src/components/ui/index.ts`; public exports must
+not bypass those files. Internal DOM structure, implementation component names
+and library-specific `data-*` attributes are not API contracts.
 
 ## Conventions
 
-- **Class prefix** `ds-*` (kit uses `ds-kit-*`).
-- **Tokens only.** No raw hex / px for color, spacing, radius, shadow, or
-  z-index — consume the CSS custom properties (`--color-*`, `--space-*`,
-  `--radius-*`, `--shadow-*`, plus the z-index band in `tokens/_chrome.scss`:
-  `--dropdown-menu-z`, `--dialog-*-z`, `--toast-z`, `--tooltip-z`, …).
-- **Portaled content uses non-scoped `<style>`.** reka teleports overlays
-  (menus, dialogs, tooltips, toasts) out of the component subtree, so their
-  styles cannot be `scoped`. Use a unique `ds-*` class and a plain
-  `<style lang="scss">` block (see `DropdownMenu.vue`, `Tooltip.vue`,
-  `ToastHost.vue`). Non-portaled primitives keep `scoped`.
-- **Reduced motion.** Every animation is wrapped in
-  `@media (prefers-reduced-motion: reduce)`.
-- Exports flow to apps automatically through the `@daopk/ui` façade
-  (`src/runtime/ui.ts` re-exports `src/components/ui/index.ts`).
+- **Class prefix:** `ds-*` (the sibling kit uses `ds-kit-*`).
+- **Tokens only:** consume `--color-*`, `--space-*`, `--radius-*`,
+  `--shadow-*`, control-height and chrome z-index tokens. The token audit must
+  stay green.
+- **Portaled styles are global:** teleported menu, dialog, tooltip and toast
+  nodes live outside the component's scoped-style boundary, so use a unique
+  `ds-*` namespace in a non-scoped `<style lang="scss">` block.
+- **Reduced motion:** every animation has a
+  `prefers-reduced-motion: reduce` override.
+- **Mixed runtime:** entry points continue using
+  `createApp(...).use(vaporInteropPlugin)` until the VDOM inventory reaches
+  zero. Switch to `createVaporApp` only after that repository-wide milestone.
 
-## API reference (ui)
+## API reference
 
 Props in **bold** are required.
 
-| Component                | Wraps (reka)     | Key props                                                                                                                     | Emits / slots                                     |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `Button`                 | —                | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot                     |
-| `Card`                   | —                | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                      |
-| `Switch`                 | `Switch*`        | **`modelValue`**, `disabled` · _needs an accessible name — pass `aria-label`/`aria-labelledby`_                               | `update:modelValue`                               |
-| `Slider`                 | `Slider*`        | **`modelValue`**, `min`, `max`, `step`, `orientation`, `disabled`, `ariaLabel`, `ariaValuetext`                               | `update:modelValue`, `commit`                     |
-| `RadioGroup`             | `RadioGroupRoot` | `modelValue`, `orientation` (`vertical`/`horizontal`), `disabled`, `label`, `name`                                            | `update:modelValue` · default slot (items)        |
-| `RadioGroupItem`         | `RadioGroupItem` | **`value`**, `label`, `disabled`, `id`                                                                                        | default slot (label)                              |
-| `Tooltip`                | `Tooltip*`       | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`                                                           | default slot (trigger, `as-child`), `content`     |
-| `HoverCard`              | `HoverCard*`     | `side`, `align`, `openDelay`, `closeDelay`, `sideOffset`, `disabled`, `enableTouch`, `portalTo`                               | `update:open` · default slot (trigger), `content` |
-| `Dialog`                 | `Dialog*`        | **`open`**, **`title`**, `description`, `variant` (`modal`/`sheet`), `size`, `dismissible`, `modal`                           | `update:open`, `close` · default slot             |
-| `DialogActions`          | —                | layout for dialog footer buttons                                                                                              | default slot                                      |
-| `DropdownMenu` (+ items) | `DropdownMenu*`  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items` slots         |
-| `ContextMenu` (+ items)  | `ContextMenu*`   | `contentClass`, `portalTo`                                                                                                    | `update:open` · `trigger` / `items` slots         |
-| `ToastHost`              | `Toast*`         | _none_ — mount once globally (already mounted in `ShellHost`)                                                                 | renders the `useToast` queue                      |
+| Component              | Implementation             | Key props                                                                                                                     | Emits / slots                               |
+| ---------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `Button`               | local Vapor                | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot               |
+| `Card`                 | local Vapor                | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                |
+| `Switch`               | `ropav/switch` adapter     | **`modelValue`**, `disabled`, accessible-name attributes                                                                      | `update:modelValue`                         |
+| `Slider`               | `ropav/slider` adapter     | **`modelValue`**, `min`, `max`, `step`, `orientation`, `disabled`, `ariaLabel`, `ariaValuetext`                               | `update:modelValue`, `commit`               |
+| `RadioGroup` + item    | `ropav/radio` adapter      | `modelValue`, `orientation`, `disabled`, `label`, `name`; item **`value`**, `label`, `disabled`, `id`                         | `update:modelValue` · item default slot     |
+| `Tooltip`              | local Vapor + Floating UI  | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
+| `HoverCard`            | local Vapor + Floating UI  | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
+| `Dialog`               | local Vapor + focus trap   | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
+| `DialogActions`        | local Vapor                | `align`                                                                                                                       | default slot                                |
+| `DropdownMenu` + items | local Vapor + Floating UI  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
+| `ContextMenu` + items  | local Vapor + virtual ref  | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
+| `ToastHost`            | local Vapor singleton host | none; mount once globally                                                                                                     | renders the `useToast` queue                |
+
+Menu exports include item, separator, label, radio group/item and item
+indicator. Item `select` receives a cancelable `Event`; calling
+`preventDefault()` keeps the menu open. Dropdown triggers support click,
+ArrowUp and ArrowDown. Open menus support roving arrows, Home/End, Enter/Space,
+Escape, Tab, typeahead, disabled-item skipping and focus restoration. Context
+menus use the same core with a pointer-position virtual reference and include
+touch/pen long-press behavior.
+
+## Portals and trigger slots
+
+`portalTo` accepts a selector or `HTMLElement`. With no explicit target,
+`resolvePortalTarget` uses `#app-overlays` when present and falls back to
+`body` for standalone apps and tests.
+
+Floating triggers use a `display: contents` host, locate the first element in
+the trigger slot and attach events/ARIA directly. They do not clone or inspect
+slot VNodes. Supply exactly one element as a trigger.
 
 ## Toasts
 
-Toasts are a singleton queue (`useToast`) rendered by one global `<ToastHost />`
-(mounted in [`ShellHost.vue`](../../shells/ShellHost.vue) beside the session-lock
-overlay). Any app or composable can enqueue one — no provider wiring:
+Mount one `<ToastHost />` (the shell already does) and enqueue from any app:
 
 ```ts
 import { useToast } from "@daopk/ui";
@@ -59,18 +85,23 @@ const id = toast.error({ title: "Upload failed", duration: 8000 });
 toast.dismiss(id); // or toast.clear()
 ```
 
-`show(options)` returns the toast id; `info` / `success` / `warning` / `error`
-are tone shortcuts. Errors and warnings are announced assertively
-(`type="foreground"`), info/success politely. `duration` is ms (default 5000).
-The viewport is corner-anchored above all chrome (`--toast-z`) and respects the
-bottom safe-area inset.
+`show(options)` returns the toast id; `info`, `success`, `warning` and `error`
+are tone shortcuts. Error/warning use assertive live regions; info/success use
+polite live regions. Timers pause on hover/focus, and toasts support manual and
+rightward-swipe dismissal. The fixed viewport respects the bottom safe area and
+`--toast-z`.
 
-## Tooltip & RadioGroup
+## Verification
 
-- `Tooltip` is self-contained (it renders its own `TooltipProvider`). The
-  default slot is the trigger and must be a single element (it uses
-  `as-child`); supply text via the `label` prop or rich content via the
-  `content` slot.
-- `RadioGroup` + `RadioGroupItem` give WAI-ARIA roving focus (arrow keys move
-  and select, `orientation` sets the axis). Bind `v-model` on the group and
-  give each item a `value`.
+Behavioral component tests live in `*.vapor.test.ts` and mount through the same
+VDOM-to-Vapor interop boundary as production. The required phase gates are:
+
+```sh
+pnpm run typecheck
+pnpm run typecheck:test
+pnpm test
+pnpm run lint
+pnpm run format:check
+pnpm run lint:tokens:audit
+pnpm run build
+```

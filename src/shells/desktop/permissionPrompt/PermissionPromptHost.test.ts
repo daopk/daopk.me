@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, markRaw, nextTick, type Component } from "vue";
 
 /**
- * Helper: flush microtasks AND a paint frame. reka-ui's DialogPortal
+ * Helper: flush microtasks AND a paint frame. The teleported dialog
  * mounts asynchronously via `Teleport` after the parent renders, so
  * `flushPromises()` alone (which only drains microtasks) is not
  * enough — we need at least one extra `nextTick` for the portal to
