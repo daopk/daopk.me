@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" vapor>
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 import { localDateKey } from "../dateGrid";

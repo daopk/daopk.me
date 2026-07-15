@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" vapor>
 import { onMounted } from "vue";
 
 import type { VfsPath } from "@daopk/sdk";

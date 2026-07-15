@@ -1,4 +1,18 @@
-import { createApp, defineComponent, h, vaporInteropPlugin, type Component } from "vue";
+import {
+  createApp,
+  defineComponent,
+  h,
+  vaporInteropPlugin,
+  type Component,
+  type InjectionKey,
+} from "vue";
+
+type VaporProvide = readonly [InjectionKey<unknown> | string, unknown];
+
+export interface VaporMountOptions {
+  readonly props?: Readonly<Record<string, unknown>>;
+  readonly provide?: readonly VaporProvide[];
+}
 
 export interface VaporMount {
   readonly element: HTMLElement;
@@ -11,17 +25,20 @@ export interface VaporMount {
  * production shell. Vue Test Utils 2.4 does not understand Vapor blocks yet,
  * so the dedicated Vapor suite asserts against the real DOM directly.
  */
-export function mountVapor(component: Component): VaporMount {
+export function mountVapor(component: Component, options: VaporMountOptions = {}): VaporMount {
   const element = document.createElement("div");
   document.body.appendChild(element);
 
   const VaporTestHost = defineComponent({
     name: "VaporTestHost",
-    render: () => h("div", { "data-vapor-test-host": "" }, [h(component)]),
+    render: () => h("div", { "data-vapor-test-host": "" }, [h(component, options.props)]),
   });
 
   const app = createApp(VaporTestHost);
   app.use(vaporInteropPlugin);
+  for (const [key, value] of options.provide ?? []) {
+    app.provide(key, value);
+  }
   app.mount(element);
 
   return {

@@ -17,9 +17,9 @@ function vueEsmRuntime(packageName: string, fileName: string): string {
   return resolve(dirname(packageJson), "dist", fileName);
 }
 
-// Vue 3.6 beta exposes Vapor only from its ESM/browser build. Keep this small
-// pilot in one ESM module graph instead of changing the Node/CJS runtime used by
-// the repository's existing Vue Test Utils suite.
+// Vue 3.6 beta exposes Vapor only from its ESM/browser build. Keep Vapor tests
+// in one ESM module graph instead of changing the Node/CJS runtime used by the
+// repository's existing Vue Test Utils suite.
 export default mergeConfig(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createViteConfig("serve") as any,
@@ -54,7 +54,12 @@ export default mergeConfig(
         },
       ],
       environment: "happy-dom",
-      include: ["apps/clock/src/widgets/ClockWidgets.test.ts"],
+      include: [
+        "apps/calendar/src/widgets/LunarDateWidget.test.ts",
+        "apps/clock/src/widgets/ClockWidgets.test.ts",
+        "apps/notes/src/NotesDesktopLayer.test.ts",
+        "apps/pdf-viewer/src/components/PdfFilePreview.test.ts",
+      ],
       pool: "vmThreads",
     },
   }),

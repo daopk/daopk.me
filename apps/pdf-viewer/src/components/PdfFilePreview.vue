@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup lang="ts" vapor>
 import { computed, watch, type ComponentPublicInstance } from "vue";
 
 import { EmptyState, Spinner } from "@daopk/kit";

@@ -28,9 +28,14 @@ export default mergeConfig(
       // startup overhead while preserving per-file isolation.
       pool: "vmThreads",
       include: ["src/**/*.test.ts", "tests/**/*.test.ts", "apps/*/src/**/*.test.ts"],
-      // Vue 3.6 beta's Node condition does not expose the Vapor runtime. The
-      // pilot has a dedicated ESM config and remains a required separate gate.
-      exclude: ["apps/clock/src/widgets/ClockWidgets.test.ts"],
+      // Vue 3.6 beta's Node condition does not expose the Vapor runtime. Vapor
+      // components use a dedicated ESM config that remains a required gate.
+      exclude: [
+        "apps/calendar/src/widgets/LunarDateWidget.test.ts",
+        "apps/clock/src/widgets/ClockWidgets.test.ts",
+        "apps/notes/src/NotesDesktopLayer.test.ts",
+        "apps/pdf-viewer/src/components/PdfFilePreview.test.ts",
+      ],
       coverage: {
         provider: "v8",
         reporter: ["text-summary", "text"],

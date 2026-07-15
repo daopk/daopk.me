@@ -1,5 +1,6 @@
-import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+
+import { mountVapor } from "~/test/mountVapor";
 
 import {
   AppContextInjectionKey,
@@ -49,7 +50,7 @@ function makeKernel(): Kernel {
 
 describe("PdfFilePreview", () => {
   it("initializes the PDF viewer from a VFS file preview input", () => {
-    mount(PdfFilePreview, {
+    const wrapper = mountVapor(PdfFilePreview, {
       props: {
         input: {
           kind: "vfs-file",
@@ -66,12 +67,10 @@ describe("PdfFilePreview", () => {
         args: { path: "/home/demo.pdf" },
         surface: "finder.panel",
       },
-      global: {
-        provide: {
-          [KernelInjectionKey as symbol]: makeKernel(),
-          [AppContextInjectionKey as symbol]: context,
-        },
-      },
+      provide: [
+        [KernelInjectionKey, makeKernel()],
+        [AppContextInjectionKey, context],
+      ],
     });
 
     expect(usePdfViewer).toHaveBeenCalledWith(
@@ -79,5 +78,9 @@ describe("PdfFilePreview", () => {
         initialPath: "/home/demo.pdf",
       }),
     );
+    expect(wrapper.find(".pdf-file-preview").getAttribute("data-preview-surface")).toBe(
+      "finder.panel",
+    );
+    wrapper.unmount();
   });
 });
