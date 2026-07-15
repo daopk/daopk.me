@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from "reka-ui";
 
+import { resolvePortalTarget } from "./portalTarget";
+
 interface DialogProps {
   open: boolean;
   /** Accessible title — required by reka-ui for `aria-labelledby`. */
@@ -34,11 +36,13 @@ const props = withDefaults(defineProps<DialogProps>(), {
   variant: "modal",
   size: "sm",
   layer: "default",
-  portalTo: "body",
+  portalTo: undefined,
   scope: "viewport",
   modal: true,
   dismissible: true,
 });
+
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 
 const contentA11yAttrs = computed(() =>
   props.description === undefined || props.description.length === 0
@@ -73,7 +77,7 @@ function onOverlayPointerDown(): void {
 
 <template>
   <DialogRoot :open="open" :modal="modal" @update:open="onUpdateOpen">
-    <DialogPortal :to="portalTo">
+    <DialogPortal :to="resolvedPortalTo">
       <DialogOverlay
         v-if="modal"
         class="ds-dialog__overlay"

@@ -64,6 +64,7 @@ defineExpose({ scrollEl });
 
 <template>
   <main class="home-screen" aria-label="Home screen">
+    <h1 class="u-visually-hidden">Home</h1>
     <HomePager
       ref="pagerRef"
       class="home-screen__pager"

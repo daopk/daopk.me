@@ -3,6 +3,7 @@ export { ContextMenuItem, ContextMenuSeparator } from "reka-ui";
 </script>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   ContextMenuContent,
   ContextMenuPortal,
@@ -10,13 +11,19 @@ import {
   ContextMenuTrigger,
 } from "reka-ui";
 
+import { resolvePortalTarget } from "./portalTarget";
+
 interface ContextMenuProps {
   modal?: boolean;
+  portalTo?: string | HTMLElement;
 }
 
-withDefaults(defineProps<ContextMenuProps>(), {
+const props = withDefaults(defineProps<ContextMenuProps>(), {
   modal: true,
+  portalTo: undefined,
 });
+
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 
 const emit = defineEmits<{
   "update:open": [next: boolean];
@@ -32,7 +39,7 @@ function onUpdateOpen(value: boolean): void {
     <ContextMenuTrigger as-child>
       <slot name="trigger" />
     </ContextMenuTrigger>
-    <ContextMenuPortal>
+    <ContextMenuPortal :to="resolvedPortalTo">
       <ContextMenuContent class="ds-context-menu" :collision-padding="8">
         <slot name="items" />
       </ContextMenuContent>

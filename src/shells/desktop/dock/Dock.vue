@@ -188,8 +188,9 @@ watch(dockAutoHide, (enabled) => {
 </script>
 
 <template>
-  <div
+  <nav
     class="dock-reveal-zone"
+    aria-label="Application dock"
     :class="{
       'dock-reveal-zone--auto-hide': dockAutoHide,
       'dock-reveal-zone--revealed': dockAutoHide && dockIsRevealed,
@@ -268,7 +269,7 @@ watch(dockAutoHide, (enabled) => {
         </template>
       </ContextMenu>
     </div>
-  </div>
+  </nav>
 </template>
 
 <style scoped lang="scss">

@@ -29,7 +29,7 @@ function onMissing(path: VfsPath): void {
 </script>
 
 <template>
-  <div class="notes-desktop-layer" aria-label="Pinned notes">
+  <div class="notes-desktop-layer" role="region" aria-label="Pinned notes">
     <DesktopStickyNote
       v-for="note in pinnedNotes.notes.value"
       :key="note.path"

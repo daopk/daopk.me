@@ -36,7 +36,7 @@ defineExpose({ scrollEl });
     <section v-if="slots.length === 0" class="home-icon-page__empty" role="status">
       <p>No apps registered yet.</p>
     </section>
-    <section v-else class="home-icon-page__grid" aria-label="Apps">
+    <div v-else class="home-icon-page__grid">
       <HomeScreenIcon
         v-for="slot in slots"
         :key="slot.manifest.id"
@@ -44,7 +44,7 @@ defineExpose({ scrollEl });
         :launching="launchingManifestIds.has(slot.manifest.id)"
         @launch="onLaunch"
       />
-    </section>
+    </div>
   </div>
 </template>
 

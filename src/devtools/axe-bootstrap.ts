@@ -69,6 +69,12 @@ export async function installAxeIfDev(): Promise<() => void> {
       try {
         const results = await axe.run(document, {
           resultTypes: ["violations"],
+          rules: {
+            // Intentional native-shell behavior: browser zoom is disabled at
+            // the product level, so this known viewport exception is not
+            // actionable in development audits.
+            "meta-viewport": { enabled: false },
+          },
         });
 
         const violationSignature = JSON.stringify(

@@ -10,12 +10,15 @@ export {
 </script>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   DropdownMenuContent,
   DropdownMenuPortal,
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from "reka-ui";
+
+import { resolvePortalTarget } from "./portalTarget";
 
 interface DropdownMenuProps {
   align?: "start" | "center" | "end";
@@ -25,13 +28,15 @@ interface DropdownMenuProps {
   sideOffset?: number;
 }
 
-withDefaults(defineProps<DropdownMenuProps>(), {
+const props = withDefaults(defineProps<DropdownMenuProps>(), {
   align: "start",
   contentClass: "",
   modal: false,
-  portalTo: "body",
+  portalTo: undefined,
   sideOffset: 4,
 });
+
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 
 const emit = defineEmits<{
   "update:open": [next: boolean];
@@ -47,7 +52,7 @@ function onUpdateOpen(value: boolean): void {
     <DropdownMenuTrigger as-child>
       <slot name="trigger" />
     </DropdownMenuTrigger>
-    <DropdownMenuPortal :to="portalTo">
+    <DropdownMenuPortal :to="resolvedPortalTo">
       <DropdownMenuContent
         :class="['ds-dropdown-menu', contentClass]"
         :align="align"

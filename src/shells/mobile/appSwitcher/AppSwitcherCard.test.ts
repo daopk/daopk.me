@@ -28,19 +28,17 @@ describe("AppSwitcherCard", () => {
   it("emits `select` with the frameId when the card body is clicked", async () => {
     const wrapper = mount(AppSwitcherCard, { props: makeProps() });
 
-    await wrapper.trigger("click");
+    await wrapper.find(".app-switcher-card__select").trigger("click");
 
     expect(wrapper.emitted("select")).toEqual([["frame-1"]]);
   });
 
-  it("emits `select` on Enter / Space key when focused (a11y keyboard activation)", async () => {
+  it("uses a native button for keyboard selection", async () => {
     const wrapper = mount(AppSwitcherCard, { props: makeProps() });
+    const select = wrapper.find(".app-switcher-card__select");
 
-    await wrapper.trigger("keydown", { key: "Enter" });
-    expect(wrapper.emitted("select")).toEqual([["frame-1"]]);
-
-    await wrapper.trigger("keydown", { key: " " });
-    expect(wrapper.emitted("select")).toEqual([["frame-1"], ["frame-1"]]);
+    expect(select.element.tagName).toBe("BUTTON");
+    expect(select.attributes("type")).toBe("button");
   });
 
   it("emits `dismiss` (not `select`) with the frameId when the dismiss button is clicked", async () => {
@@ -56,17 +54,24 @@ describe("AppSwitcherCard", () => {
   it("exposes correct ARIA labels (select includes 'currently running'; dismiss is per-app)", () => {
     const wrapper = mount(AppSwitcherCard, { props: makeProps() });
 
-    expect(wrapper.attributes("aria-label")).toBe("Switch to About, currently running");
+    expect(wrapper.find(".app-switcher-card__select").attributes("aria-label")).toBe(
+      "Switch to About, currently running",
+    );
     expect(wrapper.find(".app-switcher-card__dismiss").attributes("aria-label")).toBe(
       "Dismiss About",
     );
   });
 
-  it("renders `role='button'` + `tabindex='0'` on the outer card surface", () => {
+  it("keeps select and dismiss as sibling controls", () => {
     const wrapper = mount(AppSwitcherCard, { props: makeProps() });
+    const card = wrapper.find(".app-switcher-card");
+    const select = wrapper.find(".app-switcher-card__select");
+    const dismiss = wrapper.find(".app-switcher-card__dismiss");
 
-    expect(wrapper.attributes("role")).toBe("button");
-    expect(wrapper.attributes("tabindex")).toBe("0");
+    expect(card.attributes("role")).toBeUndefined();
+    expect(select.element.parentElement).toBe(card.element);
+    expect(dismiss.element.parentElement).toBe(card.element);
+    expect(select.element.contains(dismiss.element)).toBe(false);
   });
 
   it("exposes frameId + handleId + manifestId data attributes for DOM lookups", () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   TooltipArrow,
   TooltipContent,
@@ -7,6 +8,8 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from "reka-ui";
+
+import { resolvePortalTarget } from "./portalTarget";
 
 interface TooltipProps {
   /** Tooltip text. Use the `content` slot for rich content instead. */
@@ -19,9 +22,10 @@ interface TooltipProps {
   /** Disables the tooltip while keeping the trigger interactive. */
   disabled?: boolean;
   contentClass?: string;
+  portalTo?: string | HTMLElement;
 }
 
-withDefaults(defineProps<TooltipProps>(), {
+const props = withDefaults(defineProps<TooltipProps>(), {
   label: undefined,
   side: "top",
   align: "center",
@@ -29,7 +33,10 @@ withDefaults(defineProps<TooltipProps>(), {
   sideOffset: 6,
   disabled: false,
   contentClass: "",
+  portalTo: undefined,
 });
+
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 </script>
 
 <template>
@@ -38,7 +45,7 @@ withDefaults(defineProps<TooltipProps>(), {
       <TooltipTrigger as-child>
         <slot />
       </TooltipTrigger>
-      <TooltipPortal>
+      <TooltipPortal :to="resolvedPortalTo">
         <TooltipContent
           :class="['ds-tooltip', contentClass]"
           :side="side"

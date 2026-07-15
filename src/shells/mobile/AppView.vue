@@ -173,6 +173,7 @@ watch(
   <section
     ref="surface"
     class="app-view"
+    role="main"
     :class="{
       'app-view--foreground': animateForeground,
       'app-view--titlebar-hidden': !showTitlebar,

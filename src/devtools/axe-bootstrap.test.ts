@@ -40,6 +40,9 @@ describe("installAxeIfDev", () => {
     expect(axeMocks.run).toHaveBeenCalledOnce();
     expect(axeMocks.run).toHaveBeenCalledWith(document, {
       resultTypes: ["violations"],
+      rules: {
+        "meta-viewport": { enabled: false },
+      },
     });
 
     dispose();

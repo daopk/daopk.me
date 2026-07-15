@@ -199,6 +199,8 @@ describe("Dock", () => {
     const dock = mountDock([]);
     const zone = dock.revealZone();
 
+    expect(zone.tagName).toBe("NAV");
+    expect(zone.getAttribute("aria-label")).toBe("Application dock");
     expect(zone.dataset.autoHide).toBeUndefined();
     expect(zone.dataset.revealed).toBeUndefined();
     expect(zone.classList.contains("dock-reveal-zone--auto-hide")).toBe(false);

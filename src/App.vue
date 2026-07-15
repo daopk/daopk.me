@@ -3,6 +3,7 @@ import { computed, inject, onMounted, reactive, ref, watch } from "vue";
 
 import AuthGate from "~/components/auth/AuthGate.vue";
 import BootHost from "~/components/boot/BootHost.vue";
+import { APP_OVERLAY_PORTAL_ID } from "~/components/ui/portalTarget";
 
 import type { BootManager } from "~/core";
 import { BootManagerInjectionKey } from "~/core";
@@ -87,6 +88,12 @@ watch(
 <template>
   <Suspense>
     <div class="app-stage">
+      <div
+        :id="APP_OVERLAY_PORTAL_ID"
+        class="app-stage__overlays"
+        role="region"
+        aria-label="Application overlays"
+      />
       <!-- `failed` renders BootHost error chrome + Retry; `cancelled` is idle BootHost (HMR teardown). -->
       <BootHost
         v-if="showBootHost"
@@ -116,6 +123,10 @@ watch(
   block-size: 100vh;
   overflow: hidden;
   position: relative;
+}
+
+.app-stage__overlays:empty {
+  display: none;
 }
 
 .app-stage__auth-gate {

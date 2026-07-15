@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   HoverCardArrow,
   HoverCardContent,
@@ -6,6 +7,8 @@ import {
   HoverCardRoot,
   HoverCardTrigger,
 } from "reka-ui";
+
+import { resolvePortalTarget } from "./portalTarget";
 
 type FloatingReferenceElement =
   | Element
@@ -31,7 +34,7 @@ interface HoverCardProps {
   updatePositionStrategy?: "optimized" | "always";
 }
 
-withDefaults(defineProps<HoverCardProps>(), {
+const props = withDefaults(defineProps<HoverCardProps>(), {
   align: "center",
   closeDelay: 160,
   contentClass: "",
@@ -40,13 +43,15 @@ withDefaults(defineProps<HoverCardProps>(), {
   enableTouch: false,
   open: undefined,
   openDelay: 260,
-  portalTo: "body",
+  portalTo: undefined,
   prioritizePosition: false,
   reference: undefined,
   side: "top",
   sideOffset: 10,
   updatePositionStrategy: "optimized",
 });
+
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 
 const emit = defineEmits<{
   "update:open": [next: boolean];
@@ -71,7 +76,7 @@ function onUpdateOpen(value: boolean): void {
     <HoverCardTrigger as-child>
       <slot />
     </HoverCardTrigger>
-    <HoverCardPortal :to="portalTo">
+    <HoverCardPortal :to="resolvedPortalTo">
       <HoverCardContent
         :class="['ds-hover-card', contentClass]"
         :side="side"

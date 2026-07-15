@@ -1236,7 +1236,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     const cards = wrapper.findAll(".app-switcher-card");
     expect(cards.length).toBe(2);
-    await cards[1].trigger("click");
+    await cards[1].find(".app-switcher-card__select").trigger("click");
     await flushPromises();
     await nextTick();
 

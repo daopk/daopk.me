@@ -181,7 +181,10 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    await wrapper.findComponent(AppSwitcherCard).trigger("click");
+    await wrapper
+      .findComponent(AppSwitcherCard)
+      .find(".app-switcher-card__select")
+      .trigger("click");
 
     expect(wrapper.emitted("close")).toBeUndefined();
 
@@ -194,7 +197,10 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    await wrapper.findComponent(AppSwitcherCard).trigger("click");
+    await wrapper
+      .findComponent(AppSwitcherCard)
+      .find(".app-switcher-card__select")
+      .trigger("click");
 
     expect(wrapper.emitted("select")).toEqual([["f-1"]]);
 

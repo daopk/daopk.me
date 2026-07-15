@@ -66,7 +66,9 @@ describe("NotesDesktopLayer", () => {
     });
 
     expect(pinnedNotesMocks.hydrate).toHaveBeenCalledOnce();
-    expect(wrapper.find(".notes-desktop-layer").getAttribute("aria-label")).toBe("Pinned notes");
+    const layer = wrapper.find(".notes-desktop-layer");
+    expect(layer.getAttribute("role")).toBe("region");
+    expect(layer.getAttribute("aria-label")).toBe("Pinned notes");
     expect(wrapper.find(".desktop-sticky-note-stub").textContent).toBe("/home/demo.md");
     wrapper.unmount();
   });

@@ -92,6 +92,7 @@ describe("AppView", () => {
 
     expect(wrapper.find(".app-view__back").attributes("aria-label")).toBe("Back to home");
     expect(wrapper.find(".app-view__title").text()).toBe("Alpha");
+    expect(wrapper.find("section.app-view").attributes("role")).toBe("main");
     expect(wrapper.find("section.app-view").attributes("data-manifest-id")).toBe("alpha");
     expect(wrapper.find("section.app-view").attributes("aria-current")).toBe("page");
 

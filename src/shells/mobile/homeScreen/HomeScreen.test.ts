@@ -87,6 +87,7 @@ describe("HomeScreen multi-page (M1.4)", () => {
     const main = wrapper.find("main.home-screen");
     expect(main.exists()).toBe(true);
     expect(main.attributes("aria-label")).toBe("Home screen");
+    expect(main.find("h1").text()).toBe("Home");
 
     expect(wrapper.findAll(".home-page-indicator__dot").length).toBe(2);
   });
@@ -105,6 +106,8 @@ describe("HomeScreen multi-page (M1.4)", () => {
     expect(icons.length).toBe(2);
     expect(icons[0].props("manifest").id).toBe("alpha");
     expect(icons[1].props("manifest").id).toBe("beta");
+    expect(wrapper.find(".home-icon-page__grid").element.tagName).toBe("DIV");
+    expect(wrapper.find(".home-icon-page__grid").attributes("aria-label")).toBeUndefined();
   });
 
   it("refreshes the mobile icon grid when an app registers after mount", async () => {

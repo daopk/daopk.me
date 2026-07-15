@@ -108,6 +108,22 @@ describe("DropdownMenu primitive", () => {
     expect(document.body.querySelectorAll('[role="separator"]')).toHaveLength(1);
   });
 
+  it("uses the application overlay landmark when it is available", async () => {
+    const target = document.createElement("div");
+    target.id = "app-overlays";
+    target.setAttribute("role", "region");
+    target.setAttribute("aria-label", "Application overlays");
+    document.body.appendChild(target);
+
+    const { Host } = makeHost(() => {});
+    const wrapper = mount(Host, { attachTo: document.body });
+
+    click(wrapper.get('[data-testid="trigger"]').element);
+    await flushReka();
+
+    expect(target.querySelector('[role="menu"]')).not.toBeNull();
+  });
+
   it("emits select when a menu item is activated", async () => {
     const onSelect = vi.fn();
     const { Host } = makeHost(onSelect);
