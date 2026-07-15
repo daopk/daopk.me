@@ -8,7 +8,6 @@ import "fake-indexeddb/auto";
 import BackgroundSection from "./BackgroundSection.vue";
 import BackgroundStagePreview from "./background/BackgroundStagePreview.vue";
 
-import Switch from "~/components/ui/Switch.vue";
 import { builtinWallpapers } from "~/core/theme/wallpapers";
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
@@ -324,8 +323,9 @@ describe("BackgroundSection (M2b.6)", () => {
     await nextTick();
 
     expect(wrapper.text()).not.toContain("Legibility");
-    expect(wrapper.findComponent(Switch).exists()).toBe(true);
-    expect(wrapper.findComponent(Switch).props("modelValue")).toBe(false);
+    const blurSwitch = wrapper.find<HTMLInputElement>('input[role="switch"]');
+    expect(blurSwitch.exists()).toBe(true);
+    expect(blurSwitch.element.checked).toBe(false);
     expect(wrapper.find("[data-testid='background-dim-slider']").exists()).toBe(false);
 
     wrapper.unmount();
@@ -348,7 +348,7 @@ describe("BackgroundSection (M2b.6)", () => {
     const wrapper = mountSection(fake);
     await nextTick();
 
-    wrapper.findComponent(Switch).vm.$emit("update:modelValue", true);
+    await wrapper.find<HTMLInputElement>('input[role="switch"]').trigger("click");
     await nextTick();
 
     expect(fake.setOverrideSpy).toHaveBeenCalledWith("--wallpaper-blur", WALLPAPER_BLUR_VALUE);
@@ -356,7 +356,7 @@ describe("BackgroundSection (M2b.6)", () => {
       "--wallpaper-blur-scale",
       WALLPAPER_BLUR_SCALE,
     );
-    expect(wrapper.findComponent(Switch).props("modelValue")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>('input[role="switch"]').element.checked).toBe(true);
 
     wrapper.unmount();
   });
@@ -369,14 +369,14 @@ describe("BackgroundSection (M2b.6)", () => {
     const wrapper = mountSection(fake);
     await nextTick();
 
-    expect(wrapper.findComponent(Switch).props("modelValue")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>('input[role="switch"]').element.checked).toBe(true);
 
-    wrapper.findComponent(Switch).vm.$emit("update:modelValue", false);
+    await wrapper.find<HTMLInputElement>('input[role="switch"]').trigger("click");
     await nextTick();
 
     expect(fake.unsetOverrideSpy).toHaveBeenCalledWith("--wallpaper-blur");
     expect(fake.unsetOverrideSpy).toHaveBeenCalledWith("--wallpaper-blur-scale");
-    expect(wrapper.findComponent(Switch).props("modelValue")).toBe(false);
+    expect(wrapper.find<HTMLInputElement>('input[role="switch"]').element.checked).toBe(false);
 
     wrapper.unmount();
   });
@@ -408,7 +408,7 @@ describe("BackgroundSection (M2b.6)", () => {
     fake.fireTokensChanged(["--wallpaper-blur"]);
     await nextTick();
 
-    expect(wrapper.findComponent(Switch).props("modelValue")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>('input[role="switch"]').element.checked).toBe(true);
 
     wrapper.unmount();
   });

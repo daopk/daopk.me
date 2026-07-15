@@ -1,6 +1,5 @@
-<script setup lang="ts">
-import { computed } from "vue";
-import { SliderRange, SliderRoot, SliderThumb, SliderTrack } from "reka-ui";
+<script setup vapor lang="ts">
+import { RopavSlider } from "./ropavAdapter";
 
 interface SliderProps {
   modelValue: number;
@@ -37,44 +36,38 @@ function clamp(n: number | undefined): number {
   return Math.max(props.min, Math.min(props.max, n));
 }
 
-const internalValue = computed<number[]>({
-  get: () => [clamp(props.modelValue)],
-  set: (next) => emit("update:modelValue", clamp(next[0])),
-});
+function onUpdate(next: number): void {
+  emit("update:modelValue", clamp(next));
+}
 
-function onCommit(next: number[]): void {
-  emit("commit", clamp(next[0]));
+function onCommit(event: Event): void {
+  if (!(event.target instanceof HTMLInputElement) || event.target.type !== "range") return;
+  emit("commit", clamp(event.target.valueAsNumber));
 }
 </script>
 
 <template>
-  <div class="ds-slider" :data-disabled="disabled ? '' : undefined" :data-orientation="orientation">
-    <SliderRoot
-      v-model="internalValue"
+  <div
+    class="ds-slider"
+    :data-disabled="disabled ? '' : undefined"
+    :data-orientation="orientation"
+    :data-thumb-alignment="thumbAlignment"
+  >
+    <RopavSlider
+      :model-value="clamp(modelValue)"
       :min="min"
       :max="max"
       :step="step"
       :orientation="orientation"
-      :thumb-alignment="thumbAlignment"
       :disabled="disabled"
+      :tooltip="false"
+      :aria-label="ariaLabel ?? 'Slider thumb'"
+      :labelledby="ariaLabelledby"
+      :aria-value-text="ariaValuetext"
       class="ds-slider__root"
-      @value-commit="onCommit"
-    >
-      <SliderTrack class="ds-slider__track">
-        <SliderRange class="ds-slider__range" />
-      </SliderTrack>
-      <!-- ARIA forwarding lives on SliderThumb, not SliderRoot. reka-ui's
-           SliderThumbImpl computes aria-valuenow/min/max + aria-orientation
-           on the thumb element but does NOT bubble extra aria-* down from
-           SliderRoot. Anything we want screen readers to read off the
-           slider role (labelledby, valuetext) must be bound here. -->
-      <SliderThumb
-        class="ds-slider__thumb"
-        :aria-label="ariaLabel ?? 'Slider thumb'"
-        :aria-labelledby="ariaLabelledby"
-        :aria-valuetext="ariaValuetext"
-      />
-    </SliderRoot>
+      @change="onCommit"
+      @update:model-value="onUpdate"
+    />
   </div>
 </template>
 
@@ -106,73 +99,36 @@ function onCommit(next: number[]): void {
 }
 
 .ds-slider__root {
-  align-items: center;
+  --_rp-slider-color: var(--color-accent);
+  --_rp-slider-thumb-bg: var(--color-accent);
+  --_rp-slider-thumb-border-style: 0 solid transparent;
+  --_rp-slider-thumb-border-width: 0;
+  --_rp-slider-thumb-size: var(--ds-slider-thumb-size, 16px);
+  --_rp-slider-track-bg: var(--color-bg-subtle);
+  --_rp-slider-track-height: 3px;
+  --_rp-slider-track-length: 100%;
+
   block-size: 100%;
-  display: flex;
   flex: 1 1 auto;
+  gap: 0;
   min-inline-size: 0;
-  position: relative;
 }
 
-.ds-slider__root[data-orientation="vertical"] {
-  align-items: center;
+.ds-slider[data-orientation="vertical"] .ds-slider__root {
   block-size: 100%;
-  flex-direction: column;
   inline-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
 }
 
-.ds-slider__track {
-  background-color: var(--color-bg-subtle);
-  block-size: 3px;
-  border-radius: var(--radius-full);
-  flex-grow: 1;
-  position: relative;
-}
-
-.ds-slider__track[data-orientation="vertical"] {
-  block-size: 100%;
-  flex-grow: 1;
-  inline-size: 3px;
-}
-
-.ds-slider__range {
-  background-color: var(--color-accent);
-  block-size: 100%;
-  border-radius: var(--radius-full);
-  position: absolute;
-}
-
-.ds-slider__range[data-orientation="vertical"] {
-  block-size: auto;
-  inline-size: 100%;
-}
-
-.ds-slider__thumb {
-  background-color: var(--color-accent);
-  block-size: var(--ds-slider-thumb-size, 16px);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-  display: block;
-  inline-size: var(--ds-slider-thumb-size, 16px);
+.ds-slider__root:deep(.rp-slider__thumb-content),
+.ds-slider__root:deep(.rp-slider__native::-webkit-slider-thumb),
+.ds-slider__root:deep(.rp-slider__native::-moz-range-thumb) {
   opacity: var(--ds-slider-thumb-opacity, 1);
-  transition:
-    box-shadow var(--duration-fast) var(--ease),
-    opacity var(--duration-fast) var(--ease);
-
-  &:hover {
-    box-shadow: var(--shadow-md);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-slider__thumb {
+  .ds-slider__root:deep(.rp-slider__thumb-content) {
     transition: none;
   }
 }

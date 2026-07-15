@@ -14,6 +14,7 @@ import {
 
 import App from "./App.vue";
 import YouTubePlayerSurface from "./components/YouTubePlayerSurface.vue";
+import YouTubePlayerControls from "./components/YouTubePlayerControls.vue";
 import { AUTO_HIDE_CONTROLS_DELAY_MS } from "./composables/useAutoHideControls";
 import type {
   YouTubePlayerEvent,
@@ -181,11 +182,11 @@ function makeKernelEvents(): Pick<Kernel, "events"> {
 }
 
 function seekSlider(wrapper: ReturnType<typeof mountYoutubePlayer>) {
-  return wrapper.findComponent(".youtube-player__seek");
+  return wrapper.get<HTMLInputElement>('.youtube-player__seek input[type="range"]');
 }
 
-function volumeSlider(wrapper: ReturnType<typeof mountYoutubePlayer>) {
-  return wrapper.findComponent(".youtube-player__volume");
+function playerControls(wrapper: ReturnType<typeof mountYoutubePlayer>) {
+  return wrapper.getComponent(YouTubePlayerControls);
 }
 
 function progressBar(wrapper: ReturnType<typeof mountYoutubePlayer>) {
@@ -320,7 +321,9 @@ describe("YouTube Player App", () => {
     expect(wrapper.get("#youtube-player-video-input").attributes("placeholder")).toBe(
       "YouTube URL or video ID",
     );
-    expect(wrapper.get('button[type="submit"]').text()).toContain("Play");
+    const submit = wrapper.get<HTMLButtonElement>(".youtube-player__open-button");
+    expect(submit.element.type).toBe("submit");
+    expect(submit.text()).toContain("Play");
 
     wrapper.unmount();
   });
@@ -896,12 +899,10 @@ describe("YouTube Player App", () => {
   it("seeks only on slider commit", async () => {
     const { player, wrapper } = await mountReadyPlayer();
 
-    expect(seekSlider(wrapper).props("thumbAlignment")).toBe("overflow");
-
-    seekSlider(wrapper).vm.$emit("update:modelValue", 42);
+    playerControls(wrapper).vm.$emit("preview-seek", 42);
     expect(player.seekTo).not.toHaveBeenCalled();
 
-    seekSlider(wrapper).vm.$emit("commit", 42);
+    playerControls(wrapper).vm.$emit("commit-seek", 42);
     expect(player.seekTo).toHaveBeenCalledWith(42, true);
 
     wrapper.unmount();
@@ -911,14 +912,14 @@ describe("YouTube Player App", () => {
     vi.useFakeTimers();
     const { player, wrapper } = await mountReadyPlayer();
 
-    seekSlider(wrapper).vm.$emit("update:modelValue", 42);
+    playerControls(wrapper).vm.$emit("preview-seek", 42);
     await nextTick();
 
     player.currentTime = 7;
     await vi.advanceTimersByTimeAsync(500);
     await nextTick();
 
-    expect(seekSlider(wrapper).props("modelValue")).toBe(42);
+    expect(seekSlider(wrapper).element.valueAsNumber).toBe(42);
     expect(wrapper.text()).toContain("0:07");
 
     wrapper.unmount();
@@ -933,21 +934,21 @@ describe("YouTube Player App", () => {
     await nextTick();
 
     player.seekTo.mockImplementationOnce(() => undefined);
-    seekSlider(wrapper).vm.$emit("update:modelValue", 42);
-    seekSlider(wrapper).vm.$emit("commit", 42);
+    playerControls(wrapper).vm.$emit("preview-seek", 42);
+    playerControls(wrapper).vm.$emit("commit-seek", 42);
     await nextTick();
 
     player.currentTime = 11;
     await vi.advanceTimersByTimeAsync(500);
     await nextTick();
 
-    expect(seekSlider(wrapper).props("modelValue")).toBe(42);
+    expect(seekSlider(wrapper).element.valueAsNumber).toBe(42);
 
     player.currentTime = 43;
     await vi.advanceTimersByTimeAsync(500);
     await nextTick();
 
-    expect(seekSlider(wrapper).props("modelValue")).toBe(43);
+    expect(seekSlider(wrapper).element.valueAsNumber).toBe(43);
 
     wrapper.unmount();
   });
@@ -989,11 +990,11 @@ describe("YouTube Player App", () => {
   it("sets volume and maps zero to mute", async () => {
     const { player, wrapper } = await mountReadyPlayer();
 
-    volumeSlider(wrapper).vm.$emit("update:modelValue", 0);
+    playerControls(wrapper).vm.$emit("set-volume", 0);
     expect(player.setVolume).toHaveBeenCalledWith(0);
     expect(player.mute).toHaveBeenCalledTimes(1);
 
-    volumeSlider(wrapper).vm.$emit("update:modelValue", 35);
+    playerControls(wrapper).vm.$emit("set-volume", 35);
     expect(player.setVolume).toHaveBeenCalledWith(35);
     expect(player.unMute).toHaveBeenCalledTimes(1);
 

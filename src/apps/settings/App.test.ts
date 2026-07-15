@@ -7,7 +7,8 @@ const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
 }));
 
-vi.mock("@vueuse/core", () => ({
+vi.mock("@vueuse/core", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@vueuse/core")>()),
   useResizeObserver: (
     _target: unknown,
     callback: (entries: Array<{ contentRect: { width: number } }>) => void,

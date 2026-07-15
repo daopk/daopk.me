@@ -17,12 +17,17 @@ function vueEsmRuntime(packageName: string, fileName: string): string {
  * regular VTU suite and the direct-DOM Vapor suite must resolve every Vue
  * package to that same graph once shared components can contain Vapor icons.
  */
-export function vueEsmRuntimeAliases() {
+export function vueEsmRuntimeAliases(withCompiler = false) {
   return [
     {
       find: /^vue$/,
       replacement: fileURLToPath(
-        new URL("../node_modules/vue/dist/vue.runtime.esm-bundler.js", import.meta.url),
+        new URL(
+          withCompiler
+            ? "../node_modules/vue/dist/vue.esm-bundler.js"
+            : "../node_modules/vue/dist/vue.runtime.esm-bundler.js",
+          import.meta.url,
+        ),
       ),
     },
     {

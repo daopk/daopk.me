@@ -1,0 +1,37 @@
+:root {
+  --rp-font-family: inherit;
+  --rp-font-size-xs: var(--font-size-xs);
+  --rp-font-size-sm: var(--font-size-sm);
+  --rp-font-size-md: var(--font-size-base);
+  --rp-font-size-lg: var(--font-size-lg);
+  --rp-font-size-xl: var(--font-size-xl);
+  --rp-line-height-md: var(--leading-normal);
+
+  --rp-spacing-1: var(--space-2xs);
+  --rp-spacing-2: var(--space-xs);
+  --rp-spacing-3: var(--space-sm);
+  --rp-spacing-4: var(--space-md);
+  --rp-spacing-5: var(--space-lg);
+  --rp-spacing-6: var(--space-xl);
+
+  --rp-radius-sm: var(--radius-sm);
+  --rp-radius-md: var(--radius-md);
+  --rp-radius-lg: var(--radius-lg);
+  --rp-radius-full: var(--radius-full);
+  --rp-shadow-sm: var(--shadow-sm);
+  --rp-shadow-md: var(--shadow-md);
+  --rp-shadow-lg: var(--shadow-lg);
+  --rp-transition-fast: var(--duration-fast) var(--ease);
+
+  --rp-color-text: var(--color-fg);
+  --rp-color-dimmed: var(--color-fg-muted);
+  --rp-color-control-bg: var(--color-bg-elevated);
+  --rp-color-control-track-bg: var(--color-bg-subtle);
+  --rp-color-control-thumb-bg: var(--color-bg-elevated);
+  --rp-color-control-border: var(--color-border);
+  --rp-color-control-border-focus: var(--color-accent);
+  --rp-color-control-selected-bg: var(--color-accent);
+  --rp-color-control-selected-fg: var(--color-fg-on-accent);
+  --rp-color-focus-ring: var(--color-accent);
+  --rp-opacity-disabled: 0.6;
+}

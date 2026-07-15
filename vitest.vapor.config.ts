@@ -16,7 +16,13 @@ export default mergeConfig(
     },
     test: {
       environment: "happy-dom",
+      server: {
+        deps: {
+          inline: ["ropav"],
+        },
+      },
       include: [
+        "src/components/ui/**/*.vapor.test.ts",
         "src/icons/createIcon.vapor.test.ts",
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",

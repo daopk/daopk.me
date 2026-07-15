@@ -58,7 +58,8 @@ describe("PrivacySection (M3.5)", () => {
     expect(toggle.attributes("aria-checked")).toBe("false");
     expect(kernel.settings.get("telemetryEnabled")).toBe(false);
 
-    await toggle.trigger("click");
+    (toggle.element as HTMLInputElement).checked = true;
+    await toggle.trigger("change");
     await flushPromises();
 
     expect(kernel.settings.get("telemetryEnabled")).toBe(true);

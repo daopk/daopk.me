@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface DialogActionsProps {
   align?: "end" | "between" | "stretch";
 }

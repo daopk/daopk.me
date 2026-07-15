@@ -1,10 +1,13 @@
+import { config } from "@vue/test-utils";
 import { vi } from "vitest";
-import type { Component } from "vue";
+import { vaporInteropPlugin, type Component } from "vue";
 
-// Vue Test Utils 2.4 cannot mount Vapor roots and Node's Vue condition does not
-// expose the Vapor runtime. Keep the legacy VDOM suite isolated by replacing
-// only the shared icon factory; real Vapor icons and VDOM interop are covered by
-// `vitest.vapor.config.ts` against the browser ESM runtime.
+config.global.plugins.push(vaporInteropPlugin);
+
+// Vue Test Utils 2.4 cannot mount Vapor roots. Keep direct root coverage in the
+// Vapor suite while consumer VDOM tests exercise Vapor children through the
+// same interop plugin used by production. Icons remain light VDOM stubs here;
+// their real Vapor output has dedicated direct-DOM coverage.
 vi.mock("~/icons/createIcon", async () => {
   const { defineComponent, h } = await import("vue");
 

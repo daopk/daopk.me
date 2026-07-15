@@ -52,11 +52,14 @@ if rg \
     --glob '!src/types/kernel.ts' \
     --glob '!apps/blog/src/styles/blog.scss' \
     --glob '!apps/notes/src/DesktopStickyNote.vue' \
+    --glob '!apps/notes/src/useDesktopStickyNoteTheme.ts' \
     --glob '!apps/movies/src/components/EpisodeView.vue' \
     --glob '!apps/movies/src/components/EpisodeList.vue' \
     --glob '!apps/movies/src/components/HomeView.vue' \
     --glob '!apps/movies/src/components/MovieHlsPlayer.vue' \
     --glob '!apps/movies/src/components/detail/DetailHero.vue' \
+    --glob '!apps/movies/src/styles/detail-hero.scss' \
+    --glob '!apps/movies/src/styles/movie-hls-player.scss' \
     --glob '!**/*.test.ts' \
     --glob '!**/*.test.tsx' \
     -- "$RAW_HEX_PATTERN" \

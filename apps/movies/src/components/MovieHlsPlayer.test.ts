@@ -446,8 +446,13 @@ function pointerEvent(type: string, element: Element, options: { clientX: number
   );
 }
 
-function sliderRoots(wrapper: VueWrapper) {
-  return wrapper.findAllComponents({ name: "SliderRoot" });
+function sliderInputs(wrapper: VueWrapper) {
+  return wrapper.findAll<HTMLInputElement>('input[type="range"]');
+}
+
+async function commitSlider(slider: ReturnType<typeof sliderInputs>[number], value: number) {
+  slider.element.value = String(value);
+  await slider.trigger("change");
 }
 
 async function openSettings(wrapper: VueWrapper): Promise<void> {
@@ -712,7 +717,7 @@ content-c.ts
     setMediaMetrics(video, { currentTime: 15, duration: 120 });
     await settle();
 
-    sliderRoots(wrapper)[0]!.vm.$emit("valueCommit", [45]);
+    await commitSlider(sliderInputs(wrapper)[0]!, 45);
     await settle();
 
     expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
@@ -864,7 +869,7 @@ content-c.ts
     setMediaMetrics(video, { currentTime: 15, duration: 120, bufferedEnd: 64 });
     await settle();
 
-    sliderRoots(wrapper)[0]!.vm.$emit("valueCommit", [45]);
+    await commitSlider(sliderInputs(wrapper)[0]!, 45);
     await settle();
 
     expect(video.currentTime).toBe(45);
@@ -901,14 +906,14 @@ content-c.ts
     const wrapper = mountPlayer();
     await settle();
     const video = wrapper.get("video").element as HTMLVideoElement;
-    const volumeSlider = sliderRoots(wrapper)[1]!;
+    const volumeSlider = sliderInputs(wrapper)[1]!;
 
     expect(wrapper.find(".movies-hls-player__volume-control").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player__volume-popover").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player__top-volume-button").exists()).toBe(true);
-    expect(volumeSlider.props("orientation")).toBe("vertical");
+    expect(volumeSlider.attributes("aria-orientation")).toBe("vertical");
 
-    volumeSlider.vm.$emit("update:modelValue", [35]);
+    await volumeSlider.setValue(35);
     await settle();
 
     expect(video.volume).toBe(0.35);

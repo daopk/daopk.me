@@ -1,5 +1,8 @@
-<script setup lang="ts">
-import { RadioGroupRoot } from "reka-ui";
+<script setup vapor lang="ts">
+import { computed, provide, useId } from "vue";
+
+import { radioGroupAdapterKey } from "./radioGroupContext";
+import { RopavRadioGroup } from "./ropavAdapter";
 
 interface RadioGroupProps {
   modelValue?: string;
@@ -10,7 +13,7 @@ interface RadioGroupProps {
   name?: string;
 }
 
-withDefaults(defineProps<RadioGroupProps>(), {
+const props = withDefaults(defineProps<RadioGroupProps>(), {
   modelValue: undefined,
   disabled: false,
   orientation: "vertical",
@@ -18,29 +21,44 @@ withDefaults(defineProps<RadioGroupProps>(), {
   name: undefined,
 });
 
-defineEmits<{
+const emit = defineEmits<{
   "update:modelValue": [next: string];
 }>();
+
+const generatedName = useId();
+const resolvedName = computed(() => props.name ?? `${generatedName}-radio`);
+
+provide(radioGroupAdapterKey, {
+  get disabled() {
+    return props.disabled;
+  },
+  get modelValue() {
+    return props.modelValue;
+  },
+  get name() {
+    return resolvedName.value;
+  },
+  select(value) {
+    emit("update:modelValue", value);
+  },
+});
 </script>
 
 <template>
-  <RadioGroupRoot
+  <RopavRadioGroup
     class="ds-radio-group"
     :class="`ds-radio-group--${orientation}`"
-    :model-value="modelValue"
+    :model-value="modelValue ?? null"
     :disabled="disabled"
-    :orientation="orientation"
-    :name="name"
+    :name="resolvedName"
     :aria-label="label"
-    @update:model-value="$emit('update:modelValue', String($event))"
   >
     <slot />
-  </RadioGroupRoot>
+  </RopavRadioGroup>
 </template>
 
 <style scoped lang="scss">
 .ds-radio-group {
-  display: flex;
   gap: var(--space-sm);
 }
 

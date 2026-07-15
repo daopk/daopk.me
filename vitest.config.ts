@@ -1,7 +1,10 @@
 /// <reference types="vitest" />
+import { fileURLToPath } from "node:url";
+
 import { defineConfig, mergeConfig } from "vitest/config";
 
 import { createViteConfig } from "./vite.config";
+import { vueEsmRuntimeAliases } from "./vite/vueEsmRuntimeAliases";
 
 // Merge with `vite.config.ts` so plugins (vue), aliases, and any other shared
 // build options live in exactly one place. This file only owns test-specific
@@ -18,6 +21,20 @@ export default mergeConfig(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createViteConfig("serve") as any,
   defineConfig({
+    resolve: {
+      alias: [
+        {
+          find: /^@vue\/test-utils$/,
+          replacement: fileURLToPath(
+            new URL(
+              "./node_modules/@vue/test-utils/dist/vue-test-utils.esm-bundler.mjs",
+              import.meta.url,
+            ),
+          ),
+        },
+        ...vueEsmRuntimeAliases(true),
+      ],
+    },
     test: {
       globals: false,
       environment: "happy-dom",
@@ -27,10 +44,19 @@ export default mergeConfig(
       // The suite is many small files; VM workers avoid most process/env
       // startup overhead while preserving per-file isolation.
       pool: "vmThreads",
+      server: {
+        deps: {
+          // Mixed VDOM/Vapor tests must not let Vue-bearing dependencies fall
+          // back to Vitest's Node/CJS graph. Inline them into the same ESM
+          // runtime as the application and VTU.
+          inline: true,
+        },
+      },
       include: ["src/**/*.test.ts", "tests/**/*.test.ts", "apps/*/src/**/*.test.ts"],
       // Vue 3.6 beta's Node condition does not expose the Vapor runtime. Vapor
       // components use a dedicated ESM config that remains a required gate.
       exclude: [
+        "src/components/ui/**/*.vapor.test.ts",
         "src/icons/createIcon.vapor.test.ts",
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",

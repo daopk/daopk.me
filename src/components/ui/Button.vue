@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import type { Component } from "vue";
+<script setup vapor lang="ts">
+import { useTemplateRef, type Component } from "vue";
 
 interface ButtonProps {
   variant?: "primary" | "secondary" | "ghost" | "danger";
@@ -20,10 +20,19 @@ withDefaults(defineProps<ButtonProps>(), {
   iconEnd: undefined,
   type: "button",
 });
+
+const buttonRef = useTemplateRef<HTMLButtonElement>("buttonRef");
+
+defineExpose({
+  focus(options?: FocusOptions): void {
+    buttonRef.value?.focus(options);
+  },
+});
 </script>
 
 <template>
   <button
+    ref="buttonRef"
     :type="type"
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"

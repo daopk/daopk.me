@@ -1,14 +1,32 @@
-<script setup lang="ts">
-import { SwitchRoot, SwitchThumb } from "reka-ui";
+<script setup vapor lang="ts">
+import { computed, useAttrs } from "vue";
+
+import { RopavSwitch } from "./ropavAdapter";
+
+defineOptions({ inheritAttrs: false });
 
 interface SwitchProps {
   modelValue: boolean;
   disabled?: boolean;
+  ariaLabel?: string;
+  ariaLabelledby?: string;
 }
 
-withDefaults(defineProps<SwitchProps>(), {
+const props = withDefaults(defineProps<SwitchProps>(), {
   disabled: false,
+  ariaLabel: undefined,
+  ariaLabelledby: undefined,
 });
+
+const attrs = useAttrs();
+const resolvedAriaLabel = computed(() => props.ariaLabel ?? stringAttr(attrs["aria-label"]));
+const resolvedAriaLabelledby = computed(
+  () => props.ariaLabelledby ?? stringAttr(attrs["aria-labelledby"]),
+);
+
+function stringAttr(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
 
 defineEmits<{
   "update:modelValue": [next: boolean];
@@ -16,63 +34,39 @@ defineEmits<{
 </script>
 
 <template>
-  <SwitchRoot
+  <RopavSwitch
+    v-bind="attrs"
     :model-value="modelValue"
     :disabled="disabled"
+    :aria-label="resolvedAriaLabel"
+    :labelledby="resolvedAriaLabelledby"
     class="ds-switch"
     @update:model-value="$emit('update:modelValue', $event)"
-  >
-    <SwitchThumb class="ds-switch__thumb" />
-  </SwitchRoot>
+  />
 </template>
 
 <style scoped lang="scss">
 .ds-switch {
-  background: var(--color-bg);
-  block-size: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  display: inline-block;
+  --_rp-switch-thumb-offset: 1px;
+  --_rp-switch-thumb-size: 18px;
+  --_rp-switch-track-bg: var(--color-bg);
+  --_rp-switch-track-height: 22px;
+  --_rp-switch-track-width: 36px;
+
   flex: 0 0 auto;
-  inline-size: 36px;
-  padding: 0;
   position: relative;
+}
+
+.ds-switch:deep(.rp-switch__track) {
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
   transition:
     background-color var(--duration-fast) var(--ease),
     border-color var(--duration-fast) var(--ease);
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  &[data-state="checked"] {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-  }
-
-  &[data-disabled] {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
 }
 
-.ds-switch__thumb {
-  background: var(--color-bg-elevated);
-  block-size: 18px;
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-  display: block;
-  inline-size: 18px;
-  inset-block-start: 1px;
-  inset-inline-start: 1px;
-  position: absolute;
-  transition: inset-inline-start var(--duration-fast) var(--ease);
-}
-
-.ds-switch[data-state="checked"] .ds-switch__thumb {
-  inset-inline-start: 15px;
+.ds-switch[data-state="checked"]:deep(.rp-switch__track) {
+  border-color: var(--color-accent);
 }
 
 /* Expand the tap target to the ~44px native floor on touch without changing
@@ -91,8 +85,8 @@ defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-switch,
-  .ds-switch__thumb {
+  .ds-switch:deep(.rp-switch__track),
+  .ds-switch:deep(.rp-switch__thumb) {
     transition: none;
   }
 }

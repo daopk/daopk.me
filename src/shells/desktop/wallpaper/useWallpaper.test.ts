@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { computed, effectScope, nextTick } from "vue";
+import { effectScope, nextTick, reactive, ref, type Ref } from "vue";
 
 import "fake-indexeddb/auto";
 
@@ -10,17 +10,66 @@ import { useWallpaperStore } from "~/core/wallpaper/WallpaperStore";
 
 import { useWallpaper } from "~/composables/useWallpaper";
 
-const { mockThemeRef, mockSettingsRef } = vi.hoisted(() => {
-  const { reactive, ref } = require("vue") as typeof import("vue");
+interface MockSettings {
+  desktopWallpaperActiveId: string;
+  mobileWallpaperActiveId: string;
+  setDesktopWallpaperActiveId(value: string): void;
+  setMobileWallpaperActiveId(value: string): void;
+}
+
+const mocks = vi.hoisted(() => ({
+  settingsRef: undefined as MockSettings | undefined,
+  themeRef: undefined as Ref<ResolvedTheme> | undefined,
+}));
+
+vi.mock("~/composables/useTheme", async () => {
+  const { computed, ref } = await import("vue");
+  const themeRef = (mocks.themeRef ??= ref<ResolvedTheme>("dark"));
 
   return {
-    mockThemeRef: ref<ResolvedTheme>("dark"),
-    mockSettingsRef: reactive<{
-      desktopWallpaperActiveId: string;
-      mobileWallpaperActiveId: string;
-      setDesktopWallpaperActiveId: (v: string) => void;
-      setMobileWallpaperActiveId: (v: string) => void;
-    }>({
+    useTheme() {
+      return {
+        theme: computed(() => themeRef.value),
+
+        preference: computed(() => "system" as const),
+
+        setTheme: (): void => {},
+
+        toggle: (): void => {},
+
+        list(): readonly ThemeName[] {
+          return ["light", "dark"];
+        },
+      };
+    },
+  };
+});
+
+vi.mock("~/composables/useSettings", async () => {
+  const { reactive } = await import("vue");
+  const settingsRef = (mocks.settingsRef ??= reactive<MockSettings>({
+    desktopWallpaperActiveId: "test-dark",
+    mobileWallpaperActiveId: "test-dark",
+    setDesktopWallpaperActiveId(value: string): void {
+      this.desktopWallpaperActiveId = value;
+    },
+    setMobileWallpaperActiveId(value: string): void {
+      this.mobileWallpaperActiveId = value;
+    },
+  }));
+
+  return {
+    useSettings() {
+      return settingsRef;
+    },
+  };
+});
+
+describe("useWallpaper", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    mocks.themeRef ??= ref<ResolvedTheme>("dark");
+    mocks.settingsRef ??= reactive<MockSettings>({
       desktopWallpaperActiveId: "test-dark",
       mobileWallpaperActiveId: "test-dark",
       setDesktopWallpaperActiveId(value: string): void {
@@ -29,40 +78,10 @@ const { mockThemeRef, mockSettingsRef } = vi.hoisted(() => {
       setMobileWallpaperActiveId(value: string): void {
         this.mobileWallpaperActiveId = value;
       },
-    }),
-  };
-});
-
-vi.mock("~/composables/useTheme", () => ({
-  useTheme() {
-    return {
-      theme: computed(() => mockThemeRef.value),
-
-      preference: computed(() => "system" as const),
-
-      setTheme: (): void => {},
-
-      toggle: (): void => {},
-
-      list(): readonly ThemeName[] {
-        return ["light", "dark"];
-      },
-    };
-  },
-}));
-
-vi.mock("~/composables/useSettings", () => ({
-  useSettings() {
-    return mockSettingsRef;
-  },
-}));
-
-describe("useWallpaper", () => {
-  beforeEach(() => {
-    setActivePinia(createPinia());
-    mockThemeRef.value = "dark";
-    mockSettingsRef.desktopWallpaperActiveId = "test-dark";
-    mockSettingsRef.mobileWallpaperActiveId = "test-dark";
+    });
+    mocks.themeRef!.value = "dark";
+    mocks.settingsRef!.desktopWallpaperActiveId = "test-dark";
+    mocks.settingsRef!.mobileWallpaperActiveId = "test-dark";
   });
 
   const fakeList = (): readonly Wallpaper[] =>
@@ -89,13 +108,13 @@ describe("useWallpaper", () => {
     const { current } = useWallpaper({ list: fakeList });
     expect(current.value.id).toBe("test-dark");
 
-    mockSettingsRef.desktopWallpaperActiveId = "test-light";
+    mocks.settingsRef!.desktopWallpaperActiveId = "test-light";
     expect(current.value.id).toBe("test-light");
   });
 
   it("resolves the mobile active id and shell-specific value when requested", () => {
-    mockSettingsRef.desktopWallpaperActiveId = "test-dark";
-    mockSettingsRef.mobileWallpaperActiveId = "test-light";
+    mocks.settingsRef!.desktopWallpaperActiveId = "test-dark";
+    mocks.settingsRef!.mobileWallpaperActiveId = "test-light";
 
     const { current } = useWallpaper({
       list: () => [
@@ -113,13 +132,13 @@ describe("useWallpaper", () => {
 
     expect(current.value.id).toBe("test-light");
 
-    mockSettingsRef.mobileWallpaperActiveId = "responsive";
+    mocks.settingsRef!.mobileWallpaperActiveId = "responsive";
     expect(current.value.value).toBe("/mobile.png");
   });
 
   it("falls back to the first wallpaper when the active id is unknown", () => {
     const { current } = useWallpaper({ list: fakeList });
-    mockSettingsRef.desktopWallpaperActiveId = "no-such-id";
+    mocks.settingsRef!.desktopWallpaperActiveId = "no-such-id";
     expect(current.value.id).toBe("test-dark");
   });
 
@@ -131,8 +150,8 @@ describe("useWallpaper", () => {
   it("returns the wallpaper matching the desktop active id when explicit and known", () => {
     const { current } = useWallpaper({ list: fakeList });
 
-    mockThemeRef.value = "dark";
-    mockSettingsRef.desktopWallpaperActiveId = "test-light";
+    mocks.themeRef!.value = "dark";
+    mocks.settingsRef!.desktopWallpaperActiveId = "test-light";
 
     expect(current.value.id).toBe("test-light");
   });
@@ -142,7 +161,7 @@ describe("useWallpaper", () => {
 
     const { current } = useWallpaper({ list: fakeList });
 
-    mockSettingsRef.desktopWallpaperActiveId = "no-such-id";
+    mocks.settingsRef!.desktopWallpaperActiveId = "no-such-id";
 
     expect(current.value.id).toBe("test-dark");
     expect(warn).toHaveBeenCalled();
@@ -169,7 +188,7 @@ describe("useWallpaper", () => {
     try {
       const { current } = useWallpaper({ list: fakeList });
 
-      mockSettingsRef.desktopWallpaperActiveId = result.meta.id;
+      mocks.settingsRef!.desktopWallpaperActiveId = result.meta.id;
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 30));
       await nextTick();
@@ -201,11 +220,11 @@ describe("useWallpaper", () => {
     const { current } = useWallpaper({ list: fakeList });
     void current.value;
 
-    mockSettingsRef.desktopWallpaperActiveId = result.meta.id;
+    mocks.settingsRef!.desktopWallpaperActiveId = result.meta.id;
     await new Promise((resolve) => setTimeout(resolve, 0));
     await nextTick();
 
-    expect(mockSettingsRef.desktopWallpaperActiveId).toBe("test-dark");
+    expect(mocks.settingsRef!.desktopWallpaperActiveId).toBe("test-dark");
     expect(getBlobSpy).toHaveBeenCalledWith(result.meta.id);
 
     getBlobSpy.mockRestore();
@@ -238,13 +257,13 @@ describe("useWallpaper", () => {
         void current.value;
       });
 
-      mockSettingsRef.desktopWallpaperActiveId = result.meta.id;
+      mocks.settingsRef!.desktopWallpaperActiveId = result.meta.id;
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 30));
       await nextTick();
       expect(created.length).toBe(1);
 
-      mockSettingsRef.desktopWallpaperActiveId = "test-dark";
+      mocks.settingsRef!.desktopWallpaperActiveId = "test-dark";
       await nextTick();
       await new Promise((resolve) => setTimeout(resolve, 30));
       expect(revoked).toContain(created[0]);

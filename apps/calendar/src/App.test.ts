@@ -472,7 +472,7 @@ describe("Calendar App.vue", () => {
     await flushPromises();
     textButton("Sunday").click();
     document.body
-      .querySelector<HTMLButtonElement>('button[aria-label="Hide lunar labels"]')
+      .querySelector<HTMLInputElement>('[role="switch"][aria-label="Hide lunar labels"]')
       ?.click();
     textButton("Back").click();
     await flushPromises();

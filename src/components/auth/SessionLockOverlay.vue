@@ -21,7 +21,7 @@ const profile = kernel.profile.current();
 const { shellId } = useActiveShell();
 const store = new ProfileStore();
 const passkeys = new PasskeyService();
-const unlockButtonRef = useTemplateRef<InstanceType<typeof Button>>("unlockButtonRef");
+const unlockButtonRef = useTemplateRef<{ focus(options?: FocusOptions): void }>("unlockButtonRef");
 const autoUpdate = useAuthAutoUpdate(computed(() => locked.value));
 
 const busy = ref(false);
@@ -91,10 +91,7 @@ watch(
       return;
     }
     await nextTick();
-    const button = unlockButtonRef.value?.$el;
-    if (button instanceof HTMLElement) {
-      button.focus({ preventScroll: true });
-    }
+    unlockButtonRef.value?.focus({ preventScroll: true });
   },
   { immediate: true },
 );
