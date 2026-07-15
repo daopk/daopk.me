@@ -19,6 +19,10 @@ const props = withDefaults(defineProps<SwitchProps>(), {
 });
 
 const attrs = useAttrs();
+const switchClassNames = {
+  thumb: "ds-switch__thumb",
+  track: "ds-switch__track",
+} as const;
 const resolvedAriaLabel = computed(() => props.ariaLabel ?? stringAttr(attrs["aria-label"]));
 const resolvedAriaLabelledby = computed(
   () => props.ariaLabelledby ?? stringAttr(attrs["aria-labelledby"]),
@@ -40,6 +44,7 @@ defineEmits<{
     :disabled="disabled"
     :aria-label="resolvedAriaLabel"
     :labelledby="resolvedAriaLabelledby"
+    :class-names="switchClassNames"
     class="ds-switch"
     @update:model-value="$emit('update:modelValue', $event)"
   />
@@ -47,17 +52,17 @@ defineEmits<{
 
 <style scoped lang="scss">
 .ds-switch {
-  --_rp-switch-thumb-offset: 1px;
-  --_rp-switch-thumb-size: 18px;
-  --_rp-switch-track-bg: var(--color-bg);
-  --_rp-switch-track-height: 22px;
-  --_rp-switch-track-width: 36px;
+  --rp-color-control-track-bg: var(--color-bg);
+  --rp-switch-thumb-offset: 1px;
+  --rp-switch-thumb-size: 18px;
+  --rp-switch-track-height: 22px;
+  --rp-switch-track-width: 36px;
 
   flex: 0 0 auto;
   position: relative;
 }
 
-.ds-switch:deep(.rp-switch__track) {
+.ds-switch:deep(.ds-switch__track) {
   border: 1px solid var(--color-border);
   box-sizing: border-box;
   transition:
@@ -65,7 +70,7 @@ defineEmits<{
     border-color var(--duration-fast) var(--ease);
 }
 
-.ds-switch[data-state="checked"]:deep(.rp-switch__track) {
+.ds-switch[data-state="checked"]:deep(.ds-switch__track) {
   border-color: var(--color-accent);
 }
 
@@ -85,9 +90,8 @@ defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-switch:deep(.rp-switch__track),
-  .ds-switch:deep(.rp-switch__thumb) {
-    transition: none;
+  .ds-switch {
+    --rp-transition-fast: none;
   }
 }
 </style>

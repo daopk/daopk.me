@@ -23,6 +23,7 @@ if (!injectedGroup) {
   throw new Error("RadioGroupItem must be used inside RadioGroup.");
 }
 const group = injectedGroup;
+const radioClassNames = { indicator: "ds-radio__indicator" } as const;
 
 const resolvedDisabled = computed(() => props.disabled || group.disabled);
 
@@ -39,6 +40,7 @@ function onSelect(): void {
     :value="value"
     :checked="group.modelValue === value"
     :disabled="resolvedDisabled"
+    :class-names="radioClassNames"
     variant="outline"
     @change="onSelect"
   >
@@ -50,16 +52,16 @@ function onSelect(): void {
 
 <style scoped lang="scss">
 .ds-radio {
-  --_rp-radio-dot: 10px;
-  --_rp-radio-font-size: var(--font-size-sm);
-  --_rp-radio-size: 18px;
+  --rp-font-size-md: var(--font-size-sm);
+  --rp-radio-control-size: 18px;
+  --rp-radio-dot-size: 10px;
 
   color: var(--color-fg);
   gap: var(--space-sm);
   text-align: start;
 }
 
-.ds-radio:deep(.rp-radio__dot) {
+.ds-radio:deep(.ds-radio__indicator) {
   border-width: 1px;
   position: relative;
 
@@ -78,9 +80,8 @@ function onSelect(): void {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-radio:deep(.rp-radio__dot),
-  .ds-radio:deep(.rp-radio__dot::after) {
-    transition: none;
+  .ds-radio {
+    --rp-transition-fast: none;
   }
 }
 </style>

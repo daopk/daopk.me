@@ -8,6 +8,10 @@ const props = defineProps<{ toast: ToastRecord }>();
 
 const open = ref(true);
 const root = useTemplateRef<HTMLElement>("root");
+const toastClassNames = {
+  close: "ds-toast__close",
+  root: "ds-toast",
+} as const;
 const color = computed(() => {
   switch (props.toast.tone) {
     case "success":
@@ -95,6 +99,7 @@ function onPointerUp(event: PointerEvent): void {
       :duration="toast.duration"
       :color="color"
       :role="role"
+      :class-names="toastClassNames"
       radius="md"
       close-label="Dismiss notification"
       @update:open="onOpenChange"

@@ -53,7 +53,7 @@ import { toastQueue } from "./useToast";
   }
 }
 
-.ds-toast-viewport__item > .rp-toast {
+.ds-toast-viewport__item > .ds-toast {
   box-shadow: var(--shadow-lg);
   width: 100%;
 }

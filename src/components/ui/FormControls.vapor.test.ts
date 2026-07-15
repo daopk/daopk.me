@@ -39,6 +39,8 @@ describe("Switch", () => {
     expect(input.getAttribute("aria-checked")).toBe("false");
     expect(input.getAttribute("aria-label")).toBe("Enable widget");
     expect(wrapper.find(".ds-switch").getAttribute("data-state")).toBe("unchecked");
+    expect(wrapper.find(".ds-switch__track")).toBeTruthy();
+    expect(wrapper.find(".ds-switch__thumb")).toBeTruthy();
 
     input.click();
     await nextTick();
@@ -93,6 +95,8 @@ describe("Slider", () => {
       },
     });
     const input = wrapper.find<HTMLInputElement>('input[type="range"]');
+
+    expect(input.classList).toContain("ds-slider__input");
 
     input.value = "0.45";
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -160,6 +164,7 @@ describe("RadioGroup", () => {
     expect(radios[0]?.checked).toBe(true);
     expect(radios[0]?.name).toBe("density");
     expect(radios[2]?.disabled).toBe(true);
+    expect(wrapper.findAll(".ds-radio__indicator")).toHaveLength(3);
 
     radios[1]?.click();
     await nextTick();
