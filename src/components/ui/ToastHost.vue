@@ -1,52 +1,12 @@
-<script setup lang="ts">
-import {
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastRoot,
-  ToastTitle,
-  ToastViewport,
-} from "reka-ui";
-
-import { X } from "~/icons/lucide";
-
-import { dismissToast, toastQueue, type ToastTone } from "./useToast";
-
-// Errors/warnings interrupt (assertive); info/success announce politely.
-function liveType(tone: ToastTone): "foreground" | "background" {
-  return tone === "error" || tone === "warning" ? "foreground" : "background";
-}
-
-function onOpenChange(open: boolean, id: string): void {
-  if (!open) {
-    dismissToast(id);
-  }
-}
+<script setup vapor lang="ts">
+import ToastItem from "./ToastItem.vue";
+import { toastQueue } from "./useToast";
 </script>
 
 <template>
-  <ToastProvider>
-    <ToastRoot
-      v-for="toast in toastQueue"
-      :key="toast.id"
-      class="ds-toast"
-      :class="`ds-toast--${toast.tone}`"
-      :duration="toast.duration"
-      :type="liveType(toast.tone)"
-      @update:open="(open: boolean) => onOpenChange(open, toast.id)"
-    >
-      <div class="ds-toast__body">
-        <ToastTitle v-if="toast.title" class="ds-toast__title">{{ toast.title }}</ToastTitle>
-        <ToastDescription v-if="toast.description" class="ds-toast__description">{{
-          toast.description
-        }}</ToastDescription>
-      </div>
-      <ToastClose class="ds-toast__close" aria-label="Dismiss notification">
-        <X class="ds-toast__close-icon" aria-hidden="true" />
-      </ToastClose>
-    </ToastRoot>
-    <ToastViewport class="ds-toast-viewport" />
-  </ToastProvider>
+  <div class="ds-toast-viewport" aria-label="Notifications">
+    <ToastItem v-for="toast in toastQueue" :key="toast.id" :toast="toast" />
+  </div>
 </template>
 
 <style lang="scss">
@@ -78,13 +38,15 @@ function onOpenChange(open: boolean, id: string): void {
   display: flex;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
-
-  &[data-state="closed"] {
-    animation: ds-toast-out var(--duration-fast) var(--ease) both;
-  }
+  touch-action: pan-y;
 
   &[data-swipe="move"] {
-    transform: translateX(var(--reka-toast-swipe-move-x, 0));
+    transform: translateX(var(--ds-toast-swipe-move-x, 0));
+  }
+
+  &[data-swipe="cancel"] {
+    transform: translateX(0);
+    transition: transform var(--duration-fast) var(--ease);
   }
 
   &[data-swipe="end"] {
@@ -178,7 +140,7 @@ function onOpenChange(open: boolean, id: string): void {
 
 @media (prefers-reduced-motion: reduce) {
   .ds-toast,
-  .ds-toast[data-state="closed"] {
+  .ds-toast[data-swipe="end"] {
     animation-duration: 0ms;
   }
 }

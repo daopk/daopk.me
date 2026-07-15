@@ -5,15 +5,15 @@ import {
   vaporInteropPlugin,
   type Component,
   type InjectionKey,
-  type Slots,
 } from "vue";
 
 type VaporProvide = readonly [InjectionKey<unknown> | string, unknown];
+type VaporSlot = (...args: never[]) => unknown;
 
 export interface VaporMountOptions {
   readonly props?: Readonly<Record<string, unknown>>;
   readonly provide?: readonly VaporProvide[];
-  readonly slots?: Readonly<Slots>;
+  readonly slots?: Readonly<Record<string, VaporSlot>>;
 }
 
 export interface VaporMount {

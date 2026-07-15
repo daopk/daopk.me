@@ -76,31 +76,37 @@ const actions = computed(() => resolvedOrder.value.map((id) => ({ id, ...actionC
 </script>
 
 <template>
-  <Dialog
-    :open="isOpen"
-    :title="headline"
-    :description="description"
-    :variant="variant"
-    layer="system"
-    :dismissible="false"
-  >
-    <div
-      class="ds-permission-prompt__actions"
-      :class="`ds-permission-prompt__actions--${resolvedLayout}`"
+  <div class="ds-permission-prompt__host">
+    <Dialog
+      :open="isOpen"
+      :title="headline"
+      :description="description"
+      :variant="variant"
+      layer="system"
+      :dismissible="false"
     >
-      <Button
-        v-for="action in actions"
-        :key="action.id"
-        :variant="action.variant"
-        @click="action.onClick"
+      <div
+        class="ds-permission-prompt__actions"
+        :class="`ds-permission-prompt__actions--${resolvedLayout}`"
       >
-        {{ action.label }}
-      </Button>
-    </div>
-  </Dialog>
+        <Button
+          v-for="action in actions"
+          :key="action.id"
+          :variant="action.variant"
+          @click="action.onClick"
+        >
+          {{ action.label }}
+        </Button>
+      </div>
+    </Dialog>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.ds-permission-prompt__host {
+  display: contents;
+}
+
 .ds-permission-prompt__actions {
   display: flex;
   gap: var(--space-sm);

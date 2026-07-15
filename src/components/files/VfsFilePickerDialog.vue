@@ -66,102 +66,108 @@ const {
 </script>
 
 <template>
-  <Dialog :open="open" :title="title" size="lg" class="vfs-picker" @update:open="onDialogOpen">
-    <div class="vfs-picker__shell">
-      <nav class="vfs-picker__breadcrumbs" aria-label="Current folder">
-        <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
-          <button
-            type="button"
-            class="vfs-picker__breadcrumb"
-            :aria-current="crumb.path === cwd ? 'page' : undefined"
-            :disabled="loading || crumb.path === cwd || undefined"
-            @click="loadDirectory(crumb.path)"
-          >
-            {{ crumb.label }}
-          </button>
-          <span
-            v-if="index < breadcrumbs.length - 1"
-            class="vfs-picker__breadcrumb-separator"
-            aria-hidden="true"
-            >/</span
-          >
-        </template>
-      </nav>
-
-      <StatusBanner
-        class="vfs-picker__status"
-        :tone="error === null ? 'info' : 'error'"
-        aria-live="polite"
-      >
-        {{ liveMessage }}
-      </StatusBanner>
-
-      <div class="vfs-picker__browser">
-        <div v-if="loading" class="vfs-picker__loading">
-          <Spinner size="sm" />
-          <span>Loading...</span>
-        </div>
-        <EmptyState v-else-if="entries.length === 0" class="vfs-picker__empty">
-          This folder is empty.
-        </EmptyState>
-        <ScrollArea v-else class="vfs-picker__scroll">
-          <div
-            ref="entriesRef"
-            class="vfs-picker__entries"
-            role="listbox"
-            tabindex="0"
-            aria-label="Files"
-            :aria-activedescendant="activeDescendant()"
-            @keydown="onBrowserKeydown"
-          >
-            <div
-              v-for="(entry, index) in entries"
-              :id="`vfs-picker-entry-${index}`"
-              :key="entry.path"
-              class="vfs-picker__entry"
-              :class="{
-                'vfs-picker__entry--selected': selectedPath === entry.path,
-                'vfs-picker__entry--disabled': entry.kind === 'file' && !acceptsEntry(entry),
-              }"
-              role="option"
-              :aria-selected="selectedPath === entry.path"
-              :aria-disabled="entry.kind === 'file' && !acceptsEntry(entry) ? 'true' : undefined"
-              @click="select(entry)"
-              @dblclick="activateEntry(entry)"
+  <div class="vfs-picker__host">
+    <Dialog :open="open" :title="title" size="lg" class="vfs-picker" @update:open="onDialogOpen">
+      <div class="vfs-picker__shell">
+        <nav class="vfs-picker__breadcrumbs" aria-label="Current folder">
+          <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
+            <button
+              type="button"
+              class="vfs-picker__breadcrumb"
+              :aria-current="crumb.path === cwd ? 'page' : undefined"
+              :disabled="loading || crumb.path === cwd || undefined"
+              @click="loadDirectory(crumb.path)"
             >
-              <component
-                :is="entryIcon(entry)"
-                class="vfs-picker__entry-icon"
-                :size="18"
-                aria-hidden="true"
-              />
-              <span class="vfs-picker__entry-name" :title="entry.name || basename(entry.path)">
-                {{ entry.name || basename(entry.path) }}
-              </span>
-              <span class="vfs-picker__entry-kind">{{ entryKind(entry) }}</span>
-              <span class="vfs-picker__entry-size">{{ entrySize(entry) }}</span>
-              <span class="vfs-picker__entry-date">{{ entryDate(entry) }}</span>
-            </div>
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
+              {{ crumb.label }}
+            </button>
+            <span
+              v-if="index < breadcrumbs.length - 1"
+              class="vfs-picker__breadcrumb-separator"
+              aria-hidden="true"
+              >/</span
+            >
+          </template>
+        </nav>
 
-    <DialogActions>
-      <Button size="sm" @click="cancel">Cancel</Button>
-      <Button
-        size="sm"
-        variant="primary"
-        :disabled="!selectedAccepted || loading"
-        @click="confirm()"
-      >
-        {{ confirmLabel }}
-      </Button>
-    </DialogActions>
-  </Dialog>
+        <StatusBanner
+          class="vfs-picker__status"
+          :tone="error === null ? 'info' : 'error'"
+          aria-live="polite"
+        >
+          {{ liveMessage }}
+        </StatusBanner>
+
+        <div class="vfs-picker__browser">
+          <div v-if="loading" class="vfs-picker__loading">
+            <Spinner size="sm" />
+            <span>Loading...</span>
+          </div>
+          <EmptyState v-else-if="entries.length === 0" class="vfs-picker__empty">
+            This folder is empty.
+          </EmptyState>
+          <ScrollArea v-else class="vfs-picker__scroll">
+            <div
+              ref="entriesRef"
+              class="vfs-picker__entries"
+              role="listbox"
+              tabindex="0"
+              aria-label="Files"
+              :aria-activedescendant="activeDescendant()"
+              @keydown="onBrowserKeydown"
+            >
+              <div
+                v-for="(entry, index) in entries"
+                :id="`vfs-picker-entry-${index}`"
+                :key="entry.path"
+                class="vfs-picker__entry"
+                :class="{
+                  'vfs-picker__entry--selected': selectedPath === entry.path,
+                  'vfs-picker__entry--disabled': entry.kind === 'file' && !acceptsEntry(entry),
+                }"
+                role="option"
+                :aria-selected="selectedPath === entry.path"
+                :aria-disabled="entry.kind === 'file' && !acceptsEntry(entry) ? 'true' : undefined"
+                @click="select(entry)"
+                @dblclick="activateEntry(entry)"
+              >
+                <component
+                  :is="entryIcon(entry)"
+                  class="vfs-picker__entry-icon"
+                  :size="18"
+                  aria-hidden="true"
+                />
+                <span class="vfs-picker__entry-name" :title="entry.name || basename(entry.path)">
+                  {{ entry.name || basename(entry.path) }}
+                </span>
+                <span class="vfs-picker__entry-kind">{{ entryKind(entry) }}</span>
+                <span class="vfs-picker__entry-size">{{ entrySize(entry) }}</span>
+                <span class="vfs-picker__entry-date">{{ entryDate(entry) }}</span>
+              </div>
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+
+      <DialogActions>
+        <Button size="sm" @click="cancel">Cancel</Button>
+        <Button
+          size="sm"
+          variant="primary"
+          :disabled="!selectedAccepted || loading"
+          @click="confirm()"
+        >
+          {{ confirmLabel }}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.vfs-picker__host {
+  display: contents;
+}
+
 .vfs-picker__shell {
   display: flex;
   flex-direction: column;

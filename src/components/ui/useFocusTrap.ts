@@ -2,6 +2,7 @@ import { createFocusTrap, type FocusTrap, type Options } from "focus-trap";
 import { onScopeDispose, watch, type Ref } from "vue";
 
 export type FocusTrapTarget = Readonly<Ref<HTMLElement | null>>;
+export type FocusTrapEnabled = boolean | Readonly<Ref<boolean>>;
 export type UseFocusTrapOptions = Options;
 
 export interface FocusTrapControls {
@@ -16,6 +17,7 @@ export interface FocusTrapControls {
 export function useFocusTrap(
   target: FocusTrapTarget,
   options: UseFocusTrapOptions = {},
+  enabled: FocusTrapEnabled = true,
 ): FocusTrapControls {
   let trap: FocusTrap | null = null;
   let trappedElement: HTMLElement | null = null;
@@ -50,9 +52,9 @@ export function useFocusTrap(
   }
 
   const stopTargetWatch = watch(
-    target,
-    (element) => {
-      if (element === null) {
+    [target, () => (typeof enabled === "boolean" ? enabled : enabled.value)] as const,
+    ([element, isEnabled]) => {
+      if (element === null || !isEnabled) {
         deactivate();
         return;
       }

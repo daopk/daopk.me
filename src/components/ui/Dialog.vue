@@ -1,21 +1,15 @@
-<script setup lang="ts">
-import { computed } from "vue";
-import {
-  DialogContent,
-  DialogDescription,
-  DialogOverlay,
-  DialogPortal,
-  DialogRoot,
-  DialogTitle,
-} from "reka-ui";
+<script setup vapor lang="ts">
+import { computed, nextTick, onBeforeUnmount, ref, useAttrs, useId, watch } from "vue";
 
+import { isTopDialog, registerDialog, unregisterDialog } from "./dialogStack";
 import { resolvePortalTarget } from "./portalTarget";
+import { useFocusTrap } from "./useFocusTrap";
 
 interface DialogProps {
   open: boolean;
-  /** Accessible title — required by reka-ui for `aria-labelledby`. */
+  /** Accessible title announced when the dialog opens. */
   title: string;
-  /** Optional description — wires `aria-describedby` when present. */
+  /** Optional description announced after the title. */
   description?: string;
   variant?: "modal" | "sheet";
   size?: "sm" | "lg";
@@ -23,13 +17,11 @@ interface DialogProps {
   portalTo?: string | HTMLElement;
   scope?: "viewport" | "container";
   modal?: boolean;
-  /**
-   * When `false`, ESC + overlay-click do NOT close the dialog. Used
-   * by the permission prompt to force an explicit user decision —
-   * "Don't allow" is the explicit deny path, never a backdrop dismiss.
-   */
+  /** Disable Escape and outside-pointer dismissal. */
   dismissible?: boolean;
 }
+
+defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(defineProps<DialogProps>(), {
   description: undefined,
@@ -42,85 +34,166 @@ const props = withDefaults(defineProps<DialogProps>(), {
   dismissible: true,
 });
 
-const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
-
-const contentA11yAttrs = computed(() =>
-  props.description === undefined || props.description.length === 0
-    ? { "aria-describedby": undefined }
-    : {},
-);
-
 const emit = defineEmits<{
   "update:open": [next: boolean];
   close: [];
 }>();
 
-function onUpdateOpen(value: boolean): void {
-  emit("update:open", value);
-  if (!value) emit("close");
+const attrs = useAttrs();
+const dialogId = Symbol("ds-dialog");
+const titleId = `ds-dialog-title-${useId()}`;
+const descriptionId = `ds-dialog-description-${useId()}`;
+const portalRoot = ref<HTMLElement | null>(null);
+const content = ref<HTMLElement | null>(null);
+const trapEnabled = computed(() => props.open && props.modal);
+const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
+
+let restoreFocusTo: HTMLElement | null = null;
+let wasOpen = false;
+
+useFocusTrap(
+  content,
+  {
+    allowOutsideClick: true,
+    escapeDeactivates: false,
+    preventScroll: true,
+    tabbableOptions: { displayCheck: "none" },
+  },
+  trapEnabled,
+);
+
+function unregister(): void {
+  unregisterDialog(dialogId);
+  document.removeEventListener("keydown", onDocumentKeydown);
 }
 
-function onInteractOutside(event: Event): void {
-  if (!props.dismissible) event.preventDefault();
-}
+async function register(): Promise<void> {
+  await nextTick();
+  if (!props.open || portalRoot.value === null) return;
 
-function onEscapeKeyDown(event: Event): void {
-  if (!props.dismissible) event.preventDefault();
-}
+  registerDialog({ id: dialogId, modal: props.modal, root: portalRoot.value });
+  document.removeEventListener("keydown", onDocumentKeydown);
+  document.addEventListener("keydown", onDocumentKeydown);
 
-function onOverlayPointerDown(): void {
-  if (props.dismissible) {
-    onUpdateOpen(false);
+  if (props.modal && content.value !== null && !content.value.contains(document.activeElement)) {
+    content.value.focus({ preventScroll: true });
   }
 }
+
+async function restoreFocus(): Promise<void> {
+  const target = restoreFocusTo;
+  restoreFocusTo = null;
+  await nextTick();
+  if (target?.isConnected) target.focus({ preventScroll: true });
+}
+
+function requestClose(): void {
+  if (!props.open) return;
+  emit("update:open", false);
+  emit("close");
+}
+
+function onDocumentKeydown(event: KeyboardEvent): void {
+  if (
+    event.key !== "Escape" ||
+    event.defaultPrevented ||
+    !props.dismissible ||
+    !isTopDialog(dialogId)
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  requestClose();
+}
+
+function onOverlayPointerDown(event: PointerEvent): void {
+  if (event.target !== event.currentTarget || !props.dismissible || !isTopDialog(dialogId)) {
+    return;
+  }
+  requestClose();
+}
+
+watch(
+  () => [props.open, props.modal, resolvedPortalTo.value] as const,
+  ([open]) => {
+    unregister();
+    if (!open) {
+      if (wasOpen) void restoreFocus();
+      wasOpen = false;
+      return;
+    }
+
+    if (!wasOpen) {
+      const activeElement = document.activeElement;
+      restoreFocusTo =
+        activeElement instanceof HTMLElement && activeElement !== document.body
+          ? activeElement
+          : null;
+    }
+    wasOpen = true;
+    void register();
+  },
+  { flush: "post", immediate: true },
+);
+
+onBeforeUnmount(() => {
+  unregister();
+  if (wasOpen) void restoreFocus();
+  // Vue's mixed VDOM/Vapor interop currently leaves a teleported block behind
+  // when a VDOM consumer is unmounted wholesale. Own the portal lifecycle so
+  // tests and dynamically removed app surfaces cannot retain stale dialogs.
+  portalRoot.value?.remove();
+});
 </script>
 
 <template>
-  <DialogRoot :open="open" :modal="modal" @update:open="onUpdateOpen">
-    <DialogPortal :to="resolvedPortalTo">
-      <DialogOverlay
-        v-if="modal"
-        class="ds-dialog__overlay"
-        :class="[
-          `ds-dialog__overlay--${variant}`,
-          `ds-dialog__overlay--${scope}`,
-          `ds-dialog__overlay--${layer}`,
-        ]"
-      />
-      <div
-        v-else-if="open"
-        class="ds-dialog__overlay"
-        :class="[
-          `ds-dialog__overlay--${variant}`,
-          `ds-dialog__overlay--${scope}`,
-          `ds-dialog__overlay--${layer}`,
-        ]"
-        aria-hidden="true"
-        @pointerdown="onOverlayPointerDown"
-      />
-      <DialogContent
-        class="ds-dialog__content"
-        :class="[
-          `ds-dialog__content--${variant}`,
-          `ds-dialog__content--${scope}`,
-          `ds-dialog__content--${size}`,
-          `ds-dialog__content--${layer}`,
-        ]"
-        v-bind="contentA11yAttrs"
-        @interact-outside="onInteractOutside"
-        @escape-key-down="onEscapeKeyDown"
-      >
-        <DialogTitle class="ds-dialog__title">{{ title }}</DialogTitle>
-        <DialogDescription v-if="description" class="ds-dialog__description">{{
-          description
-        }}</DialogDescription>
-        <slot />
-      </DialogContent>
-    </DialogPortal>
-  </DialogRoot>
+  <span class="ds-dialog__host">
+    <Teleport v-if="open" :to="resolvedPortalTo">
+      <div ref="portalRoot" class="ds-dialog__portal" :data-dialog-modal="modal || undefined">
+        <div
+          class="ds-dialog__overlay"
+          :class="[
+            `ds-dialog__overlay--${variant}`,
+            `ds-dialog__overlay--${scope}`,
+            `ds-dialog__overlay--${layer}`,
+          ]"
+          aria-hidden="true"
+          @pointerdown="onOverlayPointerDown"
+        />
+        <div
+          v-bind="attrs"
+          ref="content"
+          class="ds-dialog__content"
+          :class="[
+            `ds-dialog__content--${variant}`,
+            `ds-dialog__content--${scope}`,
+            `ds-dialog__content--${size}`,
+            `ds-dialog__content--${layer}`,
+          ]"
+          role="dialog"
+          :aria-modal="modal ? 'true' : undefined"
+          :aria-labelledby="titleId"
+          :aria-describedby="description ? descriptionId : undefined"
+          tabindex="-1"
+        >
+          <h2 :id="titleId" class="ds-dialog__title">{{ title }}</h2>
+          <p v-if="description" :id="descriptionId" class="ds-dialog__description">
+            {{ description }}
+          </p>
+          <slot />
+        </div>
+      </div>
+    </Teleport>
+  </span>
 </template>
 
 <style scoped lang="scss">
+.ds-dialog__host,
+.ds-dialog__portal {
+  display: contents;
+}
+
 .ds-dialog__overlay {
   background-color: color-mix(in oklab, var(--color-bg) 60%, transparent);
   inset: 0;
