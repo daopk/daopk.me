@@ -23,7 +23,7 @@ export default mergeConfig(
       environment: "happy-dom",
       // Installs the kernel's profile-session fallback (the test profile the
       // kernel used to self-inject under `MODE === "test"`).
-      setupFiles: ["./src/test/vitest.setup.ts"],
+      setupFiles: ["./src/test/vitest.setup.ts", "./src/test/vitest.vdom.setup.ts"],
       // The suite is many small files; VM workers avoid most process/env
       // startup overhead while preserving per-file isolation.
       pool: "vmThreads",
@@ -31,6 +31,7 @@ export default mergeConfig(
       // Vue 3.6 beta's Node condition does not expose the Vapor runtime. Vapor
       // components use a dedicated ESM config that remains a required gate.
       exclude: [
+        "src/icons/createIcon.vapor.test.ts",
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",
         "apps/notes/src/NotesDesktopLayer.test.ts",

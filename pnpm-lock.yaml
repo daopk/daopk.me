@@ -20,9 +20,9 @@ importers:
       '@iconify-icons/lucide':
         specifier: ^1.2.135
         version: 1.2.135
-      '@iconify/vue':
-        specifier: ^5.0.1
-        version: 5.0.1(vue@3.6.0-beta.17(typescript@6.0.3))
+      '@iconify/utils':
+        specifier: ^3.1.3
+        version: 3.1.3
       '@shikijs/langs':
         specifier: ^4.3.0
         version: 4.3.0
@@ -117,9 +117,6 @@ importers:
       '@iconify-json/fluent-color':
         specifier: ^1.2.21
         version: 1.2.21
-      '@iconify/utils':
-        specifier: ^3.1.3
-        version: 3.1.3
       '@types/node':
         specifier: ^26.1.0
         version: 26.1.0
@@ -1216,11 +1213,6 @@ packages:
 
   '@iconify/utils@3.1.3':
     resolution: {integrity: sha512-LPKOXPn/zV+zis1oOfGWogaXVpqUybF3ZS6SCZIsz8vg0ivVp9+fVqyYB7xq0aiST/VhUQYGO1qo6uoYSiEJqw==}
-
-  '@iconify/vue@5.0.1':
-    resolution: {integrity: sha512-aumwwooJlFJ5H5qYWB6ZTAyM0C8hpfcSVLB9/a3qnH1GGvIJ+FEbpEs4s/HfErYe/M5qZeLjwmESR5fFm3lXEw==}
-    peerDependencies:
-      vue: '>=3.0.0'
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -5218,11 +5210,6 @@ snapshots:
       '@antfu/install-pkg': 1.1.0
       '@iconify/types': 2.0.0
       import-meta-resolve: 4.2.0
-
-  '@iconify/vue@5.0.1(vue@3.6.0-beta.17(typescript@6.0.3))':
-    dependencies:
-      '@iconify/types': 2.0.0
-      vue: 3.6.0-beta.17(typescript@6.0.3)
 
   '@img/colour@1.1.0': {}
 

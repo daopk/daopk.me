@@ -1,120 +1,64 @@
-import { Icon, type IconifyIcon } from "@iconify/vue";
-import { defineComponent, h, type Component } from "vue";
+import type { IconifyIcon } from "@iconify/utils";
+import { markRaw, type Component } from "vue";
 
-type IconSize = number | string;
+import ImageIcon from "./ImageIcon.vue";
+import SvgIcon from "./SvgIcon.vue";
 
-function escapeAttributeValue(value: IconSize): string {
-  return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+type ComponentOptions = Record<string, unknown> & {
+  props?: Record<string, unknown>;
+};
+
+function getComponentOptions(component: Component): ComponentOptions {
+  if (typeof component !== "object" || component === null) {
+    throw new TypeError("Vapor icon base must compile to a component options object");
+  }
+
+  return component as ComponentOptions;
 }
 
-function withStrokeWidth(content: string, strokeWidth: IconSize): string {
-  return content.replace(
-    /stroke-width="[^"]+"/g,
-    `stroke-width="${escapeAttributeValue(strokeWidth)}"`,
-  );
+function cloneWithDefaultProp(
+  base: Component,
+  componentName: string,
+  propName: "icon" | "src",
+  defaultValue: IconifyIcon | string,
+): Component {
+  const options = getComponentOptions(base);
+  const propOptions = options.props ?? {};
+  const existingProp = propOptions[propName];
+
+  if (typeof existingProp !== "object" || existingProp === null) {
+    throw new TypeError(`Vapor icon base is missing the ${propName} prop`);
+  }
+
+  return markRaw({
+    ...options,
+    name: componentName,
+    __name: componentName,
+    props: {
+      ...propOptions,
+      [propName]: {
+        ...existingProp,
+        required: false,
+        default: typeof defaultValue === "string" ? defaultValue : () => defaultValue,
+      },
+    },
+  }) as Component;
 }
 
 export function createIcon(icon: IconifyIcon, componentName: string): Component {
-  return defineComponent({
-    name: componentName,
-    inheritAttrs: false,
-    props: {
-      size: {
-        type: [Number, String],
-        default: undefined,
-      },
-      strokeWidth: {
-        type: [Number, String],
-        default: undefined,
-      },
-    },
-    setup(props, { attrs }) {
-      return () => {
-        const size = props.size ?? 24;
-        const strokeWidth = props.strokeWidth;
-
-        return h(Icon, {
-          ...attrs,
-          icon,
-          mode: "svg",
-          width: size,
-          height: size,
-          customise:
-            strokeWidth === undefined
-              ? undefined
-              : (content: string) => withStrokeWidth(content, strokeWidth),
-        });
-      };
-    },
-  });
+  return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
 }
 
 /**
- * Build an icon component that renders an app-owned image (e.g. a release-pinned
- * `icon.png` served from the app's catalog directory). Accepts the same
- * `size`/`strokeWidth` props as the iconify-backed factories so it is a drop-in
- * for `<component :is>` icon slots; `strokeWidth` is ignored for raster/SVG
- * images. Rendering as `<img>` means the SVG cannot execute script or reach the
- * host DOM, which keeps app-supplied art inside the trusted-identity boundary.
+ * Build a Vapor icon component that renders app-owned image artwork through an
+ * `<img>` element. It deliberately accepts the same `size`/`strokeWidth` props
+ * as SVG icons so all icon components remain interchangeable; `strokeWidth` is
+ * ignored for image sources.
  */
 export function createImageIcon(src: string, componentName: string): Component {
-  return defineComponent({
-    name: componentName,
-    inheritAttrs: false,
-    props: {
-      size: {
-        type: [Number, String],
-        default: undefined,
-      },
-      strokeWidth: {
-        type: [Number, String],
-        default: undefined,
-      },
-    },
-    setup(props, { attrs }) {
-      return () => {
-        const size = props.size ?? 24;
-
-        return h("img", {
-          ...attrs,
-          src,
-          width: size,
-          height: size,
-          alt: "",
-          draggable: false,
-          decoding: "async",
-        });
-      };
-    },
-  });
+  return cloneWithDefaultProp(ImageIcon, componentName, "src", src);
 }
 
 export function createPaletteIcon(icon: IconifyIcon, componentName: string): Component {
-  return defineComponent({
-    name: componentName,
-    inheritAttrs: false,
-    props: {
-      size: {
-        type: [Number, String],
-        default: undefined,
-      },
-      strokeWidth: {
-        type: [Number, String],
-        default: undefined,
-      },
-    },
-    setup(props, { attrs }) {
-      return () => {
-        const size = props.size ?? 24;
-
-        return h(Icon, {
-          ...attrs,
-          icon,
-          mode: "svg",
-          width: size,
-          height: size,
-        });
-      };
-    },
-  });
+  return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
 }
