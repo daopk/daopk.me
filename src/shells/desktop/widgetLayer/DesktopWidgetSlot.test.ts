@@ -48,6 +48,8 @@ function dispatchPointer(target: Element, type: string, init: FakePointerEventIn
   return target.dispatchEvent(ev);
 }
 
+const mountedSlots: ReturnType<typeof mount>[] = [];
+
 function mountSlot(
   manifest: WidgetManifest,
   placement: { gridX: number; gridY: number },
@@ -59,7 +61,7 @@ function mountSlot(
     }
   });
 
-  return mount(DesktopWidgetSlot, {
+  const wrapper = mount(DesktopWidgetSlot, {
     attachTo: document.body,
     props: { manifest, placement, hostSize },
     global: {
@@ -75,6 +77,8 @@ function mountSlot(
       },
     },
   });
+  mountedSlots.push(wrapper);
+  return wrapper;
 }
 
 function slotEl(wrapper: ReturnType<typeof mount>): HTMLElement {
@@ -89,6 +93,7 @@ describe("DesktopWidgetSlot (M3.7)", () => {
   });
 
   afterEach(() => {
+    for (const wrapper of mountedSlots.splice(0)) wrapper.unmount();
     // Dispose so the cross-tab `storage` listener doesn't leak into
     useWidgetPlacementStore().dispose();
     document.body.innerHTML = "";

@@ -273,62 +273,64 @@ function setNoteColor(color: PinnedDesktopNoteColor): void {
 </script>
 
 <template>
-  <ContextMenu :modal="false">
-    <template #trigger>
-      <article
-        class="desktop-sticky-note"
-        data-desktop-renderer-interactive
-        :data-dragging="dragging !== null || undefined"
-        :style="noteStyle"
-        @pointerdown="raise"
-      >
-        <header class="desktop-sticky-note__header" @pointerdown.stop="startDrag">
-          <input
-            v-model="title"
-            class="desktop-sticky-note__title"
-            aria-label="Note title"
+  <div class="desktop-sticky-note__menu-host" style="display: contents">
+    <ContextMenu :modal="false">
+      <template #trigger>
+        <article
+          class="desktop-sticky-note"
+          data-desktop-renderer-interactive
+          :data-dragging="dragging !== null || undefined"
+          :style="noteStyle"
+          @pointerdown="raise"
+        >
+          <header class="desktop-sticky-note__header" @pointerdown.stop="startDrag">
+            <input
+              v-model="title"
+              class="desktop-sticky-note__title"
+              aria-label="Note title"
+              spellcheck="true"
+              @input="markUnsaved"
+              @pointerdown.stop="startTitleDrag"
+            />
+            <span class="desktop-sticky-note__status">{{ statusText }}</span>
+          </header>
+
+          <textarea
+            v-model="body"
+            class="desktop-sticky-note__body"
+            aria-label="Note body"
             spellcheck="true"
             @input="markUnsaved"
-            @pointerdown.stop="startTitleDrag"
+            @pointerdown.stop
           />
-          <span class="desktop-sticky-note__status">{{ statusText }}</span>
-        </header>
-
-        <textarea
-          v-model="body"
-          class="desktop-sticky-note__body"
-          aria-label="Note body"
-          spellcheck="true"
-          @input="markUnsaved"
-          @pointerdown.stop
-        />
-      </article>
-    </template>
-    <template #items>
-      <div class="desktop-sticky-note__color-menu" role="group" aria-label="Note color">
-        <ContextMenuItem
-          v-for="option in colorOptions"
-          :key="option.id"
-          as-child
-          :text-value="option.label"
-          @select="setNoteColor(option.id)"
-        >
-          <button
-            type="button"
-            class="desktop-sticky-note__color-dot"
-            :style="{ '--desktop-sticky-note-dot': option.swatch }"
-            :aria-label="`Change note color to ${option.label}`"
-            :data-selected="noteColor === option.id || undefined"
-          />
-        </ContextMenuItem>
-      </div>
-      <ContextMenuSeparator />
-      <ContextMenuItem @select="openInNotes">Open in Notes</ContextMenuItem>
-      <ContextMenuItem @select="revealInFinder">Reveal in Finder</ContextMenuItem>
-      <ContextMenuSeparator />
-      <ContextMenuItem @select="removeFromDesktop">Remove from Desktop</ContextMenuItem>
-    </template>
-  </ContextMenu>
+        </article>
+      </template>
+      <template #items>
+        <div class="desktop-sticky-note__color-menu" role="group" aria-label="Note color">
+          <ContextMenuItem
+            v-for="option in colorOptions"
+            :key="option.id"
+            as-child
+            :text-value="option.label"
+            @select="setNoteColor(option.id)"
+          >
+            <button
+              type="button"
+              class="desktop-sticky-note__color-dot"
+              :style="{ '--desktop-sticky-note-dot': option.swatch }"
+              :aria-label="`Change note color to ${option.label}`"
+              :data-selected="noteColor === option.id || undefined"
+            />
+          </ContextMenuItem>
+        </div>
+        <ContextMenuSeparator />
+        <ContextMenuItem @select="openInNotes">Open in Notes</ContextMenuItem>
+        <ContextMenuItem @select="revealInFinder">Reveal in Finder</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem @select="removeFromDesktop">Remove from Desktop</ContextMenuItem>
+      </template>
+    </ContextMenu>
+  </div>
 </template>
 
 <style scoped lang="scss" src="./styles/desktop-sticky-note.scss"></style>

@@ -82,27 +82,33 @@ function onRemoveFromDesktop(): void {
 </script>
 
 <template>
-  <ContextMenu>
-    <template #trigger>
-      <div
-        class="desktop-widget-slot"
-        role="figure"
-        :aria-label="manifest.title"
-        :data-widget-id="manifest.id"
-        :data-dragging="dragging || undefined"
-        :style="slotStyle"
-        @pointerdown="dragHandlers.onPointerDown"
-      >
-        <component :is="resolveComponent(manifest)" />
-      </div>
-    </template>
-    <template #items>
-      <ContextMenuItem @select="onRemoveFromDesktop">Remove from desktop</ContextMenuItem>
-    </template>
-  </ContextMenu>
+  <div class="desktop-widget-slot-host">
+    <ContextMenu>
+      <template #trigger>
+        <div
+          class="desktop-widget-slot"
+          role="figure"
+          :aria-label="manifest.title"
+          :data-widget-id="manifest.id"
+          :data-dragging="dragging || undefined"
+          :style="slotStyle"
+          @pointerdown="dragHandlers.onPointerDown"
+        >
+          <component :is="resolveComponent(manifest)" />
+        </div>
+      </template>
+      <template #items>
+        <ContextMenuItem @select="onRemoveFromDesktop">Remove from desktop</ContextMenuItem>
+      </template>
+    </ContextMenu>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.desktop-widget-slot-host {
+  display: contents;
+}
+
 .desktop-widget-slot {
   inset: 0 auto auto 0;
   position: absolute;

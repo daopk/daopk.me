@@ -31,50 +31,56 @@ function dispatchCommand(
 </script>
 
 <template>
-  <DropdownMenu>
-    <template #trigger>
-      <button type="button" class="brand" aria-label="WebOS menu">
-        <span class="brand__wordmark">WebOS</span>
-        <span class="brand__dot" aria-hidden="true" />
-      </button>
-    </template>
+  <span class="brand-menu-host">
+    <DropdownMenu>
+      <template #trigger>
+        <button type="button" class="brand" aria-label="WebOS menu">
+          <span class="brand__wordmark">WebOS</span>
+          <span class="brand__dot" aria-hidden="true" />
+        </button>
+      </template>
 
-    <template #items>
-      <DropdownMenuLabel class="ds-dropdown-menu__label">WebOS</DropdownMenuLabel>
-      <DropdownMenuItem
-        text-value="About"
-        @select="dispatchCommand('settings:openSection', { section: 'about' })"
-      >
-        <Info class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>About</span>
-      </DropdownMenuItem>
-      <DropdownMenuItem text-value="System Settings" @select="launchApp('settings')">
-        <Settings class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>System Settings</span>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem text-value="Spotlight" @select="openSpotlight">
-        <Search class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>Spotlight</span>
-      </DropdownMenuItem>
-      <DropdownMenuItem text-value="Toggle Theme" @select="dispatchCommand('theme:toggle')">
-        <Palette class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>Toggle Theme</span>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem text-value="Lock Desktop" @select="dispatchCommand('system:lock')">
-        <Lock class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>Lock Desktop</span>
-      </DropdownMenuItem>
-      <DropdownMenuItem text-value="Sign Out" @select="dispatchCommand('system:signOut')">
-        <LogOut class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-        <span>Sign Out</span>
-      </DropdownMenuItem>
-    </template>
-  </DropdownMenu>
+      <template #items>
+        <DropdownMenuLabel class="ds-dropdown-menu__label">WebOS</DropdownMenuLabel>
+        <DropdownMenuItem
+          text-value="About"
+          @select="dispatchCommand('settings:openSection', { section: 'about' })"
+        >
+          <Info class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>About</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem text-value="System Settings" @select="launchApp('settings')">
+          <Settings class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>System Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem text-value="Spotlight" @select="openSpotlight">
+          <Search class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>Spotlight</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem text-value="Toggle Theme" @select="dispatchCommand('theme:toggle')">
+          <Palette class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>Toggle Theme</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem text-value="Lock Desktop" @select="dispatchCommand('system:lock')">
+          <Lock class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>Lock Desktop</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem text-value="Sign Out" @select="dispatchCommand('system:signOut')">
+          <LogOut class="ds-dropdown-menu__item-icon" aria-hidden="true" />
+          <span>Sign Out</span>
+        </DropdownMenuItem>
+      </template>
+    </DropdownMenu>
+  </span>
 </template>
 
 <style scoped lang="scss">
+.brand-menu-host {
+  display: contents;
+}
+
 .brand {
   align-items: center;
   appearance: none;

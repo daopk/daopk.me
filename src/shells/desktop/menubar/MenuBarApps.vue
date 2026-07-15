@@ -33,30 +33,36 @@ function visibleApps(): AppManifest[] {
 </script>
 
 <template>
-  <DropdownMenu>
-    <template #trigger>
-      <button type="button" class="apps-trigger" aria-label="Applications menu">
-        <Grid2X2 class="apps-trigger__icon" aria-hidden="true" />
-        <span>Apps</span>
-      </button>
-    </template>
+  <span class="apps-menu-host">
+    <DropdownMenu>
+      <template #trigger>
+        <button type="button" class="apps-trigger" aria-label="Applications menu">
+          <Grid2X2 class="apps-trigger__icon" aria-hidden="true" />
+          <span>Apps</span>
+        </button>
+      </template>
 
-    <template #items>
-      <DropdownMenuLabel class="ds-dropdown-menu__label">Applications</DropdownMenuLabel>
-      <DropdownMenuItem
-        v-for="app in apps"
-        :key="app.id"
-        :text-value="app.name"
-        @select="launchApp(app.id)"
-      >
-        <AppIcon :icon="app.icon" class="apps-menu__icon" aria-hidden="true" />
-        <span>{{ app.name }}</span>
-      </DropdownMenuItem>
-    </template>
-  </DropdownMenu>
+      <template #items>
+        <DropdownMenuLabel class="ds-dropdown-menu__label">Applications</DropdownMenuLabel>
+        <DropdownMenuItem
+          v-for="app in apps"
+          :key="app.id"
+          :text-value="app.name"
+          @select="launchApp(app.id)"
+        >
+          <AppIcon :icon="app.icon" class="apps-menu__icon" aria-hidden="true" />
+          <span>{{ app.name }}</span>
+        </DropdownMenuItem>
+      </template>
+    </DropdownMenu>
+  </span>
 </template>
 
 <style scoped lang="scss">
+.apps-menu-host {
+  display: contents;
+}
+
 .apps-trigger {
   align-items: center;
   appearance: none;

@@ -212,27 +212,37 @@ async function runContribution(item: DesktopContextMenuItemManifest): Promise<vo
 </script>
 
 <template>
-  <ContextMenu>
-    <template #trigger>
-      <div
-        class="desktop-context-menu-layer"
-        aria-hidden="true"
-        data-shell-child="context-menu"
-        @contextmenu="onContextMenu"
-      />
-    </template>
-    <template #items>
-      <template v-for="(group, index) in menuGroups" :key="group.group">
-        <ContextMenuSeparator v-if="index > 0" />
-        <ContextMenuItem v-for="entry in group.items" :key="entry.id" @select="selectEntry(entry)">
-          {{ entry.label }}
-        </ContextMenuItem>
+  <div class="desktop-context-menu-host">
+    <ContextMenu>
+      <template #trigger>
+        <div
+          class="desktop-context-menu-layer"
+          aria-hidden="true"
+          data-shell-child="context-menu"
+          @contextmenu="onContextMenu"
+        />
       </template>
-    </template>
-  </ContextMenu>
+      <template #items>
+        <template v-for="(group, index) in menuGroups" :key="group.group">
+          <ContextMenuSeparator v-if="index > 0" />
+          <ContextMenuItem
+            v-for="entry in group.items"
+            :key="entry.id"
+            @select="selectEntry(entry)"
+          >
+            {{ entry.label }}
+          </ContextMenuItem>
+        </template>
+      </template>
+    </ContextMenu>
+  </div>
 </template>
 
 <style scoped lang="scss">
+.desktop-context-menu-host {
+  display: contents;
+}
+
 .desktop-context-menu-layer {
   inset: 0;
   position: absolute;
