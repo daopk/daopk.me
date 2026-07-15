@@ -183,6 +183,20 @@ describe("ToastHost", () => {
     expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
   });
 
+  it("flushes pre-mount calls and updates through the provider queue", async () => {
+    vi.useFakeTimers();
+    const toast = useToast();
+    const id = toast.info({ title: "Uploading", duration: 10_000 });
+    const wrapper = mount(ToastHost);
+    await settle();
+
+    expect(wrapper.find(".ds-toast").textContent).toContain("Uploading");
+    toast.update(id, { title: "Uploaded", tone: "success" });
+    await nextTick();
+
+    expect(wrapper.find(".ds-toast").textContent).toContain("Uploaded");
+  });
+
   it("auto-dismisses while pausing the remaining timer on hover and focus", async () => {
     vi.useFakeTimers();
     useToast().info({ title: "Paused", duration: 100 });

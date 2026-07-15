@@ -41,4 +41,21 @@ describe("useToast", () => {
     toast.clear();
     expect(toastQueue).toHaveLength(0);
   });
+
+  it("updates an active toast and bounds the buffered queue", () => {
+    const toast = useToast();
+    const first = toast.info({ title: "Starting" });
+    toast.update(first, { title: "Finished", tone: "success", duration: 1000 });
+
+    expect(toastQueue[0]).toMatchObject({
+      id: first,
+      title: "Finished",
+      tone: "success",
+      duration: 1000,
+    });
+
+    for (let index = 0; index < 5; index += 1) toast.info({ title: `Toast ${index}` });
+    expect(toastQueue).toHaveLength(5);
+    expect(toastQueue.some(({ id }) => id === first)).toBe(false);
+  });
 });

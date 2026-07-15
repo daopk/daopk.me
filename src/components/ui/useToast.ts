@@ -1,5 +1,7 @@
 import { reactive } from "vue";
 
+import type { ToastUpdateOptions, UseToastReturn as RopavToastApi } from "ropav/toast";
+
 export type ToastTone = "info" | "success" | "warning" | "error";
 
 export interface ToastOptions {
@@ -19,38 +21,96 @@ export interface ToastRecord {
 }
 
 const DEFAULT_DURATION = 5000;
+const DEFAULT_MAX = 5;
 
 /**
- * Live queue rendered by the global {@link ToastHost}. Module-level singleton so
- * any app/shell can enqueue a toast through {@link useToast} and have it appear
- * in the one viewport mounted by the shell.
+ * Stable facade mirror for callers that inspect the queue directly. Ropav's
+ * provider owns the rendered queue once ToastHost connects; calls made before
+ * the host mounts are buffered here and flushed into that provider.
  */
 export const toastQueue = reactive<ToastRecord[]>([]);
 
 let counter = 0;
+let provider: RopavToastApi | null = null;
+let activeConnection: symbol | null = null;
+
+function removeLocalToast(id: string): void {
+  const index = toastQueue.findIndex((toast) => toast.id === id);
+  if (index !== -1) toastQueue.splice(index, 1);
+}
+
+function providerOptions(toast: ToastRecord) {
+  return {
+    id: toast.id,
+    type: toast.tone,
+    title: toast.title,
+    description: toast.description,
+    duration: toast.duration,
+    onClose: () => removeLocalToast(toast.id),
+  } as const;
+}
+
+function sendToProvider(toast: ToastRecord): void {
+  provider?.show(providerOptions(toast));
+}
+
+/** Internal bridge used by the single global ToastHost. */
+export function connectToastProvider(nextProvider: RopavToastApi): () => void {
+  const connection = Symbol("ds-toast-provider");
+  activeConnection = connection;
+  provider = nextProvider;
+  for (const toast of toastQueue.slice()) sendToProvider(toast);
+
+  return () => {
+    if (activeConnection !== connection) return;
+    activeConnection = null;
+    provider = null;
+  };
+}
 
 export function dismissToast(id: string): void {
-  const index = toastQueue.findIndex((toast) => toast.id === id);
-  if (index !== -1) {
-    toastQueue.splice(index, 1);
-  }
+  provider?.dismiss(id);
+  removeLocalToast(id);
 }
 
 export function clearToasts(): void {
+  provider?.dismissAll();
   toastQueue.splice(0, toastQueue.length);
 }
 
 function pushToast(options: ToastOptions): string {
   counter += 1;
-  const id = `ds-toast-${counter}`;
-  toastQueue.push({
-    id,
+  const toast: ToastRecord = {
+    id: `ds-toast-${counter}`,
     tone: options.tone ?? "info",
     title: options.title,
     description: options.description,
     duration: options.duration ?? DEFAULT_DURATION,
-  });
-  return id;
+  };
+  toastQueue.push(toast);
+  if (toastQueue.length > DEFAULT_MAX) toastQueue.splice(0, toastQueue.length - DEFAULT_MAX);
+  sendToProvider(toast);
+  return toast.id;
+}
+
+function updateToast(id: string, options: Partial<ToastOptions>): void {
+  const index = toastQueue.findIndex((toast) => toast.id === id);
+  if (index === -1) return;
+  const current = toastQueue[index]!;
+  const next: ToastRecord = {
+    id,
+    tone: options.tone ?? current.tone,
+    title: Object.hasOwn(options, "title") ? options.title : current.title,
+    description: Object.hasOwn(options, "description") ? options.description : current.description,
+    duration: options.duration ?? current.duration,
+  };
+  toastQueue.splice(index, 1, next);
+  provider?.update(id, {
+    type: next.tone,
+    title: next.title,
+    description: next.description,
+    duration: next.duration,
+  } satisfies ToastUpdateOptions);
 }
 
 export interface ToastApi {
@@ -60,19 +120,23 @@ export interface ToastApi {
   success: (options: Omit<ToastOptions, "tone">) => string;
   warning: (options: Omit<ToastOptions, "tone">) => string;
   error: (options: Omit<ToastOptions, "tone">) => string;
+  update: (id: string, options: Partial<ToastOptions>) => void;
   dismiss: (id: string) => void;
   clear: () => void;
 }
 
-/** Imperative toast API. Safe to call from any component or composable. */
+const toastApi: ToastApi = {
+  show: pushToast,
+  info: (options) => pushToast({ ...options, tone: "info" }),
+  success: (options) => pushToast({ ...options, tone: "success" }),
+  warning: (options) => pushToast({ ...options, tone: "warning" }),
+  error: (options) => pushToast({ ...options, tone: "error" }),
+  update: updateToast,
+  dismiss: dismissToast,
+  clear: clearToasts,
+};
+
+/** Imperative toast API. Safe to call before or after ToastHost mounts. */
 export function useToast(): ToastApi {
-  return {
-    show: pushToast,
-    info: (options) => pushToast({ ...options, tone: "info" }),
-    success: (options) => pushToast({ ...options, tone: "success" }),
-    warning: (options) => pushToast({ ...options, tone: "warning" }),
-    error: (options) => pushToast({ ...options, tone: "error" }),
-    dismiss: dismissToast,
-    clear: clearToasts,
-  };
+  return toastApi;
 }
