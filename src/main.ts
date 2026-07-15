@@ -59,11 +59,20 @@ const bootManager = new BootManager(kernel, kernel.boot, [...defaultBootPhases])
 
 app.provide(BootManagerInjectionKey, bootManager);
 
-// Dev-only a11y runtime (vue-axe). The dynamic import + DEV gate means
-// dev a11y is best-effort — never crash the app for it.
+// Dev-only a11y runtime. The dynamic import + DEV gate means direct axe-core
+// audits stay best-effort and never enter the production module graph.
+let disposeAxeRuntime = (): void => {};
+let mainDisposed = false;
 if (import.meta.env.DEV) {
   void import("~/devtools/axe-bootstrap")
-    .then(({ installAxeIfDev }) => installAxeIfDev(app))
+    .then(async ({ installAxeIfDev }) => {
+      const dispose = await installAxeIfDev();
+      if (mainDisposed) {
+        dispose();
+        return;
+      }
+      disposeAxeRuntime = dispose;
+    })
     .catch(() => {
       // Intentional dev-only swallow — `installAxeIfDev` already logs
     });
@@ -74,6 +83,8 @@ app.mount("#app");
 referralCode();
 
 import.meta.hot?.dispose(() => {
+  mainDisposed = true;
+  disposeAxeRuntime();
   disposePwaInstallPrompt();
   bootManager.dispose();
   kernel.dispose();

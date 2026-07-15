@@ -168,9 +168,6 @@ importers:
       vitest:
         specifier: 4.1.9
         version: 4.1.9(@types/node@26.1.0)(@vitest/coverage-v8@4.1.9)(happy-dom@20.10.6)(vite@8.1.3(@types/node@26.1.0)(esbuild@0.28.1)(jiti@2.7.0)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.48.0)(yaml@2.9.0))
-      vue-axe:
-        specifier: ^3.1.2
-        version: 3.1.2(axe-core@4.12.1)(vue@3.6.0-beta.17(typescript@6.0.3))
       vue-tsc:
         specifier: ^3.3.6
         version: 3.3.6(typescript@6.0.3)
@@ -3568,10 +3565,6 @@ packages:
     resolution: {integrity: sha512-mQUvGU6aUFQ+rNvTIAcZuWGRT9a6f6Yrg9bHs4ImKF+HZCEK+plBvnAZYSIQztknZF2qnzNtr6F8s0+IuptdlQ==}
     engines: {node: ^14.13.1 || >=16.0.0}
 
-  prismjs@1.30.0:
-    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
-    engines: {node: '>=6'}
-
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
 
@@ -4223,13 +4216,6 @@ packages:
 
   vscode-uri@3.1.0:
     resolution: {integrity: sha512-/BpdSx+yCQGnCvecbyXdxHDkuk55/G3xwnC0GqY4gmQ3j+A+g8kzzgB4Nk/SINjqn6+waqw3EgbVF2QKExkRxQ==}
-
-  vue-axe@3.1.2:
-    resolution: {integrity: sha512-RZbc+u6gGy6ecI3hK/5jTMG3fTNLTaNL5s6arAoXskVb92hAtkHZ+peQbDJl49sS4hevUXR+del6rUOdI0bcYQ==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      axe-core: ^4.0.0
-      vue: ^3.0.0
 
   vue-component-type-helpers@3.3.6:
     resolution: {integrity: sha512-FkljacAwJ9BUoSUdpFe3VDy0sGigNlTH9+2zcXUWmZOjN8swiCkl3t48wOJun0OsUd2cEIda1l04tsxMiKIIrQ==}
@@ -7563,8 +7549,6 @@ snapshots:
 
   pretty-bytes@6.1.1: {}
 
-  prismjs@1.30.0: {}
-
   property-information@7.2.0: {}
 
   proto-list@1.2.4: {}
@@ -8329,12 +8313,6 @@ snapshots:
       - msw
 
   vscode-uri@3.1.0: {}
-
-  vue-axe@3.1.2(axe-core@4.12.1)(vue@3.6.0-beta.17(typescript@6.0.3)):
-    dependencies:
-      axe-core: 4.12.1
-      prismjs: 1.30.0
-      vue: 3.6.0-beta.17(typescript@6.0.3)
 
   vue-component-type-helpers@3.3.6: {}
 
