@@ -69,8 +69,8 @@ importers:
         specifier: ^11.1.2
         version: 11.1.2
       ropav:
-        specifier: 0.0.11
-        version: 0.0.11(vue@3.6.0-beta.17(typescript@6.0.3))
+        specifier: 0.0.12
+        version: 0.0.12(vue@3.6.0-beta.17(typescript@6.0.3))
       shiki:
         specifier: ^4.3.0
         version: 4.3.0
@@ -3628,8 +3628,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  ropav@0.0.11:
-    resolution: {integrity: sha512-Jh8QP+nHPRYSEl3ZNgciTCMVQsLHwkeDw3SjxWbZlcU2ibYiMBGFjXg48oi2b4ht30pMQeLJx89E/ZP3EBVP/g==}
+  ropav@0.0.12:
+    resolution: {integrity: sha512-2W9AbqAncueINfSDp+FsxLRobO9EHHQ1RjwdkAbygOqy3vtZNpOAg7I0nfbcU60WZYyV7JMrYIoow6p87/A34w==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.0.0}
     peerDependencies:
       vue: ^3.6.0-beta.4
@@ -7657,7 +7657,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.62.2
       fsevents: 2.3.3
 
-  ropav@0.0.11(vue@3.6.0-beta.17(typescript@6.0.3)):
+  ropav@0.0.12(vue@3.6.0-beta.17(typescript@6.0.3)):
     dependencies:
       '@floating-ui/dom': 1.8.0
       focus-trap: 8.2.2

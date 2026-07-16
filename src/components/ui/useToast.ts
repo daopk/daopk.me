@@ -1,6 +1,6 @@
-import { reactive } from "vue";
+import { computed } from "vue";
 
-import type { ToastUpdateOptions, UseToastReturn as RopavToastApi } from "ropav/toast";
+import { createToastStore, type ToastUpdateOptions } from "ropav/toast";
 
 export type ToastTone = "info" | "success" | "warning" | "error";
 
@@ -23,21 +23,24 @@ export interface ToastRecord {
 const DEFAULT_DURATION = 5000;
 const DEFAULT_MAX = 5;
 
-/**
- * Stable facade mirror for callers that inspect the queue directly. Ropav's
- * provider owns the rendered queue once ToastHost connects; calls made before
- * the host mounts are buffered here and flushed into that provider.
- */
-export const toastQueue = reactive<ToastRecord[]>([]);
-
 let counter = 0;
-let provider: RopavToastApi | null = null;
-let activeConnection: symbol | null = null;
+const records = new Map<string, ToastRecord>();
 
-function removeLocalToast(id: string): void {
-  const index = toastQueue.findIndex((toast) => toast.id === id);
-  if (index !== -1) toastQueue.splice(index, 1);
-}
+/** Shared lifecycle store so calls survive ToastHost mount boundaries. */
+export const ropavToastStore = createToastStore({
+  max: DEFAULT_MAX,
+  duration: DEFAULT_DURATION,
+  radius: "md",
+  closeLabel: "Dismiss notification",
+});
+
+/** Internal read model retained for focused queue assertions. */
+export const toastQueue = computed<readonly ToastRecord[]>(() =>
+  ropavToastStore.toasts.value.flatMap((toast) => {
+    const record = records.get(toast.id);
+    return record ? [record] : [];
+  }),
+);
 
 function providerOptions(toast: ToastRecord) {
   return {
@@ -46,36 +49,18 @@ function providerOptions(toast: ToastRecord) {
     title: toast.title,
     description: toast.description,
     duration: toast.duration,
-    onClose: () => removeLocalToast(toast.id),
+    onClose: () => records.delete(toast.id),
   } as const;
 }
 
-function sendToProvider(toast: ToastRecord): void {
-  provider?.show(providerOptions(toast));
-}
-
-/** Internal bridge used by the single global ToastHost. */
-export function connectToastProvider(nextProvider: RopavToastApi): () => void {
-  const connection = Symbol("ds-toast-provider");
-  activeConnection = connection;
-  provider = nextProvider;
-  for (const toast of toastQueue.slice()) sendToProvider(toast);
-
-  return () => {
-    if (activeConnection !== connection) return;
-    activeConnection = null;
-    provider = null;
-  };
-}
-
 export function dismissToast(id: string): void {
-  provider?.dismiss(id);
-  removeLocalToast(id);
+  ropavToastStore.dismiss(id);
+  records.delete(id);
 }
 
 export function clearToasts(): void {
-  provider?.dismissAll();
-  toastQueue.splice(0, toastQueue.length);
+  ropavToastStore.dismissAll();
+  records.clear();
 }
 
 function pushToast(options: ToastOptions): string {
@@ -87,16 +72,14 @@ function pushToast(options: ToastOptions): string {
     description: options.description,
     duration: options.duration ?? DEFAULT_DURATION,
   };
-  toastQueue.push(toast);
-  if (toastQueue.length > DEFAULT_MAX) toastQueue.splice(0, toastQueue.length - DEFAULT_MAX);
-  sendToProvider(toast);
+  records.set(toast.id, toast);
+  ropavToastStore.show(providerOptions(toast));
   return toast.id;
 }
 
 function updateToast(id: string, options: Partial<ToastOptions>): void {
-  const index = toastQueue.findIndex((toast) => toast.id === id);
-  if (index === -1) return;
-  const current = toastQueue[index]!;
+  const current = records.get(id);
+  if (!current) return;
   const next: ToastRecord = {
     id,
     tone: options.tone ?? current.tone,
@@ -104,11 +87,11 @@ function updateToast(id: string, options: Partial<ToastOptions>): void {
     description: Object.hasOwn(options, "description") ? options.description : current.description,
     duration: options.duration ?? current.duration,
   };
-  toastQueue.splice(index, 1, next);
-  provider?.update(id, {
+  records.set(id, next);
+  ropavToastStore.update(id, {
     type: next.tone,
-    title: next.title,
-    description: next.description,
+    title: next.title ?? "",
+    description: next.description ?? "",
     duration: next.duration,
   } satisfies ToastUpdateOptions);
 }

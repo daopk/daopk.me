@@ -88,6 +88,7 @@ describe("DropdownMenu", () => {
     const menu = document.body.querySelector<HTMLElement>(".ds-dropdown-menu")!;
     expect(menu.getAttribute("role")).toBe("menu");
     expect(menu.style.position).toBe("fixed");
+    expect(menu.style.zIndex).toBe("var(--dropdown-menu-z)");
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
     expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
     expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(3);
@@ -146,6 +147,28 @@ describe("DropdownMenu", () => {
     document.body.appendChild(outside);
     outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
     await nextTick();
+    expect(document.body.querySelector('[role="menu"]')).toBeNull();
+    expect(updates).toEqual([true, false]);
+  });
+
+  it("closes when focus moves outside", async () => {
+    const updates: boolean[] = [];
+    const wrapper = mount(DropdownMenu, {
+      props: { "onUpdate:open": (next: boolean) => updates.push(next) },
+      slots: {
+        trigger: () => h("button", "Open"),
+        items: () => h(DropdownMenuItem, {}, () => "Item"),
+      },
+    });
+    wrapper.find<HTMLButtonElement>("button").click();
+    await settle();
+
+    const outside = document.createElement("button");
+    outside.dataset.menuTestOutside = "";
+    document.body.appendChild(outside);
+    outside.focus();
+    await nextTick();
+
     expect(document.body.querySelector('[role="menu"]')).toBeNull();
     expect(updates).toEqual([true, false]);
   });
@@ -241,6 +264,7 @@ describe("ContextMenu", () => {
     await settle();
     const menu = document.body.querySelector<HTMLElement>(".ds-context-menu")!;
     expect(menu.style.position).toBe("fixed");
+    expect(menu.style.zIndex).toBe("var(--context-menu-z)");
     expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(2);
     expect(document.activeElement?.textContent).toBe("Open");
 
@@ -248,6 +272,30 @@ describe("ContextMenu", () => {
     await settle();
     expect(onSelect).toHaveBeenCalledOnce();
     expect(updates).toEqual([true, false]);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("blocks modal outside interaction and restores trigger focus", async () => {
+    const wrapper = mount(ContextMenu, {
+      slots: {
+        trigger: () => h("button", "Right click"),
+        items: () => h(ContextMenuItem, {}, () => "Open"),
+      },
+    });
+    const trigger = wrapper.find<HTMLButtonElement>("button");
+    contextmenu(trigger);
+    await settle();
+
+    const outside = document.createElement("button");
+    outside.dataset.menuTestOutside = "";
+    document.body.appendChild(outside);
+    const event = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+    outside.dispatchEvent(event);
+    outside.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.body.querySelector('[role="menu"]')).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });
 

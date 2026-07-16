@@ -20,9 +20,7 @@ interface MenuRadioSelectDetail {
 interface MenuSurfaceOptions {
   readonly close: (restoreFocus: boolean) => void;
   readonly content: Readonly<Ref<HTMLElement | null>>;
-  readonly modal: () => boolean;
   readonly open: () => boolean;
-  readonly trigger: Readonly<Ref<HTMLElement | null>>;
 }
 
 interface AttributeSnapshot {
@@ -249,27 +247,16 @@ export function useMenuSurface(options: MenuSurfaceOptions) {
     options.close(true);
   }
 
-  function onDocumentPointerdown(event: PointerEvent): void {
-    const target = event.target;
-    if (!(target instanceof Node)) return;
-    if (options.content.value?.contains(target) || options.trigger.value?.contains(target)) return;
-    if (options.modal() && event.cancelable) event.preventDefault();
-    options.close(false);
-  }
-
   watch(
     options.open,
     (open) => {
-      document.removeEventListener("pointerdown", onDocumentPointerdown, true);
-      if (open) document.addEventListener("pointerdown", onDocumentPointerdown, true);
-      else clearTypeahead();
+      if (!open) clearTypeahead();
     },
     { immediate: true },
   );
 
   onBeforeUnmount(() => {
     clearTypeahead();
-    document.removeEventListener("pointerdown", onDocumentPointerdown, true);
   });
 
   return { onFocusin, onKeydown, onPointermove, onSelect };

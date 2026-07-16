@@ -356,8 +356,8 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await nextTick();
 
       expect(launchCount).toBe(0);
-      expect(toastQueue).toHaveLength(1);
-      expect(toastQueue[0]).toMatchObject({
+      expect(toastQueue.value).toHaveLength(1);
+      expect(toastQueue.value[0]).toMatchObject({
         tone: "warning",
         description: "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
       });

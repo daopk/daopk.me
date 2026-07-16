@@ -8,7 +8,7 @@ export { default as DropdownMenuSeparator } from "./MenuSeparator.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId } from "vue";
+import { computed, nextTick, ref, useId } from "vue";
 import {
   useDropdownMenu,
   type DropdownMenuItem as RopavDropdownMenuItem,
@@ -81,6 +81,11 @@ const {
   menuRef: content,
   rootRef,
 } = useDropdownMenu(ropavProps, { openChange: onOpenChange });
+const resolvedContentStyle = computed(() => ({
+  ...contentStyle.value,
+  zIndex: "var(--dropdown-menu-z)",
+}));
+const setRootRef = (value: unknown) => (rootRef.value = toHTMLElement(value));
 const setContentRef = (value: unknown) => (content.value = toHTMLElement(value));
 
 provideMenuContext({ contentId });
@@ -89,9 +94,7 @@ useMenuTriggerAria(trigger, () => isVisible.value, contentId);
 const surface = useMenuSurface({
   close: closeMenu,
   content,
-  modal: () => props.modal,
   open: () => isVisible.value,
-  trigger,
 });
 
 function recordFirstItemFocus(): void {
@@ -138,17 +141,10 @@ function onContentKeydown(event: KeyboardEvent): void {
 function closeMenu(restoreFocus: boolean): void {
   close({ focusTrigger: restoreFocus });
 }
-
-onMounted(() => {
-  rootRef.value = document.body;
-});
-onBeforeUnmount(() => {
-  rootRef.value = null;
-});
 </script>
 
 <template>
-  <span class="ds-menu-root">
+  <span :ref="setRootRef" class="ds-menu-root">
     <span ref="triggerHost" class="ds-menu-trigger"><slot name="trigger" /></span>
     <Teleport :to="resolvedPortalTo">
       <div class="ds-menu-portal">
@@ -159,7 +155,7 @@ onBeforeUnmount(() => {
           role="menu"
           tabindex="-1"
           :data-side="actualPlacement.split('-')[0]"
-          :style="contentStyle"
+          :style="resolvedContentStyle"
           :class="['ds-dropdown-menu', contentClass]"
           @ds-menu-select="surface.onSelect"
           @focusin="surface.onFocusin"

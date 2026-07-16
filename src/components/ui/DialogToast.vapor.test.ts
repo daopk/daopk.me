@@ -197,6 +197,20 @@ describe("ToastHost", () => {
     expect(wrapper.find(".ds-toast").textContent).toContain("Uploaded");
   });
 
+  it("retains active toasts across provider remounts", async () => {
+    vi.useFakeTimers();
+    useToast().info({ title: "Still active", duration: 10_000 });
+
+    const firstHost = mount(ToastHost);
+    await settle();
+    expect(firstHost.find(".ds-toast").textContent).toContain("Still active");
+
+    firstHost.unmount();
+    const secondHost = mount(ToastHost);
+    await settle();
+    expect(secondHost.find(".ds-toast").textContent).toContain("Still active");
+  });
+
   it("auto-dismisses while pausing the remaining timer on hover and focus", async () => {
     vi.useFakeTimers();
     useToast().info({ title: "Paused", duration: 100 });

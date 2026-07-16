@@ -2,7 +2,7 @@
 import { ref } from "vue";
 
 import { RopavToastProvider, RopavToastViewport } from "./ropavAdapter";
-import ToastProviderBridge from "./ToastProviderBridge.vue";
+import { ropavToastStore } from "./useToast";
 
 const region = ref<HTMLElement | null>(null);
 const toastViewportClassNames = {
@@ -74,8 +74,7 @@ function onPointerUp(event: PointerEvent): void {
 </script>
 
 <template>
-  <RopavToastProvider :max="5" :duration="5000" radius="md" close-label="Dismiss notification">
-    <ToastProviderBridge />
+  <RopavToastProvider :store="ropavToastStore">
     <div
       ref="region"
       role="region"

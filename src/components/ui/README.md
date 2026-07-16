@@ -8,17 +8,17 @@ classes while the rest of the repository migrates incrementally.
 The implementation is intentionally hybrid:
 
 - `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
-  `ropav@0.0.11` through
+  `ropav` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip and hover card positioning use the local Vapor composables plus
   `@floating-ui/dom`. Menus use Ropav's public `useDropdownMenu` composable for
-  disclosure and collision-aware positioning while the facade retains its
-  slot-based item API and pointerdown-outside compatibility.
+  disclosure, outside interactions and collision-aware positioning while the
+  facade retains its slot-based item API.
 - Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
   composable, stack-aware dismissal, background inerting and scroll locking.
 - Toast calls retain the stable module-level `useToast` facade while Ropav's
-  provider and viewport own the bounded queue, updates, rendering, timers,
-  live-region roles and dismissal.
+  standalone store owns the bounded queue, updates and timers. Its provider and
+  viewport own rendering, live-region roles and dismissal interactions.
 
 `src/runtime/ui.ts` re-exports `src/components/ui/index.ts`; public exports must
 not bypass those files. Internal DOM structure, implementation component names
@@ -90,8 +90,8 @@ toast.update(id, { title: "Retrying upload", tone: "info" });
 toast.dismiss(id); // or toast.clear()
 ```
 
-The facade buffers calls made before `ToastHost` mounts, then flushes them into
-Ropav's provider. The queue keeps the five newest notifications.
+The module-level Ropav store accepts calls before `ToastHost` mounts and retains
+them across provider remounts. The queue keeps the five newest notifications.
 
 `show(options)` returns the toast id; `info`, `success`, `warning` and `error`
 are tone shortcuts. Ropav maps tones to colors; error/warning use
