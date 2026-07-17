@@ -126,6 +126,7 @@ function onCommit(event: Event): void {
   --rp-slider-track-length: 100%;
   --rp-slider-track-thickness: 3px;
 
+  align-content: center;
   block-size: 100%;
   flex: 1 1 auto;
   gap: 0;
