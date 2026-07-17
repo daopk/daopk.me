@@ -89,37 +89,35 @@ watch(
 
 <template>
   <TeleportProvider :teleport-to="APP_OVERLAY_PORTAL_TARGET">
-    <Suspense>
-      <div class="app-stage">
-        <div
-          :id="APP_OVERLAY_PORTAL_ID"
-          class="app-stage__overlays"
-          role="region"
-          aria-label="Application overlays"
-        />
-        <!-- `failed` renders BootHost error chrome + Retry; `cancelled` is idle BootHost (HMR teardown). -->
-        <BootHost
-          v-if="showBootHost"
-          key="boot"
-          :progress-fraction="bootReactive.progressFraction"
-          :phase-label="bootReactive.phaseLabel"
-          :boot-status="bootReactive.status"
-          :error-message="bootReactive.error?.message"
-          @retry="handleBootRetry"
-        />
-        <ShellHost v-else-if="showShellHost" key="shell-hosted" />
-        <ToastHost />
+    <div class="app-stage">
+      <div
+        :id="APP_OVERLAY_PORTAL_ID"
+        class="app-stage__overlays"
+        role="region"
+        aria-label="Application overlays"
+      />
+      <!-- `failed` renders BootHost error chrome + Retry; `cancelled` is idle BootHost (HMR teardown). -->
+      <BootHost
+        v-if="showBootHost"
+        key="boot"
+        :progress-fraction="bootReactive.progressFraction"
+        :phase-label="bootReactive.phaseLabel"
+        :boot-status="bootReactive.status"
+        :error-message="bootReactive.error?.message"
+        @retry="handleBootRetry"
+      />
+      <ShellHost v-else-if="showShellHost" key="shell-hosted" />
+      <ToastHost />
 
-        <Transition name="auth-gate-lift">
-          <AuthGate
-            v-if="authGateVisible"
-            key="auth"
-            class="app-stage__auth-gate"
-            @authenticated="handleAuthenticated"
-          />
-        </Transition>
-      </div>
-    </Suspense>
+      <Transition name="auth-gate-lift">
+        <AuthGate
+          v-if="authGateVisible"
+          key="auth"
+          class="app-stage__auth-gate"
+          @authenticated="handleAuthenticated"
+        />
+      </Transition>
+    </div>
   </TeleportProvider>
 </template>
 
