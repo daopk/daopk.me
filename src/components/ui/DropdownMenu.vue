@@ -62,7 +62,7 @@ const ropavProps: Readonly<RopavDropdownMenuProps> = {
   get placement() {
     return placement.value;
   },
-  get portalTo() {
+  get teleportTo() {
     return props.portalTo;
   },
   strategy: "fixed",

@@ -56,7 +56,7 @@ const ropavProps: Readonly<RopavDropdownMenuProps> = {
   },
   offset: 2,
   placement: "bottom-start",
-  get portalTo() {
+  get teleportTo() {
     return props.portalTo;
   },
   strategy: "fixed",
