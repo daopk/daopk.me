@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, useAttrs, useId, watch } from "vue";
+import { useTeleportTarget } from "ropav/teleport-provider";
 
 import { isTopDialog, registerDialog, unregisterDialog } from "./dialogStack";
-import { resolvePortalTarget } from "./portalTarget";
 import { useFocusTrap } from "./useFocusTrap";
 
 interface DialogProps {
@@ -46,7 +46,7 @@ const descriptionId = `ds-dialog-description-${useId()}`;
 const portalRoot = ref<HTMLElement | null>(null);
 const content = ref<HTMLElement | null>(null);
 const trapEnabled = computed(() => props.open && props.modal);
-const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
+const resolvedPortalTo = useTeleportTarget(() => props.portalTo);
 
 let restoreFocusTo: HTMLElement | null = null;
 let wasOpen = false;

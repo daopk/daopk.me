@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
+import { useTeleportTarget } from "ropav/teleport-provider";
 
-import { resolvePortalTarget } from "./portalTarget";
 import {
   useFloatingPosition,
   type FloatingAlign,
@@ -128,7 +128,7 @@ const trigger = useSlotTrigger(triggerHost, {
 const positionReference = computed<FloatingReference | null>(
   () => props.reference ?? trigger.value,
 );
-const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
+const resolvedPortalTo = useTeleportTarget(() => props.portalTo);
 const { arrowStyle, floatingStyle, resolvedSide } = useFloatingPosition({
   align: () => props.align,
   arrow,

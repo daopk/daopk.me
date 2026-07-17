@@ -13,7 +13,6 @@ import {
 } from "ropav/dropdown-menu";
 
 import { focusMenuEdge, provideMenuContext, useMenuSurface, useMenuTriggerAria } from "./menuCore";
-import { resolvePortalTarget } from "./portalTarget";
 import { useSlotTrigger } from "./useSlotTrigger";
 
 interface ContextMenuProps {
@@ -30,7 +29,6 @@ const emit = defineEmits<{ "update:open": [next: boolean] }>();
 const contentId = `ds-context-menu-${useId()}`;
 const triggerHost = ref<HTMLElement | null>(null);
 const virtualReference = shallowRef<DropdownMenuVirtualAnchor | null>(null);
-const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 const trigger = useSlotTrigger(triggerHost, {
   click: onClick,
   contextmenu: onContextmenu,
@@ -59,7 +57,7 @@ const ropavProps: Readonly<RopavDropdownMenuProps> = {
   offset: 2,
   placement: "bottom-start",
   get portalTo() {
-    return resolvedPortalTo.value;
+    return props.portalTo;
   },
   strategy: "fixed",
   get target() {
@@ -74,6 +72,7 @@ const {
   menuRef: content,
   open,
   rootRef,
+  teleportTo: resolvedPortalTo,
 } = useDropdownMenu(ropavProps, { openChange: onOpenChange });
 const resolvedContentStyle = computed(() => ({
   ...contentStyle.value,

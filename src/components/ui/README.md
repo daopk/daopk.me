@@ -14,6 +14,8 @@ The implementation is intentionally hybrid:
   `ropav/floating` composable through a local Vapor adapter. Menus use Ropav's
   public `useDropdownMenu` composable for disclosure, outside interactions and
   collision-aware positioning while the facade retains its slot-based item API.
+- Portaled overlays inherit `#app-overlays` from the root Ropav
+  `TeleportProvider`; each facade's `portalTo` prop remains a local override.
 - Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
   composable, stack-aware dismissal, background inerting and scroll locking.
 - Toast calls retain the stable module-level `useToast` facade while Ropav's
@@ -68,9 +70,9 @@ touch/pen long-press behavior.
 
 ## Portals and trigger slots
 
-`portalTo` accepts a selector or `HTMLElement`. With no explicit target,
-`resolvePortalTarget` uses `#app-overlays` when present and falls back to
-`body` for standalone apps and tests.
+`portalTo` accepts a selector or `HTMLElement` and overrides the nearest
+Ropav `TeleportProvider`. The root app provides `#app-overlays`; standalone
+apps and tests without a provider fall back to `body`.
 
 Floating triggers use a `display: contents` host, locate the first element in
 the trigger slot and attach events/ARIA directly. They do not clone or inspect
