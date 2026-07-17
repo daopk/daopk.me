@@ -40,9 +40,9 @@ import {
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
 type LoadState = "loading" | "ready" | "error";
-type MovieHlsPlayerInstance = InstanceType<typeof MovieHlsPlayer> & {
+interface MovieHlsPlayerInstance {
   readonly handleAppKeydown?: (event: KeyboardEvent) => void;
-};
+}
 
 interface WatchViewProps {
   autoplay?: boolean;

@@ -26,15 +26,14 @@ function onLaunch(manifestId: string): void {
   emit("launch", manifestId);
 }
 
-type IconPageInstance = InstanceType<typeof HomeIconPage> & {
-  scrollEl: HTMLElement | null;
-};
+interface IconPageInstance {
+  readonly scrollEl: HTMLElement | null;
+}
 const iconPageRef = ref<IconPageInstance | null>(null);
 
-type PagerInstance = InstanceType<typeof HomePager> & {
-  currentPageIndex: { value: number };
-  seek: (index: number) => void;
-};
+interface PagerInstance {
+  readonly seek: (index: number) => void;
+}
 const pagerRef = ref<PagerInstance | null>(null);
 
 const currentPageIndex = ref(0);

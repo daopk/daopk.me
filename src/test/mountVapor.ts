@@ -2,6 +2,7 @@ import {
   createApp,
   defineComponent,
   h,
+  nextTick,
   vaporInteropPlugin,
   type Component,
   type InjectionKey,
@@ -18,9 +19,13 @@ export interface VaporMountOptions {
 
 export interface VaporMount {
   readonly element: HTMLElement;
+  click(selector: string): Promise<void>;
+  exists(selector: string): boolean;
   find<T extends Element = Element>(selector: string): T;
   findAll<T extends Element = Element>(selector: string): T[];
   html(): string;
+  setValue(selector: string, value: string): Promise<void>;
+  text(): string;
   unmount(): void;
 }
 
@@ -50,6 +55,17 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
 
   return {
     element,
+    async click(selector: string): Promise<void> {
+      const target = element.querySelector<HTMLElement>(selector);
+      if (!target) {
+        throw new Error(`Vapor test element not found: ${selector}`);
+      }
+      target.click();
+      await nextTick();
+    },
+    exists(selector: string): boolean {
+      return element.querySelector(selector) !== null;
+    },
     find<T extends Element = Element>(selector: string): T {
       const match = element.querySelector<T>(selector);
       if (!match) {
@@ -62,6 +78,21 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
     },
     html(): string {
       return element.innerHTML;
+    },
+    async setValue(selector: string, value: string): Promise<void> {
+      const target = element.querySelector<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >(selector);
+      if (!target) {
+        throw new Error(`Vapor test form control not found: ${selector}`);
+      }
+      target.value = value;
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+      await nextTick();
+    },
+    text(): string {
+      return element.textContent ?? "";
     },
     unmount(): void {
       app.unmount();

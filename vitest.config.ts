@@ -59,6 +59,7 @@ export default mergeConfig(
         "src/components/ui/**/*.vapor.test.ts",
         "src/icons/createIcon.vapor.test.ts",
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
+        "apps/clock/src/App.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",
         "apps/notes/src/NotesDesktopLayer.test.ts",
         "apps/pdf-viewer/src/components/PdfFilePreview.test.ts",

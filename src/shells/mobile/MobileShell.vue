@@ -90,9 +90,9 @@ const activeBrowserTitle = computed(() => {
   return appBrowserTitle(frame.title ?? titleFor(frame.manifestId));
 });
 
-type HomeScreenInstance = InstanceType<typeof HomeScreen> & {
-  scrollEl: HTMLElement | null;
-};
+interface HomeScreenInstance {
+  readonly scrollEl: HTMLElement | null;
+}
 const homeRef = ref<HomeScreenInstance | null>(null);
 const homeScrollEl = computed<HTMLElement | null>(() => homeRef.value?.scrollEl ?? null);
 

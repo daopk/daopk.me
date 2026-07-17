@@ -20,9 +20,9 @@ import { useMoviesI18n } from "./i18n/useMoviesI18n";
 import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
 import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
 
-type WatchViewInstance = InstanceType<typeof WatchView> & {
+interface WatchViewInstance {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
-};
+}
 
 interface AppFrameRef {
   element: HTMLElement | null;

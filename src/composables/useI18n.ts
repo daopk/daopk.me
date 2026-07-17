@@ -1,4 +1,4 @@
-import { computed, getCurrentInstance, onUnmounted, ref } from "vue";
+import { computed, getCurrentScope, onScopeDispose, ref } from "vue";
 
 import {
   LOCALE_OPTIONS,
@@ -22,14 +22,14 @@ function updateBrowserLocale(): void {
 function useBrowserLocale(): typeof browserLocale {
   updateBrowserLocale();
 
-  if (typeof window !== "undefined" && getCurrentInstance()) {
+  if (typeof window !== "undefined" && getCurrentScope()) {
     browserLocaleSubscribers += 1;
 
     if (browserLocaleSubscribers === 1) {
       window.addEventListener("languagechange", updateBrowserLocale);
     }
 
-    onUnmounted(() => {
+    onScopeDispose(() => {
       browserLocaleSubscribers = Math.max(0, browserLocaleSubscribers - 1);
 
       if (browserLocaleSubscribers === 0) {

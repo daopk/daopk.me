@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, ref } from "vue";
 
 import { AppFrame, Badge, FormField, ScrollArea, TabList, TextInput } from "@daopk/kit";

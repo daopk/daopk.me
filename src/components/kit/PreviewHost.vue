@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, defineComponent, h } from "vue";
+import { computed, defineAsyncComponent } from "vue";
 
 import { useKernel } from "~/runtime/sdk";
 import type { AppPreviewInput, AppPreviewSurface } from "~/types/preview";
 
 import EmptyState from "./EmptyState.vue";
-import Spinner from "./Spinner.vue";
+import PreviewHostError from "./PreviewHostError.vue";
+import PreviewHostLoading from "./PreviewHostLoading.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -47,29 +48,6 @@ const previewComponent = computed(() => {
     delay: 0,
     timeout: 10_000,
   });
-});
-
-const PreviewHostLoading = defineComponent({
-  name: "PreviewHostLoading",
-  setup() {
-    return () =>
-      h("div", { class: "ds-kit-preview-host__state" }, [
-        h(Spinner, { size: "md", label: "Loading preview" }),
-      ]);
-  },
-});
-
-const PreviewHostError = defineComponent({
-  name: "PreviewHostError",
-  setup() {
-    return () =>
-      h(EmptyState, {
-        class: "ds-kit-preview-host__state",
-        role: "alert",
-        title: "Preview failed",
-        description: "The preview app could not be loaded.",
-      });
-  },
 });
 </script>
 
