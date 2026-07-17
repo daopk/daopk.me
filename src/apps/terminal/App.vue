@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { inject, nextTick, ref, useTemplateRef, watch } from "vue";
 
 import { AppFrame, ScrollArea, TextInput } from "~/components/kit";

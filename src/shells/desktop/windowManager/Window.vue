@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, ref, useId } from "vue";
 import {
   Maximize2 as MaximizeIcon,

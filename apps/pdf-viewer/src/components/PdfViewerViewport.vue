@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Button } from "@daopk/ui";
 import { EmptyState, ScrollArea, Spinner } from "@daopk/kit";
 import { Upload } from "@daopk/icons";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { mediaLabel } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSummary } from "../moviesApi";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, defineAsyncComponent, onMounted, watch, provide, shallowRef } from "vue";
 
 import { useKernel } from "~/composables/useKernel";

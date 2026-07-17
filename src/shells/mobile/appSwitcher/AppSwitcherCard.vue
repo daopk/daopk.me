@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { X as DismissIcon } from "~/icons/lucide";
 import { type Component, computed } from "vue";
 

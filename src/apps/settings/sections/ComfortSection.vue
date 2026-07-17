@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 

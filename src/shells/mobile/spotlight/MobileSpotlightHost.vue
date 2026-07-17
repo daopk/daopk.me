@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Search as SearchIcon } from "~/icons/lucide";
 import { computed, ref, toRef, type CSSProperties, type Ref } from "vue";
 

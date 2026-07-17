@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, toRef } from "vue";
 
 import { ChevronRight } from "@daopk/icons";

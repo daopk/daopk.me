@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch, type Component } from "vue";
 
 import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";

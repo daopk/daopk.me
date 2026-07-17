@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface BadgeProps {
   as?: keyof HTMLElementTagNameMap;
   tone?: "neutral" | "accent" | "success" | "danger";

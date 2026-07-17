@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, onUnmounted, shallowRef, watch } from "vue";
 
 import { ActionRow, EmptyState, GroupLabel, Panel, SectionHeader } from "~/components/kit";

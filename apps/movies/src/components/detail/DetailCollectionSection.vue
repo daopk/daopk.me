@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import MovieCard from "../MovieCard.vue";
 import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import type { MovieCollection, MovieSummary } from "../../moviesApi";

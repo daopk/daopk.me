@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { Select, type SelectOption } from "@daopk/kit";

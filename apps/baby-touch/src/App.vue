@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppFrame, useAppChrome } from "@daopk/kit";
 import { computed, ref } from "vue";
 

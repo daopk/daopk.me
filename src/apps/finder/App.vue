@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppFrame, Progress } from "@daopk/kit";
 
 import FinderDeleteDialog from "./components/FinderDeleteDialog.vue";

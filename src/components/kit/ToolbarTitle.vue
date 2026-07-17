@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface ToolbarTitleProps {
   title: string;
   subtitle?: string;

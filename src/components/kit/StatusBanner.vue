@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface StatusBannerProps {
   as?: keyof HTMLElementTagNameMap;
   tone?: "info" | "success" | "warning" | "error";

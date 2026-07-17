@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { EmptyState, ListButton, SectionHeader, StatusBanner } from "@daopk/kit";
 
 import type { BlogIndexPost } from "../composables/useBlogIndex";

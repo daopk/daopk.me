@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 
 import {

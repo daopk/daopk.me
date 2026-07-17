@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, provide, useId } from "vue";
 
 import { FormFieldContextKey } from "./formFieldContext";

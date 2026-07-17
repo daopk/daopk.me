@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { onScopeDispose } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";

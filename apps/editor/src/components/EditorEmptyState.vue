@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { EmptyState } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { FolderOpen } from "@daopk/icons";

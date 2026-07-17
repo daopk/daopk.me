@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { LayoutGrid, Minimize2 } from "@daopk/icons";
 
 import { backgroundOptions } from "../babyTouchBackgroundOptions";

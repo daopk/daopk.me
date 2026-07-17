@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface SeparatorProps {
   orientation?: "horizontal" | "vertical";
   /** Omit the separator role for purely visual dividers. */

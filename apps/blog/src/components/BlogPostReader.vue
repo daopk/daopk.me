@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { EmptyState, StatusBanner } from "@daopk/kit";
 import { PreviewHost } from "@daopk/kit";
 import type { AppPreviewInput } from "@daopk/sdk";

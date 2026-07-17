@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Layers2 } from "~/icons/lucide";
 import { computed, ref } from "vue";
 

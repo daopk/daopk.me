@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, nextTick, ref } from "vue";
 
 import type { TabListOption } from "./types";

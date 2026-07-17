@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import type { Component } from "vue";
 
 import { AppToolbar, IconButton } from "@daopk/kit";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 const props = defineProps<{
   /** Total dots. Must match `HomePager.pageCount`. */
   pageCount: number;

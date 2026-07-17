@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
 import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed } from "vue";
 
 import { Button, Dialog } from "~/components/ui";

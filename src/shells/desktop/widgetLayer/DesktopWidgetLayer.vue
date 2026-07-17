@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, onMounted, onUnmounted, reactive, shallowRef, useTemplateRef } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 

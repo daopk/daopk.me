@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed } from "vue";
 
 import { Badge, Panel, SectionHeader } from "~/components/kit";

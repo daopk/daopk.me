@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import MenuBarBrand from "./MenuBarBrand.vue";
 import MenuBarApps from "./MenuBarApps.vue";
 import MenuBarStatus from "./MenuBarStatus.vue";

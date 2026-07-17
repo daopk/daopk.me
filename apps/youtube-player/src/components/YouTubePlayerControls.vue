@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, ref } from "vue";
 
 import { IconButton } from "@daopk/kit";

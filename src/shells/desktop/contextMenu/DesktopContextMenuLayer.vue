@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, onUnmounted, shallowRef } from "vue";
 
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";

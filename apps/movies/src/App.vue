@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 
 import { AppFrame } from "@daopk/kit";

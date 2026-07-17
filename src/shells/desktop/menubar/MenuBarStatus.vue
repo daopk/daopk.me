@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { CloudOff } from "~/icons/lucide";
 
 import WidgetHost from "~/components/widgets/WidgetHost.vue";

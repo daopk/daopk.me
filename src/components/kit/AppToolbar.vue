@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface AppToolbarProps {
   as?: keyof HTMLElementTagNameMap;
   density?: "compact" | "comfortable";

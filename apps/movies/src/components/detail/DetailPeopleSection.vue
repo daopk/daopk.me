@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import type { MoviePersonCredit } from "../../moviesApi";
 import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import PosterFrame from "../PosterFrame.vue";

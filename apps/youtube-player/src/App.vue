@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { inject, onUnmounted, ref } from "vue";
 
 import { AppFrame, useAppChrome } from "@daopk/kit";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { ref, toRef } from "vue";
 
 import { EmptyState, ScrollArea, Spinner, StatusBanner } from "~/components/kit";

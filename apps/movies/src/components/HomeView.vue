@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
 import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
 import { ChevronRight, Trash2 } from "@daopk/icons";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { nextTick, ref, watch } from "vue";
 
 import { Check as CheckIcon, Trash2 as TrashIcon } from "~/icons/lucide";

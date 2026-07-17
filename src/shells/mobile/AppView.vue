@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { ArrowLeft, Layers2, Minimize2 } from "~/icons/lucide";
 import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "vue";
 

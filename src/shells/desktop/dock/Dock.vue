@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch, watchEffect } from "vue";
 
 import DockItem from "./DockItem.vue";

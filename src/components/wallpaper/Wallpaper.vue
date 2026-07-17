@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, toRef, watchEffect } from "vue";
 
 import { useWallpaper } from "~/composables/useWallpaper";

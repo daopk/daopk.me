@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, ref } from "vue";
 import { Upload as UploadIcon } from "~/icons/lucide";
 

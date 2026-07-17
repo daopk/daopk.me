@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, inject, ref, watchEffect } from "vue";
 
 import { Check } from "~/icons/lucide";

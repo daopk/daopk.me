@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Check as CheckIcon } from "~/icons/lucide";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";

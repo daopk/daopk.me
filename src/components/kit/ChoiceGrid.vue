@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface ChoiceGridProps {
   label: string;
   /** Minimum column width before the grid reflows to fewer columns. */

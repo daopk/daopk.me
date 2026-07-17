@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 interface PanelProps {
   as?: keyof HTMLElementTagNameMap;
   padding?: "none" | "sm" | "md" | "lg";

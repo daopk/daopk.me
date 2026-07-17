@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Loader2 } from "~/icons/lucide";
 import { computed, type Component } from "vue";
 

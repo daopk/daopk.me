@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
 
 import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";

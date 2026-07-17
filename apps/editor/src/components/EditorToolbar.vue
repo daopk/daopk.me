@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppToolbar, IconButton } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { FileText, FolderOpen, RefreshCw, Save } from "@daopk/icons";

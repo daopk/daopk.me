@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppFrame, Textarea } from "@daopk/kit";
 import { VfsFilePickerDialog } from "@daopk/files";
 

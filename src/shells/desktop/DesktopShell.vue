@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { useTemplateRef } from "vue";
 
 import Dock from "./dock/Dock.vue";

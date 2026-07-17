@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import AuthAutoUpdateScreen from "./AuthAutoUpdateScreen.vue";
 import AuthCreatePanel from "./AuthCreatePanel.vue";
 import AuthGateSurface from "./AuthGateSurface.vue";

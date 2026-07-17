@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Shield } from "~/icons/lucide";
 
 defineProps<{

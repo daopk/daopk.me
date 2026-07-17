@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppToolbar, IconButton, SegmentedControl } from "@daopk/kit";
 import type { SegmentedControlOption } from "@daopk/kit";
 import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "@daopk/icons";

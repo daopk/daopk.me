@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, inject, onMounted, reactive, ref, watch } from "vue";
 
 import AuthGate from "~/components/auth/AuthGate.vue";

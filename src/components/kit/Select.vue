@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, inject, ref } from "vue";
 
 import { FormFieldContextKey } from "./formFieldContext";

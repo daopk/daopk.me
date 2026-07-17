@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { nextTick, ref, watch } from "vue";
 
 import type { BootStatus } from "~/types/kernel";

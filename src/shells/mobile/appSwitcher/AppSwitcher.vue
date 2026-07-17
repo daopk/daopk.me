@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Trash2 as DismissAllIcon, X as CloseIcon } from "~/icons/lucide";
 import { computed, ref, useId, type Component } from "vue";
 

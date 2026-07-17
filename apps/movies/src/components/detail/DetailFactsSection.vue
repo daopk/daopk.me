@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import type { MovieFact } from "../../moviesApi";
 import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 

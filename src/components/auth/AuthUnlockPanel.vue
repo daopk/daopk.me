@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Button } from "~/components/ui";
 import { CloudOff, KeyRound, Plus } from "~/icons/lucide";
 import type { ProfileRecord } from "~/types/profile";

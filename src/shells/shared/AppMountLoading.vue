@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { Spinner } from "~/components/kit";
 </script>
 

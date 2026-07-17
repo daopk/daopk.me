@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { computed, defineAsyncComponent, markRaw, ref, type Component } from "vue";
 
 import { ContextMenu, ContextMenuItem } from "~/components/ui";
