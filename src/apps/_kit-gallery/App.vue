@@ -40,8 +40,13 @@ import {
   Dialog,
   DialogActions,
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
+  DropdownMenuItemIndicator,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   RadioGroup,
   RadioGroupItem,
   Slider,
@@ -84,6 +89,7 @@ const radioValue = ref("comfortable");
 const requiredValue = ref("");
 const progressValue = ref(60);
 const dialogOpen = ref(false);
+const menuNotifications = ref(true);
 
 const toast = useToast();
 
@@ -442,6 +448,20 @@ const densityChoices = [
             <template #items>
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Preferences</DropdownMenuItem>
+              <DropdownMenuCheckboxItem v-model="menuNotifications" text-value="Notifications">
+                <DropdownMenuItemIndicator class="ds-dropdown-menu__indicator">
+                  ✓
+                </DropdownMenuItemIndicator>
+                Notifications
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Move to…</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent aria-label="Move to">
+                  <DropdownMenuItem>Desktop</DropdownMenuItem>
+                  <DropdownMenuItem>Archive</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Sign out</DropdownMenuItem>
             </template>

@@ -10,9 +10,10 @@ The implementation is fully Vapor while composing several Ropav behaviors:
   `ropav` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip and hover card positioning use Ropav's public
-  `ropav/floating` composable through a local Vapor adapter. Menus use Ropav's
-  public `useDropdownMenu` composable for disclosure, outside interactions and
-  collision-aware positioning while the facade retains its slot-based item API.
+  `ropav/floating` composable through a local Vapor adapter. Dropdown and
+  context menus compose `ropav/dropdown-menu` primitives for disclosure,
+  active-descendant navigation, selection, submenus, outside interactions and
+  collision-aware positioning while retaining the facade's slot API.
 - Portaled overlays inherit `#app-overlays` from the root Ropav
   `TeleportProvider`; each facade's `portalTo` prop remains a local override.
 - Dialog visuals and its stable facade stay local while `ropav/dialog`
@@ -44,29 +45,31 @@ and library-specific `data-*` attributes are not API contracts.
 
 Props in **bold** are required.
 
-| Component              | Implementation            | Key props                                                                                                                     | Emits / slots                               |
-| ---------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `Button`               | local Vapor               | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot               |
-| `Card`                 | local Vapor               | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                |
-| `Switch`               | `ropav/switch` adapter    | **`modelValue`**, `id`, `name`, `disabled`, `required`, `invalid`, ARIA and `inputAttrs`                                      | `update:modelValue`                         |
-| `Slider`               | `ropav/slider` adapter    | **`modelValue`**, `id`, `name`, `min`, `max`, `step`, `orientation`, `disabled`, ARIA and `inputAttrs`                        | `update:modelValue`, `commit`               |
-| `RadioGroup` + item    | `ropav/radio` adapter     | `modelValue`, `id`, `name`, `orientation`, validation and ARIA; item **`value`**, `label`, overrides and `inputAttrs`         | `update:modelValue` · item default slot     |
-| `Tabs` compound        | `ropav/tabs` adapter      | `modelValue`, `size`, `variant`, `orientation`, `activationMode`; trigger/content **`value`**                                 | `update:modelValue` · default slots         |
-| `Tooltip`              | local Vapor + Floating UI | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
-| `HoverCard`            | local Vapor + Floating UI | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
-| `Dialog`               | `ropav/dialog` primitives | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
-| `DialogActions`        | local Vapor               | `align`                                                                                                                       | default slot                                |
-| `DropdownMenu` + items | Ropav composable adapter  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
-| `ContextMenu` + items  | Ropav composable adapter  | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
-| `ToastHost`            | Ropav provider + viewport | none; mount once globally                                                                                                     | renders the buffered `useToast` facade      |
+| Component              | Implementation                   | Key props                                                                                                                     | Emits / slots                               |
+| ---------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `Button`               | local Vapor                      | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot               |
+| `Card`                 | local Vapor                      | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                |
+| `Switch`               | `ropav/switch` adapter           | **`modelValue`**, `id`, `name`, `disabled`, `required`, `invalid`, ARIA and `inputAttrs`                                      | `update:modelValue`                         |
+| `Slider`               | `ropav/slider` adapter           | **`modelValue`**, `id`, `name`, `min`, `max`, `step`, `orientation`, `disabled`, ARIA and `inputAttrs`                        | `update:modelValue`, `commit`               |
+| `RadioGroup` + item    | `ropav/radio` adapter            | `modelValue`, `id`, `name`, `orientation`, validation and ARIA; item **`value`**, `label`, overrides and `inputAttrs`         | `update:modelValue` · item default slot     |
+| `Tabs` compound        | `ropav/tabs` adapter             | `modelValue`, `size`, `variant`, `orientation`, `activationMode`; trigger/content **`value`**                                 | `update:modelValue` · default slots         |
+| `Tooltip`              | local Vapor + Floating UI        | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
+| `HoverCard`            | local Vapor + Floating UI        | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
+| `Dialog`               | `ropav/dialog` primitives        | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
+| `DialogActions`        | local Vapor                      | `align`                                                                                                                       | default slot                                |
+| `DropdownMenu` + items | `ropav/dropdown-menu` primitives | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
+| `ContextMenu` + items  | `ropav/dropdown-menu` primitives | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
+| `ToastHost`            | Ropav provider + viewport        | none; mount once globally                                                                                                     | renders the buffered `useToast` facade      |
 
-Menu exports include item, separator, label, radio group/item and item
-indicator. Item `select` receives a cancelable `Event`; calling
-`preventDefault()` keeps the menu open. Dropdown triggers support click,
-ArrowUp and ArrowDown. Open menus support roving arrows, Home/End, Enter/Space,
-Escape, Tab, typeahead, disabled-item skipping and focus restoration. Context
-menus use the same core with a pointer-position virtual reference and include
-touch/pen long-press behavior.
+Dropdown menu exports include item, checkbox item, separator, label, radio
+group/item, item indicator and submenu root/trigger/content. Item `select`
+receives a cancelable `Event`; calling `preventDefault()` keeps the menu open.
+Dropdown triggers support click, ArrowUp and ArrowDown. Open menus use Ropav's
+active-descendant model for Arrow keys, Home/End, Enter/Space, Escape, Tab,
+disabled-item skipping and focus restoration. A small facade adapter retains
+the existing 700 ms `textValue`-aware typeahead behavior until Ropav provides
+it. Context menus use Ropav's context trigger for pointer-position anchoring,
+keyboard opening and touch/pen long-press behavior.
 
 ## Portals and trigger slots
 

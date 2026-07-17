@@ -1,5 +1,24 @@
-<script setup vapor lang="ts"></script>
+<script setup vapor lang="ts">
+import {
+  DropdownMenuItemIndicator as RopavDropdownMenuItemIndicator,
+  type DropdownMenuAs,
+} from "ropav/dropdown-menu";
+
+defineOptions({ inheritAttrs: false });
+
+withDefaults(defineProps<{ as?: DropdownMenuAs; forceMount?: boolean }>(), {
+  as: "span",
+  forceMount: false,
+});
+</script>
 
 <template>
-  <span data-menu-indicator aria-hidden="true"><slot /></span>
+  <RopavDropdownMenuItemIndicator
+    v-bind="$attrs"
+    data-menu-indicator
+    :as="as"
+    :force-mount="forceMount"
+  >
+    <slot />
+  </RopavDropdownMenuItemIndicator>
 </template>

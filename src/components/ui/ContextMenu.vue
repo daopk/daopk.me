@@ -4,16 +4,16 @@ export { default as ContextMenuSeparator } from "./MenuSeparator.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId } from "vue";
+import { nextTick, onBeforeUnmount, ref } from "vue";
 import {
-  useDropdownMenu,
-  type DropdownMenuItem as RopavDropdownMenuItem,
-  type DropdownMenuProps as RopavDropdownMenuProps,
-  type DropdownMenuVirtualAnchor,
+  DropdownMenuContent as RopavDropdownMenuContent,
+  DropdownMenuContextTrigger as RopavDropdownMenuContextTrigger,
+  DropdownMenuPortal as RopavDropdownMenuPortal,
+  DropdownMenuRoot as RopavDropdownMenuRoot,
 } from "ropav/dropdown-menu";
 
-import { focusMenuEdge, provideMenuContext, useMenuSurface, useMenuTriggerAria } from "./menuCore";
-import { useSlotTrigger } from "./useSlotTrigger";
+import MenuPrimitiveSlot from "./MenuPrimitiveSlot.vue";
+import { useMenuTypeahead } from "./useMenuTypeahead";
 
 interface ContextMenuProps {
   modal?: boolean;
@@ -26,238 +26,81 @@ const props = withDefaults(defineProps<ContextMenuProps>(), {
 });
 
 const emit = defineEmits<{ "update:open": [next: boolean] }>();
-const contentId = `ds-context-menu-${useId()}`;
-const triggerHost = ref<HTMLElement | null>(null);
-const virtualReference = shallowRef<DropdownMenuVirtualAnchor | null>(null);
-const trigger = useSlotTrigger(triggerHost, {
-  click: onClick,
-  contextmenu: onContextmenu,
-  pointercancel: clearLongPress,
-  pointerdown: onPointerdown,
-  pointermove: onPointermove,
-  pointerup: finishPointer,
-  keydown: onTriggerKeydown,
-});
-const emptyItems: RopavDropdownMenuItem[] = [];
+const CONTEXT_MENU_BASE_Z_INDEX = 1700;
+const portalRoot = ref<HTMLElement | null>(null);
+const trigger = ref<HTMLElement | null>(null);
+const typeahead = useMenuTypeahead();
+let restoreFocusOnClose = true;
 
-let longPressTimer: number | undefined;
-let longPressPointer: { id: number; x: number; y: number } | undefined;
-let longPressOpened = false;
-let longPressWindow: Window | null = null;
-let suppressClickUntil = 0;
-
-const ropavProps: Readonly<RopavDropdownMenuProps> = {
-  get id() {
-    return contentId;
-  },
-  items: emptyItems,
-  get modal() {
-    return props.modal;
-  },
-  offset: 2,
-  placement: "bottom-start",
-  get teleportTo() {
-    return props.portalTo;
-  },
-  strategy: "fixed",
-  get target() {
-    return virtualReference.value;
-  },
-};
-
-const {
-  close,
-  contentStyle,
-  isVisible,
-  menuRef: content,
-  open,
-  rootRef,
-  teleportTo: resolvedPortalTo,
-} = useDropdownMenu(ropavProps, { openChange: onOpenChange });
-const resolvedContentStyle = computed(() => ({
-  ...contentStyle.value,
-  zIndex: "var(--context-menu-z)",
-}));
-const setRootRef = (value: unknown) => (rootRef.value = toHTMLElement(value));
-const setContentRef = (value: unknown) => (content.value = toHTMLElement(value));
-
-provideMenuContext({ contentId });
-useMenuTriggerAria(trigger, () => isVisible.value, contentId, false);
-
-const surface = useMenuSurface({
-  close: closeMenu,
-  content,
-  open: () => isVisible.value,
-});
-
-function triggerDisabled(): boolean {
-  const element = trigger.value;
-  return (
-    element === null ||
-    (element instanceof HTMLButtonElement && element.disabled) ||
-    element.getAttribute("aria-disabled") === "true"
-  );
+function setTrigger(element: HTMLElement | null): void {
+  trigger.value = element;
 }
 
-function toHTMLElement(value: unknown): HTMLElement | null {
-  return value instanceof HTMLElement ? value : null;
+function onContentKeydown(event: KeyboardEvent): void {
+  if (event.key === "Tab") restoreFocusOnClose = false;
+  typeahead.onKeydown(event);
 }
 
-function clearLongPress(): void {
-  if (longPressTimer !== undefined) window.clearTimeout(longPressTimer);
-  longPressWindow?.removeEventListener("scroll", clearLongPress, true);
-  longPressTimer = undefined;
-  longPressPointer = undefined;
-  longPressOpened = false;
-  longPressWindow = null;
+function onOutsideInteraction(): void {
+  restoreFocusOnClose = props.modal;
 }
 
-function onPointerdown(event: Event): void {
-  const pointerEvent = event as PointerEvent;
-  if (
-    triggerDisabled() ||
-    (pointerEvent.pointerType !== "touch" && pointerEvent.pointerType !== "pen") ||
-    pointerEvent.isPrimary === false
-  ) {
-    return;
-  }
-
-  clearLongPress();
-  longPressPointer = {
-    id: pointerEvent.pointerId,
-    x: pointerEvent.clientX,
-    y: pointerEvent.clientY,
-  };
-  longPressOpened = false;
-  longPressWindow = trigger.value?.ownerDocument.defaultView ?? null;
-  longPressWindow?.addEventListener("scroll", clearLongPress, true);
-  longPressTimer = window.setTimeout(() => {
-    const pointer = longPressPointer;
-    if (!pointer) return;
-    longPressOpened = true;
-    suppressClickUntil = Date.now() + 1000;
-    openAt(pointer.x, pointer.y);
-    longPressTimer = undefined;
-    longPressWindow?.removeEventListener("scroll", clearLongPress, true);
-    longPressWindow = null;
-  }, 600);
-}
-
-function onPointermove(event: Event): void {
-  const pointerEvent = event as PointerEvent;
-  const pointer = longPressPointer;
-  if (longPressOpened || !pointer || pointer.id !== pointerEvent.pointerId) return;
-  if (Math.hypot(pointerEvent.clientX - pointer.x, pointerEvent.clientY - pointer.y) > 10) {
-    clearLongPress();
-  }
-}
-
-function finishPointer(event: Event): void {
-  const pointerEvent = event as PointerEvent;
-  if (pointerEvent.pointerId !== longPressPointer?.id) return;
-  if (longPressOpened) pointerEvent.preventDefault();
-  clearLongPress();
-}
-
-function onClick(event: Event): void {
-  if (Date.now() < suppressClickUntil) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-}
-
-function onContextmenu(event: Event): void {
-  const mouseEvent = event as MouseEvent;
-  if (triggerDisabled()) return;
-  mouseEvent.preventDefault();
-  mouseEvent.stopPropagation();
-  if (Date.now() >= suppressClickUntil) {
-    openAt(mouseEvent.clientX, mouseEvent.clientY);
-  }
-}
-
-function onTriggerKeydown(event: Event): void {
-  const keyboardEvent = event as KeyboardEvent;
-  if (
-    triggerDisabled() ||
-    (keyboardEvent.key !== "ContextMenu" &&
-      !(keyboardEvent.shiftKey && keyboardEvent.key === "F10"))
-  ) {
-    return;
-  }
-  keyboardEvent.preventDefault();
-  const rect = trigger.value?.getBoundingClientRect();
-  openAt(rect?.left ?? 0, rect?.bottom ?? 0);
+async function restoreTriggerFocus(): Promise<void> {
+  await nextTick();
+  await nextTick();
+  trigger.value?.focus({ preventScroll: true });
 }
 
 function onOpenChange(next: boolean): void {
   emit("update:open", next);
-  if (next) void focusItems();
-}
-
-function openAt(x: number, y: number): void {
-  virtualReference.value = {
-    contextElement: trigger.value ?? undefined,
-    getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
-  };
-  open();
-  void focusItems();
-}
-
-async function focusItems(): Promise<void> {
-  await nextTick();
-  await nextTick();
-  if (isVisible.value) focusMenuEdge(content.value, "first");
-}
-
-function onContentKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMenu(true);
-    return;
+  if (next) {
+    restoreFocusOnClose = true;
+  } else if (restoreFocusOnClose) {
+    void restoreTriggerFocus();
   }
-  surface.onKeydown(event);
-}
-
-function closeMenu(restoreFocus: boolean): void {
-  close({ focusTrigger: false });
-  if (restoreFocus) void nextTick(() => trigger.value?.focus({ preventScroll: true }));
 }
 
 onBeforeUnmount(() => {
-  clearLongPress();
+  const root = portalRoot.value;
+  queueMicrotask(() => root?.remove());
 });
 </script>
 
 <template>
-  <span :ref="setRootRef" class="ds-menu-root">
-    <span ref="triggerHost" class="ds-menu-trigger"><slot name="trigger" /></span>
-    <Teleport :to="resolvedPortalTo">
-      <div class="ds-menu-portal">
-        <div
-          v-if="isVisible"
-          :id="contentId"
-          :ref="setContentRef"
-          role="menu"
-          tabindex="-1"
-          :style="resolvedContentStyle"
+  <RopavDropdownMenuRoot
+    :base-z-index="CONTEXT_MENU_BASE_Z_INDEX"
+    :modal="modal"
+    @update:open="onOpenChange"
+  >
+    <RopavDropdownMenuContextTrigger
+      :as="MenuPrimitiveSlot"
+      :element-callback="setTrigger"
+      :long-press-delay="600"
+      :long-press-tolerance="10"
+      :omit-attributes="['aria-controls', 'aria-expanded']"
+      @contextmenu.stop
+    >
+      <slot name="trigger" />
+    </RopavDropdownMenuContextTrigger>
+    <RopavDropdownMenuPortal :to="portalTo">
+      <div ref="portalRoot" class="ds-menu-portal">
+        <RopavDropdownMenuContent
           class="ds-context-menu"
-          @ds-menu-select="surface.onSelect"
-          @focusin="surface.onFocusin"
+          :offset="2"
+          placement="bottom-start"
+          strategy="fixed"
+          @focus-outside="onOutsideInteraction"
           @keydown="onContentKeydown"
-          @pointermove="surface.onPointermove"
+          @pointer-down-outside="onOutsideInteraction"
         >
           <slot name="items" />
-        </div>
+        </RopavDropdownMenuContent>
       </div>
-    </Teleport>
-  </span>
+    </RopavDropdownMenuPortal>
+  </RopavDropdownMenuRoot>
 </template>
 
 <style lang="scss">
-.ds-menu-root,
-.ds-menu-trigger,
 .ds-menu-portal {
   display: contents;
 }
@@ -305,6 +148,12 @@ onBeforeUnmount(() => {
       cursor: not-allowed;
       pointer-events: none;
     }
+
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
   }
 
   [role="separator"] {

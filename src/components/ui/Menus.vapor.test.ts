@@ -8,12 +8,16 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuItemIndicator,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "./index";
 
 const mounted: VaporMount[] = [];
@@ -81,11 +85,17 @@ function contextmenu(element: Element, clientX = 40, clientY = 60): void {
   );
 }
 
+function activeMenuItem(menu: HTMLElement): HTMLElement | null {
+  const activeId = menu.getAttribute("aria-activedescendant");
+  return activeId ? document.getElementById(activeId) : null;
+}
+
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
   document
     .querySelectorAll("[data-menu-test-portal], [data-menu-test-outside]")
     .forEach((node) => node.remove());
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -95,12 +105,16 @@ it("keeps menu primitives compiled in Vapor mode", () => {
     ContextMenuItem,
     ContextMenuSeparator,
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuItem,
     DropdownMenuItemIndicator,
     DropdownMenuLabel,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
     DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
   });
 });
 
@@ -144,12 +158,13 @@ describe("DropdownMenu", () => {
     const menu = document.body.querySelector<HTMLElement>(".ds-dropdown-menu")!;
     expect(menu.getAttribute("role")).toBe("menu");
     expect(menu.style.position).toBe("fixed");
-    expect(menu.style.zIndex).toBe("var(--dropdown-menu-z)");
+    expect(menu.style.zIndex).toBe("1200");
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
     expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
     expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(3);
     expect(menu.querySelectorAll('[role="separator"]')).toHaveLength(1);
-    expect(document.activeElement?.textContent).toBe("Alpha");
+    expect(document.activeElement).toBe(menu);
+    expect(activeMenuItem(menu)?.textContent).toBe("Alpha");
   });
 
   it("supports arrow, Home/End, typeahead, disabled skipping and Enter", async () => {
@@ -159,19 +174,25 @@ describe("DropdownMenu", () => {
     key(trigger, "ArrowUp");
     await settle();
     const menu = document.body.querySelector<HTMLElement>('[role="menu"]')!;
-    expect(document.activeElement?.textContent).toBe("Zulu");
+    expect(document.activeElement).toBe(menu);
+    expect(activeMenuItem(menu)?.textContent).toBe("Zulu");
 
     key(menu, "ArrowDown");
-    expect(document.activeElement?.textContent).toBe("Alpha");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Alpha");
     key(menu, "ArrowDown");
-    expect(document.activeElement?.textContent).toBe("Zulu");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Zulu");
     key(menu, "Home");
-    expect(document.activeElement?.textContent).toBe("Alpha");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Alpha");
     key(menu, "End");
-    expect(document.activeElement?.textContent).toBe("Zulu");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Zulu");
     key(menu, "a");
-    expect(document.activeElement?.textContent).toBe("Alpha");
-    key(document.activeElement!, "Enter");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Alpha");
+    key(menu, "Enter");
     await settle();
     expect(onSelect).toHaveBeenCalledOnce();
     expect(document.body.querySelector('[role="menu"]')).toBeNull();
@@ -292,6 +313,116 @@ describe("DropdownMenu", () => {
     radios[1]?.click();
     await settle();
     expect(value.value).toBe("light");
+    expect(document.body.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement?.textContent).toBe("Theme");
+  });
+
+  it("round-trips checkbox state and keeps the menu open", async () => {
+    const checked = ref<boolean | "indeterminate">(false);
+    const Host = defineVaporComponent(() =>
+      createComponent(
+        DropdownMenu,
+        {},
+        {
+          trigger: () => element("button", "Preferences"),
+          items: () =>
+            createComponent(
+              DropdownMenuCheckboxItem,
+              {
+                modelValue: () => checked.value,
+                textValue: "Notifications",
+                "onUpdate:modelValue": () => (next: boolean | "indeterminate") =>
+                  (checked.value = next),
+              },
+              {
+                default: () => [
+                  renderComponent(
+                    DropdownMenuItemIndicator,
+                    { class: "ds-dropdown-menu__indicator" },
+                    { default: () => text("✓") },
+                  ),
+                  text("Notifications"),
+                ],
+              },
+            ),
+        },
+      ),
+    );
+    const wrapper = mount(Host);
+    wrapper.find<HTMLButtonElement>("button").click();
+    await settle();
+
+    const checkbox = document.body.querySelector<HTMLElement>('[role="menuitemcheckbox"]')!;
+    expect(checkbox.getAttribute("aria-checked")).toBe("false");
+    expect(checkbox.querySelector("[data-menu-indicator]")).toBeNull();
+
+    checkbox.click();
+    await settle();
+    expect(checked.value).toBe(true);
+    expect(checkbox.getAttribute("aria-checked")).toBe("true");
+    expect(checkbox.querySelector("[data-menu-indicator]")).not.toBeNull();
+    expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+
+    checked.value = "indeterminate";
+    await settle();
+    expect(checkbox.getAttribute("aria-checked")).toBe("mixed");
+    expect(checkbox.getAttribute("data-state")).toBe("indeterminate");
+  });
+
+  it("opens and closes submenus with horizontal keys", async () => {
+    const wrapper = mount(DropdownMenu, {
+      slots: {
+        trigger: () => element("button", "Actions"),
+        items: () =>
+          renderComponent(
+            DropdownMenuSub,
+            {},
+            {
+              default: () => [
+                renderComponent(
+                  DropdownMenuSubTrigger,
+                  { textValue: "Move to" },
+                  { default: () => text("Move to") },
+                ),
+                renderComponent(
+                  DropdownMenuSubContent,
+                  { ariaLabel: "Move to" },
+                  {
+                    default: () =>
+                      renderComponent(
+                        DropdownMenuItem,
+                        { textValue: "Backlog" },
+                        { default: () => text("Backlog") },
+                      ),
+                  },
+                ),
+              ],
+            },
+          ),
+      },
+    });
+    wrapper.find<HTMLButtonElement>("button").click();
+    await settle();
+    const rootMenu = document.body.querySelector<HTMLElement>('[role="menu"]')!;
+    const subTrigger = activeMenuItem(rootMenu)!;
+    expect(subTrigger.textContent).toBe("Move to");
+
+    key(rootMenu, "ArrowRight");
+    await settle();
+    const menus = Array.from(document.body.querySelectorAll<HTMLElement>('[role="menu"]'));
+    expect(menus).toHaveLength(2);
+    expect(subTrigger.getAttribute("aria-expanded")).toBe("true");
+    expect(activeMenuItem(menus[1]!)?.textContent).toBe("Backlog");
+
+    key(menus[1]!, "ArrowLeft");
+    await settle();
+    expect(document.body.querySelectorAll('[role="menu"]')).toHaveLength(1);
+    expect(document.activeElement).toBe(rootMenu);
+    expect(activeMenuItem(rootMenu)).toBe(subTrigger);
+
+    subTrigger.dispatchEvent(new MouseEvent("mouseenter", { cancelable: true }));
+    await settle();
+    expect(document.body.querySelectorAll('[role="menu"]')).toHaveLength(2);
   });
 
   it("uses a custom portal target", async () => {
@@ -308,6 +439,40 @@ describe("DropdownMenu", () => {
     wrapper.find<HTMLButtonElement>("button").click();
     await settle();
     expect(portal.querySelector('[role="menu"]')).not.toBeNull();
+  });
+
+  it("increments Ropav layers and removes portalled content on unmount", async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(() => {});
+    const Host = defineVaporComponent(() => [
+      createComponent(
+        DropdownMenu,
+        {},
+        {
+          trigger: () => element("button", "First", { "data-testid": "first" }),
+          items: () => renderComponent(DropdownMenuItem, {}, { default: () => text("One") }),
+        },
+      ),
+      createComponent(
+        DropdownMenu,
+        {},
+        {
+          trigger: () => element("button", "Second", { "data-testid": "second" }),
+          items: () => renderComponent(DropdownMenuItem, {}, { default: () => text("Two") }),
+        },
+      ),
+    ]);
+    const wrapper = mount(Host);
+    wrapper.find<HTMLButtonElement>('[data-testid="first"]').click();
+    wrapper.find<HTMLButtonElement>('[data-testid="second"]').click();
+    await settle();
+
+    const menus = Array.from(document.body.querySelectorAll<HTMLElement>(".ds-dropdown-menu"));
+    expect(menus.map((menu) => menu.style.zIndex)).toEqual(["1200", "1202"]);
+
+    wrapper.unmount();
+    await settle();
+    expect(document.body.querySelector(".ds-dropdown-menu")).toBeNull();
+    focus.mockRestore();
   });
 });
 
@@ -339,9 +504,10 @@ describe("ContextMenu", () => {
     await settle();
     const menu = document.body.querySelector<HTMLElement>(".ds-context-menu")!;
     expect(menu.style.position).toBe("fixed");
-    expect(menu.style.zIndex).toBe("var(--context-menu-z)");
+    expect(menu.style.zIndex).toBe("1700");
     expect(menu.querySelectorAll('[role="menuitem"]')).toHaveLength(2);
-    expect(document.activeElement?.textContent).toBe("Open");
+    expect(document.activeElement).toBe(menu);
+    expect(activeMenuItem(menu)?.textContent).toBe("Open");
 
     menu.querySelector<HTMLElement>('[role="menuitem"]')!.click();
     await settle();
@@ -372,6 +538,50 @@ describe("ContextMenu", () => {
     expect(event.defaultPrevented).toBe(true);
     expect(document.body.querySelector('[role="menu"]')).toBeNull();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("opens from the keyboard and touch long-press", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(ContextMenu, {
+      props: { modal: false },
+      slots: {
+        trigger: () => element("div", "Target", { tabindex: "0" }),
+        items: () => renderComponent(ContextMenuItem, {}, { default: () => text("Inspect") }),
+      },
+    });
+    const trigger = wrapper.find<HTMLElement>("div");
+
+    key(trigger, "ContextMenu");
+    await settle();
+    expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+
+    key(document.body.querySelector<HTMLElement>('[role="menu"]')!, "Escape");
+    await settle();
+    trigger.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "F10",
+        shiftKey: true,
+      }),
+    );
+    await settle();
+    expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+
+    key(document.body.querySelector<HTMLElement>('[role="menu"]')!, "Escape");
+    await settle();
+    const pointerdown = new Event("pointerdown", { bubbles: true, cancelable: true });
+    Object.defineProperties(pointerdown, {
+      pointerId: { value: 1 },
+      pointerType: { value: "touch" },
+      clientX: { value: 25 },
+      clientY: { value: 40 },
+    });
+    trigger.dispatchEvent(pointerdown);
+    await vi.advanceTimersByTimeAsync(600);
+    await settle();
+
+    expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
   });
 
   it("supports as-child items and keyboard activation", async () => {

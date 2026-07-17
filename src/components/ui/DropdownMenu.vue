@@ -1,23 +1,28 @@
 <script lang="ts">
+export { default as DropdownMenuCheckboxItem } from "./MenuCheckboxItem.vue";
 export { default as DropdownMenuItem } from "./MenuItem.vue";
 export { default as DropdownMenuItemIndicator } from "./MenuItemIndicator.vue";
 export { default as DropdownMenuLabel } from "./MenuLabel.vue";
 export { default as DropdownMenuRadioGroup } from "./MenuRadioGroup.vue";
 export { default as DropdownMenuRadioItem } from "./MenuRadioItem.vue";
 export { default as DropdownMenuSeparator } from "./MenuSeparator.vue";
+export { default as DropdownMenuSub } from "./MenuSub.vue";
+export { default as DropdownMenuSubContent } from "./MenuSubContent.vue";
+export { default as DropdownMenuSubTrigger } from "./MenuSubTrigger.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, ref, useId } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref } from "vue";
 import {
-  useDropdownMenu,
-  type DropdownMenuItem as RopavDropdownMenuItem,
+  DropdownMenuContent as RopavDropdownMenuContent,
+  DropdownMenuPortal as RopavDropdownMenuPortal,
+  DropdownMenuRoot as RopavDropdownMenuRoot,
+  DropdownMenuTrigger as RopavDropdownMenuTrigger,
   type DropdownMenuPlacement,
-  type DropdownMenuProps as RopavDropdownMenuProps,
 } from "ropav/dropdown-menu";
 
-import { focusMenuEdge, provideMenuContext, useMenuSurface, useMenuTriggerAria } from "./menuCore";
-import { useSlotTrigger } from "./useSlotTrigger";
+import MenuPrimitiveSlot from "./MenuPrimitiveSlot.vue";
+import { useMenuTypeahead } from "./useMenuTypeahead";
 
 interface DropdownMenuProps {
   align?: "start" | "center" | "end";
@@ -36,141 +41,77 @@ const props = withDefaults(defineProps<DropdownMenuProps>(), {
 });
 
 const emit = defineEmits<{ "update:open": [next: boolean] }>();
-const contentId = `ds-dropdown-menu-${useId()}`;
-const triggerHost = ref<HTMLElement | null>(null);
+const DROPDOWN_MENU_BASE_Z_INDEX = 1200;
 const placement = computed<DropdownMenuPlacement>(() =>
   props.align === "center" ? "bottom" : `bottom-${props.align}`,
 );
-const trigger = useSlotTrigger(triggerHost, {
-  click: recordFirstItemFocus,
-  keydown: recordKeyboardFocus,
-});
-const emptyItems: RopavDropdownMenuItem[] = [];
-let pendingFocus: "first" | "last" = "first";
+const portalRoot = ref<HTMLElement | null>(null);
+const trigger = ref<HTMLElement | null>(null);
+const typeahead = useMenuTypeahead();
+let restoreFocusOnClose = true;
 
-const ropavProps: Readonly<RopavDropdownMenuProps> = {
-  get id() {
-    return contentId;
-  },
-  items: emptyItems,
-  get modal() {
-    return props.modal;
-  },
-  get offset() {
-    return props.sideOffset;
-  },
-  get placement() {
-    return placement.value;
-  },
-  get teleportTo() {
-    return props.portalTo;
-  },
-  strategy: "fixed",
-  get target() {
-    return trigger.value;
-  },
-};
-
-const {
-  actualPlacement,
-  close,
-  contentStyle,
-  isVisible,
-  menuRef: content,
-  rootRef,
-  teleportTo: resolvedPortalTo,
-} = useDropdownMenu(ropavProps, { openChange: onOpenChange });
-const resolvedContentStyle = computed(() => ({
-  ...contentStyle.value,
-  zIndex: "var(--dropdown-menu-z)",
-}));
-const setRootRef = (value: unknown) => (rootRef.value = toHTMLElement(value));
-const setContentRef = (value: unknown) => (content.value = toHTMLElement(value));
-
-provideMenuContext({ contentId });
-useMenuTriggerAria(trigger, () => isVisible.value, contentId);
-
-const surface = useMenuSurface({
-  close: closeMenu,
-  content,
-  open: () => isVisible.value,
-});
-
-function recordFirstItemFocus(): void {
-  pendingFocus = "first";
+function setTrigger(element: HTMLElement | null): void {
+  trigger.value = element;
 }
 
-function toHTMLElement(value: unknown): HTMLElement | null {
-  return value instanceof HTMLElement ? value : null;
+function onContentKeydown(event: KeyboardEvent): void {
+  if (event.key === "Tab") restoreFocusOnClose = false;
+  typeahead.onKeydown(event);
 }
 
-function recordKeyboardFocus(event: Event): void {
-  const keyboardEvent = event as KeyboardEvent;
-  if (keyboardEvent.key === "ArrowUp") pendingFocus = "last";
-  else if (
-    keyboardEvent.key === "ArrowDown" ||
-    keyboardEvent.key === "Enter" ||
-    keyboardEvent.key === " "
-  ) {
-    pendingFocus = "first";
-  }
+function onOutsideInteraction(): void {
+  restoreFocusOnClose = props.modal;
+}
+
+async function restoreTriggerFocus(): Promise<void> {
+  await nextTick();
+  await nextTick();
+  trigger.value?.focus({ preventScroll: true });
 }
 
 function onOpenChange(next: boolean): void {
   emit("update:open", next);
-  if (next) void focusItems(pendingFocus);
-}
-
-async function focusItems(edge: "first" | "last"): Promise<void> {
-  await nextTick();
-  await nextTick();
-  if (isVisible.value) focusMenuEdge(content.value, edge);
-}
-
-function onContentKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    closeMenu(true);
-    return;
+  if (next) {
+    restoreFocusOnClose = true;
+  } else if (restoreFocusOnClose) {
+    void restoreTriggerFocus();
   }
-  surface.onKeydown(event);
 }
 
-function closeMenu(restoreFocus: boolean): void {
-  close({ focusTrigger: restoreFocus });
-}
+onBeforeUnmount(() => {
+  const root = portalRoot.value;
+  queueMicrotask(() => root?.remove());
+});
 </script>
 
 <template>
-  <span :ref="setRootRef" class="ds-menu-root">
-    <span ref="triggerHost" class="ds-menu-trigger"><slot name="trigger" /></span>
-    <Teleport :to="resolvedPortalTo">
-      <div class="ds-menu-portal">
-        <div
-          v-if="isVisible"
-          :id="contentId"
-          :ref="setContentRef"
-          role="menu"
-          tabindex="-1"
-          :data-side="actualPlacement.split('-')[0]"
-          :style="resolvedContentStyle"
+  <RopavDropdownMenuRoot
+    :base-z-index="DROPDOWN_MENU_BASE_Z_INDEX"
+    :modal="modal"
+    @update:open="onOpenChange"
+  >
+    <RopavDropdownMenuTrigger :as="MenuPrimitiveSlot" :element-callback="setTrigger">
+      <slot name="trigger" />
+    </RopavDropdownMenuTrigger>
+    <RopavDropdownMenuPortal :to="portalTo">
+      <div ref="portalRoot" class="ds-menu-portal">
+        <RopavDropdownMenuContent
           :class="['ds-dropdown-menu', contentClass]"
-          @ds-menu-select="surface.onSelect"
-          @focusin="surface.onFocusin"
+          :offset="sideOffset"
+          :placement="placement"
+          strategy="fixed"
+          @focus-outside="onOutsideInteraction"
           @keydown="onContentKeydown"
-          @pointermove="surface.onPointermove"
+          @pointer-down-outside="onOutsideInteraction"
         >
           <slot name="items" />
-        </div>
+        </RopavDropdownMenuContent>
       </div>
-    </Teleport>
-  </span>
+    </RopavDropdownMenuPortal>
+  </RopavDropdownMenuRoot>
 </template>
 
 <style lang="scss">
-.ds-menu-root,
-.ds-menu-trigger,
 .ds-menu-portal {
   display: contents;
 }
@@ -226,6 +167,16 @@ function closeMenu(restoreFocus: boolean): void {
 
   [role="menuitemradio"] {
     padding-inline-start: 28px;
+  }
+
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"] {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
   }
 
   [role="menuitemradio"][aria-checked="false"] [data-menu-indicator] {

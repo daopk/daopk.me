@@ -5,12 +5,16 @@ export { default as Dialog } from "./Dialog.vue";
 export { default as DialogActions } from "./DialogActions.vue";
 export {
   default as DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuItemIndicator,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "./DropdownMenu.vue";
 export { default as HoverCard } from "./HoverCard.vue";
 export { default as RadioGroup } from "./RadioGroup.vue";
