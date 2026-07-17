@@ -29,6 +29,15 @@ export interface VaporMount {
   unmount(): void;
 }
 
+export async function flushPromises(): Promise<void> {
+  // Drain chained async setup work without relying on timers, which may be
+  // paused by tests using fake clocks in Vitest's Vapor VM pool.
+  for (let index = 0; index < 16; index += 1) {
+    await Promise.resolve();
+    await nextTick();
+  }
+}
+
 /**
  * Mount a Vapor component through the same VDOM-to-Vapor boundary used by the
  * production shell. Vue Test Utils 2.4 does not understand Vapor blocks yet,

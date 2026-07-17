@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { useResizeObserver } from "@vueuse/core";
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
@@ -196,8 +196,10 @@ async function selectNoteForView(
   }
 }
 
-function onNoteContextMenu(note: NoteListItem): void {
-  void selectNoteForView(note.path, { openEditor: false });
+function onNoteContextMenuOpen(open: boolean, note: NoteListItem): void {
+  if (open) {
+    void selectNoteForView(note.path, { openEditor: false });
+  }
 }
 
 async function duplicateNote(note: NoteListItem): Promise<void> {
@@ -318,7 +320,7 @@ function labelForStatus(status: NotesStatus): string {
       </EmptyState>
       <ScrollArea v-else as="ul" class="notes__list" aria-label="Notes">
         <li v-for="note in notes.notes.value" :key="note.path" class="notes__list-item">
-          <ContextMenu :modal="false">
+          <ContextMenu :modal="false" @update:open="onNoteContextMenuOpen($event, note)">
             <template #trigger>
               <button
                 type="button"
@@ -326,7 +328,6 @@ function labelForStatus(status: NotesStatus): string {
                 :class="{ 'notes__note-button--active': note.path === notes.selectedPath.value }"
                 :aria-current="note.path === notes.selectedPath.value ? 'page' : undefined"
                 @click="selectNote(note.path)"
-                @contextmenu="onNoteContextMenu(note)"
               >
                 <span class="notes__note-title">{{ note.title }}</span>
                 <span class="notes__note-meta">{{ formatModified(note.updatedAt) }}</span>

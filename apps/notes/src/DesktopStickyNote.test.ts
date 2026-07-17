@@ -1,7 +1,7 @@
-import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
+import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
@@ -66,16 +66,13 @@ function makeKernel() {
   return { kernel };
 }
 
-function mountSticky(note: PinnedDesktopNote, kernel: Kernel) {
-  return mount(DesktopStickyNote, {
-    attachTo: document.body,
+function mountSticky(note: PinnedDesktopNote, kernel: Kernel): VaporMount {
+  return mountVapor(DesktopStickyNote, {
     props: { note, stageSize: { width: 800, height: 600 } },
-    global: {
-      provide: {
-        [KernelInjectionKey as symbol]: kernel,
-        [AppContextInjectionKey as symbol]: makeContext(),
-      },
-    },
+    provide: [
+      [KernelInjectionKey, kernel],
+      [AppContextInjectionKey, makeContext()],
+    ],
   });
 }
 
@@ -141,12 +138,10 @@ describe("DesktopStickyNote", () => {
     await flushPromises();
     await nextTick();
 
-    expect((wrapper.get(".desktop-sticky-note__title").element as HTMLInputElement).value).toBe(
-      "Alpha",
-    );
+    expect(wrapper.find<HTMLInputElement>(".desktop-sticky-note__title").value).toBe("Alpha");
 
-    await wrapper.get(".desktop-sticky-note__title").setValue("Pinned Alpha");
-    await wrapper.get(".desktop-sticky-note__body").setValue("Updated body");
+    await wrapper.setValue(".desktop-sticky-note__title", "Pinned Alpha");
+    await wrapper.setValue(".desktop-sticky-note__body", "Updated body");
     await vi.advanceTimersByTimeAsync(800);
     await flushPromises();
 
@@ -173,8 +168,8 @@ describe("DesktopStickyNote", () => {
 
     await flushPromises();
     wrapper
-      .get(".desktop-sticky-note__title")
-      .element.dispatchEvent(pointerEvent("pointerdown", { clientX: 20, clientY: 30 }));
+      .find(".desktop-sticky-note__title")
+      .dispatchEvent(pointerEvent("pointerdown", { clientX: 20, clientY: 30 }));
     document.dispatchEvent(pointerEvent("pointermove", { clientX: 86, clientY: 72 }));
     document.dispatchEvent(pointerEvent("pointerup", { clientX: 86, clientY: 72 }));
     await nextTick();
@@ -196,7 +191,7 @@ describe("DesktopStickyNote", () => {
     const wrapper = mountSticky(note, kernel);
 
     await flushPromises();
-    const title = wrapper.get(".desktop-sticky-note__title").element as HTMLInputElement;
+    const title = wrapper.find<HTMLInputElement>(".desktop-sticky-note__title");
     title.dispatchEvent(pointerEvent("pointerdown", { clientX: 20, clientY: 30 }));
     document.dispatchEvent(pointerEvent("pointerup", { clientX: 20, clientY: 30 }));
     await nextTick();
@@ -216,7 +211,7 @@ describe("DesktopStickyNote", () => {
     const wrapper = mountSticky(note, kernel);
 
     await flushPromises();
-    dispatchContextMenu(wrapper.get(".desktop-sticky-note").element);
+    dispatchContextMenu(wrapper.find(".desktop-sticky-note"));
     await flushOverlay();
 
     expect(menuItems()[0]?.classList.contains("desktop-sticky-note__color-dot")).toBe(true);

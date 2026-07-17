@@ -27,6 +27,8 @@ export default mergeConfig(
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
         "apps/clock/src/App.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",
+        "apps/notes/src/App.test.ts",
+        "apps/notes/src/DesktopStickyNote.test.ts",
         "apps/notes/src/NotesDesktopLayer.test.ts",
         "apps/pdf-viewer/src/components/PdfFilePreview.test.ts",
       ],

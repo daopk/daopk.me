@@ -1,6 +1,7 @@
-import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+
+import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
 
 const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
@@ -191,21 +192,21 @@ function mountNotes(
   kernel: Kernel,
   context: AppContext = makeContext(),
   options: { readonly appChrome?: AppChromeController } = {},
-) {
-  const provide: Record<symbol, unknown> = {
-    [KernelInjectionKey as symbol]: kernel,
-    [AppContextInjectionKey as symbol]: context,
-  };
-  if (options.appChrome !== undefined) {
-    provide[AppChromeInjectionKey as symbol] = options.appChrome;
-  }
-
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      provide,
-    },
+): VaporMount {
+  return mountVapor(App, {
+    provide: [
+      [KernelInjectionKey, kernel],
+      [AppContextInjectionKey, context],
+      ...(options.appChrome === undefined
+        ? []
+        : ([[AppChromeInjectionKey, options.appChrome]] as const)),
+    ],
   });
+}
+
+async function click(element: HTMLElement): Promise<void> {
+  element.click();
+  await nextTick();
 }
 
 function setNotesWidth(width: number): void {
@@ -228,6 +229,7 @@ async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
   await flushPromises();
+  await nextTick();
 }
 
 function menuItems(): HTMLElement[] {
@@ -252,9 +254,9 @@ describe("Notes App.vue", () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain("No notes yet.");
-    const newButton = wrapper.get(".notes__new-button");
-    expect(newButton.text()).toContain("New");
-    expect(newButton.classes()).toContain("ds-button--sm");
+    const newButton = wrapper.find(".notes__new-button");
+    expect(newButton.textContent).toContain("New");
+    expect(newButton.classList).toContain("ds-button--sm");
 
     wrapper.unmount();
   });
@@ -274,9 +276,9 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
 
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(true);
-    expect(wrapper.find(".notes__editor").exists()).toBe(true);
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Alpha");
+    expect(wrapper.exists(".notes__sidebar")).toBe(true);
+    expect(wrapper.exists(".notes__editor")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Alpha");
 
     wrapper.unmount();
   });
@@ -303,8 +305,8 @@ describe("Notes App.vue", () => {
 
     await flushPromises();
 
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
-    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
+    expect(wrapper.find<HTMLTextAreaElement>(".notes__textarea").value).toBe("B body");
 
     wrapper.unmount();
   });
@@ -334,8 +336,8 @@ describe("Notes App.vue", () => {
     });
     await flushPromises();
 
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
-    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
+    expect(wrapper.find<HTMLTextAreaElement>(".notes__textarea").value).toBe("B body");
 
     wrapper.unmount();
   });
@@ -360,11 +362,11 @@ describe("Notes App.vue", () => {
     );
 
     await flushPromises();
-    await wrapper.findAll(".notes__note-button")[1]!.trigger("click");
+    await click(wrapper.findAll<HTMLElement>(".notes__note-button")[1]!);
     await flushPromises();
 
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
-    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
+    expect(wrapper.find<HTMLTextAreaElement>(".notes__textarea").value).toBe("B body");
 
     wrapper.unmount();
   });
@@ -392,10 +394,10 @@ describe("Notes App.vue", () => {
     setNotesWidth(320);
     await nextTick();
 
-    expect(wrapper.find(".notes").classes()).toContain("notes--compact");
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(true);
-    expect(wrapper.find(".notes__editor").exists()).toBe(false);
-    expect(wrapper.get(".notes__new-button").classes()).toContain("ds-button--md");
+    expect(wrapper.find(".notes").classList).toContain("notes--compact");
+    expect(wrapper.exists(".notes__sidebar")).toBe(true);
+    expect(wrapper.exists(".notes__editor")).toBe(false);
+    expect(wrapper.find(".notes__new-button").classList).toContain("ds-button--md");
     expect(wrapper.findAll(".notes__note-button")).toHaveLength(2);
 
     wrapper.unmount();
@@ -423,13 +425,13 @@ describe("Notes App.vue", () => {
     await flushPromises();
     setNotesWidth(320);
     await nextTick();
-    await wrapper.findAll(".notes__note-button")[1]!.trigger("click");
+    await click(wrapper.findAll<HTMLElement>(".notes__note-button")[1]!);
     await flushPromises();
 
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(false);
-    expect(wrapper.find(".notes__editor").exists()).toBe(true);
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
-    expect((wrapper.find(".notes__textarea").element as HTMLTextAreaElement).value).toBe("B body");
+    expect(wrapper.exists(".notes__sidebar")).toBe(false);
+    expect(wrapper.exists(".notes__editor")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
+    expect(wrapper.find<HTMLTextAreaElement>(".notes__textarea").value).toBe("B body");
 
     wrapper.unmount();
   });
@@ -465,18 +467,18 @@ describe("Notes App.vue", () => {
     await flushPromises();
     setNotesWidth(320);
     await nextTick();
-    await wrapper.findAll(".notes__note-button")[1]!.trigger("click");
+    await click(wrapper.findAll<HTMLElement>(".notes__note-button")[1]!);
     await flushPromises();
 
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(false);
+    expect(wrapper.exists(".notes__sidebar")).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith("Beta");
     expect(backAction?.ariaLabel).toBe("Back to Notes");
 
     backAction?.handler();
     await nextTick();
 
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(true);
-    expect(wrapper.find(".notes__editor").exists()).toBe(false);
+    expect(wrapper.exists(".notes__sidebar")).toBe(true);
+    expect(wrapper.exists(".notes__editor")).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith(null);
     expect(appChrome.setBackAction).toHaveBeenLastCalledWith(null);
 
@@ -489,17 +491,16 @@ describe("Notes App.vue", () => {
     await flushPromises();
     setNotesWidth(320);
     await nextTick();
-    await wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("New"))
-      ?.trigger("click");
+    const newButton = wrapper
+      .findAll<HTMLButtonElement>("button")
+      .find((button) => button.textContent?.includes("New"));
+    expect(newButton).toBeDefined();
+    await click(newButton!);
     await flushPromises();
 
-    expect(wrapper.find(".notes__sidebar").exists()).toBe(false);
-    expect(wrapper.find(".notes__editor").exists()).toBe(true);
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe(
-      "Untitled note",
-    );
+    expect(wrapper.exists(".notes__sidebar")).toBe(false);
+    expect(wrapper.exists(".notes__editor")).toBe(true);
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Untitled note");
 
     wrapper.unmount();
   });
@@ -524,7 +525,7 @@ describe("Notes App.vue", () => {
     );
 
     await flushPromises();
-    dispatchContextMenu(wrapper.findAll(".notes__note-button")[1]!.element);
+    dispatchContextMenu(wrapper.findAll(".notes__note-button")[1]!);
     await flushOverlay();
 
     expect(menuItems().map((node) => node.textContent?.trim())).toEqual([
@@ -534,7 +535,7 @@ describe("Notes App.vue", () => {
       "Reveal in Finder",
       "Delete...",
     ]);
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
 
     wrapper.unmount();
   });
@@ -552,7 +553,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    dispatchContextMenu(wrapper.get(".notes__note-button").element);
+    dispatchContextMenu(wrapper.find(".notes__note-button"));
     await flushOverlay();
     menuItems()[2]!.click();
     await flushOverlay();
@@ -575,7 +576,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    dispatchContextMenu(wrapper.get(".notes__note-button").element);
+    dispatchContextMenu(wrapper.find(".notes__note-button"));
     await flushOverlay();
     menuItems()[1]!.click();
     await flushOverlay();
@@ -607,7 +608,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    dispatchContextMenu(wrapper.get(".notes__note-button").element);
+    dispatchContextMenu(wrapper.find(".notes__note-button"));
     await flushOverlay();
     menuItems()[3]!.click();
     await flushOverlay();
@@ -640,7 +641,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    dispatchContextMenu(wrapper.findAll(".notes__note-button")[0]!.element);
+    dispatchContextMenu(wrapper.findAll(".notes__note-button")[0]!);
     await flushOverlay();
     menuItems()[4]!.click();
     await flushOverlay();
@@ -660,7 +661,7 @@ describe("Notes App.vue", () => {
     expect(kernel.trash.moveToTrash).toHaveBeenCalledWith("/home/notes/a.md", {
       handleId: "notes-handle",
     });
-    expect((wrapper.find(".notes__title-input").element as HTMLInputElement).value).toBe("Beta");
+    expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
 
     wrapper.unmount();
   });
@@ -679,7 +680,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    await wrapper.find(".notes__textarea").setValue("New body");
+    await wrapper.setValue(".notes__textarea", "New body");
     await vi.advanceTimersByTimeAsync(800);
 
     expect(kernel.vfs.writeText).toHaveBeenLastCalledWith(
@@ -709,7 +710,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    await wrapper.find(".notes__textarea").setValue("Changed before close");
+    await wrapper.setValue(".notes__textarea", "Changed before close");
 
     const pendingCloseWork: Promise<unknown>[] = [];
     kernel.events.emit("app.will-kill", {
@@ -751,7 +752,7 @@ describe("Notes App.vue", () => {
     const wrapper = mountNotes(kernel);
 
     await flushPromises();
-    await wrapper.find(".notes__textarea").setValue("Changed before close");
+    await wrapper.setValue(".notes__textarea", "Changed before close");
 
     const pendingCloseWork: Promise<unknown>[] = [];
     kernel.events.emit("app.will-kill", {
