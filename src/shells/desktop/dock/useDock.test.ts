@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, ref, type Component, type Ref } from "vue";
+import { defineVaporComponent, ref, type Ref } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -16,8 +16,8 @@ import {
 import { SPOTLIGHT_DOCK_ITEM_KEY, TRASH_DOCK_ITEM_KEY, type DockItemModel } from "./types";
 import { useDock } from "./useDock";
 
-const Stub = defineComponent({ template: "<span />" });
-const StubIcon = defineComponent({ template: "<svg />" });
+const Stub = defineVaporComponent(() => document.createElement("span"));
+const StubIcon = defineVaporComponent(() => document.createElement("svg"));
 
 let fakeManifests: AppManifest[];
 let pinnedAppIds: Ref<string[]>;
@@ -26,9 +26,9 @@ function makeManifest(id: string, category: AppManifest["category"] = "system"):
   return {
     id,
     name: id[0]!.toUpperCase() + id.slice(1),
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category,
-    component: () => Promise.resolve({ default: Stub as Component }),
+    component: () => Promise.resolve({ default: Stub }),
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 import type { SettingsSectionId } from "~/types/settings";
 import { mountVaporTest } from "~/test/mountVapor";
 
@@ -24,7 +24,7 @@ const components = {
   account: SettingsAccountIcon,
   privacy: SettingsPrivacyIcon,
   about: SettingsAboutDeviceIcon,
-} as const satisfies Record<SettingsSectionId, Component>;
+} as const satisfies Record<SettingsSectionId, VaporComponent>;
 
 describe("Settings menu bitmap icons", () => {
   it("provides one raster asset for every Settings section", () => {

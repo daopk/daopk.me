@@ -1,5 +1,13 @@
 <script setup vapor lang="ts">
-import { computed, inject, onUnmounted, ref, useTemplateRef, watch, type Component } from "vue";
+import {
+  computed,
+  inject,
+  onUnmounted,
+  ref,
+  useTemplateRef,
+  watch,
+  type VaporComponent,
+} from "vue";
 import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
 import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
 import {
@@ -42,8 +50,8 @@ import {
 interface SectionEntry {
   id: SettingsSectionId;
   labelKey: SettingsTranslationKey;
-  icon: Component;
-  component: Component;
+  icon: VaporComponent;
+  component: VaporComponent;
 }
 
 interface AppFrameRef {
@@ -54,54 +62,54 @@ const sectionEntries: Record<SettingsSectionId, SectionEntry> = {
   appearance: {
     id: "appearance",
     labelKey: "settings.nav.appearance",
-    icon: AppearanceIcon as Component,
+    icon: AppearanceIcon,
     component: AppearanceSection,
   },
   language: {
     id: "language",
     labelKey: "settings.nav.language",
-    icon: LanguageIcon as Component,
+    icon: LanguageIcon,
     component: LanguageSection,
   },
   background: {
     id: "background",
     labelKey: "settings.nav.background",
-    icon: BackgroundIcon as Component,
+    icon: BackgroundIcon,
     component: BackgroundSection,
   },
   comfort: {
     id: "comfort",
     labelKey: "settings.nav.comfort",
-    icon: ComfortIcon as Component,
+    icon: ComfortIcon,
     component: ComfortSection,
   },
   dock: {
     id: "dock",
     labelKey: "settings.nav.dock",
-    icon: DockIcon as Component,
+    icon: DockIcon,
     component: DockSection,
   },
   account: {
     id: "account",
     labelKey: "settings.nav.account",
-    icon: AccountIcon as Component,
+    icon: AccountIcon,
     component: AccountSection,
   },
   privacy: {
     id: "privacy",
     labelKey: "settings.nav.privacy",
-    icon: PrivacyIcon as Component,
+    icon: PrivacyIcon,
     component: PrivacySection,
   },
   about: {
     id: "about",
     labelKey: "settings.nav.about",
-    icon: AboutIcon as Component,
+    icon: AboutIcon,
     component: AboutDeviceSection,
   },
 };
 
-const componentMap: Record<SettingsSectionId, Component> = {
+const componentMap: Record<SettingsSectionId, VaporComponent> = {
   appearance: AppearanceSection,
   language: LanguageSection,
   background: BackgroundSection,
@@ -143,7 +151,7 @@ function normalizeSection(value: unknown): SettingsSectionId {
 }
 
 const activeId = ref<SettingsSectionId>(normalizeSection(appContext?.args.section));
-const activeComponent = computed<Component>(() => componentMap[activeId.value]);
+const activeComponent = computed<VaporComponent>(() => componentMap[activeId.value]);
 const activeLabel = computed(() => t(sectionEntries[activeId.value].labelKey));
 
 const narrowPanelOpen = ref(false);

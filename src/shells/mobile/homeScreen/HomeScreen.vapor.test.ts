@@ -1,7 +1,7 @@
 import { mountVaporTest as mount } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, nextTick, type Component } from "vue";
+import { defineVaporComponent, nextTick } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -19,7 +19,7 @@ function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id: "alpha",
     name: "Alpha",
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,

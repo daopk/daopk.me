@@ -11,7 +11,7 @@ import type {
 import type { Kernel } from "~/types/kernel";
 import type { AppPreviewProvider } from "~/types/preview";
 import type { WidgetManifest } from "~/types/widget";
-import type { Component } from "vue";
+import type { Component, VaporComponent } from "vue";
 
 import {
   coerceFirstPartyCatalog,
@@ -52,7 +52,7 @@ function asEsmModule(component: Component): { default: Component } {
  * cannot be resolved to a trusted asset URL (it already passed shape validation
  * at catalog coercion time, so this is defense-in-depth, not the happy path).
  */
-function resolveAppIcon(entryUrl: string, appId: string, ref: string): Component {
+function resolveAppIcon(entryUrl: string, appId: string, ref: string): VaporComponent {
   const url = resolveTrustedAppAssetUrl(entryUrl, appId, ref);
   return url === null ? FallbackAppIcon : createImageIcon(url, `AppIcon:${appId}:${ref}`);
 }

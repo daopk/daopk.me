@@ -1,9 +1,9 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 interface IconButtonProps {
   label: string;
-  icon?: Component;
+  icon?: VaporComponent;
   active?: boolean;
   disabled?: boolean;
   pressed?: boolean;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defineComponent } from "vue";
+import { defineVaporComponent } from "vue";
 
 import {
   DesktopContextMenuRegistry,
@@ -58,7 +58,7 @@ describe("DesktopContributionRegistry", () => {
   it("lists desktop renderers by surface and order", () => {
     const registry = new DesktopRendererRegistry();
     const component = () =>
-      Promise.resolve({ default: defineComponent({ name: "Renderer", render: () => null }) });
+      Promise.resolve({ default: defineVaporComponent(() => document.createElement("div")) });
 
     registry.register({
       id: "notes:renderer-b",

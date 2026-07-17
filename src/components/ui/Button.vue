@@ -1,13 +1,13 @@
 <script setup vapor lang="ts">
-import { useTemplateRef, type Component } from "vue";
+import { useTemplateRef, type VaporComponent } from "vue";
 
 interface ButtonProps {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
   loading?: boolean;
   disabled?: boolean;
-  iconStart?: Component;
-  iconEnd?: Component;
+  iconStart?: VaporComponent;
+  iconEnd?: VaporComponent;
   type?: "button" | "submit" | "reset";
 }
 

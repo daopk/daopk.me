@@ -2,8 +2,7 @@
 
 Stateful and behaviorally complex primitives exposed through the stable
 `@daopk/ui` facade. Every SFC in this directory compiles in Vue Vapor mode;
-apps can keep using the existing exports, props, events, slots and `ds-*`
-classes while the rest of the repository migrates incrementally.
+apps keep using the existing exports, props, events, slots and `ds-*` classes.
 
 The implementation is fully Vapor while composing several Ropav behaviors:
 

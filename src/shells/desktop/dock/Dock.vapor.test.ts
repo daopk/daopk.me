@@ -23,7 +23,7 @@ function makeManifest(id: string, overrides: Partial<AppManifest> = {}): AppMani
   return {
     id,
     name: id.toUpperCase(),
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
     component: (): Promise<{ default: Component }> => Promise.resolve({ default: StubApp }),
     ...overrides,

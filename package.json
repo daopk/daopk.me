@@ -62,7 +62,6 @@
     "@types/node": "^26.1.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "4.1.10",
-    "@vue/server-renderer": "catalog:",
     "@vue/tsconfig": "^0.9.1",
     "axe-core": "^4.12.1",
     "fake-indexeddb": "^6.2.5",

@@ -1,4 +1,4 @@
-import type { Component, InjectionKey } from "vue";
+import type { Component, InjectionKey, VaporComponent } from "vue";
 
 import {
   AppChromeInjectionKey as rawAppChromeInjectionKey,
@@ -59,14 +59,14 @@ export interface AppManifest {
   /** Short source revision for first-party release traceability. */
   revision?: string;
   /**
-   * App icon as a resolved Vue Component. Built-in (system) apps import a
+   * App icon as a resolved Vue Vapor component. Built-in (system) apps import a
    * Fluent Color glyph directly; first-party apps declare a flat icon filename
    * in their serializable manifest, which the host resolves to a trusted
    * release-pinned image component (`createImageIcon`) at registration. Keeping
-   * this contract a resolved Component (not a string key) lets the dock,
+   * this contract a resolved Vapor component (not a string key) lets the dock,
    * launcher, and other surfaces render any app icon uniformly via `AppIcon`.
    */
-  icon: Component;
+  icon: VaporComponent;
   category: "system" | "productivity" | "media" | "dev" | "other";
   hidden?: boolean;
   singleton?: boolean;

@@ -31,7 +31,7 @@ function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id: "alpha",
     name: "Alpha",
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,
@@ -143,12 +143,12 @@ describe("AppView", () => {
     const probeManifest: AppManifest = {
       id: "alpha",
       name: "Alpha",
-      icon: StubIcon as Component,
+      icon: StubIcon,
       category: "system",
       component: () =>
         Promise.resolve(
           Object.assign(Object.create(null) as { default: Component }, {
-            default: Probe as Component,
+            default: Probe,
             __esModule: true,
           }),
         ),
@@ -214,12 +214,12 @@ describe("AppView", () => {
     const probeManifest: AppManifest = {
       id: "settings",
       name: "Settings",
-      icon: StubIcon as Component,
+      icon: StubIcon,
       category: "system",
       component: () =>
         Promise.resolve(
           Object.assign(Object.create(null) as { default: Component }, {
-            default: Probe as Component,
+            default: Probe,
             __esModule: true,
           }),
         ),
@@ -299,12 +299,12 @@ describe("AppView", () => {
     const probeManifest: AppManifest = {
       id: "alpha",
       name: "Alpha",
-      icon: StubIcon as Component,
+      icon: StubIcon,
       category: "system",
       component: () =>
         Promise.resolve(
           Object.assign(Object.create(null) as { default: Component }, {
-            default: Probe as Component,
+            default: Probe,
             __esModule: true,
           }),
         ),
@@ -342,12 +342,12 @@ describe("AppView", () => {
     const probeManifest: AppManifest = {
       id: "alpha",
       name: "Alpha",
-      icon: StubIcon as Component,
+      icon: StubIcon,
       category: "system",
       component: () =>
         Promise.resolve(
           Object.assign(Object.create(null) as { default: Component }, {
-            default: Probe as Component,
+            default: Probe,
             __esModule: true,
           }),
         ),

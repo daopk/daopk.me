@@ -45,9 +45,9 @@ function asEsm(component: Component): { default: Component } {
 function manifest(overrides: Partial<AppManifest> & { id: string }): AppManifest {
   return {
     name: overrides.id,
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "productivity",
-    component: () => Promise.resolve(asEsm(StubApp as Component)),
+    component: () => Promise.resolve(asEsm(StubApp)),
     ...overrides,
   };
 }
@@ -153,7 +153,7 @@ describe("Window context menu", () => {
         manifest({
           id: "youtube-player",
           name: "YouTube Player",
-          component: () => Promise.resolve(asEsm(ChromeProbe as Component)),
+          component: () => Promise.resolve(asEsm(ChromeProbe)),
         }),
       ],
     );

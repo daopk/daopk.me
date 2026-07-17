@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, type Component } from "vue";
+import { computed, type VaporComponent } from "vue";
 
 /**
  * Canonical renderer for an app/identity icon. The resolved icon is always a
@@ -10,14 +10,14 @@ import { computed, type Component } from "vue";
  * underlying svg/img so existing call-site styling keeps working.
  */
 const props = defineProps<{
-  icon?: Component | null;
+  icon?: VaporComponent | null;
   /** Used when `icon` is absent — e.g. a generic slot icon for widget tiles. */
-  fallback?: Component | null;
+  fallback?: VaporComponent | null;
   size?: number | string;
   strokeWidth?: number | string;
 }>();
 
-const resolved = computed<Component | null>(() => props.icon ?? props.fallback ?? null);
+const resolved = computed<VaporComponent | null>(() => props.icon ?? props.fallback ?? null);
 </script>
 
 <template>

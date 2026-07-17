@@ -1,6 +1,6 @@
 import { mountVaporTest as mount } from "~/test/mountVapor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, type Component } from "vue";
+import { defineVaporComponent } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -14,7 +14,7 @@ function manifest(id: string, name?: string, overrides: Partial<AppManifest> = {
   return {
     id,
     name: name ?? id,
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,

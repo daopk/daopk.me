@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import "fake-indexeddb/auto";
 
@@ -16,7 +16,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 let pathCounter = 0;
 
 function makeManifest(

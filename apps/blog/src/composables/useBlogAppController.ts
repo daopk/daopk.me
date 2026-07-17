@@ -1,4 +1,4 @@
-import { computed, onUnmounted, ref, type Component, type ComputedRef, type Ref } from "vue";
+import { computed, onUnmounted, ref, type ComputedRef, type Ref, type VaporComponent } from "vue";
 
 import { useAppChrome } from "@daopk/kit";
 import { Check, Share2 } from "@daopk/icons";
@@ -35,7 +35,7 @@ export interface UseBlogAppControllerBindings {
   readonly currentPostCover: ComputedRef<BlogPostCover | null>;
   readonly debugHandleId: string | undefined;
   readonly notFoundDescription: ComputedRef<string>;
-  readonly shareButtonIcon: ComputedRef<Component>;
+  readonly shareButtonIcon: ComputedRef<VaporComponent>;
   readonly shareButtonLabel: ComputedRef<string>;
   readonly shareCopied: Ref<boolean>;
   readonly view: Ref<BlogView>;
@@ -85,7 +85,7 @@ export function useBlogAppController({
   );
   const chrome = useAppChrome({ title: chromeTitle, backAction: chromeBackAction });
   const shareButtonLabel = computed(() => (shareCopied.value ? "Copied URL" : "Share post"));
-  const shareButtonIcon = computed<Component>(() => (shareCopied.value ? Check : Share2));
+  const shareButtonIcon = computed<VaporComponent>(() => (shareCopied.value ? Check : Share2));
   const debugHandleId = import.meta.env.DEV ? appContext?.handleId : undefined;
 
   let shareCopiedTimeout: number | undefined;

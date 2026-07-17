@@ -1,4 +1,4 @@
-import { computed, inject, onMounted, onUnmounted, ref, type Component } from "vue";
+import { computed, inject, onMounted, onUnmounted, ref, type VaporComponent } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { FinderFileIcon, FinderFolderIcon } from "~/icons/fluentColor";
@@ -205,7 +205,7 @@ export function useTrashApp() {
     return item.kind === "directory" ? "Folder" : "File";
   }
 
-  function itemIcon(item: TrashItem): Component {
+  function itemIcon(item: TrashItem): VaporComponent {
     return item.kind === "directory" ? FinderFolderIcon : FinderFileIcon;
   }
 

@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import { createPaletteIcon } from "./createIcon";
 import {
@@ -9,7 +9,7 @@ import {
 
 export type { FluentColorIconName };
 
-function createFluentIcon(name: FluentColorIconName, componentName: string): Component {
+function createFluentIcon(name: FluentColorIconName, componentName: string): VaporComponent {
   return createPaletteIcon(fluentColorIconData[name], componentName);
 }
 

@@ -1,6 +1,6 @@
 import { flushPromises, mountVaporTest as mount, type VaporTestWrapper } from "~/test/mountVapor";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, nextTick, type Component } from "vue";
+import { defineVaporComponent, nextTick } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -36,7 +36,7 @@ function manifest(overrides: Partial<AppManifest> & { id: string; name: string }
   return {
     version: "1.0.0",
     category: "productivity",
-    icon: IconStub as Component,
+    icon: IconStub,
     component: async () => ({ default: IconStub }),
     ...overrides,
   };

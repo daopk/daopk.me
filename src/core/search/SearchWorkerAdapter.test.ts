@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import { debugWarn } from "~/core/debug";
 import { wrapRpcMethod } from "~/core/ipc/rpc";
@@ -20,7 +20,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 
 type EventListener = (payload: { id: string }) => void;
 

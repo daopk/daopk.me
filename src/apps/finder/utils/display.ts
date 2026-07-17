@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import { formatBytes, formatDateTime, type VfsDirEntry } from "@daopk/sdk";
 
@@ -19,7 +19,7 @@ export function isCloudDriveEntry(entry: VfsDirEntry): boolean {
   return entry.kind === "directory" && entry.path === "/cloud";
 }
 
-export function entryIcon(entry: VfsDirEntry): Component {
+export function entryIcon(entry: VfsDirEntry): VaporComponent {
   if (isCloudDriveEntry(entry)) {
     return CloudFolderIcon;
   }

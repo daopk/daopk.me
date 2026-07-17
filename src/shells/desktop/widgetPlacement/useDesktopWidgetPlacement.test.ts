@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { defineVaporComponent } from "vue";
 
 import type { WidgetPlacement } from "~/core/widgets/WidgetPlacementStore";
 import type { WidgetManifest } from "~/types/widget";
 
 import { useDesktopWidgetPlacementResolver } from "./useDesktopWidgetPlacement";
+
+const StubWidget = defineVaporComponent(() => document.createElement("div"));
 
 function makeManifest(overrides: Partial<WidgetManifest> = {}): WidgetManifest {
   return {
@@ -11,7 +14,7 @@ function makeManifest(overrides: Partial<WidgetManifest> = {}): WidgetManifest {
     title: "Test Widget",
     surface: "desktop:wallpaper",
     size: "sm",
-    component: () => Promise.resolve({ default: { render: () => null } }),
+    component: () => Promise.resolve({ default: StubWidget }),
     ...overrides,
   };
 }

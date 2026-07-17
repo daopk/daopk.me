@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import type { AppManifest, AppPermission } from "~/types/app";
@@ -12,7 +12,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 
 function makeManifest(
   id: string,

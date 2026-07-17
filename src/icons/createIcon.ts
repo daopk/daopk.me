@@ -1,5 +1,5 @@
 import type { IconifyIcon } from "@iconify/utils";
-import { markRaw, type Component } from "vue";
+import { markRaw, type VaporComponent } from "vue";
 
 import ImageIcon from "./ImageIcon.vue";
 import SvgIcon from "./SvgIcon.vue";
@@ -8,7 +8,7 @@ type ComponentOptions = Record<string, unknown> & {
   props?: Record<string, unknown>;
 };
 
-function getComponentOptions(component: Component): ComponentOptions {
+function getComponentOptions(component: VaporComponent): ComponentOptions {
   if (typeof component !== "object" || component === null) {
     throw new TypeError("Vapor icon base must compile to a component options object");
   }
@@ -17,11 +17,11 @@ function getComponentOptions(component: Component): ComponentOptions {
 }
 
 function cloneWithDefaultProp(
-  base: Component,
+  base: VaporComponent,
   componentName: string,
   propName: "icon" | "src",
   defaultValue: IconifyIcon | string,
-): Component {
+): VaporComponent {
   const options = getComponentOptions(base);
   const propOptions = options.props ?? {};
   const existingProp = propOptions[propName];
@@ -42,10 +42,10 @@ function cloneWithDefaultProp(
         default: typeof defaultValue === "string" ? defaultValue : () => defaultValue,
       },
     },
-  }) as Component;
+  }) as VaporComponent;
 }
 
-export function createIcon(icon: IconifyIcon, componentName: string): Component {
+export function createIcon(icon: IconifyIcon, componentName: string): VaporComponent {
   return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
 }
 
@@ -55,10 +55,10 @@ export function createIcon(icon: IconifyIcon, componentName: string): Component 
  * as SVG icons so all icon components remain interchangeable; `strokeWidth` is
  * ignored for image sources.
  */
-export function createImageIcon(src: string, componentName: string): Component {
+export function createImageIcon(src: string, componentName: string): VaporComponent {
   return cloneWithDefaultProp(ImageIcon, componentName, "src", src);
 }
 
-export function createPaletteIcon(icon: IconifyIcon, componentName: string): Component {
+export function createPaletteIcon(icon: IconifyIcon, componentName: string): VaporComponent {
   return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
 }

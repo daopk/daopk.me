@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { X as DismissIcon } from "~/icons/lucide";
-import { type Component, computed } from "vue";
+import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 
@@ -9,7 +9,7 @@ const props = defineProps<{
   handleId: string;
   manifestId: string;
   name: string;
-  icon: Component;
+  icon: VaporComponent;
 }>();
 
 const emit = defineEmits<{

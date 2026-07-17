@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporAsyncComponent, defineVaporComponent, nextTick, type Component } from "vue";
+import {
+  defineVaporAsyncComponent,
+  defineVaporComponent,
+  nextTick,
+  type Component,
+  type VaporComponent,
+} from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { Kernel, KernelAppsRegisterOptions } from "~/types/kernel";
@@ -137,7 +143,7 @@ async function renderViaAsyncComponent(
 }
 
 /** Render a resolved identity icon component to HTML so its `<img>`/fallback is inspectable. */
-function renderIcon(icon: Component | undefined | null): string {
+function renderIcon(icon: Component | VaporComponent | undefined | null): string {
   if (icon === undefined || icon === null) {
     return "";
   }

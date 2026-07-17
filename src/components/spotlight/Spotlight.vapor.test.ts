@@ -1,6 +1,6 @@
 import { mountVaporTest as mount, type VaporTestWrapper } from "~/test/mountVapor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, type Component } from "vue";
+import { defineVaporComponent } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";
 import type { SpotlightRecentEntry } from "~/core/spotlight/SpotlightRecentsStore";
@@ -46,7 +46,7 @@ function appManifest(id: string, overrides: Partial<AppManifest> = {}): AppManif
   return {
     id,
     name: id.charAt(0).toUpperCase() + id.slice(1),
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,

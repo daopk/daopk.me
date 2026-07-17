@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { WidgetManifest, WidgetShellScope, WidgetSize, WidgetSurface } from "~/types/widget";
@@ -16,7 +16,7 @@ export interface WidgetCatalogItem {
   id: string;
   title: string;
   description: string;
-  icon?: Component;
+  icon?: VaporComponent;
   provider: WidgetCatalogProvider;
   surface: WidgetSurface;
   surfaceLabel: string;

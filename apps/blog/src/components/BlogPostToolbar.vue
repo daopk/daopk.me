@@ -1,12 +1,12 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import { AppToolbar, IconButton } from "@daopk/kit";
 import { ArrowLeft } from "@daopk/icons";
 import { Button } from "@daopk/ui";
 
 defineProps<{
-  readonly shareButtonIcon: Component;
+  readonly shareButtonIcon: VaporComponent;
   readonly shareButtonLabel: string;
   readonly shareCopied: boolean;
 }>();

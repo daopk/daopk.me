@@ -8,7 +8,7 @@ import {
 } from "~/icons/fluentColor";
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { Search as SearchIcon } from "~/icons/lucide";
-import { computed, ref, useId, watch, type Component } from "vue";
+import { computed, ref, useId, watch, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { useFocusTrap } from "~/components/ui/useFocusTrap";
@@ -59,7 +59,7 @@ interface Row {
   id: string;
   title: string;
   hint: string;
-  icon: Component | undefined;
+  icon: VaporComponent | undefined;
   badge: string;
   snippet: string;
   vfs: SearchVfsMetadata | null;
@@ -120,7 +120,7 @@ function resolveVfsRow(hit: SearchHit): Omit<Row, "sectionLabel"> | null {
   };
 }
 
-function fileIconFor(metadata: SearchVfsMetadata): Component {
+function fileIconFor(metadata: SearchVfsMetadata): VaporComponent {
   if (detectVfsFileType(vfsFileTypeInputFromPath(metadata.path, metadata.mimeType)) === "pdf") {
     return FinderPdfFileIcon;
   }

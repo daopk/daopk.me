@@ -1,13 +1,8 @@
 import type { Component, VaporComponent } from "vue";
 
-export type VerifiedVaporComponent = Component &
-  VaporComponent & {
-    readonly __vapor: true;
-  };
+export type VerifiedVaporComponent = Component & VaporComponent & { readonly __vapor: true };
 
-export function isVaporComponent(
-  component: Component | VaporComponent,
-): component is VerifiedVaporComponent {
+export function isVaporComponent(component: unknown): component is VerifiedVaporComponent {
   return (
     (typeof component === "object" || typeof component === "function") &&
     component !== null &&
@@ -17,7 +12,7 @@ export function isVaporComponent(
 }
 
 export function assertVaporComponent(
-  component: Component | VaporComponent,
+  component: unknown,
   name = "Component",
 ): asserts component is VerifiedVaporComponent {
   if (!isVaporComponent(component)) {

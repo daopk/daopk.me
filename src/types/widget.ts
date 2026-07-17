@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { Component, VaporComponent } from "vue";
 
 export type WidgetSurface = "desktop:menubar" | "desktop:wallpaper" | "mobile:widgets" | "any";
 
@@ -14,7 +14,7 @@ export interface WidgetManifest {
   id: string;
   title: string;
   description?: string;
-  icon?: Component;
+  icon?: VaporComponent;
   surface: WidgetSurface;
   size: WidgetSize;
   defaultVisible?: boolean;

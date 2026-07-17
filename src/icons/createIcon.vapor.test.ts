@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 import IconButton from "~/components/kit/IconButton.vue";
 import { mountVapor } from "~/test/mountVapor";
 
@@ -96,7 +96,7 @@ function referencedIds(svg: SVGElement): string[] {
     });
 }
 
-function isVaporDefinition(component: Component): boolean {
+function isVaporDefinition(component: VaporComponent): boolean {
   return (
     typeof component === "object" &&
     component !== null &&

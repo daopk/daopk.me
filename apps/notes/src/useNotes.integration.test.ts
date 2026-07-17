@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { defineComponent } from "vue";
+import { defineVaporComponent } from "vue";
 
 import "fake-indexeddb/auto";
 
@@ -16,15 +16,17 @@ import type { NotesVfsClient } from "./useNotes";
 // Minimal manifest: this test drives `useNotes` directly against the kernel
 // VFS, so it only needs a registered `notes` handle for permission scoping —
 // not the real (now independently-built) app component.
+const NotesTestIcon = defineVaporComponent(() => document.createElement("svg"));
+const NotesTestStub = defineVaporComponent(() => document.createElement("div"));
+
 const notesManifest: AppManifest = {
   id: "notes",
   name: "Notes",
   version: "1.0.0",
-  icon: defineComponent({ name: "NotesTestIcon", render: () => null }),
+  icon: NotesTestIcon,
   category: "productivity",
   permissions: ["vfs.read", "vfs.write"],
-  component: () =>
-    Promise.resolve({ default: defineComponent({ name: "NotesTestStub", render: () => null }) }),
+  component: () => Promise.resolve({ default: NotesTestStub }),
 };
 
 function deleteDatabase(name: string): Promise<void> {

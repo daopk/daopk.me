@@ -1,7 +1,7 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, markRaw, nextTick, type Component } from "vue";
+import { defineVaporComponent, markRaw, nextTick } from "vue";
 
 /**
  * Helper: flush microtasks AND a paint frame. The teleported dialog
@@ -29,7 +29,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineVaporComponent(() => document.createElement("svg")));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 
 function makeManifest(id: string, name: string, category: AppManifest["category"]): AppManifest {
   return {

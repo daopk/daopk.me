@@ -1,11 +1,11 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 export interface SegmentedControlOption {
   readonly value: string;
   readonly label: string;
   readonly ariaLabel?: string;
   readonly disabled?: boolean;
-  readonly icon?: Component;
+  readonly icon?: VaporComponent;
 }
 
 export interface SelectOption {
@@ -19,7 +19,7 @@ export interface TabListOption {
   readonly label: string;
   readonly ariaLabel?: string;
   readonly disabled?: boolean;
-  readonly icon?: Component;
+  readonly icon?: VaporComponent;
   readonly id?: string;
   readonly panelId?: string;
 }

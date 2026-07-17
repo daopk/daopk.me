@@ -1,7 +1,7 @@
 import { mountVaporTest as mount } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, type Component } from "vue";
+import { defineVaporComponent } from "vue";
 
 import DockSection from "./DockSection.vue";
 
@@ -17,7 +17,7 @@ const StubApp = defineVaporComponent(() => document.createElement("div"));
 
 function makeApp(overrides: Partial<AppManifest> & { id: string; name: string }): AppManifest {
   return {
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "productivity",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,

@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { Loader2 } from "~/icons/lucide";
-import { computed, type Component } from "vue";
+import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import type { AppManifest } from "~/types/app";
@@ -26,7 +26,7 @@ const emit = defineEmits<{
   (e: "launch", manifestId: string): void;
 }>();
 
-const iconComponent = computed<Component>(() => props.manifest.icon);
+const iconComponent = computed<VaporComponent>(() => props.manifest.icon);
 const disabled = computed<boolean>(() => props.launching);
 
 function onActivate(): void {

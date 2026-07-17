@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 interface EmptyStateProps {
-  icon?: Component;
+  icon?: VaporComponent;
   title?: string;
   description?: string;
   role?: string;

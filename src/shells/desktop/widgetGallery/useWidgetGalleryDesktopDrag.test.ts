@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { defineVaporComponent } from "vue";
 
 import type { WidgetCatalogItem } from "~/core/widgets/catalog";
 import type { WidgetManifest } from "~/types/widget";
 
 import { useWidgetGalleryDesktopDrag } from "./useWidgetGalleryDesktopDrag";
+
+const StubWidget = defineVaporComponent(() => document.createElement("div"));
 
 interface FakePointerEventInit {
   clientX?: number;
@@ -42,7 +45,7 @@ function makeManifest(overrides: Partial<WidgetManifest> = {}): WidgetManifest {
     description: "Vietnamese lunar date",
     surface: "desktop:wallpaper",
     size: "md",
-    component: () => Promise.resolve({ default: { render: () => null } }),
+    component: () => Promise.resolve({ default: StubWidget }),
     ...overrides,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defineComponent, h, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import type { AppManifest } from "~/types/app";
 import type { WidgetManifest } from "~/types/widget";
@@ -14,7 +14,7 @@ import {
   widgetShellScopeForSurface,
 } from "./catalog";
 
-const StubIcon: Component = markRaw(defineComponent({ render: () => h("svg") }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 
 function widget(overrides: Partial<WidgetManifest>): WidgetManifest {
   return {

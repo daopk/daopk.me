@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch, type Component } from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch, type VaporComponent } from "vue";
 
 import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";
 import { Badge, EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
@@ -130,7 +130,7 @@ function isLoadingCloudEntry(entry: VfsDirEntry): boolean {
   return props.loadingPath === entry.path && isCloudDriveEntry(entry);
 }
 
-function openSuggestionIconFor(suggestion: FinderOpenSuggestion): Component | null {
+function openSuggestionIconFor(suggestion: FinderOpenSuggestion): VaporComponent | null {
   return kernel.apps.list().find((app) => app.id === suggestion.manifestId)?.icon ?? null;
 }
 

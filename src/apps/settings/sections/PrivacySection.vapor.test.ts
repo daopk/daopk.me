@@ -1,7 +1,7 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import { kernel } from "~/core/kernel";
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
@@ -15,7 +15,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(
+const StubIcon = markRaw(
   defineVaporComponent(() => document.createElementNS("http://www.w3.org/2000/svg", "svg")),
 );
 

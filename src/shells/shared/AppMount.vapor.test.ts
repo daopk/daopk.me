@@ -47,9 +47,9 @@ function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id: "template",
     name: "Template",
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "dev",
-    component: () => Promise.resolve(asEsm(TemplateApp as Component)),
+    component: () => Promise.resolve(asEsm(TemplateApp)),
     ...overrides,
   };
 }
@@ -262,9 +262,7 @@ describe("AppMount", () => {
       return probe;
     });
 
-    currentKernel = makeKernel([
-      manifest({ component: () => Promise.resolve(asEsm(Probe as Component)) }),
-    ]);
+    currentKernel = makeKernel([manifest({ component: () => Promise.resolve(asEsm(Probe)) })]);
 
     mount(AppMount, {
       props: {
@@ -299,9 +297,7 @@ describe("AppMount", () => {
       return probe;
     });
 
-    currentKernel = makeKernel([
-      manifest({ component: () => Promise.resolve(asEsm(Probe as Component)) }),
-    ]);
+    currentKernel = makeKernel([manifest({ component: () => Promise.resolve(asEsm(Probe)) })]);
 
     mount(AppMount, {
       props: {

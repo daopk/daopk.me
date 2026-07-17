@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import type { AppHandle } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -24,7 +24,7 @@ export interface CommandManifest {
   id: string;
   title: string;
   hint?: string;
-  icon?: Component;
+  icon?: VaporComponent;
   shortcut?: string;
   scope?: "global" | "app" | "shell";
   keywords?: string[];

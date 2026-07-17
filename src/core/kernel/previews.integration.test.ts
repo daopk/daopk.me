@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { defineComponent, markRaw, type Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 
 import { debugWarn } from "~/core/debug";
 import type { AppManifest } from "~/types/app";
@@ -13,7 +13,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 const input: AppPreviewInput = Object.freeze({ kind: "url", url: "https://example.com" });
 
 function makePreview(id: string, overrides: Partial<AppPreviewProvider> = {}): AppPreviewProvider {

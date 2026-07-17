@@ -1,4 +1,4 @@
-import { defineComponent, type Component } from "vue";
+import { defineVaporComponent } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -23,15 +23,16 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon = defineComponent({ template: "<svg />" });
+const StubIcon = defineVaporComponent(() => document.createElement("svg"));
+const StubApp = defineVaporComponent(() => document.createElement("div"));
 
 function manifest(id: string): AppManifest {
   return {
     id,
     name: id,
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
-    component: () => Promise.resolve({ default: defineComponent({ template: "<div />" }) }),
+    component: () => Promise.resolve({ default: StubApp }),
   };
 }
 

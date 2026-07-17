@@ -1,5 +1,6 @@
 import { Terminal } from "~/icons/lucide";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { defineVaporComponent } from "vue";
 
 import { runAutorunManifests, resetAutorunLatch } from "./autorun";
 
@@ -10,6 +11,8 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
   debugWarn: vi.fn(),
 }));
+
+const StubApp = defineVaporComponent(() => document.createElement("div"));
 
 interface FakeKernel {
   kernel: Kernel;
@@ -22,7 +25,7 @@ function makeManifest(overrides: Partial<AppManifest>): AppManifest {
     name: "Test",
     icon: Terminal,
     category: "system",
-    component: async () => ({ default: { template: "<div />" } }),
+    component: async () => ({ default: StubApp }),
     ...overrides,
   };
 }

@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 export type ShellId = "desktop" | "mobile";
 
@@ -15,4 +15,4 @@ export interface DeviceProfile {
   viewportHeight?: number;
 }
 
-export type ShellComponent = Component;
+export type ShellComponent = VaporComponent;

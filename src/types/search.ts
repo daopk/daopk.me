@@ -1,7 +1,7 @@
 /**
  * Public types for the kernel search façade.
  *
- * Hits are intentionally **structured-clone safe** — no `Component` refs,
+ * Hits are intentionally **structured-clone safe** — no `VaporComponent` refs,
  * no callback functions — so can swap the adapter into a Comlink
  * worker invisibly. UI consumers (Spotlight) re-resolve icons + run
  * targets from the original registry by `kind` + `id`.

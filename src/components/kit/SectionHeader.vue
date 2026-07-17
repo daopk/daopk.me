@@ -1,11 +1,11 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 interface SectionHeaderProps {
   as?: keyof HTMLElementTagNameMap;
   title?: string;
   subtitle?: string;
-  icon?: Component;
+  icon?: VaporComponent;
   level?: 1 | 2 | 3 | 4;
   /** `page` uses the larger page-title scale; `section` (default) the section scale. */
   size?: "section" | "page";

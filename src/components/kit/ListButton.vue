@@ -1,10 +1,10 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 interface ListButtonProps {
   active?: boolean;
   disabled?: boolean;
-  icon?: Component;
+  icon?: VaporComponent;
   meta?: string;
   title?: string;
   type?: "button" | "submit" | "reset";

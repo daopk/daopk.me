@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { markRaw, defineComponent } from "vue";
-
-import type { Component } from "vue";
+import { defineVaporComponent, markRaw } from "vue";
 import type { CommandManifest } from "~/types/command";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
@@ -15,7 +13,7 @@ vi.mock("~/core/debug", () => ({
   debugLog: vi.fn(),
 }));
 
-const StubIcon: Component = markRaw(defineComponent({ template: "<svg />" }));
+const StubIcon = markRaw(defineVaporComponent(() => document.createElement("svg")));
 
 type EventListener = (payload: { id: string }) => void;
 

@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 import { Check } from "~/icons/lucide";
 
@@ -7,7 +7,7 @@ interface ChoiceCardProps {
   selected?: boolean;
   title: string;
   description?: string;
-  icon?: Component;
+  icon?: VaporComponent;
   disabled?: boolean;
 }
 

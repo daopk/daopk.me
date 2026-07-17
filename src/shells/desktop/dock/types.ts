@@ -1,4 +1,4 @@
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 
 export const SPOTLIGHT_DOCK_ITEM_KEY = "system:spotlight";
 export const TRASH_DOCK_ITEM_KEY = "system:trash";
@@ -12,7 +12,7 @@ export interface AppDockItem {
   kind: "app";
   manifestId: string;
   name: string;
-  icon: Component;
+  icon: VaporComponent;
   singleton: boolean;
   pinned: boolean;
 }
@@ -22,7 +22,7 @@ export interface SystemDockItem {
   kind: "system";
   action: SystemDockAction;
   name: string;
-  icon: Component;
+  icon: VaporComponent;
 }
 
 export type DockItemModel = AppDockItem | SystemDockItem;

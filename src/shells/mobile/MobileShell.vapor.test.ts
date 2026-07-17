@@ -27,9 +27,9 @@ function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
   return {
     id: "alpha",
     name: "Alpha",
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
-    component: () => Promise.resolve(asEsm(StubApp as Component)),
+    component: () => Promise.resolve(asEsm(StubApp)),
     ...overrides,
   };
 }
@@ -297,7 +297,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       manifest({
         id: "blog",
         name: "Blog",
-        component: () => Promise.resolve(asEsm(Probe as Component)),
+        component: () => Promise.resolve(asEsm(Probe)),
       }),
     ]);
     const wrapper = mount(MobileShell, { attachTo: document.body });
@@ -479,7 +479,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     currentKernel = makeKernel([
       manifest({
         chrome: { mobile: { titlebar: "hidden" } },
-        component: () => Promise.resolve(asEsm(Probe as Component)),
+        component: () => Promise.resolve(asEsm(Probe)),
       }),
     ]);
 

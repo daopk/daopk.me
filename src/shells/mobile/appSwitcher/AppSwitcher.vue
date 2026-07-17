@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { Trash2 as DismissAllIcon, X as CloseIcon } from "~/icons/lucide";
-import { computed, ref, useId, type Component } from "vue";
+import { computed, ref, useId, type VaporComponent } from "vue";
 
 import { useFocusTrap } from "~/components/ui/useFocusTrap";
 import { useKernel } from "~/composables/useKernel";
@@ -34,7 +34,7 @@ useFocusTrap(appSwitcherRef, {
 
 interface ResolvedFrame extends NavigationFrame {
   name: string;
-  icon: Component;
+  icon: VaporComponent;
 }
 
 const cards = computed<ResolvedFrame[]>(() => {

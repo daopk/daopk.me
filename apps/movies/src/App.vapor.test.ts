@@ -965,7 +965,7 @@ describe("Movies app", () => {
       id: "youtube-player:video-preview",
       manifestId: "youtube-player",
       surfaces: ["movies.trailer"],
-      component: () => Promise.resolve(asEsm(PreviewComponent as Component)),
+      component: () => Promise.resolve(asEsm(PreviewComponent)),
       match: vi.fn(),
     };
     const resolve = vi.fn(() => ({
@@ -1202,7 +1202,7 @@ describe("Movies app", () => {
             id: "youtube-player:video-preview",
             manifestId: "youtube-player",
             surfaces: ["movies.trailer"],
-            component: () => Promise.resolve(asEsm(PreviewComponent as Component)),
+            component: () => Promise.resolve(asEsm(PreviewComponent)),
             match: vi.fn(),
           },
         })),
@@ -2490,7 +2490,7 @@ describe("Movies app", () => {
       id: "youtube-player:video-preview",
       manifestId: "youtube-player",
       surfaces: ["movies.trailer"],
-      component: () => Promise.resolve(asEsm(PreviewComponent as Component)),
+      component: () => Promise.resolve(asEsm(PreviewComponent)),
       match: vi.fn(),
     };
     const resolve = vi.fn(() => ({

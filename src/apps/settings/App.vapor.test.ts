@@ -1,7 +1,7 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, nextTick, ref, type Component } from "vue";
+import { defineVaporComponent, nextTick, ref } from "vue";
 
 const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
@@ -48,7 +48,7 @@ const StubApp = defineVaporComponent(() => document.createElement("div"));
 
 function makeApp(overrides: Partial<AppManifest> & { id: string; name: string }): AppManifest {
   return {
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "productivity",
     component: () => Promise.resolve({ default: StubApp }),
     ...overrides,

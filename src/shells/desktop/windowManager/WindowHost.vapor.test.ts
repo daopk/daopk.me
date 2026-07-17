@@ -66,9 +66,9 @@ function manifest(id = "alpha", name = "Alpha", overrides: Partial<AppManifest> 
   return {
     id,
     name,
-    icon: StubIcon as Component,
+    icon: StubIcon,
     category: "system",
-    component: () => Promise.resolve(asEsm(StubApp as Component)),
+    component: () => Promise.resolve(asEsm(StubApp)),
     ...overrides,
   };
 }

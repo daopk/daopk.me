@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import type { Component } from "vue";
+import type { VaporComponent } from "vue";
 import { computed } from "vue";
 
 import type { BabyTouchFamily } from "../../babyTouchTypes";
@@ -11,12 +11,12 @@ const props = defineProps<{
   readonly kind: string;
 }>();
 
-const stickerArtComponents: Record<BabyTouchFamily, Component> = {
+const stickerArtComponents: Record<BabyTouchFamily, VaporComponent> = {
   animal: AnimalStickerArt,
   "soft-animal": SoftAnimalStickerArt,
 };
 
-const stickerArtComponent = computed<Component>(() => stickerArtComponents[props.family]);
+const stickerArtComponent = computed<VaporComponent>(() => stickerArtComponents[props.family]);
 </script>
 
 <template>
