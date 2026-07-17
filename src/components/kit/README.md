@@ -11,10 +11,10 @@ directly; there is no shared barrel and `kit` never re-exports `ui`.
 
 ## kit vs ui — which layer?
 
-| Layer | Prefix     | Owns                                                          | Examples                                                                                                                                                                                                                                                                                                                                                               |
-| ----- | ---------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui`  | `ds-*`     | Vapor-native stateful / behaviorally complex primitives       | `Button`, `Card`, `Dialog`, `DialogActions`, `Switch`, `Slider`, `DropdownMenu`, `ContextMenu`, `RadioGroup`, `Tooltip`, `ToastHost` (+ `useToast`)                                                                                                                                                                                                                    |
-| `kit` | `ds-kit-*` | Layout, app chrome, and plain-HTML form / list / nav controls | `AppFrame`, `AppToolbar`, `ToolbarGroup`, `ToolbarTitle`, `Panel`, `SectionHeader`, `GroupLabel`, `ScrollArea`, `Separator`, `Spinner`, `Badge`, `StatusBanner`, `EmptyState`, `DataTable`, `ActionRow`, `ListButton`, `IconButton`, `FormField`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `Progress`, `SegmentedControl`, `TabList`, `ChoiceCard`, `ChoiceGrid` |
+| Layer | Prefix     | Owns                                                          | Examples                                                                                                                                                                                                                                                                                                                                                    |
+| ----- | ---------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui`  | `ds-*`     | Vapor-native stateful / behaviorally complex primitives       | `Button`, `Card`, `Dialog`, `DialogActions`, `Switch`, `Slider`, `Tabs`, `DropdownMenu`, `ContextMenu`, `RadioGroup`, `Tooltip`, `ToastHost` (+ `useToast`)                                                                                                                                                                                                 |
+| `kit` | `ds-kit-*` | Layout, app chrome, and plain-HTML form / list / nav controls | `AppFrame`, `AppToolbar`, `ToolbarGroup`, `ToolbarTitle`, `Panel`, `SectionHeader`, `GroupLabel`, `ScrollArea`, `Separator`, `Spinner`, `Badge`, `StatusBanner`, `EmptyState`, `DataTable`, `ActionRow`, `ListButton`, `IconButton`, `FormField`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `Progress`, `SegmentedControl`, `ChoiceCard`, `ChoiceGrid` |
 
 A live, interactive reference for every primitive ships as the dev-only **Kit
 Gallery** app ([`src/apps/_kit-gallery`](../../apps/_kit-gallery)). For ui-layer
@@ -86,9 +86,10 @@ The mobile shell exposes `--mobile-shell-app-safe-area-*` and
 - Respect `prefers-reduced-motion`: gate or shorten transitions/animations.
 - Tables expose `role="table"/"row"/"columnheader"/"cell"`; choice sets use
   `role="radiogroup"` + `role="radio"`.
-- Composite widgets follow their WAI-ARIA pattern. `TabList` is a `tablist`
-  with a roving `tabindex` and Arrow / Home / End navigation (disabled tabs are
-  skipped). `RadioGroup` (ui) gives the same arrow-key roving focus.
+- Composite widgets follow their WAI-ARIA pattern. `Tabs` (ui) owns the
+  `tablist`/`tab`/`tabpanel` linkage, roving `tabindex`, and Arrow / Home / End
+  navigation (disabled tabs are skipped). `RadioGroup` (ui) gives the same
+  arrow-key roving focus.
 - `FormField` auto-associates the control it wraps (see **Forms** below), so
   hints/errors are programmatically linked and errors are announced.
 
@@ -183,7 +184,6 @@ density / safe-area behavior above; the live demos are in the Kit Gallery.
 | `Select`           | Native select                    | **`modelValue`**, **`options`**, `placeholder`, `invalid`, `id`, `name`                              | `update:modelValue` · exposes `focus`/`blur`          |
 | `Checkbox`         | Checkbox + label                 | `modelValue`, `indeterminate`, `disabled`, `ariaLabel`, `id`, `name`                                 | `update:modelValue` · default slot                    |
 | `SegmentedControl` | Single-select button group       | **`modelValue`**, **`options`**, **`label`**, `showLabels`, `size`                                   | `update:modelValue`, `change`                         |
-| `TabList`          | ARIA tablist (keyboard)          | **`modelValue`**, **`tabs`**, **`label`**, `size`                                                    | `update:modelValue`, `change`                         |
 | `ChoiceCard`       | Selectable radio card            | `selected`, `title`, `description`, `icon`                                                           | `select`                                              |
 | `ChoiceGrid`       | Radiogroup of choice cards       | **`label`**                                                                                          | default slot                                          |
 | `PreviewHost`      | Resolves an app preview provider | **`input`**, **`surface`**, `fallbackTitle`                                                          | —                                                     |

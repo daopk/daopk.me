@@ -6,7 +6,7 @@ apps keep using the existing exports, props, events, slots and `ds-*` classes.
 
 The implementation is fully Vapor while composing several Ropav behaviors:
 
-- `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
+- `Switch`, `Slider`, tabs, radio controls and toast lifecycle/rendering adapt
   `ropav` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
 - Tooltip and hover card positioning use Ropav's public
@@ -50,6 +50,7 @@ Props in **bold** are required.
 | `Switch`               | `ropav/switch` adapter    | **`modelValue`**, `id`, `name`, `disabled`, `required`, `invalid`, ARIA and `inputAttrs`                                      | `update:modelValue`                         |
 | `Slider`               | `ropav/slider` adapter    | **`modelValue`**, `id`, `name`, `min`, `max`, `step`, `orientation`, `disabled`, ARIA and `inputAttrs`                        | `update:modelValue`, `commit`               |
 | `RadioGroup` + item    | `ropav/radio` adapter     | `modelValue`, `id`, `name`, `orientation`, validation and ARIA; item **`value`**, `label`, overrides and `inputAttrs`         | `update:modelValue` · item default slot     |
+| `Tabs` compound        | `ropav/tabs` adapter      | `modelValue`, `size`, `variant`, `orientation`, `activationMode`; trigger/content **`value`**                                 | `update:modelValue` · default slots         |
 | `Tooltip`              | local Vapor + Floating UI | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
 | `HoverCard`            | local Vapor + Floating UI | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
 | `Dialog`               | local Vapor + focus trap  | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |

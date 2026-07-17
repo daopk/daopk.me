@@ -34,7 +34,11 @@
   --rp-color-control-border-focus: var(--color-accent);
   --rp-color-control-selected-bg: var(--color-accent);
   --rp-color-control-selected-fg: var(--color-fg-on-accent);
+  --rp-color-body: var(--color-bg);
+  --rp-color-default-hover: var(--color-bg-subtle);
   --rp-color-focus-ring: var(--color-accent);
+  --rp-primary-color-filled: var(--color-accent);
+  --rp-primary-color-filled-hover: var(--color-accent-hover);
   --rp-color-blue-light-color: var(--color-accent);
   --rp-color-blue-outline: var(--color-accent);
   --rp-color-green-light-color: var(--color-success);
@@ -44,4 +48,6 @@
   --rp-color-yellow-light-color: var(--color-accent-sheen);
   --rp-color-yellow-outline: var(--color-accent-sheen);
   --rp-opacity-disabled: 0.6;
+  --rp-size-control-sm: var(--control-height-sm);
+  --rp-size-control-md: var(--control-height-md);
 }

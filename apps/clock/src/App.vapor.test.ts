@@ -59,8 +59,10 @@ describe("Clock App", () => {
 
   it("renders Now first and switches tabs accessibly", async () => {
     const wrapper = mountClockApp();
+    await nextTick();
 
     expect(wrapper.find("#clock-tab-now").getAttribute("aria-selected")).toBe("true");
+    expect(wrapper.find("#clock-tab-now").getAttribute("aria-controls")).toBe("clock-panel-now");
     expect(elementText(wrapper.find("#clock-panel-now time"))).toBe("14:30:00");
 
     await selectTab(wrapper, "Stopwatch");

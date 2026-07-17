@@ -1,9 +1,9 @@
 <script setup vapor lang="ts">
 import { computed, ref } from "vue";
 
-import { AppFrame, Badge, FormField, ScrollArea, TabList, TextInput } from "@daopk/kit";
-import type { TabListOption } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { AppFrame, Badge, FormField, ScrollArea, TextInput } from "@daopk/kit";
+import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@daopk/ui";
+import type { TabsValue } from "@daopk/ui";
 import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "@daopk/icons";
 
 import { formatClockLongDate, formatClockSecond, toLocalIsoSecond } from "./useClockNow";
@@ -17,7 +17,7 @@ import {
 const clock = useClockApp();
 const activeTab = ref<ClockTab>("now");
 
-const tabs: readonly TabListOption[] = [
+const tabs = [
   { value: "now", label: "Now", icon: Clock, id: tabId("now"), panelId: panelId("now") },
   { value: "timer", label: "Timer", icon: Timer, id: tabId("timer"), panelId: panelId("timer") },
   {
@@ -27,7 +27,7 @@ const tabs: readonly TabListOption[] = [
     id: tabId("stopwatch"),
     panelId: panelId("stopwatch"),
   },
-];
+] as const;
 
 const nowDate = computed(() => new Date(clock.currentMs.value));
 const nowTimeLabel = computed(() => formatClockSecond(nowDate.value));
@@ -53,7 +53,7 @@ function selectTab(tab: ClockTab): void {
   activeTab.value = tab;
 }
 
-function selectTabValue(tab: string): void {
+function selectTabValue(tab: TabsValue): void {
   if (tab === "now" || tab === "timer" || tab === "stopwatch") {
     selectTab(tab);
   }
@@ -94,165 +94,174 @@ function durationDatetime(ms: number): string {
 
 <template>
   <AppFrame class="clock-app" layout="grid" :safe-area="false" aria-label="Clock">
-    <div class="clock-app__topbar">
-      <TabList
-        class="clock-app__tabs"
-        :model-value="activeTab"
-        :tabs="tabs"
-        label="Clock sections"
-        @update:model-value="selectTabValue"
-      />
-    </div>
-
-    <ScrollArea as="main" class="clock-app__body">
-      <section
-        v-show="activeTab === 'now'"
-        :id="panelId('now')"
-        class="clock-app__panel clock-app__panel--now"
-        role="tabpanel"
-        :aria-labelledby="tabId('now')"
-      >
-        <time class="clock-app__now-time" :datetime="nowDatetime">{{ nowTimeLabel }}</time>
-        <p class="clock-app__now-date">{{ nowDateLabel }}</p>
-        <p class="clock-app__timezone">{{ timezoneLabel }}</p>
-      </section>
-
-      <section
-        v-show="activeTab === 'timer'"
-        :id="panelId('timer')"
-        class="clock-app__panel clock-app__panel--timer"
-        role="tabpanel"
-        :aria-labelledby="tabId('timer')"
-      >
-        <div class="clock-app__readout" :class="{ 'clock-app__readout--finished': timerFinished }">
-          <time :datetime="`PT${Math.floor(clock.timerRemainingMs.value / 1000)}S`">
-            {{ clock.timerDisplay.value }}
-          </time>
-          <Badge v-if="timerFinished" tone="accent" size="md" role="status">Time's up</Badge>
-        </div>
-
-        <div class="clock-app__inputs" aria-label="Timer duration">
-          <FormField class="clock-app__number-field" label="Hours">
-            <TextInput
-              type="number"
-              min="0"
-              max="23"
-              step="1"
-              inputmode="numeric"
-              aria-label="Timer hours"
-              :disabled="!clock.timerCanEdit.value"
-              :model-value="String(timerPartValue('hours'))"
-              @update:model-value="clock.setTimerPart('hours', $event)"
-            />
-          </FormField>
-          <FormField class="clock-app__number-field" label="Minutes">
-            <TextInput
-              type="number"
-              min="0"
-              max="59"
-              step="1"
-              inputmode="numeric"
-              aria-label="Timer minutes"
-              :disabled="!clock.timerCanEdit.value"
-              :model-value="String(timerPartValue('minutes'))"
-              @update:model-value="clock.setTimerPart('minutes', $event)"
-            />
-          </FormField>
-          <FormField class="clock-app__number-field" label="Seconds">
-            <TextInput
-              type="number"
-              min="0"
-              max="59"
-              step="1"
-              inputmode="numeric"
-              aria-label="Timer seconds"
-              :disabled="!clock.timerCanEdit.value"
-              :model-value="String(timerPartValue('seconds'))"
-              @update:model-value="clock.setTimerPart('seconds', $event)"
-            />
-          </FormField>
-        </div>
-
-        <div class="clock-app__presets" aria-label="Timer presets">
-          <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(1)">1m</Button>
-          <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(5)">5m</Button>
-          <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(10)">10m</Button>
-          <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(25)">25m</Button>
-        </div>
-
-        <div class="clock-app__controls">
-          <Button
-            v-if="clock.timerStatus.value !== 'running'"
-            variant="primary"
-            :icon-start="Play"
-            :disabled="
-              clock.timerStatus.value === 'paused'
-                ? !clock.timerCanResume.value
-                : !clock.timerCanStart.value
-            "
-            @click="runTimerPrimary"
+    <Tabs
+      class="clock-app__tabs-layout"
+      :model-value="activeTab"
+      aria-label="Clock sections"
+      @update:model-value="selectTabValue"
+    >
+      <div class="clock-app__topbar">
+        <TabsList class="clock-app__tabs">
+          <TabsTrigger
+            v-for="tab in tabs"
+            :id="tab.id"
+            :key="tab.value"
+            :value="tab.value"
+            :aria-label="tab.label"
           >
-            {{ timerPrimaryLabel }}
-          </Button>
-          <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseTimer">
-            Pause
-          </Button>
-          <Button :icon-start="RotateCcw" @click="clock.resetTimer">Reset</Button>
-        </div>
-      </section>
+            <component :is="tab.icon" aria-hidden="true" />
+            <span>{{ tab.label }}</span>
+          </TabsTrigger>
+        </TabsList>
+      </div>
 
-      <section
-        v-show="activeTab === 'stopwatch'"
-        :id="panelId('stopwatch')"
-        class="clock-app__panel clock-app__panel--stopwatch"
-        role="tabpanel"
-        :aria-labelledby="tabId('stopwatch')"
-      >
-        <div class="clock-app__readout clock-app__readout--stopwatch">
-          <time
-            class="clock-app__stopwatch-time"
-            :datetime="durationDatetime(clock.stopwatchElapsedMs.value)"
-          >
-            <span>{{ stopwatchDisplayParts.time }}</span>
-            <span class="clock-app__milliseconds">.{{ stopwatchDisplayParts.milliseconds }}</span>
-          </time>
-        </div>
-
-        <div class="clock-app__controls">
-          <Button
-            v-if="clock.stopwatchStatus.value !== 'running'"
-            variant="primary"
-            :icon-start="Play"
-            @click="runStopwatchPrimary"
-          >
-            {{ stopwatchPrimaryLabel }}
-          </Button>
-          <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseStopwatch">
-            Pause
-          </Button>
-          <Button
-            :icon-start="Flag"
-            :disabled="!clock.stopwatchCanLap.value"
-            @click="clock.lapStopwatch"
-          >
-            Lap
-          </Button>
-          <Button :icon-start="RotateCcw" @click="clock.resetStopwatch">Reset</Button>
-        </div>
-
-        <ScrollArea
-          v-if="clock.laps.value.length > 0"
-          as="ol"
-          class="clock-app__laps"
-          aria-label="Stopwatch laps"
+      <ScrollArea as="main" class="clock-app__body">
+        <TabsContent
+          :id="panelId('now')"
+          value="now"
+          class="clock-app__panel clock-app__panel--now"
         >
-          <li v-for="(lap, index) in clock.laps.value" :key="`${lap}-${index}`">
-            <span>Lap {{ clock.laps.value.length - index }}</span>
-            <time :datetime="durationDatetime(lap)">{{ formatStopwatchDurationMs(lap) }}</time>
-          </li>
-        </ScrollArea>
-      </section>
-    </ScrollArea>
+          <time class="clock-app__now-time" :datetime="nowDatetime">{{ nowTimeLabel }}</time>
+          <p class="clock-app__now-date">{{ nowDateLabel }}</p>
+          <p class="clock-app__timezone">{{ timezoneLabel }}</p>
+        </TabsContent>
+
+        <TabsContent
+          :id="panelId('timer')"
+          value="timer"
+          class="clock-app__panel clock-app__panel--timer"
+        >
+          <div
+            class="clock-app__readout"
+            :class="{ 'clock-app__readout--finished': timerFinished }"
+          >
+            <time :datetime="`PT${Math.floor(clock.timerRemainingMs.value / 1000)}S`">
+              {{ clock.timerDisplay.value }}
+            </time>
+            <Badge v-if="timerFinished" tone="accent" size="md" role="status">Time's up</Badge>
+          </div>
+
+          <div class="clock-app__inputs" aria-label="Timer duration">
+            <FormField class="clock-app__number-field" label="Hours">
+              <TextInput
+                type="number"
+                min="0"
+                max="23"
+                step="1"
+                inputmode="numeric"
+                aria-label="Timer hours"
+                :disabled="!clock.timerCanEdit.value"
+                :model-value="String(timerPartValue('hours'))"
+                @update:model-value="clock.setTimerPart('hours', $event)"
+              />
+            </FormField>
+            <FormField class="clock-app__number-field" label="Minutes">
+              <TextInput
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                inputmode="numeric"
+                aria-label="Timer minutes"
+                :disabled="!clock.timerCanEdit.value"
+                :model-value="String(timerPartValue('minutes'))"
+                @update:model-value="clock.setTimerPart('minutes', $event)"
+              />
+            </FormField>
+            <FormField class="clock-app__number-field" label="Seconds">
+              <TextInput
+                type="number"
+                min="0"
+                max="59"
+                step="1"
+                inputmode="numeric"
+                aria-label="Timer seconds"
+                :disabled="!clock.timerCanEdit.value"
+                :model-value="String(timerPartValue('seconds'))"
+                @update:model-value="clock.setTimerPart('seconds', $event)"
+              />
+            </FormField>
+          </div>
+
+          <div class="clock-app__presets" aria-label="Timer presets">
+            <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(1)">1m</Button>
+            <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(5)">5m</Button>
+            <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(10)">10m</Button>
+            <Button size="sm" :disabled="timerRunning" @click="setTimerPreset(25)">25m</Button>
+          </div>
+
+          <div class="clock-app__controls">
+            <Button
+              v-if="clock.timerStatus.value !== 'running'"
+              variant="primary"
+              :icon-start="Play"
+              :disabled="
+                clock.timerStatus.value === 'paused'
+                  ? !clock.timerCanResume.value
+                  : !clock.timerCanStart.value
+              "
+              @click="runTimerPrimary"
+            >
+              {{ timerPrimaryLabel }}
+            </Button>
+            <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseTimer">
+              Pause
+            </Button>
+            <Button :icon-start="RotateCcw" @click="clock.resetTimer">Reset</Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          :id="panelId('stopwatch')"
+          value="stopwatch"
+          class="clock-app__panel clock-app__panel--stopwatch"
+        >
+          <div class="clock-app__readout clock-app__readout--stopwatch">
+            <time
+              class="clock-app__stopwatch-time"
+              :datetime="durationDatetime(clock.stopwatchElapsedMs.value)"
+            >
+              <span>{{ stopwatchDisplayParts.time }}</span>
+              <span class="clock-app__milliseconds">.{{ stopwatchDisplayParts.milliseconds }}</span>
+            </time>
+          </div>
+
+          <div class="clock-app__controls">
+            <Button
+              v-if="clock.stopwatchStatus.value !== 'running'"
+              variant="primary"
+              :icon-start="Play"
+              @click="runStopwatchPrimary"
+            >
+              {{ stopwatchPrimaryLabel }}
+            </Button>
+            <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseStopwatch">
+              Pause
+            </Button>
+            <Button
+              :icon-start="Flag"
+              :disabled="!clock.stopwatchCanLap.value"
+              @click="clock.lapStopwatch"
+            >
+              Lap
+            </Button>
+            <Button :icon-start="RotateCcw" @click="clock.resetStopwatch">Reset</Button>
+          </div>
+
+          <ScrollArea
+            v-if="clock.laps.value.length > 0"
+            as="ol"
+            class="clock-app__laps"
+            aria-label="Stopwatch laps"
+          >
+            <li v-for="(lap, index) in clock.laps.value" :key="`${lap}-${index}`">
+              <span>Lap {{ clock.laps.value.length - index }}</span>
+              <time :datetime="durationDatetime(lap)">{{ formatStopwatchDurationMs(lap) }}</time>
+            </li>
+          </ScrollArea>
+        </TabsContent>
+      </ScrollArea>
+    </Tabs>
   </AppFrame>
 </template>
 
@@ -264,7 +273,15 @@ function durationDatetime(ms: number): string {
   background: var(--color-bg);
   block-size: 100%;
   color: var(--color-fg);
+  inline-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.clock-app :deep(.clock-app__tabs-layout) {
+  block-size: 100%;
   display: grid;
+  gap: 0;
   grid-template-areas:
     "topbar"
     "body";
@@ -417,7 +434,9 @@ function durationDatetime(ms: number): string {
   .clock-app {
     --clock-now-size: 60px;
     --clock-readout-size: 56px;
+  }
 
+  .clock-app :deep(.clock-app__tabs-layout) {
     grid-template-areas:
       "body"
       "topbar";

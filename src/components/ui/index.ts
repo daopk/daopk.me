@@ -17,9 +17,22 @@ export { default as RadioGroup } from "./RadioGroup.vue";
 export { default as RadioGroupItem } from "./RadioGroupItem.vue";
 export { default as Slider } from "./Slider.vue";
 export { default as Switch } from "./Switch.vue";
+export { default as Tabs } from "./Tabs.vue";
+export { default as TabsContent } from "./TabsContent.vue";
+export { default as TabsList } from "./TabsList.vue";
+export { default as TabsTrigger } from "./TabsTrigger.vue";
 export { default as ToastHost } from "./ToastHost.vue";
 export { default as Tooltip } from "./Tooltip.vue";
 export { useFocusTrap } from "./useFocusTrap";
 export type { FocusTrapControls, FocusTrapTarget, UseFocusTrapOptions } from "./useFocusTrap";
 export { useToast } from "./useToast";
 export type { ToastApi, ToastOptions, ToastRecord, ToastTone } from "./useToast";
+export type {
+  TabsActivationMode,
+  TabsOrientation,
+  TabsPlacement,
+  TabsSize,
+  TabsTriggerAlign,
+  TabsValue,
+  TabsVariant,
+} from "./tabsTypes";

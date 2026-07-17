@@ -24,14 +24,12 @@ import {
   Separator,
   Spinner,
   StatusBanner,
-  TabList,
   Textarea,
   TextInput,
   ToolbarTitle,
   useAppChrome,
   type SegmentedControlOption,
   type SelectOption,
-  type TabListOption,
 } from "~/components/kit";
 import {
   Button,
@@ -48,6 +46,10 @@ import {
   RadioGroupItem,
   Slider,
   Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Tooltip,
   useToast,
 } from "~/components/ui";
@@ -104,12 +106,6 @@ const segmentOptions: readonly SegmentedControlOption[] = [
   { value: "list", label: "List", icon: LayoutGrid },
   { value: "grid", label: "Grid", icon: LayoutGrid },
   { value: "columns", label: "Columns", disabled: true },
-];
-
-const tabOptions: readonly TabListOption[] = [
-  { value: "overview", label: "Overview" },
-  { value: "specs", label: "Specs" },
-  { value: "activity", label: "Activity" },
 ];
 
 const densityChoices = [
@@ -263,9 +259,18 @@ const densityChoices = [
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">SegmentedControl + TabList (kit)</GroupLabel>
+        <GroupLabel as="h2">SegmentedControl (kit) + Tabs (ui)</GroupLabel>
         <SegmentedControl v-model="segmentValue" :options="segmentOptions" label="View mode" />
-        <TabList v-model="tabValue" :tabs="tabOptions" label="Sample tabs" />
+        <Tabs v-model="tabValue" aria-label="Sample tabs">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="specs">Specs</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview">Overview panel</TabsContent>
+          <TabsContent value="specs">Specs panel</TabsContent>
+          <TabsContent value="activity">Activity panel</TabsContent>
+        </Tabs>
         <p class="gallery__caption">Segment: {{ segmentValue }} · Tab: {{ tabValue }}</p>
       </Panel>
 
