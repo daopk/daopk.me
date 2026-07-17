@@ -6,7 +6,6 @@ import { nextTick, ref, type Ref } from "vue";
 import "fake-indexeddb/auto";
 
 import BackgroundSection from "./BackgroundSection.vue";
-import BackgroundStagePreview from "./background/BackgroundStagePreview.vue";
 
 import { builtinWallpapers } from "~/core/theme/wallpapers";
 import type { Kernel } from "~/types/kernel";
@@ -390,11 +389,10 @@ describe("BackgroundSection (M2b.6)", () => {
     await nextTick();
 
     expect(wrapper.find(".background__preview").exists()).toBe(true);
-    expect(wrapper.find(".background__stage-wallpaper").exists()).toBe(true);
-    expect(wrapper.findComponent(BackgroundStagePreview).props("wallpaperEffectStyle")).toEqual({
-      filter: `blur(${WALLPAPER_BLUR_VALUE})`,
-      transform: `scale(${WALLPAPER_BLUR_SCALE})`,
-    });
+    const wallpaper = wrapper.find<HTMLElement>(".background__stage-wallpaper");
+    expect(wallpaper.exists()).toBe(true);
+    expect(wallpaper.element.style.filter).toBe(`blur(${WALLPAPER_BLUR_VALUE})`);
+    expect(wallpaper.element.style.transform).toBe(`scale(${WALLPAPER_BLUR_SCALE})`);
 
     wrapper.unmount();
   });

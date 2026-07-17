@@ -7,7 +7,6 @@ import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 import HomeScreen from "./HomeScreen.vue";
-import HomeScreenIcon from "./HomeScreenIcon.vue";
 
 vi.mock("~/composables/useReducedMotion", () => ({
   useReducedMotion: () => ({ reduced: { value: false } }),
@@ -102,10 +101,10 @@ describe("HomeScreen multi-page (M1.4)", () => {
       props: { recentsAvailable: false },
     });
 
-    const icons = wrapper.findAllComponents(HomeScreenIcon);
+    const icons = wrapper.findAll("button.home-icon");
     expect(icons.length).toBe(2);
-    expect(icons[0].props("manifest").id).toBe("alpha");
-    expect(icons[1].props("manifest").id).toBe("beta");
+    expect(icons[0].attributes("data-manifest-id")).toBe("alpha");
+    expect(icons[1].attributes("data-manifest-id")).toBe("beta");
     expect(wrapper.find(".home-icon-page__grid").element.tagName).toBe("DIV");
     expect(wrapper.find(".home-icon-page__grid").attributes("aria-label")).toBeUndefined();
   });
@@ -118,18 +117,17 @@ describe("HomeScreen multi-page (M1.4)", () => {
       props: { recentsAvailable: false },
     });
 
-    expect(wrapper.findAllComponents(HomeScreenIcon).map((c) => c.props("manifest").id)).toEqual([
-      "alpha",
-    ]);
+    expect(
+      wrapper.findAll("button.home-icon").map((icon) => icon.attributes("data-manifest-id")),
+    ).toEqual(["alpha"]);
 
     manifests.push(manifest({ id: "baby-touch", name: "Baby Touch" }));
     currentKernel.events.emit("app.registered", { id: "baby-touch" });
     await nextTick();
 
-    expect(wrapper.findAllComponents(HomeScreenIcon).map((c) => c.props("manifest").id)).toEqual([
-      "alpha",
-      "baby-touch",
-    ]);
+    expect(
+      wrapper.findAll("button.home-icon").map((icon) => icon.attributes("data-manifest-id")),
+    ).toEqual(["alpha", "baby-touch"]);
   });
 
   it("hides private and hidden manifests on page 1", () => {
@@ -144,7 +142,9 @@ describe("HomeScreen multi-page (M1.4)", () => {
       props: { recentsAvailable: false },
     });
 
-    const ids = wrapper.findAllComponents(HomeScreenIcon).map((c) => c.props("manifest").id);
+    const ids = wrapper
+      .findAll("button.home-icon")
+      .map((icon) => icon.attributes("data-manifest-id"));
     expect(ids).toEqual(["alpha", "beta"]);
   });
 
@@ -155,7 +155,7 @@ describe("HomeScreen multi-page (M1.4)", () => {
       props: { recentsAvailable: false },
     });
 
-    expect(wrapper.findAllComponents(HomeScreenIcon).length).toBe(0);
+    expect(wrapper.findAll("button.home-icon").length).toBe(0);
     expect(wrapper.find(".home-icon-page__empty").exists()).toBe(true);
   });
 
@@ -197,11 +197,11 @@ describe("HomeScreen multi-page (M1.4)", () => {
       },
     });
 
-    const icons = wrapper.findAllComponents(HomeScreenIcon);
+    const icons = wrapper.findAll("button.home-icon");
     expect(icons.length).toBe(3);
-    expect(icons[0].props("launching")).toBe(false);
-    expect(icons[1].props("launching")).toBe(true);
-    expect(icons[2].props("launching")).toBe(false);
+    expect(icons[0].attributes("aria-busy")).toBeUndefined();
+    expect(icons[1].attributes("aria-busy")).toBe("true");
+    expect(icons[2].attributes("aria-busy")).toBeUndefined();
   });
 
   it("keeps desktop-only manifests launchable on the mobile home screen", async () => {
@@ -213,8 +213,8 @@ describe("HomeScreen multi-page (M1.4)", () => {
       props: { recentsAvailable: false },
     });
 
-    const icon = wrapper.findComponent(HomeScreenIcon);
-    expect(icon.props("manifest").id).toBe("desktop-tool");
+    const icon = wrapper.find("button.home-icon");
+    expect(icon.attributes("data-manifest-id")).toBe("desktop-tool");
     expect(wrapper.find("button.home-icon").attributes("disabled")).toBeUndefined();
 
     await wrapper.find("button.home-icon").trigger("click");

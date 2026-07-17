@@ -887,7 +887,6 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
     const wrapper = mount(MobileShell, { attachTo: document.body });
     try {
-      const iconWrapper = wrapper.findComponent(HomeScreenIcon);
       const iconButton = wrapper.find("button.home-icon");
 
       expect(iconButton.attributes("aria-busy")).toBeUndefined();
@@ -898,7 +897,6 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
       expect(iconButton.attributes("aria-busy")).toBe("true");
       expect(iconButton.attributes("disabled")).toBeDefined();
-      expect(iconWrapper.props("launching")).toBe(true);
       expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
 
       await iconButton.trigger("click");

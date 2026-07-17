@@ -16,6 +16,8 @@ import { basename, isDirectChild } from "~/core/vfs/path";
 
 import VfsFilePickerDialog from "./VfsFilePickerDialog.vue";
 
+type VfsFilePickerDialogProps = Parameters<typeof VfsFilePickerDialog>[0];
+
 interface FakeNode {
   readonly kind: "directory" | "file";
   readonly mimeType?: string;
@@ -97,10 +99,7 @@ function makeContext(): AppContext {
   };
 }
 
-function mountPicker(
-  kernel: Kernel,
-  props: Partial<InstanceType<typeof VfsFilePickerDialog>["$props"]> = {},
-) {
+function mountPicker(kernel: Kernel, props: Partial<VfsFilePickerDialogProps> = {}) {
   return mount(VfsFilePickerDialog, {
     attachTo: document.body,
     props: {

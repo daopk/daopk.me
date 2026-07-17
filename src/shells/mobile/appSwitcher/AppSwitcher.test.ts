@@ -6,7 +6,6 @@ import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 import AppSwitcher from "./AppSwitcher.vue";
-import AppSwitcherCard from "./AppSwitcherCard.vue";
 
 const StubIcon = defineComponent({ template: "<svg />" });
 
@@ -45,7 +44,7 @@ describe("AppSwitcher", () => {
     const wrapper = mount(AppSwitcher, { props: { frames: [] }, attachTo: document.body });
 
     expect(wrapper.find(".app-switcher__empty").exists()).toBe(true);
-    expect(wrapper.findAllComponents(AppSwitcherCard).length).toBe(0);
+    expect(wrapper.findAll(".app-switcher-card").length).toBe(0);
 
     wrapper.unmount();
   });
@@ -61,12 +60,12 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    const cards = wrapper.findAllComponents(AppSwitcherCard);
+    const cards = wrapper.findAll(".app-switcher-card");
     expect(cards.length).toBe(2);
-    expect(cards[0].props("frameId")).toBe("f-2");
-    expect(cards[0].props("name")).toBe("Beta");
-    expect(cards[1].props("frameId")).toBe("f-1");
-    expect(cards[1].props("name")).toBe("Alpha");
+    expect(cards[0].attributes("data-frame-id")).toBe("f-2");
+    expect(cards[0].find(".app-switcher-card__name").text()).toBe("Beta");
+    expect(cards[1].attributes("data-frame-id")).toBe("f-1");
+    expect(cards[1].find(".app-switcher-card__name").text()).toBe("Alpha");
 
     wrapper.unmount();
   });
@@ -83,9 +82,9 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    const cards = wrapper.findAllComponents(AppSwitcherCard);
+    const cards = wrapper.findAll(".app-switcher-card");
     expect(cards.length).toBe(2);
-    expect(cards.map((c) => c.props("manifestId"))).toEqual(["beta", "alpha"]);
+    expect(cards.map((card) => card.attributes("data-manifest-id"))).toEqual(["beta", "alpha"]);
 
     wrapper.unmount();
   });
@@ -102,10 +101,10 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    const cards = wrapper.findAllComponents(AppSwitcherCard);
+    const cards = wrapper.findAll(".app-switcher-card");
     expect(cards.length).toBe(2);
-    expect(cards.map((c) => c.props("frameId"))).toEqual(["f-2", "f-1"]);
-    expect(cards.every((c) => c.props("handleId") === "singleton-h")).toBe(true);
+    expect(cards.map((card) => card.attributes("data-frame-id"))).toEqual(["f-2", "f-1"]);
+    expect(cards.every((card) => card.attributes("data-handle-id") === "singleton-h")).toBe(true);
 
     wrapper.unmount();
   });
@@ -181,10 +180,7 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    await wrapper
-      .findComponent(AppSwitcherCard)
-      .find(".app-switcher-card__select")
-      .trigger("click");
+    await wrapper.find(".app-switcher-card__select").trigger("click");
 
     expect(wrapper.emitted("close")).toBeUndefined();
 
@@ -197,10 +193,7 @@ describe("AppSwitcher", () => {
       attachTo: document.body,
     });
 
-    await wrapper
-      .findComponent(AppSwitcherCard)
-      .find(".app-switcher-card__select")
-      .trigger("click");
+    await wrapper.find(".app-switcher-card__select").trigger("click");
 
     expect(wrapper.emitted("select")).toEqual([["f-1"]]);
 
