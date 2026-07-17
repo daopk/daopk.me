@@ -9,7 +9,9 @@ allowBuilds:
 catalog:
   "@vitejs/plugin-vue": ^6.0.8
   ropav: ^0.0.13
+  vite: ^8.1.5
   vue: 3.6.0-beta.17
+  vue-tsc: ^3.3.7
 minimumReleaseAgeExclude:
   - ropav@0.0.13
 packages:
