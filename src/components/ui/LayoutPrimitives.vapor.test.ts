@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { defineComponent, h, nextTick } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import Button from "./Button.vue";
 import Card from "./Card.vue";
@@ -10,10 +10,10 @@ import DialogActions from "./DialogActions.vue";
 const mounted: VaporMount[] = [];
 
 function mount(
-  component: Parameters<typeof mountVapor>[0],
-  options?: Parameters<typeof mountVapor>[1],
+  component: Parameters<typeof mountVaporRoot>[0],
+  options?: Parameters<typeof mountVaporRoot>[1],
 ) {
-  const wrapper = mountVapor(component, options);
+  const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { flushPromises, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import {
   AppChromeInjectionKey,
@@ -61,7 +61,7 @@ function mountCalendar(
     readonly appChrome?: AppChromeController;
   } = {},
 ): VaporMount {
-  return mountVapor(App, {
+  return mountVaporRoot(App, {
     provide: [
       [KernelInjectionKey, kernel],
       [AppContextInjectionKey, makeContext(options.args)],

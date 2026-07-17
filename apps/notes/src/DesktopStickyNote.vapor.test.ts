@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { flushPromises, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
@@ -67,7 +67,7 @@ function makeKernel() {
 }
 
 function mountSticky(note: PinnedDesktopNote, kernel: Kernel): VaporMount {
-  return mountVapor(DesktopStickyNote, {
+  return mountVaporRoot(DesktopStickyNote, {
     props: { note, stageSize: { width: 800, height: 600 } },
     provide: [
       [KernelInjectionKey, kernel],

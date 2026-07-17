@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import LunarDateWidget from "./LunarDateWidget.vue";
 
 function mountAt(date: Date): VaporMount {
   vi.useFakeTimers();
   vi.setSystemTime(date);
-  return mountVapor(LunarDateWidget);
+  return mountVaporRoot(LunarDateWidget);
 }
 
 describe("LunarDateWidget", () => {

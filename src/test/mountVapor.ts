@@ -7,9 +7,11 @@ import {
   type Component,
   type InjectionKey,
 } from "vue";
+import { onTestFinished } from "vitest";
 
 type VaporProvide = readonly [InjectionKey<unknown> | string, unknown];
 type VaporSlot = (...args: never[]) => unknown;
+type VaporValueEvent = "change" | "input";
 
 export interface VaporMountOptions {
   readonly props?: Readonly<Record<string, unknown>>;
@@ -24,9 +26,34 @@ export interface VaporMount {
   find<T extends Element = Element>(selector: string): T;
   findAll<T extends Element = Element>(selector: string): T[];
   html(): string;
-  setValue(selector: string, value: string): Promise<void>;
+  setValue(selector: string, value: string, eventType?: VaporValueEvent): Promise<void>;
   text(): string;
+  trigger(selector: string, event: Event): Promise<void>;
   unmount(): void;
+}
+
+export function isVaporComponent(component: Component): boolean {
+  return (
+    typeof component === "object" &&
+    component !== null &&
+    "__vapor" in component &&
+    component.__vapor === true
+  );
+}
+
+export function assertVaporComponent(
+  component: Component,
+  name = "Component",
+): asserts component is Component & { readonly __vapor: true } {
+  if (!isVaporComponent(component)) {
+    throw new TypeError(`${name} was not compiled in Vapor mode`);
+  }
+}
+
+export function assertVaporComponents(components: Readonly<Record<string, Component>>): void {
+  for (const [name, component] of Object.entries(components)) {
+    assertVaporComponent(component, name);
+  }
 }
 
 export async function flushPromises(): Promise<void> {
@@ -46,6 +73,7 @@ export async function flushPromises(): Promise<void> {
 export function mountVapor(component: Component, options: VaporMountOptions = {}): VaporMount {
   const element = document.createElement("div");
   document.body.appendChild(element);
+  let mounted = true;
 
   const VaporTestHost = defineComponent({
     name: "VaporTestHost",
@@ -60,9 +88,15 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
   for (const [key, value] of options.provide ?? []) {
     app.provide(key, value);
   }
-  app.mount(element);
+  try {
+    app.mount(element);
+  } catch (error) {
+    mounted = false;
+    element.remove();
+    throw error;
+  }
 
-  return {
+  const wrapper: VaporMount = {
     element,
     async click(selector: string): Promise<void> {
       const target = element.querySelector<HTMLElement>(selector);
@@ -88,7 +122,7 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
     html(): string {
       return element.innerHTML;
     },
-    async setValue(selector: string, value: string): Promise<void> {
+    async setValue(selector: string, value: string, eventType?: VaporValueEvent): Promise<void> {
       const target = element.querySelector<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
       >(selector);
@@ -96,16 +130,46 @@ export function mountVapor(component: Component, options: VaporMountOptions = {}
         throw new Error(`Vapor test form control not found: ${selector}`);
       }
       target.value = value;
-      target.dispatchEvent(new Event("input", { bubbles: true }));
-      target.dispatchEvent(new Event("change", { bubbles: true }));
+      target.dispatchEvent(
+        new Event(eventType ?? (target instanceof HTMLSelectElement ? "change" : "input"), {
+          bubbles: true,
+        }),
+      );
       await nextTick();
     },
     text(): string {
       return element.textContent ?? "";
     },
+    async trigger(selector: string, event: Event): Promise<void> {
+      const target = element.querySelector<HTMLElement>(selector);
+      if (!target) {
+        throw new Error(`Vapor test element not found: ${selector}`);
+      }
+      target.dispatchEvent(event);
+      await nextTick();
+    },
     unmount(): void {
+      if (!mounted) return;
+      mounted = false;
       app.unmount();
       element.remove();
     },
   };
+
+  // Cleanup still runs when an assertion throws before a test reaches its
+  // explicit `unmount()`. The idempotent wrapper keeps existing manual cleanup
+  // and suite-level afterEach hooks safe.
+  onTestFinished(() => wrapper.unmount());
+
+  return wrapper;
+}
+
+/** Mount a component and fail immediately if it lost its Vapor compilation. */
+export function mountVaporRoot(
+  component: Component,
+  options: VaporMountOptions = {},
+  name?: string,
+): VaporMount {
+  assertVaporComponent(component, name);
+  return mountVapor(component, options);
 }

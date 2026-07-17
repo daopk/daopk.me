@@ -19,10 +19,12 @@
     "typecheck:apps": "pnpm -r --filter './apps/*' --if-present run typecheck",
     "typecheck:root": "vue-tsc --noEmit -p tsconfig.app.json",
     "typecheck:test": "vue-tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run && pnpm run test:vapor",
-    "test:vapor": "vitest run --config vitest.vapor.config.ts",
+    "test": "vitest run",
+    "test:vdom": "vitest run --project vdom",
+    "test:vapor": "vitest run --project vapor",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage --pool=forks"
+    "test:vapor:watch": "vitest --project vapor",
+    "test:coverage": "vitest run --coverage --pool=forks --maxWorkers=4"
   },
   "dependencies": {
     "@floating-ui/dom": "1.7.6",

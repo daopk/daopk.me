@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, ref } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
 
 import {
   ContextMenu,
@@ -58,6 +58,21 @@ afterEach(() => {
     .querySelectorAll("[data-menu-test-portal], [data-menu-test-outside]")
     .forEach((node) => node.remove());
   vi.useRealTimers();
+});
+
+it("keeps menu primitives compiled in Vapor mode", () => {
+  assertVaporComponents({
+    ContextMenu,
+    ContextMenuItem,
+    ContextMenuSeparator,
+    DropdownMenu,
+    DropdownMenuItem,
+    DropdownMenuItemIndicator,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+  });
 });
 
 describe("DropdownMenu", () => {

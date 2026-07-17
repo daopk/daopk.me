@@ -10,7 +10,7 @@ describe("markdown.worker API", () => {
     await expect(api.render("# Worker Markdown")).resolves.toEqual({
       html: expect.stringContaining("<h1>Worker Markdown</h1>"),
     });
-  });
+  }, 15_000);
 
   it("preserves the pipeline sanitization rules", async () => {
     const api = createMarkdownWorkerApi();

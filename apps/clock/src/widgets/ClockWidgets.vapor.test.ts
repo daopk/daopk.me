@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { mountVapor } from "~/test/mountVapor";
+import { mountVaporRoot } from "~/test/mountVapor";
 
 import DesktopBigClockWidget from "./DesktopBigClockWidget.vue";
 import MenubarClockWidget from "./MenubarClockWidget.vue";
@@ -17,7 +17,7 @@ describe("Clock widgets", () => {
   });
 
   it("renders the menubar clock as a compact <time>", () => {
-    const wrapper = mountVapor(MenubarClockWidget);
+    const wrapper = mountVaporRoot(MenubarClockWidget);
     const timeEl = wrapper.find<HTMLTimeElement>("time");
 
     expect(timeEl.textContent).toBe("14:30");
@@ -26,7 +26,7 @@ describe("Clock widgets", () => {
   });
 
   it("renders the desktop clock with date context", () => {
-    const wrapper = mountVapor(DesktopBigClockWidget);
+    const wrapper = mountVaporRoot(DesktopBigClockWidget);
 
     expect(wrapper.find("time").textContent).toBe("14:30");
     expect(wrapper.find(".clock-desktop-widget__date").textContent).toContain("Friday");
@@ -35,7 +35,7 @@ describe("Clock widgets", () => {
   });
 
   it("renders the mobile clock as an accessible group", () => {
-    const wrapper = mountVapor(MobileBigClockWidget);
+    const wrapper = mountVaporRoot(MobileBigClockWidget);
     const root = wrapper.find(".clock-mobile-widget");
 
     expect(root.getAttribute("role")).toBe("group");

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import ClockApp from "./App.vue";
 
 const mounted: VaporMount[] = [];
 
 function mountClockApp(): VaporMount {
-  const wrapper = mountVapor(ClockApp);
+  const wrapper = mountVaporRoot(ClockApp);
   mounted.push(wrapper);
   return wrapper;
 }

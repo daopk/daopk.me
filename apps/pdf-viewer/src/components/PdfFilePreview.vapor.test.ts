@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mountVapor } from "~/test/mountVapor";
+import { mountVaporRoot } from "~/test/mountVapor";
 
 import {
   AppContextInjectionKey,
@@ -50,7 +50,7 @@ function makeKernel(): Kernel {
 
 describe("PdfFilePreview", () => {
   it("initializes the PDF viewer from a VFS file preview input", () => {
-    const wrapper = mountVapor(PdfFilePreview, {
+    const wrapper = mountVaporRoot(PdfFilePreview, {
       props: {
         input: {
           kind: "vfs-file",

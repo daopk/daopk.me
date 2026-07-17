@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
-import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { flushPromises, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
@@ -193,7 +193,7 @@ function mountNotes(
   context: AppContext = makeContext(),
   options: { readonly appChrome?: AppChromeController } = {},
 ): VaporMount {
-  return mountVapor(App, {
+  return mountVaporRoot(App, {
     provide: [
       [KernelInjectionKey, kernel],
       [AppContextInjectionKey, context],

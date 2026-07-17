@@ -90,9 +90,9 @@ describe("Spotlight.vue", () => {
   describe("a11y wiring", () => {
     it("moves initial focus into the search input", async () => {
       const w = makeSpotlight({});
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      const input = w.get('input[role="combobox"]').element;
 
-      expect(document.activeElement).toBe(w.get('input[role="combobox"]').element);
+      await vi.waitFor(() => expect(document.activeElement).toBe(input));
       w.unmount();
     });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { mountVapor } from "~/test/mountVapor";
+import { mountVaporRoot } from "~/test/mountVapor";
 
 import NotesDesktopLayer from "./NotesDesktopLayer.vue";
 
@@ -59,7 +59,7 @@ vi.mock("./DesktopStickyNote.vue", async () => {
 
 describe("NotesDesktopLayer", () => {
   it("hydrates pinned notes and renders VDOM note children through interop", () => {
-    const wrapper = mountVapor(NotesDesktopLayer, {
+    const wrapper = mountVaporRoot(NotesDesktopLayer, {
       props: {
         stageSize: { width: 1280, height: 720 },
       },

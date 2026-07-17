@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { defineConfig, mergeConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
 
 import { createViteConfig } from "./vite.config";
 import { vueEsmRuntimeAliases } from "./vite/vueEsmRuntimeAliases";
@@ -10,11 +10,13 @@ import { vueEsmRuntimeAliases } from "./vite/vueEsmRuntimeAliases";
 export default mergeConfig(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   createViteConfig("serve") as any,
-  defineConfig({
+  defineProject({
     resolve: {
       alias: vueEsmRuntimeAliases(),
     },
     test: {
+      name: "vapor",
+      globals: false,
       environment: "happy-dom",
       server: {
         deps: {
@@ -22,18 +24,14 @@ export default mergeConfig(
         },
       },
       include: [
-        "src/components/ui/**/*.vapor.test.ts",
-        "src/icons/createIcon.vapor.test.ts",
-        "apps/calendar/src/App.test.ts",
-        "apps/calendar/src/widgets/LunarDateWidget.test.ts",
-        "apps/clock/src/App.test.ts",
-        "apps/clock/src/widgets/ClockWidgets.test.ts",
-        "apps/notes/src/App.test.ts",
-        "apps/notes/src/DesktopStickyNote.test.ts",
-        "apps/notes/src/NotesDesktopLayer.test.ts",
-        "apps/pdf-viewer/src/components/PdfFilePreview.test.ts",
+        "src/**/*.vapor.test.ts",
+        "tests/**/*.vapor.test.ts",
+        "apps/*/src/**/*.vapor.test.ts",
       ],
       pool: "vmThreads",
+      // Run after the much larger VDOM project so coverage does not multiply
+      // worker pressure and make timing-sensitive DOM tests flaky.
+      sequence: { groupOrder: 1 },
     },
   }),
 );

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { defineComponent, h, nextTick, ref } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
 
 import RadioGroup from "./RadioGroup.vue";
 import RadioGroupItem from "./RadioGroupItem.vue";
@@ -21,6 +21,10 @@ function mount(
 
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
+});
+
+it("keeps form controls compiled in Vapor mode", () => {
+  assertVaporComponents({ RadioGroup, RadioGroupItem, Slider, Switch });
 });
 
 describe("Switch", () => {

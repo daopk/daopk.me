@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, ref } from "vue";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
 
 import Dialog from "./Dialog.vue";
 import ToastHost from "./ToastHost.vue";
@@ -36,6 +36,10 @@ afterEach(() => {
   vi.useRealTimers();
   document.body.innerHTML = "";
   document.body.style.overflow = "";
+});
+
+it("keeps dialog and toast roots compiled in Vapor mode", () => {
+  assertVaporComponents({ Dialog, ToastHost });
 });
 
 describe("Dialog", () => {
