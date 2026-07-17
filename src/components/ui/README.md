@@ -10,10 +10,10 @@ The implementation is intentionally hybrid:
 - `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
   `ropav` through
   `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
-- Tooltip and hover card positioning use the local Vapor composables plus
-  `@floating-ui/dom`. Menus use Ropav's public `useDropdownMenu` composable for
-  disclosure, outside interactions and collision-aware positioning while the
-  facade retains its slot-based item API.
+- Tooltip and hover card positioning use Ropav's public
+  `ropav/floating` composable through a local Vapor adapter. Menus use Ropav's
+  public `useDropdownMenu` composable for disclosure, outside interactions and
+  collision-aware positioning while the facade retains its slot-based item API.
 - Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
   composable, stack-aware dismissal, background inerting and scroll locking.
 - Toast calls retain the stable module-level `useToast` facade while Ropav's

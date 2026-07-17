@@ -1,9 +1,13 @@
 <script setup vapor lang="ts">
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
-import type { ReferenceElement } from "@floating-ui/dom";
 
 import { resolvePortalTarget } from "./portalTarget";
-import { useFloatingPosition, type FloatingAlign, type FloatingSide } from "./useFloatingPosition";
+import {
+  useFloatingPosition,
+  type FloatingAlign,
+  type FloatingReference,
+  type FloatingSide,
+} from "./useFloatingPosition";
 import { useSlotTrigger } from "./useSlotTrigger";
 
 interface HoverCardProps {
@@ -17,7 +21,7 @@ interface HoverCardProps {
   openDelay?: number;
   portalTo?: string | HTMLElement;
   prioritizePosition?: boolean;
-  reference?: ReferenceElement;
+  reference?: FloatingReference;
   side?: FloatingSide;
   sideOffset?: number;
   updatePositionStrategy?: "optimized" | "always";
@@ -121,7 +125,9 @@ const trigger = useSlotTrigger(triggerHost, {
   pointerleave: onPointerLeave,
   pointerup: onPointerUp,
 });
-const positionReference = computed<ReferenceElement | null>(() => props.reference ?? trigger.value);
+const positionReference = computed<FloatingReference | null>(
+  () => props.reference ?? trigger.value,
+);
 const resolvedPortalTo = computed(() => resolvePortalTarget(props.portalTo));
 const { arrowStyle, floatingStyle, resolvedSide } = useFloatingPosition({
   align: () => props.align,

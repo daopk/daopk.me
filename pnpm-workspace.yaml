@@ -8,9 +8,10 @@ allowBuilds:
   workerd: false
 catalog:
   "@vue/server-renderer": 3.6.0-beta.17
+  ropav: ^0.0.13
   vue: 3.6.0-beta.17
 minimumReleaseAgeExclude:
-  - ropav@0.0.12
+  - ropav@0.0.13
 packages:
   - .
   - apps/*
