@@ -1,5 +1,6 @@
-import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { flushPromises, mountVapor, type VaporMount } from "~/test/mountVapor";
 
 import {
   AppChromeInjectionKey,
@@ -59,21 +60,15 @@ function mountCalendar(
     readonly args?: Readonly<Record<string, unknown>>;
     readonly appChrome?: AppChromeController;
   } = {},
-) {
-  const provide: Record<symbol, unknown> = {
-    [KernelInjectionKey as symbol]: kernel,
-    [AppContextInjectionKey as symbol]: makeContext(options.args),
-  };
-
-  if (options.appChrome !== undefined) {
-    provide[AppChromeInjectionKey as symbol] = options.appChrome;
-  }
-
-  return mount(App, {
-    attachTo: document.body,
-    global: {
-      provide,
-    },
+): VaporMount {
+  return mountVapor(App, {
+    provide: [
+      [KernelInjectionKey, kernel],
+      [AppContextInjectionKey, makeContext(options.args)],
+      ...(options.appChrome === undefined
+        ? []
+        : ([[AppChromeInjectionKey, options.appChrome]] as const)),
+    ],
   });
 }
 
@@ -238,13 +233,13 @@ describe("Calendar App.vue", () => {
     const wrapper = mountCalendar();
 
     await flushPromises();
-    await wrapper.find('button[aria-label="Next month"]').trigger("click");
+    await wrapper.click('button[aria-label="Next month"]');
     expect(wrapper.text()).toContain("June 2026");
 
-    await wrapper.find('button[aria-label="Previous month"]').trigger("click");
+    await wrapper.click('button[aria-label="Previous month"]');
     expect(wrapper.text()).toContain("May 2026");
 
-    await wrapper.find('button[aria-label="Next month"]').trigger("click");
+    await wrapper.click('button[aria-label="Next month"]');
     textButton("Today").click();
     await flushPromises();
     expect(wrapper.text()).toContain("May 2026");
@@ -440,7 +435,7 @@ describe("Calendar App.vue", () => {
 
     await flushPromises();
 
-    expect(wrapper.find(".calendar-settings__header").exists()).toBe(false);
+    expect(wrapper.exists(".calendar-settings__header")).toBe(false);
     expect(appChrome.setTitle).toHaveBeenLastCalledWith("Calendar settings");
     expect(backAction?.ariaLabel).toBe("Back to Calendar");
 

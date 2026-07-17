@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { AppToolbar, IconButton, ToolbarGroup, ToolbarTitle } from "@daopk/kit";
 import { Button } from "@daopk/ui";
 import { ChevronLeft, ChevronRight } from "@daopk/icons";

@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup vapor lang="ts">
 import { GroupLabel } from "@daopk/kit";
 
 import type { CalendarDayCell } from "../dateGrid";

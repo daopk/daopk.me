@@ -58,6 +58,7 @@ export default mergeConfig(
       exclude: [
         "src/components/ui/**/*.vapor.test.ts",
         "src/icons/createIcon.vapor.test.ts",
+        "apps/calendar/src/App.test.ts",
         "apps/calendar/src/widgets/LunarDateWidget.test.ts",
         "apps/clock/src/App.test.ts",
         "apps/clock/src/widgets/ClockWidgets.test.ts",
