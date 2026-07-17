@@ -1,9 +1,14 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useAttrs, useId, watch } from "vue";
-import { useTeleportTarget } from "ropav/teleport-provider";
-
-import { isTopDialog, registerDialog, unregisterDialog } from "./dialogStack";
-import { useFocusTrap } from "./useFocusTrap";
+import { computed, onBeforeUnmount, ref } from "vue";
+import {
+  DialogContent as RopavDialogContent,
+  DialogDescription as RopavDialogDescription,
+  DialogOverlay as RopavDialogOverlay,
+  DialogPortal as RopavDialogPortal,
+  DialogRoot as RopavDialogRoot,
+  DialogTitle as RopavDialogTitle,
+  type DialogFocusTrapOptions,
+} from "ropav/dialog";
 
 interface DialogProps {
   open: boolean;
@@ -39,130 +44,53 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const attrs = useAttrs();
-const dialogId = Symbol("ds-dialog");
-const titleId = `ds-dialog-title-${useId()}`;
-const descriptionId = `ds-dialog-description-${useId()}`;
+// Ropav treats baseZIndex as the content plane and reserves the preceding
+// plane for the overlay. Keep these floors aligned with the chrome tokens.
+const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
+const SYSTEM_DIALOG_CONTENT_BASE_Z_INDEX = 1801;
+
+const baseZIndex = computed(() =>
+  props.layer === "system" ? SYSTEM_DIALOG_CONTENT_BASE_Z_INDEX : DIALOG_CONTENT_BASE_Z_INDEX,
+);
+
+const focusTrapOptions: DialogFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" },
+};
+
 const portalRoot = ref<HTMLElement | null>(null);
-const content = ref<HTMLElement | null>(null);
-const trapEnabled = computed(() => props.open && props.modal);
-const resolvedPortalTo = useTeleportTarget(() => props.portalTo);
-
-let restoreFocusTo: HTMLElement | null = null;
-let wasOpen = false;
-
-useFocusTrap(
-  content,
-  {
-    allowOutsideClick: true,
-    escapeDeactivates: false,
-    preventScroll: true,
-    tabbableOptions: { displayCheck: "none" },
-  },
-  trapEnabled,
-);
-
-function unregister(): void {
-  unregisterDialog(dialogId);
-  document.removeEventListener("keydown", onDocumentKeydown);
-}
-
-async function register(): Promise<void> {
-  await nextTick();
-  if (!props.open || portalRoot.value === null) return;
-
-  registerDialog({ id: dialogId, modal: props.modal, root: portalRoot.value });
-  document.removeEventListener("keydown", onDocumentKeydown);
-  document.addEventListener("keydown", onDocumentKeydown);
-
-  if (props.modal && content.value !== null && !content.value.contains(document.activeElement)) {
-    content.value.focus({ preventScroll: true });
-  }
-}
-
-async function restoreFocus(): Promise<void> {
-  const target = restoreFocusTo;
-  restoreFocusTo = null;
-  await nextTick();
-  if (target?.isConnected) target.focus({ preventScroll: true });
-}
-
-function requestClose(): void {
-  if (!props.open) return;
-  emit("update:open", false);
-  emit("close");
-}
-
-function onDocumentKeydown(event: KeyboardEvent): void {
-  if (
-    event.key !== "Escape" ||
-    event.defaultPrevented ||
-    !props.dismissible ||
-    !isTopDialog(dialogId)
-  ) {
-    return;
-  }
-
-  event.preventDefault();
-  requestClose();
-}
-
-function onOverlayPointerDown(event: PointerEvent): void {
-  if (event.target !== event.currentTarget || !props.dismissible || !isTopDialog(dialogId)) {
-    return;
-  }
-  requestClose();
-}
-
-watch(
-  () => [props.open, props.modal, resolvedPortalTo.value] as const,
-  ([open]) => {
-    unregister();
-    if (!open) {
-      if (wasOpen) void restoreFocus();
-      wasOpen = false;
-      return;
-    }
-
-    if (!wasOpen) {
-      const activeElement = document.activeElement;
-      restoreFocusTo =
-        activeElement instanceof HTMLElement && activeElement !== document.body
-          ? activeElement
-          : null;
-    }
-    wasOpen = true;
-    void register();
-  },
-  { flush: "post", immediate: true },
-);
 
 onBeforeUnmount(() => {
-  unregister();
-  if (wasOpen) void restoreFocus();
-  // Own the teleported root lifecycle so dynamically removed app surfaces
-  // cannot retain stale dialogs while their dismissal transition is pending.
-  portalRoot.value?.remove();
+  // Vapor Teleport can retain its children when a controlled-open surface is
+  // unmounted. Own this inert wrapper so removed app surfaces cannot leave a
+  // stale dialog in the shared overlay target.
+  const root = portalRoot.value;
+  queueMicrotask(() => root?.remove());
 });
 </script>
 
 <template>
-  <span class="ds-dialog__host">
-    <Teleport v-if="open" :to="resolvedPortalTo">
-      <div ref="portalRoot" class="ds-dialog__portal" :data-dialog-modal="modal || undefined">
-        <div
+  <RopavDialogRoot
+    :open="open"
+    :base-z-index="baseZIndex"
+    :modal="modal"
+    :close-on-escape="dismissible"
+    :close-on-outside-click="dismissible"
+    :prevent-scroll="modal"
+    @update:open="emit('update:open', $event)"
+    @close="emit('close')"
+  >
+    <RopavDialogPortal :teleport-to="portalTo">
+      <div v-if="open" ref="portalRoot" class="ds-dialog__portal">
+        <RopavDialogOverlay
           class="ds-dialog__overlay"
           :class="[
             `ds-dialog__overlay--${variant}`,
             `ds-dialog__overlay--${scope}`,
             `ds-dialog__overlay--${layer}`,
           ]"
-          aria-hidden="true"
-          @pointerdown="onOverlayPointerDown"
         />
-        <div
-          v-bind="attrs"
-          ref="content"
+        <RopavDialogContent
+          v-bind="$attrs"
           class="ds-dialog__content"
           :class="[
             `ds-dialog__content--${variant}`,
@@ -170,25 +98,20 @@ onBeforeUnmount(() => {
             `ds-dialog__content--${size}`,
             `ds-dialog__content--${layer}`,
           ]"
-          role="dialog"
-          :aria-modal="modal ? 'true' : undefined"
-          :aria-labelledby="titleId"
-          :aria-describedby="description ? descriptionId : undefined"
-          tabindex="-1"
+          :focus-trap-options="focusTrapOptions"
         >
-          <h2 :id="titleId" class="ds-dialog__title">{{ title }}</h2>
-          <p v-if="description" :id="descriptionId" class="ds-dialog__description">
+          <RopavDialogTitle class="ds-dialog__title">{{ title }}</RopavDialogTitle>
+          <RopavDialogDescription v-if="description" class="ds-dialog__description">
             {{ description }}
-          </p>
+          </RopavDialogDescription>
           <slot />
-        </div>
+        </RopavDialogContent>
       </div>
-    </Teleport>
-  </span>
+    </RopavDialogPortal>
+  </RopavDialogRoot>
 </template>
 
 <style scoped lang="scss">
-.ds-dialog__host,
 .ds-dialog__portal {
   display: contents;
 }

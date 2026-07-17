@@ -15,8 +15,9 @@ The implementation is fully Vapor while composing several Ropav behaviors:
   collision-aware positioning while the facade retains its slot-based item API.
 - Portaled overlays inherit `#app-overlays` from the root Ropav
   `TeleportProvider`; each facade's `portalTo` prop remains a local override.
-- Dialog behavior is local Vapor DOM with `Teleport`, the `ropav/focus-trap`
-  composable, stack-aware dismissal, background inerting and scroll locking.
+- Dialog visuals and its stable facade stay local while `ropav/dialog`
+  primitives own teleporting, focus trapping, stack-aware dismissal,
+  background inerting, scroll locking and focus restoration.
 - Toast calls retain the stable module-level `useToast` facade while Ropav's
   standalone store owns the bounded queue, updates and timers. Its provider and
   viewport own rendering, live-region roles and dismissal interactions.
@@ -53,7 +54,7 @@ Props in **bold** are required.
 | `Tabs` compound        | `ropav/tabs` adapter      | `modelValue`, `size`, `variant`, `orientation`, `activationMode`; trigger/content **`value`**                                 | `update:modelValue` · default slots         |
 | `Tooltip`              | local Vapor + Floating UI | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
 | `HoverCard`            | local Vapor + Floating UI | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
-| `Dialog`               | local Vapor + focus trap  | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
+| `Dialog`               | `ropav/dialog` primitives | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
 | `DialogActions`        | local Vapor               | `align`                                                                                                                       | default slot                                |
 | `DropdownMenu` + items | Ropav composable adapter  | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
 | `ContextMenu` + items  | Ropav composable adapter  | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |

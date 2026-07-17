@@ -87,6 +87,8 @@ describe("Dialog", () => {
     expect(dialog?.getAttribute("aria-labelledby")).toBeTruthy();
     expect(dialog?.getAttribute("aria-describedby")).toBeTruthy();
     expect(overlay?.classList).toContain("ds-dialog__overlay--default");
+    expect(dialog?.style.zIndex).toBe("1601");
+    expect(overlay?.style.zIndex).toBe("1600");
     expect(document.body.style.overflow).toBe("hidden");
     expect(wrapper.element.inert).toBe(true);
     expect(document.activeElement === dialog || dialog?.contains(document.activeElement)).toBe(
@@ -105,11 +107,14 @@ describe("Dialog", () => {
   it("only lets the top dialog handle Escape and outside pointer dismissal", async () => {
     const firstUpdates: boolean[] = [];
     const secondUpdates: boolean[] = [];
+    const firstCloseArgs: unknown[][] = [];
+    const secondCloseArgs: unknown[][] = [];
     mount(Dialog, {
       props: {
         open: true,
         title: "First",
         "onUpdate:open": (next: boolean) => firstUpdates.push(next),
+        onClose: (...args: unknown[]) => firstCloseArgs.push(args),
       },
     });
     mount(Dialog, {
@@ -117,16 +122,27 @@ describe("Dialog", () => {
         open: true,
         title: "Second",
         "onUpdate:open": (next: boolean) => secondUpdates.push(next),
+        onClose: (...args: unknown[]) => secondCloseArgs.push(args),
       },
     });
     await settle();
 
+    const overlays = document.querySelectorAll<HTMLElement>(".ds-dialog__overlay");
+    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
+    expect(overlays[0]?.style.zIndex).toBe("1600");
+    expect(dialogs[0]?.style.zIndex).toBe("1601");
+    expect(overlays[1]?.style.zIndex).toBe("1602");
+    expect(dialogs[1]?.style.zIndex).toBe("1603");
+
     document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
     expect(firstUpdates).toEqual([]);
     expect(secondUpdates).toEqual([false]);
+    expect(firstCloseArgs).toEqual([]);
+    expect(secondCloseArgs).toEqual([[]]);
 
-    pointer(document.querySelectorAll(".ds-dialog__overlay")[0]!, "pointerdown");
+    pointer(overlays[0]!, "pointerdown");
     expect(firstUpdates).toEqual([]);
+    expect(firstCloseArgs).toEqual([]);
   });
 
   it("supports non-modal container sheets and non-dismissible system dialogs", async () => {
@@ -143,6 +159,8 @@ describe("Dialog", () => {
         layer: "system",
         modal: false,
         dismissible: false,
+        class: "consumer-dialog-class",
+        "data-consumer-attr": "preserved",
         "onUpdate:open": (next: boolean) => updates.push(next),
       },
       slots: { default: "<button>Explicit action</button>" },
@@ -153,12 +171,29 @@ describe("Dialog", () => {
     expect(dialog?.classList).toContain("ds-dialog__content--container");
     expect(dialog?.classList).toContain("ds-dialog__content--sheet");
     expect(dialog?.classList).toContain("ds-dialog__content--system");
+    expect(dialog?.classList).toContain("consumer-dialog-class");
+    expect(dialog?.dataset.consumerAttr).toBe("preserved");
     expect(dialog?.hasAttribute("aria-modal")).toBe(false);
+    expect(dialog?.style.zIndex).toBe("1801");
+    expect(target.querySelector<HTMLElement>(".ds-dialog__overlay")?.style.zIndex).toBe("1800");
     expect(document.body.style.overflow).toBe("");
 
     document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
     pointer(target.querySelector(".ds-dialog__overlay")!, "pointerdown");
     expect(updates).toEqual([]);
+  });
+
+  it("removes teleported content when an open dialog surface unmounts", async () => {
+    const wrapper = mount(Dialog, {
+      props: { open: true, title: "Transient dialog" },
+      slots: { default: "Transient content" },
+    });
+    await settle();
+    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
+
+    wrapper.unmount();
+    await settle();
+    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it("has no serious accessibility violations while open", async () => {

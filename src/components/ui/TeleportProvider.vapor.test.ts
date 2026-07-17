@@ -4,6 +4,7 @@ import { TeleportProvider } from "ropav/teleport-provider";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
+import Dialog from "./Dialog.vue";
 import DropdownMenu, { DropdownMenuItem } from "./DropdownMenu.vue";
 import Tooltip from "./Tooltip.vue";
 
@@ -103,6 +104,24 @@ describe("TeleportProvider integration", () => {
     await settle();
 
     expect(portal.querySelector('[role="menu"]')?.textContent).toContain("Item");
+  });
+
+  it("provides the default target through the Ropav dialog portal", async () => {
+    const portal = createPortal("provider-dialog-target");
+    mount(TeleportProvider, {
+      props: { teleportTo: "#provider-dialog-target" },
+      slots: {
+        default: () =>
+          createComponent(
+            Dialog,
+            { open: true, title: "Provider dialog" },
+            { default: () => button("Dialog action") },
+          ),
+      },
+    });
+    await settle();
+
+    expect(portal.querySelector('[role="dialog"]')?.textContent).toContain("Provider dialog");
   });
 
   it("keeps portalTo as a local override", async () => {
