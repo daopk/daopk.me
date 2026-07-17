@@ -17,7 +17,7 @@
     "hls.js": "^1.6.16"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitejs/plugin-vue": "catalog:",
     "@vue/tsconfig": "^0.9.1",
     "embla-carousel": "^8.6.0",
     "sass-embedded": "^1.100.0",

@@ -7,6 +7,7 @@ allowBuilds:
   # its binary, so skip the heavy postinstall download.
   workerd: false
 catalog:
+  "@vitejs/plugin-vue": ^6.0.8
   ropav: ^0.0.13
   vue: 3.6.0-beta.17
 minimumReleaseAgeExclude:

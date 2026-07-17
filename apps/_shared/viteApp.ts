@@ -86,7 +86,7 @@ const WORKSPACE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export function defineDaopkApp(id: string, options: DaopkAppOptions = {}): UserConfig {
   return defineConfig({
     envDir: WORKSPACE_ROOT,
-    plugins: [vue(), injectCssOnLoad(id), ...(options.plugins ?? [])],
+    plugins: [vue({ features: { vapor: true } }), injectCssOnLoad(id), ...(options.plugins ?? [])],
     build: {
       target: "es2022",
       cssCodeSplit: false,

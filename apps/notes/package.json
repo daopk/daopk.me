@@ -13,7 +13,7 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitejs/plugin-vue": "catalog:",
     "@vue/tsconfig": "^0.9.1",
     "@vueuse/core": "^14.3.0",
     "sass-embedded": "^1.100.0",

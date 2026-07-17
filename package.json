@@ -60,7 +60,7 @@
     "@daopk-app/youtube-player": "workspace:*",
     "@iconify-json/fluent-color": "^1.2.21",
     "@types/node": "^26.1.0",
-    "@vitejs/plugin-vue": "^6.0.8",
+    "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "4.1.10",
     "@vue/tsconfig": "^0.9.1",
     "axe-core": "^4.12.1",

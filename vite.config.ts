@@ -62,7 +62,7 @@ export function createViteConfig(command: ViteCommand): UserConfig {
       photosContentProxyServer(),
       appsContentPreviewServer(),
       externalRuntimeImportMap(),
-      vue(),
+      vue({ features: { vapor: true } }),
       pwaPlugin(),
       sameOriginRootHtmlAssets(),
     ],

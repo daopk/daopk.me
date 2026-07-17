@@ -16,7 +16,7 @@
     "pdfjs-dist": "^6.1.200"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@vitejs/plugin-vue": "catalog:",
     "@vue/tsconfig": "^0.9.1",
     "sass-embedded": "^1.100.0",
     "typescript": "~6.0.3",
