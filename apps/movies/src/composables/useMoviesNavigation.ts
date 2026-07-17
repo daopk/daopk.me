@@ -78,7 +78,7 @@ export function useMoviesNavigation({
   const futureHistory = ref<MoviesView[]>([]);
   const toolbarSolid = ref(false);
 
-  const canGoBack = computed(() => history.value.length > 0);
+  const canGoBack = computed(() => history.value.length > 0 || view.value.name !== "home");
   const canGoForward = computed(() => futureHistory.value.length > 0);
   const canGoHome = computed(() => view.value.name !== "home");
   const activeSearch = computed(() =>
@@ -127,6 +127,14 @@ export function useMoviesNavigation({
   function goBack(): void {
     const previous = history.value.at(-1);
     if (previous === undefined) {
+      if (view.value.name === "home") {
+        return;
+      }
+
+      futureHistory.value = [...futureHistory.value, view.value];
+      view.value = createMoviesHomeView();
+      resetToolbarSolid();
+      syncViewPath(view.value);
       return;
     }
 

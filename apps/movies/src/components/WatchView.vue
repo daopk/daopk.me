@@ -82,9 +82,15 @@ let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
 const playbackProgressStore = createMoviesPlaybackProgressStore();
 const sourcePreferenceStore = createMoviesSourcePreferenceStore();
+const watchTarget = computed<MoviesWatchTarget | null>(() => props.target ?? null);
 
 const play = computed<MoviePlayInfo | null>(() => {
-  if (props.target.kind === "movie") {
+  const target = watchTarget.value;
+  if (target === null) {
+    return null;
+  }
+
+  if (target.kind === "movie") {
     return movieDetail.value?.play ?? null;
   }
 
@@ -101,14 +107,24 @@ const sourceOptions = computed(() =>
 );
 const hasSourceOptions = computed(() => sourceOptions.value.length > 1);
 const title = computed(() => {
-  if (props.target.kind === "movie") {
+  const target = watchTarget.value;
+  if (target === null) {
+    return "";
+  }
+
+  if (target.kind === "movie") {
     return movieDetail.value?.name ?? mediaLabel("movie", t, "singular");
   }
 
   return episodeDetail.value?.episode.name ?? t("movies.section.episode");
 });
 const posterUrl = computed(() => {
-  if (props.target.kind === "movie") {
+  const target = watchTarget.value;
+  if (target === null) {
+    return "";
+  }
+
+  if (target.kind === "movie") {
     const detail = movieDetail.value;
     return detail === null ? "" : detail.backdropUrl || detail.posterUrl;
   }
@@ -120,18 +136,20 @@ const posterUrl = computed(() => {
         currentEpisodeDetail.series.backdropUrl ||
         currentEpisodeDetail.series.posterUrl;
 });
-const progressKey = computed(() =>
-  props.target.kind === "movie"
-    ? moviePlaybackProgressKey(props.target.tmdbId)
-    : episodePlaybackProgressKey(
-        props.target.tmdbId,
-        props.target.seasonNumber,
-        props.target.episodeNumber,
-      ),
-);
+const progressKey = computed(() => {
+  const target = watchTarget.value;
+  if (target === null) {
+    return "";
+  }
+
+  return target.kind === "movie"
+    ? moviePlaybackProgressKey(target.tmdbId)
+    : episodePlaybackProgressKey(target.tmdbId, target.seasonNumber, target.episodeNumber);
+});
 const episodeInfo = computed(() => {
+  const target = watchTarget.value;
   const currentEpisodeDetail = episodeDetail.value;
-  if (props.target.kind !== "episode" || currentEpisodeDetail === null) {
+  if (target?.kind !== "episode" || currentEpisodeDetail === null) {
     return null;
   }
 
@@ -146,13 +164,13 @@ const episodeInfo = computed(() => {
   };
 });
 const activeEpisodeNumber = computed(() => {
-  const target = props.target;
-  return target.kind === "episode" ? target.episodeNumber : null;
+  const target = watchTarget.value;
+  return target?.kind === "episode" ? target.episodeNumber : null;
 });
 const canChooseAnotherSeason = computed(() => {
-  const target = props.target;
+  const target = watchTarget.value;
   const currentEpisodeDetail = episodeDetail.value;
-  if (target.kind !== "episode" || currentEpisodeDetail === null) {
+  if (target?.kind !== "episode" || currentEpisodeDetail === null) {
     return false;
   }
 
@@ -161,9 +179,9 @@ const canChooseAnotherSeason = computed(() => {
   );
 });
 const nextEpisode = computed<MovieSeasonEpisode | null>(() => {
-  const target = props.target;
+  const target = watchTarget.value;
   const currentEpisodeDetail = episodeDetail.value;
-  if (target.kind !== "episode" || currentEpisodeDetail === null) {
+  if (target?.kind !== "episode" || currentEpisodeDetail === null) {
     return null;
   }
 
@@ -181,7 +199,8 @@ const nextEpisode = computed<MovieSeasonEpisode | null>(() => {
 const nextEpisodeTarget = computed<MovieEpisodeTarget | null>(() => {
   const episode = nextEpisode.value;
   const currentEpisodeDetail = episodeDetail.value;
-  if (episode === null || currentEpisodeDetail === null) {
+  const target = watchTarget.value;
+  if (episode === null || currentEpisodeDetail === null || target === null) {
     return null;
   }
 
@@ -189,7 +208,7 @@ const nextEpisodeTarget = computed<MovieEpisodeTarget | null>(() => {
     episodeNumber: episode.episodeNumber,
     seasonNumber: episode.seasonNumber,
     slug: currentEpisodeDetail.series.slug,
-    tmdbId: props.target.tmdbId,
+    tmdbId: target.tmdbId,
   };
 });
 const nextEpisodeLabel = computed(() => {
@@ -203,7 +222,7 @@ const nextEpisodeLabel = computed(() => {
 });
 
 watch(
-  () => [props.target, props.sourcePreference, locale.value] as const,
+  () => [watchTarget.value, props.sourcePreference, locale.value] as const,
   () => {
     void loadTarget();
   },
@@ -247,6 +266,11 @@ function applyViewportBlockSize(element: HTMLElement, blockSize: number): void {
 
 async function loadTarget(): Promise<void> {
   abortController?.abort();
+  const target = watchTarget.value;
+  if (target === null) {
+    return;
+  }
+
   const controller = new AbortController();
   abortController = controller;
   state.value = "loading";
@@ -255,7 +279,6 @@ async function loadTarget(): Promise<void> {
   selectedSourceIndex.value = 0;
 
   try {
-    const target = props.target;
     if (target.kind === "movie") {
       movieDetail.value = await fetchMovieDetail("movie", target.tmdbId, {
         signal: controller.signal,
@@ -268,7 +291,7 @@ async function loadTarget(): Promise<void> {
         { signal: controller.signal },
       );
     }
-    restoreSavedSourceIndex(props.sourcePreference);
+    restoreSavedSourceIndex(props.sourcePreference ?? null);
     state.value = "ready";
   } catch {
     if (controller.signal.aborted) {
@@ -323,8 +346,9 @@ function watchNextEpisode(): void {
 }
 
 function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
+  const target = watchTarget.value;
   const currentEpisodeDetail = episodeDetail.value;
-  if (episode.play === null || currentEpisodeDetail === null) {
+  if (target === null || episode.play === null || currentEpisodeDetail === null) {
     return;
   }
 
@@ -334,7 +358,7 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
       episodeNumber: episode.episodeNumber,
       seasonNumber: episode.seasonNumber,
       slug: currentEpisodeDetail.series.slug,
-      tmdbId: props.target.tmdbId,
+      tmdbId: target.tmdbId,
     },
   });
 }
@@ -452,12 +476,12 @@ defineExpose({
       </section>
 
       <SeasonEpisodesSection
-        v-if="episodeDetail !== null"
+        v-if="episodeDetail !== null && watchTarget !== null"
         class="movies-watch__episodes"
         :active-episode-number="activeEpisodeNumber"
         :initial-season="episodeDetail.season"
         :series="episodeDetail.series"
-        :tmdb-id="props.target.tmdbId"
+        :tmdb-id="watchTarget.tmdbId"
         @open="watchSeasonEpisode"
       />
     </article>

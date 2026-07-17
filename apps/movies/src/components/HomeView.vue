@@ -1,4 +1,6 @@
 <script setup vapor lang="ts">
+import { nextTick } from "vue";
+
 import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
 import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
 import { ChevronRight, Trash2 } from "@daopk/icons";
@@ -57,13 +59,34 @@ const {
   t,
 } = useMoviesHomeView({
   closeTrailerPreviewNow,
-  openContinueEpisode: (request) => {
-    emit("open-continue-episode", request);
-  },
-  openContinueMovie: (movie) => {
-    emit("open-continue-movie", movie);
-  },
+  openContinueEpisode,
+  openContinueMovie,
 });
+
+async function closeTrailerPreviewBeforeNavigation(): Promise<void> {
+  closeTrailerPreviewNow();
+  await nextTick();
+}
+
+async function openContinueEpisode(request: MovieEpisodeTarget): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-continue-episode", request);
+}
+
+async function openContinueMovie(movie: MovieSummary): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-continue-movie", movie);
+}
+
+async function openDetail(movie: MovieSummary): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-detail", movie);
+}
+
+async function openList(query: MoviesListQuery): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-list", query);
+}
 </script>
 
 <template>
@@ -79,7 +102,7 @@ const {
       {{ t("movies.error.homeData") }}
     </StatusBanner>
 
-    <HomeHero v-if="hasFeatured" :featured="featured" @open-detail="$emit('open-detail', $event)" />
+    <HomeHero v-if="hasFeatured" :featured="featured" @open-detail="openDetail" />
 
     <section
       v-if="hasFeatured || hasContinueWatching"
@@ -179,7 +202,7 @@ const {
                     variant="ghost"
                     :icon-start="ChevronRight"
                     :aria-label="t('movies.home.viewAll', { label: rowListLabel(group, row, t) })"
-                    @click="$emit('open-list', queryForRow(group, row))"
+                    @click="openList(queryForRow(group, row))"
                   />
                 </div>
 
@@ -196,7 +219,7 @@ const {
                       @pointerenter="showTrailerPreviewFromPointer(movie, $event)"
                       @pointerleave="closeTrailerPreview"
                       @pointermove="moveTrailerPreview(movie, $event)"
-                      @open="$emit('open-detail', $event)"
+                      @open="openDetail"
                     />
                   </li>
                 </ul>

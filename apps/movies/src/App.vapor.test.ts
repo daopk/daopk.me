@@ -1011,6 +1011,32 @@ describe("Movies app", () => {
     restoreHoverPreview();
   });
 
+  it("closes a focused card trailer preview before opening movie details", async () => {
+    const restoreHoverPreview = stubHoverPreviewCapability();
+    const wrapper = mountMovies({ attachTo: document.body });
+    await settle();
+
+    const card = wrapper.get(".movies-home__rail .movie-card");
+    card.element.focus();
+    await nextTick();
+
+    expect(document.body.querySelector(".movies-trailer-hover-card")).not.toBeNull();
+
+    await card.trigger("click");
+    await settle();
+
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+    expect(document.body.querySelector(".movies-trailer-hover-card")).toBeNull();
+
+    await wrapper.get('.movies-toolbar__history button[aria-label="Back"]').trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+
+    restoreHoverPreview();
+  });
+
   it("waits one second before opening a Home rail trailer preview", async () => {
     const restoreHoverPreview = stubHoverPreviewCapability();
 
@@ -1718,6 +1744,14 @@ describe("Movies app", () => {
     expect(movieInfo.text()).toContain("An insomniac office worker meets a soap maker.");
     expect(movieInfo.text()).toContain("Release Date");
     expect(movieInfo.text()).toContain("Edward Norton");
+
+    await wrapper.get(".movies-hls-player__back-button").trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+    expect(wrapper.find(".movies-watch").exists()).toBe(false);
+    expect(wrapper.find(".movies-hls-player").exists()).toBe(false);
   });
 
   it("opens a Continue Watching movie with the last saved source", async () => {
@@ -2773,7 +2807,7 @@ describe("Movies app", () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 
-  it("shows toolbar Home for a direct route with no back history", async () => {
+  it("uses Home as the back fallback for a direct route", async () => {
     window.history.replaceState(null, "", "/movie/550-fight-club");
     const wrapper = mountMovies();
     await settle();
@@ -2784,24 +2818,39 @@ describe("Movies app", () => {
     const homeButton = () => toolbarHistory.get('button[aria-label="Home"]');
 
     expect(wrapper.text()).toContain("Fight Club");
-    expect(backButton().attributes("disabled")).toBeDefined();
-    expect(forwardButton().attributes("disabled")).toBeDefined();
-    expect(homeButton().attributes("disabled")).toBeUndefined();
-
-    await homeButton().trigger("click");
-    await settle();
-
-    expect(window.location.pathname).toBe("/apps/movies");
-    expect(wrapper.find(".movies-home").exists()).toBe(true);
     expect(backButton().attributes("disabled")).toBeUndefined();
     expect(forwardButton().attributes("disabled")).toBeDefined();
-    expect(homeButton().attributes("disabled")).toBeDefined();
+    expect(homeButton().attributes("disabled")).toBeUndefined();
 
     await backButton().trigger("click");
     await settle();
 
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
+    expect(backButton().attributes("disabled")).toBeDefined();
+    expect(forwardButton().attributes("disabled")).toBeUndefined();
+    expect(homeButton().attributes("disabled")).toBeDefined();
+
+    await forwardButton().trigger("click");
+    await settle();
+
     expect(window.location.pathname).toBe("/movie/550-fight-club");
     expect(wrapper.text()).toContain("Fight Club");
+  });
+
+  it("returns Home from a failed direct route", async () => {
+    window.history.replaceState(null, "", "/movie/550-fight-club");
+    vi.mocked(fetchMovieDetail).mockRejectedValueOnce(new Error("Detail failed"));
+
+    const wrapper = mountMovies();
+    await settle();
+
+    expect(wrapper.text()).toContain("Could not load title");
+    await wrapper.get(".movies-detail__status button").trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/apps/movies");
+    expect(wrapper.find(".movies-home").exists()).toBe(true);
   });
 
   it("opens actor information from Detail cast cards", async () => {

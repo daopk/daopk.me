@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { toRef } from "vue";
+import { nextTick, toRef } from "vue";
 
 import { EmptyState, ScrollArea, Spinner, StatusBanner } from "@daopk/kit";
 import { Search } from "@daopk/icons";
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 const {
   anchorMode: trailerPreviewAnchorMode,
   close: closeTrailerPreview,
+  closeNow: closeTrailerPreviewNow,
   enabled: trailerPreviewEnabled,
   keepOpen: keepTrailerPreviewOpen,
   movie: trailerPreviewMovie,
@@ -64,11 +65,24 @@ const {
   t,
   title,
 } = useMoviesListView({
-  openList: (query) => {
-    emit("open-list", query);
-  },
+  openList,
   query: toRef(props, "query"),
 });
+
+async function closeTrailerPreviewBeforeNavigation(): Promise<void> {
+  closeTrailerPreviewNow();
+  await nextTick();
+}
+
+async function openDetail(movie: MovieSummary): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-detail", movie);
+}
+
+async function openList(query: MoviesListQuery): Promise<void> {
+  await closeTrailerPreviewBeforeNavigation();
+  emit("open-list", query);
+}
 </script>
 
 <template>
@@ -104,7 +118,7 @@ const {
               :key="option.value"
               size="md"
               :variant="activeSearchMedia === option.value ? 'primary' : 'secondary'"
-              @click="$emit('open-list', mediaQuery(option.value))"
+              @click="openList(mediaQuery(option.value))"
             >
               {{ option.label }}
             </Button>
@@ -214,7 +228,7 @@ const {
                 @pointerenter="showTrailerPreviewFromPointer(movie, $event)"
                 @pointerleave="closeTrailerPreview"
                 @pointermove="moveTrailerPreview(movie, $event)"
-                @open="$emit('open-detail', $event)"
+                @open="openDetail"
               />
             </li>
           </ul>
