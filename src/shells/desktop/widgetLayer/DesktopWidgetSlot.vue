@@ -1,10 +1,11 @@
 <script setup vapor lang="ts">
-import { computed, defineAsyncComponent, markRaw, ref, type Component } from "vue";
+import { computed, defineVaporAsyncComponent, markRaw, ref, type VaporComponent } from "vue";
 
 import { ContextMenu, ContextMenuItem } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { gridToPixels, widgetPixelDimensions } from "~/core/widgets/sizing";
 import type { WidgetManifest } from "~/types/widget";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { useWidgetDrag } from "./useWidgetDrag";
 
@@ -64,11 +65,13 @@ const dragHandlers = useWidgetDrag({
   },
 });
 
-const asyncComponentCache = new WeakMap<WidgetManifest, Component>();
-function resolveComponent(manifest: WidgetManifest): Component {
+const asyncComponentCache = new WeakMap<WidgetManifest, VaporComponent>();
+function resolveComponent(manifest: WidgetManifest): VaporComponent {
   const cached = asyncComponentCache.get(manifest);
   if (cached) return cached;
-  const wrapped = markRaw(defineAsyncComponent(manifest.component));
+  const wrapped = markRaw(
+    defineVaporAsyncComponent(verifiedVaporLoader(manifest.component, `Widget ${manifest.id}`)),
+  );
   asyncComponentCache.set(manifest, wrapped);
   return wrapped;
 }

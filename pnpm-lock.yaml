@@ -132,9 +132,6 @@ importers:
       '@vue/server-renderer':
         specifier: 'catalog:'
         version: 3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3))
-      '@vue/test-utils':
-        specifier: ^2.4.11
-        version: 2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))
       '@vue/tsconfig':
         specifier: ^0.9.1
         version: 0.9.1(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))
@@ -2442,16 +2439,6 @@ packages:
 
   '@vue/shared@3.6.0-beta.17':
     resolution: {integrity: sha512-iuDH2UPBc8nzqgL4dcLiqpAJoJfQe70RcPM34+p+dVk0ThJD9jjpLPjzouP+RoRrXkAPOC7jmMncafdv69BGaA==}
-
-  '@vue/test-utils@2.4.11':
-    resolution: {integrity: sha512-GDqaqZsA6m2E5vNzej0aYiIb6BX8xV9pNSbbbXKOfEYwg7ZNblVX8suyqmUBThq8VIrgAJNxn+z72hVtUeiWHA==}
-    peerDependencies:
-      '@vue/compiler-dom': 3.x
-      '@vue/server-renderer': 3.x
-      vue: 3.x
-    peerDependenciesMeta:
-      '@vue/server-renderer':
-        optional: true
 
   '@vue/tsconfig@0.9.1':
     resolution: {integrity: sha512-buvjm+9NzLCJL29KY1j1991YYJ5e6275OiK+G4jtmfIb+z4POywbdm0wXusT9adVWqe0xqg70TbI7+mRx4uU9w==}
@@ -6258,15 +6245,6 @@ snapshots:
   '@vue/shared@3.5.40': {}
 
   '@vue/shared@3.6.0-beta.17': {}
-
-  '@vue/test-utils@2.4.11(@vue/compiler-dom@3.6.0-beta.17)(@vue/server-renderer@3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3)))(vue@3.6.0-beta.17(typescript@6.0.3))':
-    dependencies:
-      '@vue/compiler-dom': 3.6.0-beta.17
-      js-beautify: 1.15.4
-      vue: 3.6.0-beta.17(typescript@6.0.3)
-      vue-component-type-helpers: 3.3.6
-    optionalDependencies:
-      '@vue/server-renderer': 3.6.0-beta.17(vue@3.6.0-beta.17(typescript@6.0.3))
 
   '@vue/tsconfig@0.9.1(typescript@6.0.3)(vue@3.6.0-beta.17(typescript@6.0.3))':
     optionalDependencies:

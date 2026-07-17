@@ -1,27 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { defineComponent, h } from "vue";
+import { defineVaporComponent } from "vue";
 
 import Button from "~/components/ui/Button.vue";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { mountVapor, mountVaporRoot } from "./mountVapor";
 
 describe("mountVapor", () => {
   it("rejects VDOM components when a Vapor root is required", () => {
-    const VdomComponent = defineComponent({ render: () => h("div", "VDOM") });
+    const VdomComponent = { render: () => null };
 
     expect(() => mountVaporRoot(VdomComponent)).toThrow("was not compiled in Vapor mode");
     expect(() => mountVaporRoot(Button)).not.toThrow();
   });
 
+  it("rejects VDOM components returned by an async loader", async () => {
+    const VdomComponent = { render: () => null };
+
+    await expect(verifiedVaporLoader(async () => ({ default: VdomComponent }))()).rejects.toThrow(
+      "was not compiled in Vapor mode",
+    );
+    await expect(verifiedVaporLoader(async () => ({ default: Button }))()).resolves.toEqual({
+      default: Button,
+    });
+  });
+
   it("dispatches only the requested value event and supports exact DOM events", async () => {
     const events: string[] = [];
-    const Host = defineComponent({
-      render: () =>
-        h("input", {
-          onChange: () => events.push("change"),
-          onInput: () => events.push("input"),
-          onKeydown: (event: KeyboardEvent) => events.push(event.key),
-        }),
+    const Host = defineVaporComponent(() => {
+      const input = document.createElement("input");
+      input.addEventListener("change", () => events.push("change"));
+      input.addEventListener("input", () => events.push("input"));
+      input.addEventListener("keydown", (event) => events.push(event.key));
+      return input;
     });
     const wrapper = mountVapor(Host);
 

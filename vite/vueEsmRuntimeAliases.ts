@@ -13,21 +13,15 @@ function vueEsmRuntime(packageName: string, fileName: string): string {
 }
 
 /**
- * Vue 3.6 beta exposes Vapor only from its ESM/browser module graph. Both the
- * regular VTU suite and the direct-DOM Vapor suite must resolve every Vue
- * package to that same graph once shared components can contain Vapor icons.
+ * Vue 3.6 beta exposes Vapor only from its ESM/browser module graph. Resolve
+ * every Vue package to that graph so tests never mix runtime identities.
  */
-export function vueEsmRuntimeAliases(withCompiler = false) {
+export function vueEsmRuntimeAliases() {
   return [
     {
       find: /^vue$/,
       replacement: fileURLToPath(
-        new URL(
-          withCompiler
-            ? "../node_modules/vue/dist/vue.esm-bundler.js"
-            : "../node_modules/vue/dist/vue.runtime.esm-bundler.js",
-          import.meta.url,
-        ),
+        new URL("../node_modules/vue/dist/vue.runtime.esm-bundler.js", import.meta.url),
       ),
     },
     {

@@ -1,0 +1,79 @@
+import { mountVaporTest as mount } from "~/test/mountVapor";
+import { afterEach, describe, expect, it } from "vitest";
+
+import PhotoLightbox from "./PhotoLightbox.vue";
+import type { Photo } from "./usePhotos";
+
+const mountedLightboxes: Array<ReturnType<typeof mount>> = [];
+
+afterEach(() => {
+  for (const wrapper of mountedLightboxes.splice(0)) {
+    wrapper.unmount();
+  }
+});
+
+function photo(key: string): Photo {
+  return {
+    key,
+    url: `/public/photos/${key}`,
+    size: 0,
+    uploaded: null,
+    contentType: "image/jpeg",
+  };
+}
+
+function mountLightbox(index: number) {
+  const photos = [photo("a.jpg"), photo("2026/sunset.jpg"), photo("c.png")];
+  const wrapper = mount(PhotoLightbox, {
+    props: { photos, index },
+    attachTo: document.body,
+  });
+  mountedLightboxes.push(wrapper);
+  return wrapper;
+}
+
+describe("PhotoLightbox", () => {
+  it("renders the active photo at full resolution", () => {
+    const wrapper = mountLightbox(1);
+
+    expect(wrapper.get(".photos__lightbox-image").attributes("src")).toBe(
+      "/public/photos/2026/sunset.jpg",
+    );
+    expect(wrapper.get(".photos__lightbox-title").text()).toBe("sunset");
+  });
+
+  it("emits close from the close control", async () => {
+    const wrapper = mountLightbox(0);
+
+    await wrapper.get('[aria-label="Close photo viewer"]').trigger("click");
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+  });
+
+  it("emits close when Escape is pressed inside the lightbox", async () => {
+    const wrapper = mountLightbox(0);
+
+    await wrapper.get(".photos__lightbox").trigger("keydown", { key: "Escape" });
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+  });
+
+  it("steps the index with the navigation buttons", async () => {
+    const wrapper = mountLightbox(1);
+
+    await wrapper.get('[aria-label="Next photo"]').trigger("click");
+    await wrapper.get('[aria-label="Previous photo"]').trigger("click");
+
+    expect(wrapper.emitted("update:index")).toEqual([[2], [0]]);
+  });
+
+  it("hides previous at the first photo and next at the last", () => {
+    const first = mountLightbox(0);
+    expect(first.find('[aria-label="Previous photo"]').exists()).toBe(false);
+    expect(first.find('[aria-label="Next photo"]').exists()).toBe(true);
+
+    const last = mountLightbox(2);
+    expect(last.find('[aria-label="Next photo"]').exists()).toBe(false);
+    expect(last.find('[aria-label="Previous photo"]').exists()).toBe(true);
+  });
+});

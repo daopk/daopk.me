@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, defineAsyncComponent, onMounted, watch, provide, shallowRef } from "vue";
+import { computed, defineVaporAsyncComponent, onMounted, watch, provide, shallowRef } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { debugWarn } from "~/core/debug";
@@ -9,6 +9,7 @@ import {
   type AppChromeController,
   type AppContext,
 } from "~/types/app";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { AppMountRetryKey } from "./appMountContext";
 import AppMountError from "./AppMountError.vue";
@@ -72,8 +73,8 @@ function createResolvedComponent() {
     return undefined;
   }
 
-  return defineAsyncComponent({
-    loader,
+  return defineVaporAsyncComponent({
+    loader: verifiedVaporLoader(loader, `App ${props.manifestId}`),
     loadingComponent: AppMountLoading,
     errorComponent: AppMountError,
     delay: 0,
@@ -86,7 +87,7 @@ function createResolvedComponent() {
 }
 
 // Stored in a ref so a manual retry can swap in a *fresh* async wrapper. Vue's
-// `defineAsyncComponent` caches its rejected request in a closure, so simply
+// `defineVaporAsyncComponent` caches its rejected request in a closure, so simply
 // remounting the same wrapper would re-throw the cached error; recreating it
 // gives the loader a clean attempt.
 const resolvedComponent = shallowRef(createResolvedComponent());

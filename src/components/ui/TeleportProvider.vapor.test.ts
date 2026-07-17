@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { h, nextTick } from "vue";
+import { createComponent, nextTick } from "vue";
 import { TeleportProvider } from "ropav/teleport-provider";
 
-import { mountVapor, type VaporMount } from "~/test/mountVapor";
+import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import DropdownMenu, { DropdownMenuItem } from "./DropdownMenu.vue";
 import Tooltip from "./Tooltip.vue";
@@ -10,12 +10,18 @@ import Tooltip from "./Tooltip.vue";
 const mounted: VaporMount[] = [];
 
 function mount(
-  component: Parameters<typeof mountVapor>[0],
-  options?: Parameters<typeof mountVapor>[1],
+  component: Parameters<typeof mountVaporRoot>[0],
+  options?: Parameters<typeof mountVaporRoot>[1],
 ) {
-  const wrapper = mountVapor(component, options);
+  const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
+}
+
+function button(text: string): HTMLButtonElement {
+  const element = document.createElement("button");
+  element.textContent = text;
+  return element;
 }
 
 function createPortal(id: string): HTMLElement {
@@ -44,14 +50,18 @@ describe("TeleportProvider integration", () => {
     const wrapper = mount(TeleportProvider, {
       props: { teleportTo: "#provider-floating-target" },
       slots: {
-        default: () => [
-          h("div", { id: "provider-floating-target" }),
-          h(
-            Tooltip,
-            { delayDuration: 0, label: "Provider tooltip" },
-            { default: () => h("button", "Trigger") },
-          ),
-        ],
+        default: () => {
+          const portal = document.createElement("div");
+          portal.id = "provider-floating-target";
+          return [
+            portal,
+            createComponent(
+              Tooltip,
+              { delayDuration: 0, label: "Provider tooltip" },
+              { default: () => button("Trigger") },
+            ),
+          ];
+        },
       },
     });
     const portal = wrapper.find<HTMLElement>("#provider-floating-target");
@@ -71,12 +81,19 @@ describe("TeleportProvider integration", () => {
       props: { teleportTo: "#provider-menu-target" },
       slots: {
         default: () =>
-          h(
+          createComponent(
             DropdownMenu,
             {},
             {
-              trigger: () => h("button", "Open menu"),
-              items: () => h(DropdownMenuItem, {}, () => "Item"),
+              trigger: () => button("Open menu"),
+              items: () =>
+                createComponent(
+                  DropdownMenuItem,
+                  {},
+                  {
+                    default: () => document.createTextNode("Item"),
+                  },
+                ),
             },
           ),
       },
@@ -96,10 +113,10 @@ describe("TeleportProvider integration", () => {
       props: { teleportTo: "#provider-default-target" },
       slots: {
         default: () =>
-          h(
+          createComponent(
             Tooltip,
             { delayDuration: 0, label: "Overridden tooltip", portalTo: overridePortal },
-            { default: () => h("button", "Trigger") },
+            { default: () => button("Trigger") },
           ),
       },
     });

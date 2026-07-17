@@ -39,7 +39,7 @@ export type FirstPartyModuleLoader = () => Promise<Record<string, unknown>>;
 /**
  * Wrap a resolved component in an ESM-flagged record. Every manifest consumer
  * (`AppMount` + widget/preview surfaces) feeds `component` straight to Vue's
- * `defineAsyncComponent`, which only unwraps `.default` when the resolved value
+ * `defineVaporAsyncComponent`, which only unwraps `.default` when the resolved value
  * is module-shaped (`__esModule` or `Symbol.toStringTag === "Module"`).
  */
 function asEsmModule(component: Component): { default: Component } {

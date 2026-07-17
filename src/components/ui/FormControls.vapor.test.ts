@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { defineComponent, h, nextTick, ref } from "vue";
+import { createComponent, defineVaporComponent, nextTick, ref } from "vue";
 
-import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import RadioGroup from "./RadioGroup.vue";
 import RadioGroupItem from "./RadioGroupItem.vue";
@@ -11,10 +11,10 @@ import Switch from "./Switch.vue";
 const mounted: VaporMount[] = [];
 
 function mount(
-  component: Parameters<typeof mountVapor>[0],
-  options?: Parameters<typeof mountVapor>[1],
+  component: Parameters<typeof mountVaporRoot>[0],
+  options?: Parameters<typeof mountVaporRoot>[1],
 ) {
-  const wrapper = mountVapor(component, options);
+  const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
 }
@@ -66,13 +66,12 @@ describe("Switch", () => {
 
   it("round-trips v-model state through the Vapor boundary", async () => {
     const value = ref(false);
-    const Host = defineComponent({
-      setup: () => () =>
-        h(Switch, {
-          modelValue: value.value,
-          "onUpdate:modelValue": (next: boolean) => (value.value = next),
-        }),
-    });
+    const Host = defineVaporComponent(() =>
+      createComponent(Switch, {
+        modelValue: () => value.value,
+        "onUpdate:modelValue": () => (next: boolean) => (value.value = next),
+      }),
+    );
     const wrapper = mount(Host);
     const input = wrapper.find<HTMLInputElement>('input[role="switch"]');
 
@@ -193,9 +192,9 @@ describe("RadioGroup", () => {
       },
       slots: {
         default: () => [
-          h(RadioGroupItem, { value: "a", label: "A" }),
-          h(RadioGroupItem, { value: "b", label: "B" }),
-          h(RadioGroupItem, { value: "c", label: "C", disabled: true }),
+          createComponent(RadioGroupItem, { value: "a", label: "A" }),
+          createComponent(RadioGroupItem, { value: "b", label: "B" }),
+          createComponent(RadioGroupItem, { value: "c", label: "C", disabled: true }),
         ],
       },
     });
@@ -226,7 +225,17 @@ describe("RadioGroup", () => {
       props: { modelValue: "a", orientation: "horizontal", label: "Density" },
       slots: {
         default: () =>
-          h(RadioGroupItem, { value: "a" }, { default: () => h("strong", "Comfortable") }),
+          createComponent(
+            RadioGroupItem,
+            { value: "a" },
+            {
+              default: () => {
+                const label = document.createElement("strong");
+                label.textContent = "Comfortable";
+                return label;
+              },
+            },
+          ),
       },
     });
 
@@ -247,7 +256,7 @@ describe("RadioGroup", () => {
       },
       slots: {
         default: () =>
-          h(RadioGroupItem, {
+          createComponent(RadioGroupItem, {
             value: "compact",
             label: "Compact",
             inputAttrs: { form: "appearance", autocomplete: "off" },

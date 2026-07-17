@@ -166,6 +166,18 @@ function onContextMenu(event: MouseEvent): void {
   };
 }
 
+const contextMenuBoundTriggers = new WeakSet<HTMLElement>();
+
+function bindContextMenuPosition(value: unknown): void {
+  if (!(value instanceof HTMLElement) || contextMenuBoundTriggers.has(value)) {
+    return;
+  }
+  contextMenuBoundTriggers.add(value);
+  // ContextMenu installs a direct listener that stops bubbling. Bind the
+  // position tracker first so Vapor's document-level delegation cannot miss it.
+  value.addEventListener("contextmenu", onContextMenu);
+}
+
 function selectEntry(entry: ContextMenuEntry): void {
   if (entry.kind === "shell") {
     dispatch(entry.commandId, entry.payload);
@@ -216,10 +228,10 @@ async function runContribution(item: DesktopContextMenuItemManifest): Promise<vo
     <ContextMenu>
       <template #trigger>
         <div
+          :ref="bindContextMenuPosition"
           class="desktop-context-menu-layer"
           aria-hidden="true"
           data-shell-child="context-menu"
-          @contextmenu="onContextMenu"
         />
       </template>
       <template #items>

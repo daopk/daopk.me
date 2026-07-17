@@ -207,6 +207,22 @@ function onEntryPointerCancel(event: PointerEvent): void {
   }
 }
 
+const pointerBoundEntries = new WeakSet<HTMLElement>();
+
+function bindEntryPointerHandlers(entry: VfsDirEntry, value: unknown): void {
+  if (!(value instanceof HTMLElement) || pointerBoundEntries.has(value)) {
+    return;
+  }
+  pointerBoundEntries.add(value);
+
+  // These listeners must run on the entry before the nested ContextMenu's
+  // parent trigger sees the bubbling event. Vapor delegates template events
+  // at `document`, which is too late for this nested stopPropagation case.
+  value.addEventListener("pointercancel", onEntryPointerCancel);
+  value.addEventListener("pointerdown", (event) => onEntryPointerDown(entry, event));
+  value.addEventListener("pointerup", (event) => onEntryPointerUp(entry, event));
+}
+
 function onEntryContextMenu(entry: VfsDirEntry): void {
   entryPointerStart = null;
   emit("entryContextMenu", entry);
@@ -278,6 +294,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
               <template #trigger>
                 <div
                   :id="entryId(index)"
+                  :ref="(value) => bindEntryPointerHandlers(entry, value)"
                   class="finder__entry"
                   :class="{ 'finder__entry--selected': selectedPath === entry.path }"
                   role="option"
@@ -285,9 +302,6 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   @click="emit('entryClick', entry)"
                   @contextmenu.stop="onEntryContextMenu(entry)"
                   @dblclick="emit('entryDoubleClick', entry)"
-                  @pointercancel="onEntryPointerCancel"
-                  @pointerdown="onEntryPointerDown(entry, $event)"
-                  @pointerup="onEntryPointerUp(entry, $event)"
                 >
                   <component
                     :is="isLoadingCloudEntry(entry) ? Loader2 : entryIcon(entry)"

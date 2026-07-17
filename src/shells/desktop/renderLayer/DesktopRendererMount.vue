@@ -1,9 +1,10 @@
 <script setup vapor lang="ts">
-import { defineAsyncComponent, markRaw, onUnmounted, provide, type Component } from "vue";
+import { defineVaporAsyncComponent, markRaw, onUnmounted, provide, type VaporComponent } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import type { DesktopRendererManifest } from "~/types/desktop";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 const props = defineProps<{
   renderer: DesktopRendererManifest;
@@ -34,12 +35,16 @@ onUnmounted(() => {
   kernel.processes.kill(handle.id, "shell");
 });
 
-const asyncComponentCache = new WeakMap<DesktopRendererManifest, Component>();
+const asyncComponentCache = new WeakMap<DesktopRendererManifest, VaporComponent>();
 
-function resolveComponent(renderer: DesktopRendererManifest): Component {
+function resolveComponent(renderer: DesktopRendererManifest): VaporComponent {
   const cached = asyncComponentCache.get(renderer);
   if (cached) return cached;
-  const wrapped = markRaw(defineAsyncComponent(renderer.component));
+  const wrapped = markRaw(
+    defineVaporAsyncComponent(
+      verifiedVaporLoader(renderer.component, `Desktop renderer ${renderer.id}`),
+    ),
+  );
   asyncComponentCache.set(renderer, wrapped);
   return wrapped;
 }

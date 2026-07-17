@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, nextTick, ref } from "vue";
+import { createComponent, defineVaporComponent, insert, nextTick, ref } from "vue";
 
-import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import Dialog from "./Dialog.vue";
 import ToastHost from "./ToastHost.vue";
@@ -10,10 +10,10 @@ import { clearToasts, useToast } from "./useToast";
 const mounted: VaporMount[] = [];
 
 function mount(
-  component: Parameters<typeof mountVapor>[0],
-  options?: Parameters<typeof mountVapor>[1],
+  component: Parameters<typeof mountVaporRoot>[0],
+  options?: Parameters<typeof mountVaporRoot>[1],
 ) {
-  const wrapper = mountVapor(component, options);
+  const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
 }
@@ -45,21 +45,34 @@ it("keeps dialog and toast roots compiled in Vapor mode", () => {
 describe("Dialog", () => {
   it("renders viewport modal semantics, traps focus and restores the trigger", async () => {
     const open = ref(false);
-    const Host = defineComponent({
-      setup: () => () =>
-        h("div", [
-          h("button", { id: "dialog-trigger", onClick: () => (open.value = true) }, "Open dialog"),
-          h(
-            Dialog,
-            {
-              open: open.value,
-              title: "Confirm change",
-              description: "This updates your preferences.",
-              "onUpdate:open": (next: boolean) => (open.value = next),
+    const Host = defineVaporComponent(() => {
+      const root = document.createElement("div");
+      const trigger = document.createElement("button");
+      trigger.id = "dialog-trigger";
+      trigger.textContent = "Open dialog";
+      trigger.addEventListener("click", () => (open.value = true));
+      root.append(trigger);
+      insert(
+        createComponent(
+          Dialog,
+          {
+            open: () => open.value,
+            title: "Confirm change",
+            description: "This updates your preferences.",
+            "onUpdate:open": () => (next: boolean) => (open.value = next),
+          },
+          {
+            default: () => {
+              const button = document.createElement("button");
+              button.id = "inside-action";
+              button.textContent = "Continue";
+              return button;
             },
-            { default: () => h("button", { id: "inside-action" }, "Continue") },
-          ),
-        ]),
+          },
+        ),
+        root,
+      );
+      return root;
     });
     const wrapper = mount(Host);
     const trigger = wrapper.find<HTMLButtonElement>("#dialog-trigger");
@@ -132,7 +145,7 @@ describe("Dialog", () => {
         dismissible: false,
         "onUpdate:open": (next: boolean) => updates.push(next),
       },
-      slots: { default: () => h("button", "Explicit action") },
+      slots: { default: "<button>Explicit action</button>" },
     });
     await settle();
 
@@ -151,7 +164,7 @@ describe("Dialog", () => {
   it("has no serious accessibility violations while open", async () => {
     mount(Dialog, {
       props: { open: true, title: "Accessible dialog", description: "Dialog details" },
-      slots: { default: () => h("button", "Done") },
+      slots: { default: "<button>Done</button>" },
     });
     await settle();
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;

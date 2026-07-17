@@ -13,7 +13,7 @@ export interface FocusTrapControls {
 /**
  * Preserve the stable @daopk/ui facade while delegating focus containment to
  * Ropav. The adapter keeps the existing defaults and reactive enabled input
- * usable from both VDOM and Vapor SFCs.
+ * usable from Vapor SFCs and DOM-bound composables.
  */
 export function useFocusTrap(
   target: FocusTrapTarget,

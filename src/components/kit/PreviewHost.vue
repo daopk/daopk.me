@@ -1,8 +1,9 @@
 <script setup vapor lang="ts">
-import { computed, defineAsyncComponent } from "vue";
+import { computed, defineVaporAsyncComponent } from "vue";
 
 import { useKernel } from "~/runtime/sdk";
 import type { AppPreviewInput, AppPreviewSurface } from "~/types/preview";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import EmptyState from "./EmptyState.vue";
 import PreviewHostError from "./PreviewHostError.vue";
@@ -41,8 +42,11 @@ const previewComponent = computed(() => {
     return null;
   }
 
-  return defineAsyncComponent({
-    loader: () => provider.component().then((module) => module.default),
+  return defineVaporAsyncComponent({
+    loader: () =>
+      verifiedVaporLoader(provider.component, `Preview provider ${provider.id}`)().then(
+        (module) => module.default,
+      ),
     loadingComponent: PreviewHostLoading,
     errorComponent: PreviewHostError,
     delay: 0,

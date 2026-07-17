@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, nextTick, ref } from "vue";
+import { createComponent, defineVaporComponent, nextTick, ref } from "vue";
 
-import { assertVaporComponents, mountVapor, type VaporMount } from "~/test/mountVapor";
+import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import {
   ContextMenu,
@@ -19,12 +19,41 @@ import {
 const mounted: VaporMount[] = [];
 
 function mount(
-  component: Parameters<typeof mountVapor>[0],
-  options?: Parameters<typeof mountVapor>[1],
+  component: Parameters<typeof mountVaporRoot>[0],
+  options?: Parameters<typeof mountVaporRoot>[1],
 ) {
-  const wrapper = mountVapor(component, options);
+  const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
+}
+
+function element(
+  tag: "button" | "div",
+  text: string,
+  attrs: Readonly<Record<string, string>> = {},
+): HTMLElement {
+  const node = document.createElement(tag);
+  node.textContent = text;
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  return node;
+}
+
+function text(value: string): Text {
+  return document.createTextNode(value);
+}
+
+function renderComponent(
+  component: Parameters<typeof createComponent>[0],
+  props: Readonly<Record<string, unknown>> = {},
+  slots?: Readonly<Record<string, () => unknown>>,
+) {
+  const rawProps = Object.fromEntries(
+    Object.entries(props).map(([key, value]) => [
+      key,
+      typeof value === "function" ? () => value : value,
+    ]),
+  );
+  return createComponent(component, rawProps, slots as never);
 }
 
 async function settle(): Promise<void> {
@@ -79,13 +108,25 @@ describe("DropdownMenu", () => {
   function mountBasic(onSelect: (event: Event) => void = () => {}) {
     return mount(DropdownMenu, {
       slots: {
-        trigger: () => h("button", { "data-testid": "trigger" }, "Open menu"),
+        trigger: () => element("button", "Open menu", { "data-testid": "trigger" }),
         items: () => [
-          h(DropdownMenuLabel, { class: "ds-dropdown-menu__label" }, () => "Actions"),
-          h(DropdownMenuItem, { textValue: "Alpha", onSelect }, () => "Alpha"),
-          h(DropdownMenuItem, { textValue: "Disabled", disabled: true }, () => "Disabled"),
-          h(DropdownMenuSeparator),
-          h(DropdownMenuItem, { textValue: "Zulu" }, () => "Zulu"),
+          renderComponent(
+            DropdownMenuLabel,
+            { class: "ds-dropdown-menu__label" },
+            { default: () => text("Actions") },
+          ),
+          renderComponent(
+            DropdownMenuItem,
+            { textValue: "Alpha", onSelect },
+            { default: () => text("Alpha") },
+          ),
+          renderComponent(
+            DropdownMenuItem,
+            { textValue: "Disabled", disabled: true },
+            { default: () => text("Disabled") },
+          ),
+          renderComponent(DropdownMenuSeparator),
+          renderComponent(DropdownMenuItem, { textValue: "Zulu" }, { default: () => text("Zulu") }),
         ],
       },
     });
@@ -142,12 +183,12 @@ describe("DropdownMenu", () => {
     const wrapper = mount(DropdownMenu, {
       props: { "onUpdate:open": (next: boolean) => updates.push(next) },
       slots: {
-        trigger: () => h("button", "Open"),
+        trigger: () => element("button", "Open"),
         items: () =>
-          h(
+          renderComponent(
             DropdownMenuItem,
             { onSelect: (event: Event) => event.preventDefault() },
-            () => "Stay open",
+            { default: () => text("Stay open") },
           ),
       },
     });
@@ -171,8 +212,8 @@ describe("DropdownMenu", () => {
     const wrapper = mount(DropdownMenu, {
       props: { "onUpdate:open": (next: boolean) => updates.push(next) },
       slots: {
-        trigger: () => h("button", "Open"),
-        items: () => h(DropdownMenuItem, {}, () => "Item"),
+        trigger: () => element("button", "Open"),
+        items: () => renderComponent(DropdownMenuItem, {}, { default: () => text("Item") }),
       },
     });
     wrapper.find<HTMLButtonElement>("button").click();
@@ -190,44 +231,55 @@ describe("DropdownMenu", () => {
 
   it("round-trips radio values and item indicators", async () => {
     const value = ref("system");
-    const Host = defineComponent({
-      setup: () => () =>
-        h(
-          DropdownMenu,
-          {},
-          {
-            trigger: () => h("button", "Theme"),
-            items: () =>
-              h(
-                DropdownMenuRadioGroup,
-                {
-                  modelValue: value.value,
-                  "onUpdate:modelValue": (next: string) => (value.value = next),
-                },
-                {
-                  default: () => [
-                    h(DropdownMenuRadioItem, { value: "system", textValue: "System" }, () => [
-                      h(
-                        DropdownMenuItemIndicator,
-                        { class: "ds-dropdown-menu__indicator" },
-                        () => "✓",
-                      ),
-                      "System",
-                    ]),
-                    h(DropdownMenuRadioItem, { value: "light", textValue: "Light" }, () => [
-                      h(
-                        DropdownMenuItemIndicator,
-                        { class: "ds-dropdown-menu__indicator" },
-                        () => "✓",
-                      ),
-                      "Light",
-                    ]),
-                  ],
-                },
-              ),
-          },
-        ),
-    });
+    const Host = defineVaporComponent(() =>
+      createComponent(
+        DropdownMenu,
+        {},
+        {
+          trigger: () => element("button", "Theme"),
+          items: () =>
+            createComponent(
+              DropdownMenuRadioGroup,
+              {
+                modelValue: () => value.value,
+                "onUpdate:modelValue": () => (next: string) => (value.value = next),
+              },
+              {
+                default: () => [
+                  renderComponent(
+                    DropdownMenuRadioItem,
+                    { value: "system", textValue: "System" },
+                    {
+                      default: () => [
+                        renderComponent(
+                          DropdownMenuItemIndicator,
+                          { class: "ds-dropdown-menu__indicator" },
+                          { default: () => text("✓") },
+                        ),
+                        text("System"),
+                      ],
+                    },
+                  ),
+                  renderComponent(
+                    DropdownMenuRadioItem,
+                    { value: "light", textValue: "Light" },
+                    {
+                      default: () => [
+                        renderComponent(
+                          DropdownMenuItemIndicator,
+                          { class: "ds-dropdown-menu__indicator" },
+                          { default: () => text("✓") },
+                        ),
+                        text("Light"),
+                      ],
+                    },
+                  ),
+                ],
+              },
+            ),
+        },
+      ),
+    );
     const wrapper = mount(Host);
     wrapper.find<HTMLButtonElement>("button").click();
     await settle();
@@ -249,8 +301,8 @@ describe("DropdownMenu", () => {
     const wrapper = mount(DropdownMenu, {
       props: { align: "end", portalTo: portal, sideOffset: 8 },
       slots: {
-        trigger: () => h("button", "Open"),
-        items: () => h(DropdownMenuItem, {}, () => "Item"),
+        trigger: () => element("button", "Open"),
+        items: () => renderComponent(DropdownMenuItem, {}, { default: () => text("Item") }),
       },
     });
     wrapper.find<HTMLButtonElement>("button").click();
@@ -266,11 +318,19 @@ describe("ContextMenu", () => {
     const wrapper = mount(ContextMenu, {
       props: { modal: false, "onUpdate:open": (next: boolean) => updates.push(next) },
       slots: {
-        trigger: () => h("button", { "data-testid": "context-trigger" }, "Right click"),
+        trigger: () => element("button", "Right click", { "data-testid": "context-trigger" }),
         items: () => [
-          h(ContextMenuItem, { textValue: "Open", onSelect }, () => "Open"),
-          h(ContextMenuSeparator),
-          h(ContextMenuItem, { disabled: true }, () => "Unavailable"),
+          renderComponent(
+            ContextMenuItem,
+            { textValue: "Open", onSelect },
+            { default: () => text("Open") },
+          ),
+          renderComponent(ContextMenuSeparator),
+          renderComponent(
+            ContextMenuItem,
+            { disabled: true },
+            { default: () => text("Unavailable") },
+          ),
         ],
       },
     });
@@ -293,8 +353,8 @@ describe("ContextMenu", () => {
   it("blocks modal outside interaction and restores trigger focus", async () => {
     const wrapper = mount(ContextMenu, {
       slots: {
-        trigger: () => h("button", "Right click"),
-        items: () => h(ContextMenuItem, {}, () => "Open"),
+        trigger: () => element("button", "Right click"),
+        items: () => renderComponent(ContextMenuItem, {}, { default: () => text("Open") }),
       },
     });
     const trigger = wrapper.find<HTMLButtonElement>("button");
@@ -318,10 +378,15 @@ describe("ContextMenu", () => {
     const onSelect = vi.fn();
     const wrapper = mount(ContextMenu, {
       slots: {
-        trigger: () => h("div", { "data-testid": "context-trigger" }, "Target"),
+        trigger: () => element("div", "Target", { "data-testid": "context-trigger" }),
         items: () =>
-          h(ContextMenuItem, { asChild: true, textValue: "Color blue", onSelect }, () =>
-            h("button", { class: "color-dot", "aria-label": "Color blue" }),
+          renderComponent(
+            ContextMenuItem,
+            { asChild: true, textValue: "Color blue", onSelect },
+            {
+              default: () =>
+                element("button", "", { class: "color-dot", "aria-label": "Color blue" }),
+            },
           ),
       },
     });
@@ -338,10 +403,10 @@ describe("ContextMenu", () => {
   it("has no serious accessibility violations while open", async () => {
     const wrapper = mount(ContextMenu, {
       slots: {
-        trigger: () => h("button", "Target"),
+        trigger: () => element("button", "Target"),
         items: () => [
-          h(ContextMenuItem, {}, () => "Open"),
-          h(ContextMenuItem, { disabled: true }, () => "Disabled"),
+          renderComponent(ContextMenuItem, {}, { default: () => text("Open") }),
+          renderComponent(ContextMenuItem, { disabled: true }, { default: () => text("Disabled") }),
         ],
       },
     });

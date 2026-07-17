@@ -1,17 +1,18 @@
 <script setup vapor lang="ts">
 import {
   computed,
-  defineAsyncComponent,
+  defineVaporAsyncComponent,
   markRaw,
   onUnmounted,
   shallowRef,
-  type Component,
+  type VaporComponent,
 } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { useWidgetEnabled } from "~/composables/useWidgetEnabled";
 import { widgetDefaultVisible, widgetShellScopeForSurface } from "~/core/widgets/catalog";
 import type { WidgetManifest, WidgetSurface } from "~/types/widget";
+import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 const props = defineProps<{
   surface: Exclude<WidgetSurface, "any">;
@@ -45,12 +46,14 @@ onUnmounted(() => {
   stopUnregistered();
 });
 
-const asyncComponentCache = new WeakMap<WidgetManifest, Component>();
+const asyncComponentCache = new WeakMap<WidgetManifest, VaporComponent>();
 
-function resolveComponent(manifest: WidgetManifest): Component {
+function resolveComponent(manifest: WidgetManifest): VaporComponent {
   const cached = asyncComponentCache.get(manifest);
   if (cached) return cached;
-  const wrapped = markRaw(defineAsyncComponent(manifest.component));
+  const wrapped = markRaw(
+    defineVaporAsyncComponent(verifiedVaporLoader(manifest.component, `Widget ${manifest.id}`)),
+  );
   asyncComponentCache.set(manifest, wrapped);
   return wrapped;
 }

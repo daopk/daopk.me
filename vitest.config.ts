@@ -1,70 +1,95 @@
 /// <reference types="vitest" />
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 
-// Keep VDOM and Vapor in separate Vite module graphs while exposing one
-// command surface for run, watch, and coverage. Each project owns its Vue
-// aliases and dependency inlining; this root only owns cross-project policy.
-export default defineConfig({
-  test: {
-    projects: ["./vitest.vdom.config.ts", "./vitest.vapor.config.ts"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text-summary", "text"],
-      reportsDirectory: "./coverage",
-      // Scope widens per milestone (plans.md §8 DoD #5). M1.5 added
-      // composables + `motionPreference` spine; M1.1 widens to the mobile
-      // shell modules (StatusBar + HomeScreen and its helpers). The Vue
-      // SFCs themselves still count via their `<script>` sections.
-      include: [
-        "src/core/storage/**/*.ts",
-        "src/core/theme/**/*.ts",
-        "src/core/devices/**/*.ts",
-        "src/core/background/**/*.ts",
-        "src/core/ipc/channel.ts",
-        "src/core/ipc/rpc.ts",
-        "src/core/markdown/**/*.ts",
-        "src/core/search/**/*.ts",
-        "src/workers/markdown.worker.ts",
-        "src/workers/search.worker.ts",
-        "src/composables/**/*.ts",
-        "src/shells/mobile/**/*.ts",
-        "src/shells/mobile/**/*.vue",
-        // Design-system kit + ui layers — the production-grade gate. Scoped to
-        // the two component libraries (not all of `src/components/**`, which
-        // also holds untested app-shell surfaces like auth/boot/spotlight).
-        "src/components/kit/**/*.ts",
-        "src/components/kit/**/*.vue",
-        "src/components/ui/**/*.ts",
-        "src/components/ui/**/*.vue",
-      ],
-      // `IndexedDBStore.ts` is exercised mostly via integration paths we have
-      // not yet wired up — it drags the unit threshold below 70%. Exclude it
-      // from the gate (kept in the report for visibility) until we add direct
-      // tests in a later phase.
-      // `deviceProfile.ts` ships covered via shell integration in M1.2; until
-      // then it dilutes the device folder average, so exclude from the gate.
-      exclude: [
-        "**/*.test.ts",
-        "**/*.d.ts",
-        "**/storage/index.ts",
-        "**/theme/index.ts",
-        "**/devices/index.ts",
-        "**/devices/deviceProfile.ts",
-        "**/storage/IndexedDBStore.ts",
-      ],
-      // vitest 4 removed the `all: false` knob — coverage now always counts
-      // every file matching `include` (not just imported ones). The 70% bar
-      // assumed the v3 semantics; recalibrate to 65% as a floor and tighten
-      // again as we backfill store tests in later phases.
-      thresholds: {
-        statements: 65,
-        // The design-system layers ship to apps as a published surface, so
-        // they are held to a higher, enforced bar than the app internals.
-        // Files matching these globs are gated here (and excluded from the
-        // global floor above).
-        "src/components/kit/**": { statements: 90 },
-        "src/components/ui/**": { statements: 80 },
+import { createViteConfig } from "./vite.config";
+import { vueEsmRuntimeAliases } from "./vite/vueEsmRuntimeAliases";
+
+export default mergeConfig(
+  createViteConfig("serve"),
+  defineConfig({
+    resolve: {
+      alias: vueEsmRuntimeAliases(),
+    },
+    test: {
+      globals: false,
+      environment: "happy-dom",
+      environmentOptions: {
+        happyDOM: {
+          settings: {
+            disableJavaScriptFileLoading: true,
+            navigation: {
+              disableChildFrameNavigation: true,
+            },
+          },
+        },
+      },
+      server: {
+        deps: {
+          inline: ["ropav"],
+        },
+      },
+      include: ["src/**/*.test.ts", "tests/**/*.test.ts", "apps/*/src/**/*.test.ts"],
+      setupFiles: ["./src/test/vitest.setup.ts"],
+      pool: "vmThreads",
+      coverage: {
+        provider: "v8",
+        reporter: ["text-summary", "text"],
+        reportsDirectory: "./coverage",
+        // Scope widens per milestone (plans.md §8 DoD #5). M1.5 added
+        // composables + `motionPreference` spine; M1.1 widens to the mobile
+        // shell modules (StatusBar + HomeScreen and its helpers). The Vue
+        // SFCs themselves still count via their `<script>` sections.
+        include: [
+          "src/core/storage/**/*.ts",
+          "src/core/theme/**/*.ts",
+          "src/core/devices/**/*.ts",
+          "src/core/background/**/*.ts",
+          "src/core/ipc/channel.ts",
+          "src/core/ipc/rpc.ts",
+          "src/core/markdown/**/*.ts",
+          "src/core/search/**/*.ts",
+          "src/workers/markdown.worker.ts",
+          "src/workers/search.worker.ts",
+          "src/composables/**/*.ts",
+          "src/shells/mobile/**/*.ts",
+          "src/shells/mobile/**/*.vue",
+          // Design-system kit + ui layers — the production-grade gate. Scoped to
+          // the two component libraries (not all of `src/components/**`, which
+          // also holds untested app-shell surfaces like auth/boot/spotlight).
+          "src/components/kit/**/*.ts",
+          "src/components/kit/**/*.vue",
+          "src/components/ui/**/*.ts",
+          "src/components/ui/**/*.vue",
+        ],
+        // `IndexedDBStore.ts` is exercised mostly via integration paths we have
+        // not yet wired up — it drags the unit threshold below 70%. Exclude it
+        // from the gate (kept in the report for visibility) until we add direct
+        // tests in a later phase.
+        // `deviceProfile.ts` ships covered via shell integration in M1.2; until
+        // then it dilutes the device folder average, so exclude from the gate.
+        exclude: [
+          "**/*.test.ts",
+          "**/*.d.ts",
+          "**/storage/index.ts",
+          "**/theme/index.ts",
+          "**/devices/index.ts",
+          "**/devices/deviceProfile.ts",
+          "**/storage/IndexedDBStore.ts",
+        ],
+        // vitest 4 removed the `all: false` knob — coverage now always counts
+        // every file matching `include` (not just imported ones). The 70% bar
+        // assumed the v3 semantics; recalibrate to 65% as a floor and tighten
+        // again as we backfill store tests in later phases.
+        thresholds: {
+          statements: 65,
+          // The design-system layers ship to apps as a published surface, so
+          // they are held to a higher, enforced bar than the app internals.
+          // Files matching these globs are gated here (and excluded from the
+          // global floor above).
+          "src/components/kit/**": { statements: 90 },
+          "src/components/ui/**": { statements: 80 },
+        },
       },
     },
-  },
-});
+  }),
+);

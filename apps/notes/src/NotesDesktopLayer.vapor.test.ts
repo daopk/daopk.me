@@ -30,10 +30,10 @@ vi.mock("./usePinnedDesktopNotes", async () => {
 });
 
 vi.mock("./DesktopStickyNote.vue", async () => {
-  const { defineComponent, h } = await import("vue");
+  const { defineVaporComponent, renderEffect } = await import("vue");
 
   return {
-    default: defineComponent({
+    default: defineVaporComponent({
       name: "DesktopStickyNoteStub",
       props: {
         note: {
@@ -46,19 +46,19 @@ vi.mock("./DesktopStickyNote.vue", async () => {
         },
       },
       setup(props) {
-        return () =>
-          h(
-            "article",
-            { class: "desktop-sticky-note-stub" },
-            String((props.note as { path: string }).path),
-          );
+        const article = document.createElement("article");
+        article.className = "desktop-sticky-note-stub";
+        renderEffect(() => {
+          article.textContent = String((props.note as { path: string }).path);
+        });
+        return article;
       },
     }),
   };
 });
 
 describe("NotesDesktopLayer", () => {
-  it("hydrates pinned notes and renders VDOM note children through interop", () => {
+  it("hydrates pinned notes and renders Vapor note children", () => {
     const wrapper = mountVaporRoot(NotesDesktopLayer, {
       props: {
         stageSize: { width: 1280, height: 720 },

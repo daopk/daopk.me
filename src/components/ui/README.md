@@ -5,7 +5,7 @@ Stateful and behaviorally complex primitives exposed through the stable
 apps can keep using the existing exports, props, events, slots and `ds-*`
 classes while the rest of the repository migrates incrementally.
 
-The implementation is intentionally hybrid:
+The implementation is fully Vapor while composing several Ropav behaviors:
 
 - `Switch`, `Slider`, radio controls and toast lifecycle/rendering adapt
   `ropav` through
@@ -37,9 +37,8 @@ and library-specific `data-*` attributes are not API contracts.
   `ds-*` namespace in a non-scoped `<style lang="scss">` block.
 - **Reduced motion:** every animation has a
   `prefers-reduced-motion: reduce` override.
-- **Mixed runtime:** entry points continue using
-  `createApp(...).use(vaporInteropPlugin)` until the VDOM inventory reaches
-  zero. Switch to `createVaporApp` only after that repository-wide milestone.
+- **Vapor runtime:** entry points use `createVaporApp`; test harnesses mount
+  through the same runtime without enabling the VDOM interop plugin.
 
 ## API reference
 
@@ -104,7 +103,7 @@ dismissal, the bottom safe area and `--toast-z` integration.
 ## Verification
 
 Behavioral component tests live in `*.vapor.test.ts` and mount through the same
-VDOM-to-Vapor interop boundary as production. The required phase gates are:
+native Vapor runtime as production. The required phase gates are:
 
 ```sh
 pnpm run typecheck

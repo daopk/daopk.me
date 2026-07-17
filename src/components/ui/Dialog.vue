@@ -140,9 +140,8 @@ watch(
 onBeforeUnmount(() => {
   unregister();
   if (wasOpen) void restoreFocus();
-  // Vue's mixed VDOM/Vapor interop currently leaves a teleported block behind
-  // when a VDOM consumer is unmounted wholesale. Own the portal lifecycle so
-  // tests and dynamically removed app surfaces cannot retain stale dialogs.
+  // Own the teleported root lifecycle so dynamically removed app surfaces
+  // cannot retain stale dialogs while their dismissal transition is pending.
   portalRoot.value?.remove();
 });
 </script>

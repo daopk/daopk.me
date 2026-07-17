@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { h, nextTick } from "vue";
+import { nextTick } from "vue";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
@@ -7,6 +7,13 @@ import HoverCard from "./HoverCard.vue";
 import Tooltip from "./Tooltip.vue";
 
 const mounted: VaporMount[] = [];
+
+function button(text: string, onClick?: () => void): HTMLButtonElement {
+  const element = document.createElement("button");
+  element.textContent = text;
+  if (onClick !== undefined) element.addEventListener("click", onClick);
+  return element;
+}
 
 function mount(
   component: Parameters<typeof mountVaporRoot>[0],
@@ -38,7 +45,7 @@ describe("Tooltip", () => {
     vi.useFakeTimers();
     const wrapper = mount(Tooltip, {
       props: { label: "More info", delayDuration: 100 },
-      slots: { default: () => h("button", "Trigger") },
+      slots: { default: () => button("Trigger") },
     });
     const trigger = wrapper.find<HTMLButtonElement>("button");
 
@@ -67,8 +74,8 @@ describe("Tooltip", () => {
     const wrapper = mount(Tooltip, {
       props: { delayDuration: 0, portalTo: portal },
       slots: {
-        default: () => h("button", "Trigger"),
-        content: () => h("strong", "Rich help"),
+        default: () => button("Trigger"),
+        content: "<strong>Rich help</strong>",
       },
     });
 
@@ -84,7 +91,7 @@ describe("Tooltip", () => {
     let clicks = 0;
     const wrapper = mount(Tooltip, {
       props: { disabled: true, label: "Hidden" },
-      slots: { default: () => h("button", { onClick: () => clicks++ }, "Trigger") },
+      slots: { default: () => button("Trigger", () => clicks++) },
     });
     const trigger = wrapper.find<HTMLButtonElement>("button");
     trigger.click();
@@ -107,8 +114,8 @@ describe("HoverCard", () => {
         "onUpdate:open": (next: boolean) => updates.push(next),
       },
       slots: {
-        default: () => h("button", "Preview"),
-        content: () => h("div", "Preview content"),
+        default: () => button("Preview"),
+        content: "<div>Preview content</div>",
       },
     });
     const trigger = wrapper.find<HTMLButtonElement>("button");
@@ -139,8 +146,8 @@ describe("HoverCard", () => {
     mount(HoverCard, {
       props: { defaultOpen: true, reference, side: "right", sideOffset: 12 },
       slots: {
-        default: () => h("button", "Preview"),
-        content: () => h("div", "Virtual preview"),
+        default: () => button("Preview"),
+        content: "<div>Virtual preview</div>",
       },
     });
 
@@ -161,8 +168,8 @@ describe("HoverCard", () => {
         "onUpdate:open": (next: boolean) => updates.push(next),
       },
       slots: {
-        default: () => h("button", "Preview"),
-        content: () => h("div", "Controlled content"),
+        default: () => button("Preview"),
+        content: "<div>Controlled content</div>",
       },
     });
     pointer(controlled.find("button"), "pointerenter");
@@ -173,8 +180,8 @@ describe("HoverCard", () => {
     const disabled = mount(HoverCard, {
       props: { defaultOpen: true, disabled: true },
       slots: {
-        default: () => h("button", "Disabled preview"),
-        content: () => h("div", "Must stay hidden"),
+        default: () => button("Disabled preview"),
+        content: "<div>Must stay hidden</div>",
       },
     });
     expect(disabled.find("button").textContent).toBe("Disabled preview");

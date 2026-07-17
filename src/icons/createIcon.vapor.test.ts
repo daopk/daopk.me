@@ -175,7 +175,7 @@ describe("Vapor icon components", () => {
     wrapper.unmount();
   });
 
-  it("renders inside a legacy VDOM component through the production interop boundary", () => {
+  it("renders inside a Vapor component through the production component boundary", () => {
     const wrapper = mountVapor(IconButton, {
       props: { label: "Search", icon: Search },
     });

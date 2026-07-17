@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { defineComponent, h, nextTick } from "vue";
+import { defineVaporComponent, nextTick } from "vue";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
@@ -26,7 +26,7 @@ describe("Button", () => {
   it("preserves variants, size, type and slot content", () => {
     const wrapper = mount(Button, {
       props: { variant: "primary", size: "sm", type: "submit" },
-      slots: { default: () => h("span", "Save") },
+      slots: { default: "<span>Save</span>" },
     });
     const button = wrapper.find<HTMLButtonElement>("button");
 
@@ -38,7 +38,11 @@ describe("Button", () => {
 
   it("disables interaction while loading and swaps icons for status", async () => {
     let clicks = 0;
-    const Icon = defineComponent({ render: () => h("svg", { "data-testid": "icon" }) });
+    const Icon = defineVaporComponent(() => {
+      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      icon.dataset.testid = "icon";
+      return icon;
+    });
     const wrapper = mount(Button, {
       props: { loading: true, iconStart: Icon, iconEnd: Icon, onClick: () => clicks++ },
       slots: { default: () => "Save" },
@@ -89,7 +93,7 @@ describe("Card", () => {
 
 describe("DialogActions", () => {
   it("renders slots with the default and requested alignment", () => {
-    const end = mount(DialogActions, { slots: { default: () => h("button", "OK") } });
+    const end = mount(DialogActions, { slots: { default: "<button>OK</button>" } });
     expect(end.find(".ds-dialog-actions").classList).toContain("ds-dialog-actions--end");
     expect(end.find("button").textContent).toBe("OK");
 

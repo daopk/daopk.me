@@ -20,10 +20,7 @@
     "typecheck:root": "vue-tsc --noEmit -p tsconfig.app.json",
     "typecheck:test": "vue-tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
-    "test:vdom": "vitest run --project vdom",
-    "test:vapor": "vitest run --project vapor",
     "test:watch": "vitest",
-    "test:vapor:watch": "vitest --project vapor",
     "test:coverage": "vitest run --coverage --pool=forks --maxWorkers=4"
   },
   "dependencies": {
@@ -66,7 +63,6 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "4.1.10",
     "@vue/server-renderer": "catalog:",
-    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
     "axe-core": "^4.12.1",
     "fake-indexeddb": "^6.2.5",
