@@ -1,14 +1,16 @@
 <script setup vapor lang="ts">
-import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from "vue";
-import { useTeleportTarget } from "ropav/teleport-provider";
-
+import { computed, useTemplateRef, type CSSProperties } from "vue";
 import {
   useFloatingPosition,
-  type FloatingAlign,
+  useHoverDisclosure,
   type FloatingReference,
   type FloatingSide,
-} from "./useFloatingPosition";
+} from "ropav/floating";
+import { useTeleportTarget } from "ropav/teleport-provider";
+
 import { useSlotTrigger } from "./useSlotTrigger";
+
+type FloatingAlign = "start" | "center" | "end";
 
 interface HoverCardProps {
   align?: FloatingAlign;
@@ -48,124 +50,63 @@ const emit = defineEmits<{
   "update:open": [next: boolean];
 }>();
 
-const internalOpen = ref(props.defaultOpen);
-const isControlled = computed(() => props.open !== undefined);
-const isOpen = computed(
-  () => !props.disabled && (isControlled.value ? props.open === true : internalOpen.value),
-);
 const triggerHost = useTemplateRef<HTMLElement>("triggerHost");
 const content = useTemplateRef<HTMLElement>("content");
 const arrow = useTemplateRef<HTMLElement>("arrow");
-let openTimer: ReturnType<typeof setTimeout> | undefined;
-let closeTimer: ReturnType<typeof setTimeout> | undefined;
-
-function clearTimers(): void {
-  if (openTimer !== undefined) clearTimeout(openTimer);
-  if (closeTimer !== undefined) clearTimeout(closeTimer);
-  openTimer = undefined;
-  closeTimer = undefined;
-}
-
-function setOpen(next: boolean): void {
-  clearTimers();
-  if (props.disabled && next) return;
-  const changed = isOpen.value !== next;
-  if (!isControlled.value) internalOpen.value = next;
-  if (changed || isControlled.value) emit("update:open", next);
-}
-
-function scheduleOpen(): void {
-  if (props.disabled || isOpen.value) return;
-  if (closeTimer !== undefined) clearTimeout(closeTimer);
-  openTimer = setTimeout(() => setOpen(true), Math.max(0, props.openDelay));
-}
-
-function scheduleClose(): void {
-  if (openTimer !== undefined) clearTimeout(openTimer);
-  closeTimer = setTimeout(() => setOpen(false), Math.max(0, props.closeDelay));
-}
-
-function onPointerEnter(): void {
-  scheduleOpen();
-}
-
-function onPointerLeave(): void {
-  scheduleClose();
-}
-
-function onFocusIn(): void {
-  scheduleOpen();
-}
-
-function onFocusOut(event: Event): void {
-  const related = event instanceof FocusEvent ? event.relatedTarget : null;
-  if (related instanceof Node && content.value?.contains(related)) return;
-  scheduleClose();
-}
-
-function onPointerUp(event: Event): void {
-  if (!(event instanceof PointerEvent) || event.pointerType !== "touch" || !props.enableTouch)
-    return;
-  setOpen(!isOpen.value);
-}
-
-function onKeydown(event: Event): void {
-  if (event instanceof KeyboardEvent && event.key === "Escape") setOpen(false);
-}
-
-function onDocumentKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") setOpen(false);
-}
-
-const trigger = useSlotTrigger(triggerHost, {
-  focusin: onFocusIn,
-  focusout: onFocusOut,
-  keydown: onKeydown,
-  pointerenter: onPointerEnter,
-  pointerleave: onPointerLeave,
-  pointerup: onPointerUp,
-});
+const trigger = useSlotTrigger(triggerHost, {});
 const positionReference = computed<FloatingReference | null>(
   () => props.reference ?? trigger.value,
 );
 const resolvedPortalTo = useTeleportTarget(() => props.portalTo);
-const { arrowStyle, floatingStyle, resolvedSide } = useFloatingPosition({
-  align: () => props.align,
+
+const { isOpen } = useHoverDisclosure({
+  open: () => props.open,
+  defaultOpen: props.defaultOpen,
+  openDelay: () => props.openDelay,
+  closeDelay: () => props.closeDelay,
+  disabled: () => props.disabled,
+  touchBehavior: () => (props.enableTouch ? "toggle" : "none"),
+  interactionTarget: () => positionReference.value,
+  contentTarget: content,
+  onOpenChange: (next) => emit("update:open", next),
+});
+
+function placement() {
+  return props.align === "center" ? props.side : (`${props.side}-${props.align}` as const);
+}
+
+const {
+  actualPlacement,
+  arrowStyle: ropavArrowStyle,
+  floatingStyle,
+} = useFloatingPosition({
   arrow,
+  autoUpdateOptions: () => ({
+    animationFrame: props.updatePositionStrategy === "always",
+  }),
+  collisionPadding: 8,
   floating: content,
-  open: () => isOpen.value,
-  prioritizePosition: () => props.prioritizePosition,
+  flipOptions: () => ({
+    fallbackStrategy: props.prioritizePosition ? "initialPlacement" : "bestFit",
+  }),
+  offset: () => props.sideOffset,
+  open: isOpen,
+  placement,
   reference: () => positionReference.value,
-  side: () => props.side,
-  sideOffset: () => props.sideOffset,
-  updatePositionStrategy: () => props.updatePositionStrategy,
+  strategy: "fixed",
 });
 
-function cancelClose(): void {
-  if (closeTimer !== undefined) clearTimeout(closeTimer);
-  closeTimer = undefined;
-}
-
-function onContentFocusOut(event: FocusEvent): void {
-  const related = event.relatedTarget;
-  if (related instanceof Node && trigger.value?.contains(related)) return;
-  scheduleClose();
-}
-
-watch(
-  () => props.disabled,
-  (disabled) => {
-    if (disabled) setOpen(false);
-  },
-);
-watch(isOpen, (nextOpen) => {
-  document.removeEventListener("keydown", onDocumentKeydown);
-  if (nextOpen) document.addEventListener("keydown", onDocumentKeydown);
-});
-onBeforeUnmount(() => {
-  clearTimers();
-  document.removeEventListener("keydown", onDocumentKeydown);
-});
+const resolvedSide = computed(() => actualPlacement.value.split("-")[0] as FloatingSide);
+const oppositeSide: Record<FloatingSide, FloatingSide> = {
+  top: "bottom",
+  right: "left",
+  bottom: "top",
+  left: "right",
+};
+const arrowStyle = computed<CSSProperties>(() => ({
+  ...ropavArrowStyle.value,
+  [oppositeSide[resolvedSide.value]]: "-4px",
+}));
 </script>
 
 <template>
@@ -176,11 +117,6 @@ onBeforeUnmount(() => {
       :class="['ds-hover-card', contentClass]"
       :data-side="resolvedSide"
       :style="floatingStyle"
-      @focusin="cancelClose"
-      @focusout="onContentFocusOut"
-      @keydown="onKeydown"
-      @pointerenter="cancelClose"
-      @pointerleave="scheduleClose"
     >
       <slot name="content" />
       <span

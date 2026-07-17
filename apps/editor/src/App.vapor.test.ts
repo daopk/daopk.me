@@ -172,6 +172,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
 function mountEditor(kernel: Kernel, context: AppContext = makeContext()): MountedEditor {
   return mount(App, {
     attachTo: document.body,
+    toastProvider: true,
     global: {
       provide: {
         [KernelInjectionKey as symbol]: kernel,

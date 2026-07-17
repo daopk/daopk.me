@@ -144,10 +144,10 @@ describe("ComfortSection", () => {
     const motionCards = wrapper.findAll(".comfort__motion-card");
     const typeCards = wrapper.findAll(".comfort__type-card");
 
-    expect(densityCards[1]?.attributes("aria-checked")).toBe("true");
-    expect(motionCards[0]?.attributes("aria-checked")).toBe("true");
-    expect(typeCards[0]?.attributes("aria-checked")).toBe("true");
-    expect(typeCards[4]?.attributes("aria-checked")).toBe("true");
+    expect(densityCards[1]!.find<HTMLInputElement>("input").element.checked).toBe(true);
+    expect(motionCards[0]!.find<HTMLInputElement>("input").element.checked).toBe(true);
+    expect(typeCards[0]!.find<HTMLInputElement>("input").element.checked).toBe(true);
+    expect(typeCards[4]!.find<HTMLInputElement>("input").element.checked).toBe(true);
 
     wrapper.unmount();
   });
@@ -194,7 +194,9 @@ describe("ComfortSection", () => {
     expect(wrapper.text()).not.toContain("reducing motion");
     expect(wrapper.text()).not.toContain("animating fully");
     expect(wrapper.find("[aria-live='polite']").exists()).toBe(false);
-    expect(wrapper.findAll(".comfort__motion-card")[1]?.attributes("aria-checked")).toBe("true");
+    expect(
+      wrapper.findAll(".comfort__motion-card")[1]!.find<HTMLInputElement>("input").element.checked,
+    ).toBe(true);
 
     wrapper.unmount();
   });
@@ -240,11 +242,13 @@ describe("ComfortSection", () => {
     });
     await nextTick();
 
-    expect(wrapper.findAll(".comfort__density-card")[0]?.attributes("aria-checked")).toBe("true");
+    expect(
+      wrapper.findAll(".comfort__density-card")[0]!.find<HTMLInputElement>("input").element.checked,
+    ).toBe(true);
 
     const typeCards = wrapper.findAll(".comfort__type-card");
-    expect(typeCards[2]?.attributes("aria-checked")).toBe("true");
-    expect(typeCards[5]?.attributes("aria-checked")).toBe("true");
+    expect(typeCards[2]!.find<HTMLInputElement>("input").element.checked).toBe(true);
+    expect(typeCards[5]!.find<HTMLInputElement>("input").element.checked).toBe(true);
 
     wrapper.unmount();
   });

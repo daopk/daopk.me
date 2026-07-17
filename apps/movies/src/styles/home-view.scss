@@ -263,7 +263,7 @@ span.movies-home__continue-image {
   text-decoration: none;
 }
 
-.movies-home__row-action :deep(.ds-button__icon) {
+.movies-home__row-action :deep(svg) {
   block-size: 18px;
   inline-size: 18px;
 }
@@ -317,4 +317,27 @@ span.movies-home__continue-image {
   .movies-home__continue-image {
     transition: none;
   }
+}
+.movies-home__period-control {
+  background: color-mix(in srgb, var(--color-fg) 6%, transparent);
+  border-radius: var(--radius-md);
+  gap: var(--space-2xs);
+  padding: var(--space-2xs);
+}
+
+.movies-home__period-option {
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-muted);
+  min-block-size: var(--control-height-sm);
+  padding: 0 var(--space-sm);
+}
+
+.movies-home__period-option:hover,
+.movies-home__period-option[data-state="checked"] {
+  background: var(--color-bg-elevated);
+  color: var(--color-fg);
+}
+
+:deep(.movies-home__period-indicator) {
+  display: none;
 }

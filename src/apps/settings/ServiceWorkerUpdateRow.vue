@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed } from "vue";
 
-import Button from "~/components/ui/Button.vue";
+import { Button } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
@@ -70,7 +70,7 @@ function dismiss(): void {
     </div>
 
     <div v-if="isActionable" class="sw-update-row__actions">
-      <Button variant="primary" size="sm" :loading="isRefreshing" @click="refresh">
+      <Button variant="solid" color="blue" size="sm" :loading="isRefreshing" @click="refresh">
         {{ primaryLabel }}
       </Button>
       <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.sw.later") }}</Button>

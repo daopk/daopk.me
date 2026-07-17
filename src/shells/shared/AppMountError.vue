@@ -20,14 +20,8 @@ const retry = inject(AppMountRetryKey, null);
           : "Try closing and reopening the window."
       }}
     </p>
-    <Button
-      v-if="retry"
-      class="app-mount-error__retry"
-      variant="secondary"
-      size="sm"
-      :icon-start="RefreshCw"
-      @click="retry"
-    >
+    <Button v-if="retry" class="app-mount-error__retry" variant="surface" size="sm" @click="retry">
+      <template #left><RefreshCw aria-hidden="true" /></template>
       Try again
     </Button>
   </div>

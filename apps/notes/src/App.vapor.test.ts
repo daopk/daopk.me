@@ -194,6 +194,7 @@ function mountNotes(
   options: { readonly appChrome?: AppChromeController } = {},
 ): VaporMount {
   return mountVaporRoot(App, {
+    toastProvider: true,
     provide: [
       [KernelInjectionKey, kernel],
       [AppContextInjectionKey, context],
@@ -256,7 +257,7 @@ describe("Notes App.vue", () => {
     expect(wrapper.text()).toContain("No notes yet.");
     const newButton = wrapper.find(".notes__new-button");
     expect(newButton.textContent).toContain("New");
-    expect(newButton.classList).toContain("ds-button--sm");
+    expect(newButton.tagName).toBe("BUTTON");
 
     wrapper.unmount();
   });
@@ -397,7 +398,7 @@ describe("Notes App.vue", () => {
     expect(wrapper.find(".notes").classList).toContain("notes--compact");
     expect(wrapper.exists(".notes__sidebar")).toBe(true);
     expect(wrapper.exists(".notes__editor")).toBe(false);
-    expect(wrapper.find(".notes__new-button").classList).toContain("ds-button--md");
+    expect(wrapper.find(".notes__new-button").textContent).toContain("New");
     expect(wrapper.findAll(".notes__note-button")).toHaveLength(2);
 
     wrapper.unmount();

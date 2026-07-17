@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
 
-import { Select, type SelectOption } from "@daopk/kit";
+import { Select, type SelectOption } from "@daopk/ui";
 
 import {
   fetchMovieSeason,
@@ -62,7 +62,7 @@ const selectedSeasonMeta = computed(() => {
 const selectedSeasonOverview = computed(() =>
   props.showOverview ? (selectedSeason.value?.overview ?? "") : "",
 );
-const seasonOptions = computed<readonly SelectOption[]>(() =>
+const seasonOptions = computed<SelectOption[]>(() =>
   [...props.series.seasons]
     .sort((left, right) => left.seasonNumber - right.seasonNumber)
     .map((season) => ({
@@ -94,7 +94,9 @@ onUnmounted(() => {
   abortController?.abort();
 });
 
-function selectSeason(seasonValue: string): void {
+function selectSeason(value: string | number | null): void {
+  if (value === null) return;
+  const seasonValue = String(value);
   selectedSeasonNumber.value = seasonValue;
   const seasonNumber = Number(seasonValue);
   void loadSelectedSeason(
@@ -147,7 +149,7 @@ async function loadSelectedSeason(seasonNumber: number | null): Promise<void> {
         <Select
           v-if="showSeasonPicker"
           class="movies-season-episodes__season-select"
-          :aria-label="t('movies.action.chooseAnotherSeason')"
+          :ariaLabel="t('movies.action.chooseAnotherSeason')"
           :model-value="selectedSeasonNumber"
           :options="seasonOptions"
           @update:model-value="selectSeason"

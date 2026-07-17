@@ -1,6 +1,6 @@
 import { mountVaporTest as mount, type VaporTestWrapper } from "~/test/mountVapor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent } from "vue";
+import { defineVaporComponent, nextTick } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";
 import type { SpotlightRecentEntry } from "~/core/spotlight/SpotlightRecentsStore";
@@ -97,6 +97,22 @@ describe("Spotlight.vue", () => {
 
       await vi.waitFor(() => expect(document.activeElement).toBe(input));
       w.unmount();
+    });
+
+    it("returns focus to the previously focused control when the modal unmounts", async () => {
+      const trigger = document.createElement("button");
+      document.body.appendChild(trigger);
+      trigger.focus();
+
+      const w = makeSpotlight({});
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(w.get('input[role="combobox"]').element),
+      );
+
+      w.unmount();
+      await nextTick();
+      expect(document.activeElement).toBe(trigger);
+      trigger.remove();
     });
 
     it("exposes role=dialog + aria-modal=true + aria-labelledby on the panel", () => {
@@ -265,8 +281,8 @@ describe("Spotlight.vue", () => {
     }
 
     async function press(w: VaporTestWrapper, key: string): Promise<void> {
-      const dialog = w.find('[role="dialog"]');
-      await dialog.trigger("keydown", { key });
+      const input = w.find('input[role="combobox"]');
+      await input.trigger("keydown", { key });
     }
 
     it("ArrowDown moves activeIndex forward, ArrowUp moves it back", async () => {
@@ -373,10 +389,10 @@ describe("Spotlight.vue", () => {
       w.unmount();
     });
 
-    it("scrim mousedown emits close (target===currentTarget guard)", async () => {
+    it("Ropav Modal emits close when its overlay receives pointerdown", async () => {
       const w = makeSpotlight({});
-      const scrim = w.find(".spotlight").element as HTMLElement;
-      scrim.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      const scrim = w.find(".spotlight__overlay").element as HTMLElement;
+      scrim.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
       await w.vm.$nextTick();
       expect(w.emitted("close")).toBeTruthy();
       w.unmount();

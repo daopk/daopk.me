@@ -720,7 +720,7 @@ Event body`,
     await waitForContent(wrapper);
 
     expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
-    expect(wrapper.find(".blog__back .ds-button__icon").exists()).toBe(true);
+    expect(wrapper.find(".blog__back svg").exists()).toBe(true);
 
     await wrapper.find(".blog__share").trigger("click");
 

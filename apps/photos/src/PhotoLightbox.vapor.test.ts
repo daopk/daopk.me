@@ -1,5 +1,5 @@
 import { mountVaporTest as mount } from "~/test/mountVapor";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import PhotoLightbox from "./PhotoLightbox.vue";
 import type { Photo } from "./usePhotos";
@@ -46,6 +46,23 @@ describe("PhotoLightbox", () => {
     const wrapper = mountLightbox(0);
 
     await wrapper.get('[aria-label="Close photo viewer"]').trigger("click");
+
+    expect(wrapper.emitted("close")).toHaveLength(1);
+  });
+
+  it("moves initial focus to the close control", async () => {
+    const wrapper = mountLightbox(0);
+    const closeButton = wrapper.get('[aria-label="Close photo viewer"]').element;
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(closeButton));
+  });
+
+  it("uses Ropav outside dismissal for the overlay", async () => {
+    const wrapper = mountLightbox(0);
+    const overlay = wrapper.get(".photos__lightbox-overlay").element;
+
+    overlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted("close")).toHaveLength(1);
   });

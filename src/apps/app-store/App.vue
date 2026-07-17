@@ -1,15 +1,15 @@
 <script setup vapor lang="ts">
+import { computed } from "vue";
+
 import {
   AppFrame,
   AppToolbar,
-  Badge,
   EmptyState,
   ScrollArea,
-  StatusBanner,
   ToolbarTitle,
   useAppChrome,
 } from "~/components/kit";
-import { Button } from "~/components/ui";
+import { Alert, Badge, Button } from "~/components/ui";
 import AppIcon from "~/components/AppIcon.vue";
 import { Download as UpdateIcon, ExternalLink as LaunchIcon, RefreshCw } from "~/icons/lucide";
 
@@ -31,6 +31,20 @@ const {
   updateApp,
   updateEntryFor,
 } = useAppStoreController();
+
+const statusColor = computed(() => {
+  switch (statusTone.value) {
+    case "success":
+      return "green" as const;
+    case "warning":
+      return "yellow" as const;
+    case "error":
+      return "red" as const;
+    case "info":
+      return "blue" as const;
+  }
+  return "blue" as const;
+});
 </script>
 
 <template>
@@ -41,24 +55,25 @@ const {
         <Button
           class="app-store__check"
           size="sm"
-          :icon-start="RefreshCw"
           :loading="checkState.kind === 'checking'"
           @click="checkForUpdates"
         >
+          <template #left><RefreshCw aria-hidden="true" /></template>
           Check updates
         </Button>
       </template>
     </AppToolbar>
 
     <ScrollArea class="app-store__body" safe-area>
-      <StatusBanner
+      <Alert
         v-if="checkState.kind !== 'idle'"
         class="app-store__status"
-        :tone="statusTone"
+        :color="statusColor"
+        variant="surface"
         :role="checkState.kind === 'error' ? 'alert' : 'status'"
       >
         {{ statusMessage }}
-      </StatusBanner>
+      </Alert>
 
       <EmptyState v-if="apps.length === 0" class="app-store__center">
         No first-party apps available.
@@ -90,7 +105,12 @@ const {
 
               <div class="app-store__meta">
                 <span class="app-store__category">{{ group.label }}</span>
-                <Badge v-if="updateEntryFor(app)" class="app-store__badge" tone="accent">
+                <Badge
+                  v-if="updateEntryFor(app)"
+                  class="app-store__badge"
+                  color="blue"
+                  variant="subtle"
+                >
                   {{ catalogEntryReleaseLabel(updateEntryFor(app)) }}
                 </Badge>
               </div>
@@ -99,21 +119,22 @@ const {
                 v-if="updateEntryFor(app)"
                 class="app-store__action app-store__update"
                 size="sm"
-                variant="primary"
-                :icon-start="UpdateIcon"
+                variant="solid"
+                color="blue"
                 :loading="isUpdating(app.id)"
                 @click="updateApp(app)"
               >
+                <template #left><UpdateIcon aria-hidden="true" /></template>
                 Update
               </Button>
               <Button
                 v-else
                 class="app-store__action app-store__launch"
                 size="sm"
-                variant="secondary"
-                :icon-start="LaunchIcon"
+                variant="surface"
                 @click="launchApp(app.id)"
               >
+                <template #left><LaunchIcon aria-hidden="true" /></template>
                 Open
               </Button>
             </li>

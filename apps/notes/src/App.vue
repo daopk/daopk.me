@@ -2,22 +2,15 @@
 import { useResizeObserver } from "@vueuse/core";
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
 
-import {
-  AppFrame,
-  AppToolbar,
-  EmptyState,
-  ScrollArea,
-  Textarea,
-  TextInput,
-  useAppChrome,
-} from "@daopk/kit";
+import { AppFrame, AppToolbar, EmptyState, ScrollArea, useAppChrome } from "@daopk/kit";
 import {
   Button,
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
-  Dialog,
-  DialogActions,
+  Input,
+  Modal,
+  Textarea,
   useToast,
 } from "@daopk/ui";
 import { FileText, Plus } from "@daopk/icons";
@@ -305,12 +298,13 @@ function labelForStatus(status: NotesStatus): string {
         <Button
           class="notes__new-button"
           :size="isCompact ? 'md' : 'sm'"
-          variant="primary"
-          :icon-start="Plus"
+          variant="solid"
+          color="blue"
           :loading="newButtonLoading"
           :disabled="newButtonDisabled"
           @click="createNote"
         >
+          <template #left><Plus aria-hidden="true" /></template>
           New
         </Button>
       </AppToolbar>
@@ -359,13 +353,12 @@ function labelForStatus(status: NotesStatus): string {
       </EmptyState>
       <template v-else>
         <header class="notes__editor-header">
-          <TextInput
-            class="notes__title-input"
-            variant="plain"
+          <Input
+            class="notes__title-input-root"
+            :class-names="{ input: 'notes__title-input' }"
             :model-value="notes.title.value"
-            aria-label="Note title"
-            autocomplete="off"
-            spellcheck="true"
+            ariaLabel="Note title"
+            :input-attrs="{ autocomplete: 'off', spellcheck: true }"
             @update:model-value="notes.setTitle"
           />
           <div
@@ -377,30 +370,37 @@ function labelForStatus(status: NotesStatus): string {
           </div>
         </header>
         <Textarea
-          class="notes__textarea"
-          variant="plain"
+          class="notes__textarea-root"
+          :class-names="{ input: 'notes__textarea' }"
           resize="none"
           :model-value="notes.draft.value"
-          aria-label="Note body"
-          spellcheck="true"
+          ariaLabel="Note body"
+          :input-attrs="{ spellcheck: true }"
           @update:model-value="notes.setDraft"
         />
       </template>
     </main>
 
-    <Dialog
+    <Modal
       v-model:open="deleteDialogOpen"
       title="Move note to Trash?"
       :description="deleteDescription"
+      :show-close-button="false"
       @close="cancelDeleteNote"
     >
-      <DialogActions>
+      <template #footer>
         <Button size="sm" :disabled="deletingNote" @click="cancelDeleteNote">Cancel</Button>
-        <Button size="sm" variant="primary" :loading="deletingNote" @click="confirmDeleteNote">
+        <Button
+          size="sm"
+          variant="solid"
+          color="blue"
+          :loading="deletingNote"
+          @click="confirmDeleteNote"
+        >
           Move to Trash
         </Button>
-      </DialogActions>
-    </Dialog>
+      </template>
+    </Modal>
   </AppFrame>
 </template>
 

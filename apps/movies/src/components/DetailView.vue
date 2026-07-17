@@ -139,7 +139,10 @@ function startWatching(): void {
       :title="t('movies.error.detail.title')"
       :description="t('movies.error.detail.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
+      <Button @click="$emit('back')">
+        <template #left><ArrowLeft aria-hidden="true" /></template>
+        {{ t("movies.action.back") }}
+      </Button>
     </EmptyState>
 
     <template v-else-if="detail">

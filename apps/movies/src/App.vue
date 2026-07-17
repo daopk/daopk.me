@@ -2,7 +2,7 @@
 import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 
 import { AppFrame } from "@daopk/kit";
-import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Button, Modal } from "@daopk/ui";
 import { Palette } from "@daopk/icons";
 import { AppContextInjectionKey, KernelInjectionKey } from "@daopk/sdk";
 
@@ -220,29 +220,31 @@ onUnmounted(() => {
       @open-detail="openDetail"
     />
 
-    <Dialog
+    <Modal
       :open="darkThemeSuggestionOpen"
       :title="t('movies.themeSuggestion.title')"
       :description="t('movies.themeSuggestion.description')"
-      :portal-to="darkThemeSuggestionPortalTarget"
-      scope="container"
+      :teleport-to="darkThemeSuggestionPortalTarget"
+      :show-close-button="false"
+      :styles="{ root: { position: 'absolute' } }"
       @update:open="setDarkThemeSuggestionOpen"
     >
-      <DialogActions align="stretch">
-        <Button type="button" variant="secondary" @click="setDarkThemeSuggestionOpen(false)">
+      <template #footer>
+        <Button type="button" variant="surface" @click="setDarkThemeSuggestionOpen(false)">
           {{ t("movies.themeSuggestion.later") }}
         </Button>
         <Button
           class="movies-app__theme-suggestion-primary"
           type="button"
-          variant="primary"
-          :icon-start="Palette"
+          variant="solid"
+          color="blue"
           @click="switchSystemThemeToDark"
         >
+          <template #left><Palette aria-hidden="true" /></template>
           {{ t("movies.themeSuggestion.switch") }}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </template>
+    </Modal>
   </AppFrame>
 </template>
 

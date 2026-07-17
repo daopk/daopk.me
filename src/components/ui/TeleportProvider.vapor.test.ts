@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createComponent, nextTick } from "vue";
+import { Modal } from "ropav/modal";
 import { TeleportProvider } from "ropav/teleport-provider";
+import { Tooltip } from "ropav/tooltip";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
-import Dialog from "./Dialog.vue";
 import DropdownMenu, { DropdownMenuItem } from "./DropdownMenu.vue";
-import Tooltip from "./Tooltip.vue";
 
 const mounted: VaporMount[] = [];
 
@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 describe("TeleportProvider integration", () => {
-  it("provides the default target to local overlay wrappers", async () => {
+  it("provides the default target to a direct Ropav tooltip", async () => {
     vi.useFakeTimers();
     const wrapper = mount(TeleportProvider, {
       props: { teleportTo: "#provider-floating-target" },
@@ -58,7 +58,7 @@ describe("TeleportProvider integration", () => {
             portal,
             createComponent(
               Tooltip,
-              { delayDuration: 0, label: "Provider tooltip" },
+              { content: "Provider tooltip", openDelay: 0 },
               { default: () => button("Trigger") },
             ),
           ];
@@ -67,9 +67,7 @@ describe("TeleportProvider integration", () => {
     });
     const portal = wrapper.find<HTMLElement>("#provider-floating-target");
 
-    wrapper
-      .find<HTMLButtonElement>("button")
-      .dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
+    wrapper.find(".rp-tooltip").dispatchEvent(new MouseEvent("mouseenter"));
     await vi.runAllTimersAsync();
     await settle();
 
@@ -113,7 +111,7 @@ describe("TeleportProvider integration", () => {
       slots: {
         default: () =>
           createComponent(
-            Dialog,
+            Modal,
             { open: true, title: "Provider dialog" },
             { default: () => button("Dialog action") },
           ),
@@ -134,15 +132,13 @@ describe("TeleportProvider integration", () => {
         default: () =>
           createComponent(
             Tooltip,
-            { delayDuration: 0, label: "Overridden tooltip", portalTo: overridePortal },
+            { content: "Overridden tooltip", openDelay: 0, teleportTo: overridePortal },
             { default: () => button("Trigger") },
           ),
       },
     });
 
-    wrapper
-      .find<HTMLButtonElement>("button")
-      .dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
+    wrapper.find(".rp-tooltip").dispatchEvent(new MouseEvent("mouseenter"));
     await vi.runAllTimersAsync();
     await settle();
 

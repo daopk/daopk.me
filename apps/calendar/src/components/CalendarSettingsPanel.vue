@@ -55,21 +55,17 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
           v-if="showBack"
           class="calendar-settings__action-button"
           size="md"
-          :icon-start="ArrowLeft"
           aria-label="Back to Calendar"
           @click="emit('back')"
         >
+          <template #left><ArrowLeft aria-hidden="true" /></template>
           Back
         </Button>
         <ToolbarTitle class="calendar-settings__title" title="Calendar settings" />
       </div>
       <template #end>
-        <Button
-          class="calendar-settings__action-button"
-          size="md"
-          :icon-start="RotateCcw"
-          @click="settings.reset"
-        >
+        <Button class="calendar-settings__action-button" size="md" @click="settings.reset">
+          <template #left><RotateCcw aria-hidden="true" /></template>
           Reset
         </Button>
       </template>
@@ -125,18 +121,14 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
         </template>
         <Switch
           :model-value="showLunarCalendar"
-          :aria-label="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
+          :ariaLabel="showLunarCalendar ? 'Hide lunar labels' : 'Show lunar labels'"
           @update:model-value="settings.setShowLunarCalendar"
         />
       </ActionRow>
 
       <footer v-if="!showHeader" class="calendar-settings__footer">
-        <Button
-          class="calendar-settings__action-button"
-          size="md"
-          :icon-start="RotateCcw"
-          @click="settings.reset"
-        >
+        <Button class="calendar-settings__action-button" size="md" @click="settings.reset">
+          <template #left><RotateCcw aria-hidden="true" /></template>
           Reset
         </Button>
       </footer>

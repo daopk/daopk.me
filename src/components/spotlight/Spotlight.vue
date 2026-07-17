@@ -9,9 +9,9 @@ import {
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import { Search as SearchIcon } from "~/icons/lucide";
 import { computed, ref, useId, watch, type VaporComponent } from "vue";
+import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
 import AppIcon from "~/components/AppIcon.vue";
-import { useFocusTrap } from "~/components/ui/useFocusTrap";
 import type { AppManifest } from "~/types/app";
 import type { CommandManifest } from "~/types/command";
 import type { SearchHit, SearchKind, SearchVfsMetadata } from "~/types/search";
@@ -41,18 +41,22 @@ const emit = defineEmits<{
 const kernel = useKernel();
 const { reduced } = useReducedMotion();
 
-const headingId = useId();
 const inputId = useId();
 const listboxId = useId();
 const optionIdPrefix = useId();
-const spotlightRef = ref<HTMLElement | null>(null);
-const inputRef = ref<HTMLInputElement | null>(null);
 
-useFocusTrap(spotlightRef, {
-  escapeDeactivates: false,
-  initialFocus: () => inputRef.value ?? spotlightRef.value ?? false,
-  preventScroll: true,
-});
+const SPOTLIGHT_CONTENT_BASE_Z_INDEX = 1501;
+const focusTrapOptions: ModalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" },
+};
+
+const modalClassNames = computed(() => ({
+  root: ["spotlight", { "spotlight--reduced": reduced.value }],
+  overlay: "spotlight__overlay",
+  panel: "spotlight__panel",
+  header: "spotlight__sr-only",
+  body: "spotlight__body",
+}));
 
 interface Row {
   kind: SearchKind;
@@ -237,17 +241,11 @@ function onKeydown(event: KeyboardEvent): void {
       event.preventDefault();
       dispatchActive();
       break;
-    case "Escape":
-      event.preventDefault();
-      emit("close");
-      break;
   }
 }
 
-function onScrimMousedown(event: MouseEvent): void {
-  if (event.target === event.currentTarget) {
-    emit("close");
-  }
+function close(): void {
+  emit("close");
 }
 
 function onRowClick(index: number): void {
@@ -261,27 +259,24 @@ function onRowHover(index: number): void {
 </script>
 
 <template>
-  <div
-    ref="spotlightRef"
-    class="spotlight"
-    :class="{ 'spotlight--reduced': reduced }"
-    role="presentation"
-    tabindex="-1"
-    @mousedown="onScrimMousedown"
+  <Modal
+    :open="true"
+    title="Spotlight"
+    size="640px"
+    :base-z-index="SPOTLIGHT_CONTENT_BASE_Z_INDEX"
+    :teleport="false"
+    :show-close-button="false"
+    initial-focus=".spotlight__input"
+    :focus-trap-options="focusTrapOptions"
+    :overlay-props="{ color: 'var(--spotlight-scrim)' }"
+    :class-names="modalClassNames"
+    @close="close"
   >
-    <div
-      class="spotlight__panel"
-      role="dialog"
-      aria-modal="true"
-      :aria-labelledby="headingId"
-      @keydown="onKeydown"
-    >
-      <h2 :id="headingId" class="spotlight__sr-only">Spotlight</h2>
+    <div class="spotlight__content" @keydown="onKeydown">
       <div class="spotlight__inputRow">
         <SearchIcon class="spotlight__inputIcon" :size="18" :stroke-width="2" aria-hidden="true" />
         <input
           :id="inputId"
-          ref="inputRef"
           class="spotlight__input"
           type="text"
           role="combobox"
@@ -335,13 +330,12 @@ function onRowHover(index: number): void {
         </ul>
       </div>
     </div>
-  </div>
+  </Modal>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 .spotlight {
   align-items: flex-start;
-  background: var(--spotlight-scrim);
   block-size: 100%;
   display: flex;
   inline-size: 100%;
@@ -350,6 +344,11 @@ function onRowHover(index: number): void {
   padding-block-start: 12vh;
   position: fixed;
   z-index: var(--spotlight-z);
+}
+
+.spotlight__body,
+.spotlight__content {
+  display: contents;
 }
 
 .spotlight-presence-enter-active,

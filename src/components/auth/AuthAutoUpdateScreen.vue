@@ -47,11 +47,12 @@ const emit = defineEmits<{
       <Button
         v-if="failed"
         class="auth-auto-update__retry"
-        variant="primary"
+        variant="solid"
+        color="blue"
         type="button"
-        :icon-start="RefreshCw"
         @click="emit('retry')"
       >
+        <template #left><RefreshCw aria-hidden="true" /></template>
         Retry update
       </Button>
     </div>

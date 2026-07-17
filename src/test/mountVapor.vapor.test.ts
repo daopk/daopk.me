@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defineVaporComponent } from "vue";
+import { Button } from "ropav/button";
 
-import Button from "~/components/ui/Button.vue";
 import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { mountVapor, mountVaporRoot } from "./mountVapor";

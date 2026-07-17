@@ -223,13 +223,13 @@
     0 18px 34px -24px color-mix(in srgb, var(--color-accent) 52%, black);
 }
 
-.movies-home__hero-details :deep(.ds-button__icon) {
+.movies-home__hero-details :deep(.movies-home__hero-details-icon) {
   block-size: 13px;
   inline-size: 13px;
   transition: transform var(--duration-fast) var(--ease);
 }
 
-.movies-home__hero-details:hover :deep(.ds-button__icon) {
+.movies-home__hero-details:hover :deep(.movies-home__hero-details-icon) {
   transform: translateX(2px);
 }
 

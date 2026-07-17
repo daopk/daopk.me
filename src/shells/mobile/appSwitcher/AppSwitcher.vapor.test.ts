@@ -123,6 +123,14 @@ describe("AppSwitcher", () => {
     wrapper.unmount();
   });
 
+  it("moves initial focus to the close button", async () => {
+    const wrapper = mount(AppSwitcher, { props: { frames: [] }, attachTo: document.body });
+    const closeButton = wrapper.get(".app-switcher__close").element;
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(closeButton));
+    wrapper.unmount();
+  });
+
   it("emits `close` when Escape is pressed inside the dialog", async () => {
     const wrapper = mount(AppSwitcher, {
       props: { frames: [] },
@@ -160,14 +168,14 @@ describe("AppSwitcher", () => {
     wrapper.unmount();
   });
 
-  it("emits `close` when the scrim itself is clicked (not via children)", async () => {
+  it("emits `close` when Ropav Modal handles pointerdown on the overlay", async () => {
     const wrapper = mount(AppSwitcher, {
       props: { frames: [{ frameId: "f-1", handleId: "h-1", manifestId: "alpha" }] },
       attachTo: document.body,
     });
 
-    const scrim = wrapper.find(".app-switcher").element as HTMLElement;
-    scrim.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const scrim = wrapper.find(".app-switcher__overlay").element as HTMLElement;
+    scrim.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
     await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted("close")).toBeTruthy();
@@ -214,7 +222,7 @@ describe("AppSwitcher", () => {
     wrapper.unmount();
   });
 
-  it("exposes `role='dialog'` + `aria-modal='true'` for a11y", () => {
+  it("exposes the Ropav dialog semantics and accessible name", () => {
     const wrapper = mount(AppSwitcher, {
       props: { frames: [] },
       attachTo: document.body,
@@ -223,7 +231,7 @@ describe("AppSwitcher", () => {
     const dialog = wrapper.find('[role="dialog"]');
     expect(dialog.exists()).toBe(true);
     expect(dialog.attributes("aria-modal")).toBe("true");
-    expect(dialog.attributes("aria-labelledby")).toBeTruthy();
+    expect(dialog.attributes("aria-label")).toBe("Recent apps");
 
     wrapper.unmount();
   });

@@ -29,6 +29,12 @@
   outline-offset: 2px;
 }
 
+.editor__textarea-root {
+  block-size: 100%;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+
 .editor__actions {
   align-items: center;
   display: flex;

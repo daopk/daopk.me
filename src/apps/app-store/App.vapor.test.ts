@@ -129,6 +129,7 @@ const mountedWrappers: VaporTestWrapper[] = [];
 function mountStore(kernel: Kernel): VaporTestWrapper {
   const wrapper = mount(AppStore, {
     attachTo: document.body,
+    toastProvider: true,
     global: { provide: { [KernelInjectionKey as symbol]: kernel } },
   });
   mountedWrappers.push(wrapper);

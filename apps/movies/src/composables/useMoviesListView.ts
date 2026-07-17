@@ -43,6 +43,10 @@ interface UseMoviesListViewOptions {
   readonly query: Readonly<Ref<MoviesListQuery>>;
 }
 
+interface SelectHandle {
+  focus(): void;
+}
+
 export interface UseMoviesListViewBindings {
   readonly activeCountry: Ref<string>;
   readonly activeGenreValue: Ref<string>;
@@ -88,8 +92,8 @@ export function useMoviesListView({
     movie: "idle",
     tv: "idle",
   });
-  const genreSelect = useTemplateRef<HTMLSelectElement>("genreSelect");
-  const countrySelect = useTemplateRef<HTMLSelectElement>("countrySelect");
+  const genreSelect = useTemplateRef<SelectHandle>("genreSelect");
+  const countrySelect = useTemplateRef<SelectHandle>("countrySelect");
   let abortController: AbortController | null = null;
   const filtersAbortControllers: Record<MovieMediaType, AbortController | null> = {
     movie: null,
@@ -379,9 +383,9 @@ export function useMoviesListView({
     }
     await nextTick();
     if (filterFocus === "genre") {
-      genreSelect.value?.focus({ preventScroll: true });
+      genreSelect.value?.focus();
     } else {
-      countrySelect.value?.focus({ preventScroll: true });
+      countrySelect.value?.focus();
     }
   }
 

@@ -46,14 +46,14 @@
   padding: 0 var(--space-xs);
 }
 
-.movies-toolbar__history :deep(.ds-kit-icon-button),
+.movies-toolbar__history-button,
 .movies-toolbar__history-menu-button {
   border-radius: var(--radius-full);
   color: var(--movies-toolbar-control-fg, color-mix(in srgb, var(--color-fg) 72%, transparent));
 }
 
-.movies-toolbar__history :deep(.ds-kit-icon-button:hover),
-.movies-toolbar__history :deep(.ds-kit-icon-button:focus-visible),
+.movies-toolbar__history-button:hover,
+.movies-toolbar__history-button:focus-visible,
 .movies-toolbar__history-menu-button:hover,
 .movies-toolbar__history-menu-button:focus-visible {
   background: var(
@@ -176,7 +176,7 @@
   padding-block-start: var(--space-sm);
 }
 
-.movies-toolbar__search-form :deep(.ds-kit-text-input) {
+.movies-toolbar__search-form :deep(input) {
   inline-size: 100%;
 }
 

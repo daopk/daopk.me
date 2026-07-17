@@ -1,6 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, inject, onMounted, reactive, ref, watch } from "vue";
 import { TeleportProvider } from "ropav/teleport-provider";
+import { ToastProvider } from "ropav/toast";
 
 import AuthGate from "~/components/auth/AuthGate.vue";
 import BootHost from "~/components/boot/BootHost.vue";
@@ -89,35 +90,37 @@ watch(
 
 <template>
   <TeleportProvider :teleport-to="APP_OVERLAY_PORTAL_TARGET">
-    <div class="app-stage">
-      <div
-        :id="APP_OVERLAY_PORTAL_ID"
-        class="app-stage__overlays"
-        role="region"
-        aria-label="Application overlays"
-      />
-      <!-- `failed` renders BootHost error chrome + Retry; `cancelled` is idle BootHost (HMR teardown). -->
-      <BootHost
-        v-if="showBootHost"
-        key="boot"
-        :progress-fraction="bootReactive.progressFraction"
-        :phase-label="bootReactive.phaseLabel"
-        :boot-status="bootReactive.status"
-        :error-message="bootReactive.error?.message"
-        @retry="handleBootRetry"
-      />
-      <ShellHost v-else-if="showShellHost" key="shell-hosted" />
-      <ToastHost />
-
-      <Transition name="auth-gate-lift">
-        <AuthGate
-          v-if="authGateVisible"
-          key="auth"
-          class="app-stage__auth-gate"
-          @authenticated="handleAuthenticated"
+    <ToastProvider :max="5" :duration="5000" radius="md" close-label="Dismiss notification">
+      <div class="app-stage">
+        <div
+          :id="APP_OVERLAY_PORTAL_ID"
+          class="app-stage__overlays"
+          role="region"
+          aria-label="Application overlays"
         />
-      </Transition>
-    </div>
+        <!-- `failed` renders BootHost error chrome + Retry; `cancelled` is idle BootHost (HMR teardown). -->
+        <BootHost
+          v-if="showBootHost"
+          key="boot"
+          :progress-fraction="bootReactive.progressFraction"
+          :phase-label="bootReactive.phaseLabel"
+          :boot-status="bootReactive.status"
+          :error-message="bootReactive.error?.message"
+          @retry="handleBootRetry"
+        />
+        <ShellHost v-else-if="showShellHost" key="shell-hosted" />
+        <ToastHost />
+
+        <Transition name="auth-gate-lift">
+          <AuthGate
+            v-if="authGateVisible"
+            key="auth"
+            class="app-stage__auth-gate"
+            @authenticated="handleAuthenticated"
+          />
+        </Transition>
+      </div>
+    </ToastProvider>
   </TeleportProvider>
 </template>
 

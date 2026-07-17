@@ -129,13 +129,14 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
         <div class="movies-home__hero-actions">
           <Button
             class="movies-home__hero-details"
-            variant="secondary"
+            :class-names="{ right: 'movies-home__hero-details-icon' }"
+            variant="surface"
             size="sm"
-            :icon-end="ChevronRight"
             :aria-label="t('movies.home.hero.openTitle', { title: activeHero.name })"
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
+            <template #right><ChevronRight aria-hidden="true" /></template>
           </Button>
         </div>
       </div>
@@ -244,13 +245,14 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
         <div class="movies-home__hero-actions">
           <Button
             class="movies-home__hero-details"
-            variant="secondary"
+            :class-names="{ right: 'movies-home__hero-details-icon' }"
+            variant="surface"
             size="sm"
-            :icon-end="ChevronRight"
             :aria-label="t('movies.home.hero.openTitle', { title: activeHero.name })"
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
+            <template #right><ChevronRight aria-hidden="true" /></template>
           </Button>
         </div>
       </div>

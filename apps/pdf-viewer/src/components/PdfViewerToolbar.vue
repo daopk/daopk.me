@@ -1,8 +1,14 @@
 <script setup vapor lang="ts">
 import { ref } from "vue";
 
-import { AppToolbar, IconButton, Separator, TextInput, ToolbarGroup } from "@daopk/kit";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuSeparator } from "@daopk/ui";
+import { AppToolbar, Separator, ToolbarGroup } from "@daopk/kit";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  IconButton,
+  Input,
+} from "@daopk/ui";
 import {
   ChevronLeft,
   ChevronRight,
@@ -63,7 +69,9 @@ const {
         class="pdf-viewer__document-group"
         label="Document"
       >
-        <IconButton label="Open PDF" :icon="Upload" :disabled="busy" @click="emit('openFile')" />
+        <IconButton ariaLabel="Open PDF" :disabled="busy" @click="emit('openFile')">
+          <Upload aria-hidden="true" />
+        </IconButton>
       </ToolbarGroup>
 
       <Separator
@@ -75,27 +83,31 @@ const {
 
       <ToolbarGroup class="pdf-viewer__page-group" label="Pages">
         <IconButton
-          label="Previous page"
-          :icon="ChevronLeft"
+          ariaLabel="Previous page"
           :disabled="!viewer.canGoPrevious.value || busy"
           @click="emit('goPrevious')"
-        />
+        >
+          <ChevronLeft aria-hidden="true" />
+        </IconButton>
         <form
           class="pdf-viewer__page-form pdf-viewer__page-form--desktop"
           @submit.prevent="emit('submitPage')"
         >
           <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
-          <TextInput
+          <Input
             id="pdf-viewer-page"
-            class="pdf-viewer__page-input"
+            class="pdf-viewer__page-input-root"
+            :class-names="{ input: 'pdf-viewer__page-input' }"
             type="number"
-            inputmode="numeric"
-            min="1"
             :model-value="pageDraft"
-            :max="viewer.pageCount.value || undefined"
+            :input-attrs="{
+              inputmode: 'numeric',
+              min: 1,
+              max: viewer.pageCount.value || undefined,
+              onBlur: () => emit('submitPage'),
+            }"
             :disabled="!hasDocument || busy"
             @update:model-value="emit('update:pageDraft', $event)"
-            @blur="emit('submitPage')"
           />
           <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
         </form>
@@ -109,11 +121,12 @@ const {
           {{ pageSelectorLabel }}
         </button>
         <IconButton
-          label="Next page"
-          :icon="ChevronRight"
+          ariaLabel="Next page"
           :disabled="!viewer.canGoNext.value || busy"
           @click="emit('goNext')"
-        />
+        >
+          <ChevronRight aria-hidden="true" />
+        </IconButton>
       </ToolbarGroup>
 
       <Separator
@@ -130,42 +143,47 @@ const {
       >
         <IconButton
           v-if="isToolbarActionVisible('zoom')"
-          label="Zoom out"
-          :icon="ZoomOut"
+          ariaLabel="Zoom out"
           :disabled="!hasDocument || busy"
           @click="emit('zoomOut')"
-        />
+        >
+          <ZoomOut aria-hidden="true" />
+        </IconButton>
         <span v-if="isToolbarActionVisible('zoom')" class="pdf-viewer__zoom" aria-live="polite">{{
           viewer.zoomLabel.value
         }}</span>
         <IconButton
           v-if="isToolbarActionVisible('zoom')"
-          label="Zoom in"
-          :icon="ZoomIn"
+          ariaLabel="Zoom in"
           :disabled="!hasDocument || busy"
           @click="emit('zoomIn')"
-        />
+        >
+          <ZoomIn aria-hidden="true" />
+        </IconButton>
         <IconButton
           v-if="isToolbarActionVisible('fit')"
-          label="Fit width"
-          :icon="MoveHorizontal"
+          ariaLabel="Fit width"
           :disabled="!hasDocument || busy"
           @click="emit('fitWidth')"
-        />
+        >
+          <MoveHorizontal aria-hidden="true" />
+        </IconButton>
         <IconButton
           v-if="isToolbarActionVisible('rotate')"
-          label="Rotate clockwise"
-          :icon="RotateCwSquare"
+          ariaLabel="Rotate clockwise"
           :disabled="!hasDocument || busy"
           @click="emit('rotateClockwise')"
-        />
+        >
+          <RotateCwSquare aria-hidden="true" />
+        </IconButton>
         <IconButton
           v-if="isToolbarActionVisible('download')"
-          label="Download PDF"
-          :icon="Download"
+          ariaLabel="Download PDF"
           :disabled="!viewer.canDownload.value || busy"
           @click="emit('download')"
-        />
+        >
+          <Download aria-hidden="true" />
+        </IconButton>
       </ToolbarGroup>
 
       <ToolbarGroup
@@ -175,7 +193,9 @@ const {
       >
         <DropdownMenu align="end">
           <template #trigger>
-            <IconButton label="More PDF tools" :icon="MoreHorizontal" :disabled="busy" />
+            <IconButton ariaLabel="More PDF tools" :disabled="busy">
+              <MoreHorizontal aria-hidden="true" />
+            </IconButton>
           </template>
 
           <template #items>

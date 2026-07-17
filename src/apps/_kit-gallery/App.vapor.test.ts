@@ -1,8 +1,12 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import { mountVaporTest, type VaporTestMountOptions } from "~/test/mountVapor";
 import { describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 
 import App from "./App.vue";
+
+function mount(component: typeof App, options: VaporTestMountOptions = {}) {
+  return mountVaporTest(component, { ...options, toastProvider: true });
+}
 
 // Smoke test for the dev-only gallery: mounting the whole catalog at once is a
 // cheap guard that every kit + ui primitive still renders together with valid
@@ -13,26 +17,27 @@ describe("Kit Gallery", () => {
 
     expect(wrapper.text()).toContain("Kit Gallery");
     expect(wrapper.text()).toContain("Button (ui)");
-    expect(wrapper.text()).toContain("Inputs (kit)");
+    expect(wrapper.text()).toContain("Field + inputs (Ropav)");
     expect(wrapper.text()).toContain("Overlays (ui)");
 
     // Representative primitives from each layer render.
-    expect(wrapper.findAll(".ds-button").length).toBeGreaterThan(0);
-    expect(wrapper.findAll(".ds-kit-choice-card")).toHaveLength(3);
+    expect(wrapper.findAll(".rp-button").length).toBeGreaterThan(0);
+    expect(wrapper.findAll(".gallery__choice")).toHaveLength(3);
     expect(wrapper.find('[role="switch"]').exists()).toBe(true);
     expect(wrapper.find(".ds-kit-data-table").exists()).toBe(true);
   });
 
-  it("keeps the selected ChoiceCard in sync", async () => {
+  it("keeps the selected styled Radio card in sync", async () => {
     const wrapper = mount(App);
-    const cards = wrapper.findAll(".ds-kit-choice-card");
+    const cards = wrapper.findAll(".gallery__choice");
+    const inputs = cards.map((card) => card.find<HTMLInputElement>('input[type="radio"]'));
 
     // The middle card ("Comfortable") is selected by default.
-    expect(cards[1].attributes("aria-checked")).toBe("true");
+    expect(inputs[1].element.checked).toBe(true);
 
-    await cards[0].trigger("click");
-    expect(cards[0].attributes("aria-checked")).toBe("true");
-    expect(cards[1].attributes("aria-checked")).toBe("false");
+    await inputs[0].setChecked();
+    expect(inputs[0].element.checked).toBe(true);
+    expect(inputs[1].element.checked).toBe(false);
   });
 
   // Smoke a11y guard over the whole catalog. color-contrast needs real layout

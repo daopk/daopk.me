@@ -16,6 +16,8 @@ import {
 } from "vue";
 import { onTestFinished } from "vitest";
 
+import { ToastProvider } from "ropav/toast";
+
 import { assertVaporComponent } from "~/utils/vaporComponent";
 
 export { assertVaporComponent, isVaporComponent } from "~/utils/vaporComponent";
@@ -75,6 +77,7 @@ export interface VaporMountOptions {
   readonly provide?: readonly VaporProvide[];
   readonly slots?: Readonly<Record<string, VaporSlotInput>>;
   readonly global?: VaporGlobalMountOptions;
+  readonly toastProvider?: boolean;
 }
 
 export interface VaporTestMountOptions extends VaporMountOptions {
@@ -206,20 +209,26 @@ function createNativeVaporMount(
 
   const VaporTestHost = defineVaporComponent(
     () => {
-      rootInstance = createComponent(
-        component as VaporComponent,
-        {
-          ...captureRawProps,
-          $: [
-            () =>
-              Object.fromEntries(
-                Object.entries({ ...attrs, ...props }).filter(([key]) => !eventKeys.has(key)),
-              ),
-          ],
-        },
-        slots as never,
-      );
-      return rootInstance;
+      const createTestComponent = (): VaporComponentInstance => {
+        rootInstance = createComponent(
+          component as VaporComponent,
+          {
+            ...captureRawProps,
+            $: [
+              () =>
+                Object.fromEntries(
+                  Object.entries({ ...attrs, ...props }).filter(([key]) => !eventKeys.has(key)),
+                ),
+            ],
+          },
+          slots as never,
+        );
+        return rootInstance;
+      };
+
+      return options.toastProvider === true
+        ? createComponent(ToastProvider, {}, { default: createTestComponent })
+        : createTestComponent();
     },
     { name: "VaporTestHost" },
   );

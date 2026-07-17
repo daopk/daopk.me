@@ -84,10 +84,10 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     await flushAndPaint();
 
     const dialog = document.body.querySelector('[role="dialog"]');
-    const overlay = document.body.querySelector(".ds-dialog__overlay");
+    const overlay = document.body.querySelector(".ds-permission-prompt__overlay");
     expect(dialog).not.toBeNull();
-    expect(dialog?.classList.contains("ds-dialog__content--system")).toBe(true);
-    expect(overlay?.classList.contains("ds-dialog__overlay--system")).toBe(true);
+    expect(dialog?.classList.contains("ds-permission-prompt__panel--system")).toBe(true);
+    expect(overlay?.classList.contains("ds-permission-prompt__overlay--system")).toBe(true);
     expect(dialog?.textContent).toContain("RSS Reader");
     expect(dialog?.textContent).toContain("send you notifications");
     expect(dialog?.textContent).toContain("Don't allow");

@@ -151,7 +151,7 @@ function permissionCopy(permission: AppPermission): string {
       </template>
       <Switch
         :model-value="telemetryEnabled"
-        :aria-label="
+        :ariaLabel="
           telemetryEnabled
             ? t('settings.privacy.disableTelemetry')
             : t('settings.privacy.enableTelemetry')
@@ -198,7 +198,6 @@ function permissionCopy(permission: AppPermission): string {
             <Button
               variant="ghost"
               size="sm"
-              :icon-start="RevokeIcon"
               :aria-label="
                 t('settings.privacy.revokeAria', {
                   decision: describeDecision(row).toLocaleLowerCase(locale),
@@ -206,8 +205,10 @@ function permissionCopy(permission: AppPermission): string {
                 })
               "
               @click="revoke(row)"
-              >{{ t("settings.privacy.revoke") }}</Button
             >
+              <template #left><RevokeIcon aria-hidden="true" /></template>
+              {{ t("settings.privacy.revoke") }}
+            </Button>
           </ActionRow>
         </ul>
       </Panel>

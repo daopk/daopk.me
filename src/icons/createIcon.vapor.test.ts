@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { VaporComponent } from "vue";
-import IconButton from "~/components/kit/IconButton.vue";
+import { createComponent, type VaporComponent } from "vue";
+import { IconButton } from "ropav/icon-button";
 import { mountVapor } from "~/test/mountVapor";
 
 import { TrashAppIcon } from "./fluentColor";
@@ -177,13 +177,14 @@ describe("Vapor icon components", () => {
 
   it("renders inside a Vapor component through the production component boundary", () => {
     const wrapper = mountVapor(IconButton, {
-      props: { label: "Search", icon: Search },
+      props: { ariaLabel: "Search" },
+      slots: { default: () => createComponent(Search, { size: 24 }) },
     });
     const button = wrapper.find<HTMLButtonElement>("button");
     const icon = wrapper.find<SVGElement>("svg");
 
     expect(button.getAttribute("aria-label")).toBe("Search");
-    expect(icon.classList.contains("ds-kit-icon-button__icon")).toBe(true);
+    expect(icon.parentElement?.classList.contains("rp-icon-button__icon")).toBe(true);
     expect(icon.getAttribute("width")).toBe("24");
     expect(icon.getAttribute("height")).toBe("24");
     wrapper.unmount();

@@ -187,7 +187,11 @@ describe("DesktopWidgetGallery", () => {
     const row = wrapper.find('[data-widget-id="calendar-gallery:lunar"]');
     expect(row.attributes("data-visible")).toBeUndefined();
 
-    await row.find(".ds-button--primary").trigger("click");
+    const addButton = row
+      .findAll<HTMLButtonElement>("button")
+      .find((button) => button.text() === "Add");
+    expect(addButton).toBeDefined();
+    await addButton!.trigger("click");
     await nextTick();
 
     expect(useWidgetPlacementStore().isEnabled("desktop", "calendar-gallery:lunar", false)).toBe(

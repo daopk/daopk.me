@@ -1,4 +1,6 @@
 <script setup vapor lang="ts">
+import { onBeforeUnmount, useId } from "vue";
+
 import {
   AppFrame,
   AppToolbar,
@@ -7,13 +9,30 @@ import {
   GroupLabel,
   ScrollArea,
   Spinner,
-  StatusBanner,
 } from "~/components/kit";
-import { Button, Dialog, DialogActions } from "~/components/ui";
+import { Alert, Button, Modal } from "~/components/ui";
 import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
 import { formatBytes } from "~/utils/format";
 
 import { useTrashApp } from "./useTrashApp";
+
+const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
+const modalIdBase = useId();
+const permanentDeleteModalId = `trash-permanent-delete-${modalIdBase}`;
+const emptyTrashModalId = `trash-empty-${modalIdBase}`;
+const modalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" as const },
+};
+const modalOverlayProps = {
+  color: "color-mix(in oklab, var(--color-bg) 60%, transparent)",
+};
+
+onBeforeUnmount(() => {
+  const portalRoots = [permanentDeleteModalId, emptyTrashModalId]
+    .map((id) => document.getElementById(id)?.parentElement)
+    .filter((element): element is HTMLElement => element instanceof HTMLElement);
+  queueMicrotask(() => portalRoots.forEach((root) => root.remove()));
+});
 
 const {
   cancelEmptyTrash,
@@ -51,17 +70,19 @@ const {
     <AppToolbar class="trash__toolbar" density="comfortable" wrap>
       <template #end>
         <div class="trash__actions">
-          <Button size="sm" :icon-start="RefreshCw" :loading="loading" @click="refresh">
+          <Button size="sm" :loading="loading" @click="refresh">
+            <template #left><RefreshCw aria-hidden="true" /></template>
             Refresh
           </Button>
           <Button
             size="sm"
-            variant="danger"
-            :icon-start="Trash2"
+            variant="solid"
+            color="red"
             :disabled="!hasItems"
             :loading="emptying"
             @click="requestEmptyTrash"
           >
+            <template #left><Trash2 aria-hidden="true" /></template>
             Empty Trash...
           </Button>
         </div>
@@ -88,10 +109,10 @@ const {
     </dl>
 
     <main class="trash__content">
-      <StatusBanner v-if="error" class="trash__notice" tone="error" role="alert">
-        <AlertCircle class="trash__notice-icon" aria-hidden="true" />
+      <Alert v-if="error" class="trash__notice" color="red" variant="surface" role="alert">
+        <template #icon><AlertCircle class="trash__notice-icon" aria-hidden="true" /></template>
         <span>{{ error }}</span>
-      </StatusBanner>
+      </Alert>
 
       <EmptyState v-if="loading && items.length === 0" class="trash__state">
         <template #icon><Spinner /></template>
@@ -150,22 +171,23 @@ const {
               <span class="trash__item-actions">
                 <Button
                   size="sm"
-                  :icon-start="RotateCw"
                   :loading="mutatingId === item.id"
                   :disabled="emptying"
                   @click="restore(item)"
                 >
+                  <template #left><RotateCw aria-hidden="true" /></template>
                   Restore
                 </Button>
                 <Button
                   size="sm"
-                  variant="danger"
-                  :icon-start="Trash2"
+                  variant="solid"
+                  color="red"
                   :aria-label="`Delete ${item.name} permanently`"
                   :loading="mutatingId === item.id"
                   :disabled="emptying"
                   @click="requestRemovePermanently(item)"
                 >
+                  <template #left><Trash2 aria-hidden="true" /></template>
                   Delete...
                 </Button>
               </span>
@@ -175,49 +197,65 @@ const {
       </ScrollArea>
     </main>
 
-    <Dialog
+    <Modal
+      :id="permanentDeleteModalId"
       v-model:open="permanentDeleteDialogOpen"
       title="Delete permanently?"
       :description="permanentDeleteDescription"
-      :dismissible="mutatingId === null"
+      size="420px"
+      :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
+      :close-on-overlay-click="mutatingId === null"
+      :close-on-escape="mutatingId === null"
+      :show-close-button="false"
+      :focus-trap-options="modalFocusTrapOptions"
+      :overlay-props="modalOverlayProps"
       @close="cancelPermanentDelete"
     >
-      <DialogActions>
+      <template #footer>
         <Button size="sm" :disabled="mutatingId !== null" @click="cancelPermanentDelete">
           Cancel
         </Button>
         <Button
           size="sm"
-          variant="danger"
-          :icon-start="Trash2"
+          variant="solid"
+          color="red"
           :loading="mutatingId === pendingPermanentDelete?.id"
           @click="confirmRemovePermanently"
         >
+          <template #left><Trash2 aria-hidden="true" /></template>
           Delete Permanently
         </Button>
-      </DialogActions>
-    </Dialog>
+      </template>
+    </Modal>
 
-    <Dialog
+    <Modal
+      :id="emptyTrashModalId"
       v-model:open="emptyDialogOpen"
       title="Empty Trash?"
       :description="emptyDialogDescription"
-      :dismissible="!emptying"
+      size="420px"
+      :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
+      :close-on-overlay-click="!emptying"
+      :close-on-escape="!emptying"
+      :show-close-button="false"
+      :focus-trap-options="modalFocusTrapOptions"
+      :overlay-props="modalOverlayProps"
       @close="cancelEmptyTrash"
     >
-      <DialogActions>
+      <template #footer>
         <Button size="sm" :disabled="emptying" @click="cancelEmptyTrash">Cancel</Button>
         <Button
           size="sm"
-          variant="danger"
-          :icon-start="Trash2"
+          variant="solid"
+          color="red"
           :loading="emptying"
           @click="confirmEmptyTrash"
         >
+          <template #left><Trash2 aria-hidden="true" /></template>
           Empty Trash
         </Button>
-      </DialogActions>
-    </Dialog>
+      </template>
+    </Modal>
   </AppFrame>
 </template>
 

@@ -161,7 +161,10 @@ async function loadEpisode(): Promise<void> {
       :title="t('movies.error.episode.title')"
       :description="t('movies.error.episode.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
+      <Button @click="$emit('back')">
+        <template #left><ArrowLeft aria-hidden="true" /></template>
+        {{ t("movies.action.back") }}
+      </Button>
     </EmptyState>
 
     <article v-else-if="detail && season && episode" class="movies-episode__content">
@@ -210,10 +213,10 @@ async function loadEpisode(): Promise<void> {
             v-if="canChooseAnotherSeason"
             class="movies-episode__series-link"
             size="sm"
-            variant="secondary"
-            :icon-start="Layers2"
+            variant="surface"
             @click="openSeriesDetail"
           >
+            <template #left><Layers2 aria-hidden="true" /></template>
             {{ t("movies.action.seriesOverview") }}
           </Button>
         </div>

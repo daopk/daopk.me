@@ -1,9 +1,9 @@
 <script setup vapor lang="ts">
-import { nextTick, toRef } from "vue";
+import { computed, nextTick, toRef } from "vue";
 
-import { EmptyState, ScrollArea, Spinner, StatusBanner } from "@daopk/kit";
+import { EmptyState, ScrollArea, Spinner } from "@daopk/kit";
 import { Search } from "@daopk/icons";
-import { Button } from "@daopk/ui";
+import { Alert, Button, Input, Select, type SelectOption } from "@daopk/ui";
 
 import MovieCard from "./MovieCard.vue";
 import MovieTrailerHoverPreview from "./MovieTrailerHoverPreview.vue";
@@ -69,6 +69,33 @@ const {
   query: toRef(props, "query"),
 });
 
+const catalogOptions = computed<SelectOption[]>(() =>
+  catalogMediaSelectOptions.value.map((option) => ({ ...option })),
+);
+const genreOptions = computed<SelectOption[]>(() => [
+  { label: t("movies.filters.allGenres"), value: "" },
+  ...(currentFilters.value?.genres.map((genre) => ({
+    label: genreLabel(genre, t),
+    value: String(genre.id),
+  })) ?? []),
+]);
+const countryOptions = computed<SelectOption[]>(() => [
+  { label: t("movies.filters.allCountries"), value: "" },
+  ...popularCountries.value.map((country) => ({
+    label: countryLabel(country, t),
+    value: country.code,
+  })),
+]);
+const sortOptions = computed<SelectOption[]>(() => [
+  { label: sortLabel("popular", t), value: "popular" },
+  { label: sortLabel("newest", t), value: "newest" },
+  { label: sortLabel("top-rated", t), value: "top-rated" },
+]);
+
+function updateStringValue(value: string | number | null, update: (value: string) => void): void {
+  if (value !== null) update(String(value));
+}
+
 async function closeTrailerPreviewBeforeNavigation(): Promise<void> {
   closeTrailerPreviewNow();
   await nextTick();
@@ -102,12 +129,17 @@ async function openList(query: MoviesListQuery): Promise<void> {
           >
             <div class="movies-list__search-input-shell">
               <Search class="movies-list__search-input-icon" aria-hidden="true" />
-              <input
+              <Input
                 v-model="searchDraft"
-                type="search"
-                :aria-label="t('movies.search.keyword.ariaLabel')"
+                class="movies-list__search-input-root"
+                :class-names="{ input: 'movies-list__search-input' }"
+                type="text"
+                :ariaLabel="t('movies.search.keyword.ariaLabel')"
                 :placeholder="t('movies.search.titlesPlaceholder')"
-                autocomplete="off"
+                :input-attrs="{
+                  autocomplete: 'off',
+                  role: 'searchbox',
+                }"
                 @search="submitSearchKeyword"
               />
             </div>
@@ -116,8 +148,11 @@ async function openList(query: MoviesListQuery): Promise<void> {
             <Button
               v-for="option in searchMediaOptions"
               :key="option.value"
+              class="movies-list__tab"
+              :class="{ 'movies-list__tab--active': activeSearchMedia === option.value }"
               size="md"
-              :variant="activeSearchMedia === option.value ? 'primary' : 'secondary'"
+              :variant="activeSearchMedia === option.value ? 'solid' : 'ghost'"
+              :color="activeSearchMedia === option.value ? 'blue' : 'gray'"
               @click="openList(mediaQuery(option.value))"
             >
               {{ option.label }}
@@ -131,73 +166,60 @@ async function openList(query: MoviesListQuery): Promise<void> {
         >
           <label class="movies-list__filter-field">
             <span>{{ t("movies.filters.type") }}</span>
-            <select
-              :value="catalogMedia"
-              :aria-label="t('movies.filters.type')"
-              @change="setCatalogMedia(($event.target as HTMLSelectElement).value)"
-            >
-              <option
-                v-for="option in catalogMediaSelectOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
+            <Select
+              class="movies-list__filter-select"
+              :model-value="catalogMedia"
+              :options="catalogOptions"
+              :ariaLabel="t('movies.filters.type')"
+              @update:model-value="updateStringValue($event, setCatalogMedia)"
+            />
           </label>
 
           <label class="movies-list__filter-field">
             <span>{{ t("movies.filters.genre") }}</span>
-            <select
+            <Select
               ref="genreSelect"
-              :value="activeGenreValue"
-              :aria-label="t('movies.filters.genre')"
+              class="movies-list__filter-select"
+              :model-value="activeGenreValue"
+              :options="genreOptions"
+              :ariaLabel="t('movies.filters.genre')"
               :disabled="currentFilterState === 'loading' || currentFilterState === 'error'"
-              @change="setGenre(($event.target as HTMLSelectElement).value)"
-            >
-              <option value="">{{ t("movies.filters.allGenres") }}</option>
-              <option
-                v-for="genre in currentFilters?.genres ?? []"
-                :key="genre.id"
-                :value="genre.id"
-              >
-                {{ genreLabel(genre, t) }}
-              </option>
-            </select>
+              @update:model-value="updateStringValue($event, setGenre)"
+            />
           </label>
 
           <label class="movies-list__filter-field">
             <span>{{ t("movies.filters.country") }}</span>
-            <select
+            <Select
               ref="countrySelect"
-              :value="activeCountry"
-              :aria-label="t('movies.filters.country')"
+              class="movies-list__filter-select"
+              :model-value="activeCountry"
+              :options="countryOptions"
+              :ariaLabel="t('movies.filters.country')"
               :disabled="currentFilterState === 'loading' || currentFilterState === 'error'"
-              @change="setCountry(($event.target as HTMLSelectElement).value)"
-            >
-              <option value="">{{ t("movies.filters.allCountries") }}</option>
-              <option v-for="country in popularCountries" :key="country.code" :value="country.code">
-                {{ countryLabel(country, t) }}
-              </option>
-            </select>
+              @update:model-value="updateStringValue($event, setCountry)"
+            />
           </label>
 
           <label class="movies-list__filter-field">
             <span>{{ t("movies.filters.sort") }}</span>
-            <select
-              :value="activeSort"
-              :aria-label="t('movies.filters.sort')"
-              @change="setSort(($event.target as HTMLSelectElement).value)"
-            >
-              <option value="popular">{{ sortLabel("popular", t) }}</option>
-              <option value="newest">{{ sortLabel("newest", t) }}</option>
-              <option value="top-rated">{{ sortLabel("top-rated", t) }}</option>
-            </select>
+            <Select
+              class="movies-list__filter-select"
+              :model-value="activeSort"
+              :options="sortOptions"
+              :ariaLabel="t('movies.filters.sort')"
+              @update:model-value="updateStringValue($event, setSort)"
+            />
           </label>
         </div>
-        <StatusBanner v-if="!isSearchList && currentFilterState === 'error'" tone="warning">
+        <Alert
+          v-if="!isSearchList && currentFilterState === 'error'"
+          color="yellow"
+          variant="surface"
+          role="status"
+        >
           {{ t("movies.error.filters") }}
-        </StatusBanner>
+        </Alert>
       </header>
 
       <section
@@ -208,9 +230,9 @@ async function openList(query: MoviesListQuery): Promise<void> {
         <div v-if="loadingInitial" class="movies-list__loading">
           <Spinner size="lg" :label="t('movies.loading.movies')" />
         </div>
-        <StatusBanner v-else-if="state === 'error'" tone="error" role="alert">
+        <Alert v-else-if="state === 'error'" color="red" variant="surface" role="alert">
           {{ t("movies.error.listTitles") }}
-        </StatusBanner>
+        </Alert>
 
         <EmptyState
           v-else-if="state === 'ready' && items.length === 0"

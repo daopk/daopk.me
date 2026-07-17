@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ThemeManager, type ThemeManagerDeps } from "~/core/theme/ThemeManager";
 import type { ResolvedTheme } from "~/types/theme";
@@ -16,10 +16,16 @@ function deps(overrides?: Partial<ThemeManagerDeps>): ThemeManagerDeps {
 }
 
 describe("ThemeManager", () => {
-  it("applyToDocument sets html data-theme", () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.theme;
+    delete document.documentElement.dataset.rpColorScheme;
+  });
+
+  it("applyToDocument synchronizes the app and Ropav color schemes", () => {
     const mgr = new ThemeManager(deps());
     mgr.applyToDocument("dark");
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.rpColorScheme).toBe("dark");
   });
 
   it("setTheme delegates to persist", () => {
@@ -117,6 +123,7 @@ describe("ThemeManager", () => {
     expect(listener).not.toHaveBeenCalled();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.rpColorScheme).toBe("dark");
   });
 
   describe("applyOverrides", () => {
@@ -205,6 +212,7 @@ describe("ThemeManager", () => {
     push?.("dark");
 
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.rpColorScheme).toBe("dark");
 
     expect(listener).toHaveBeenCalledWith("dark");
   });

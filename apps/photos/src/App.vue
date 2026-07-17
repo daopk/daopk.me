@@ -5,13 +5,11 @@ import {
   AppFrame,
   AppToolbar,
   EmptyState,
-  IconButton,
   ScrollArea,
-  StatusBanner,
   ToolbarTitle,
   useAppChrome,
 } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { Alert, Button, IconButton } from "@daopk/ui";
 import { RefreshCw } from "@daopk/icons";
 
 import { PHOTO_THUMB_WIDTH, PHOTO_THUMB_WIDTH_2X, photoThumbUrl } from "./photosContentConfig";
@@ -53,19 +51,22 @@ function closeLightbox(): void {
     <AppToolbar class="photos__toolbar" density="comfortable">
       <ToolbarTitle title="Photos" :subtitle="countLabel" />
       <template #end>
-        <IconButton
-          label="Refresh"
-          :icon="RefreshCw"
-          :disabled="gallery.loading.value"
-          @click="reload"
-        />
+        <IconButton ariaLabel="Refresh" :disabled="gallery.loading.value" @click="reload">
+          <RefreshCw aria-hidden="true" />
+        </IconButton>
       </template>
     </AppToolbar>
 
     <ScrollArea class="photos__body" safe-area>
-      <StatusBanner v-if="initialLoading" class="photos__status" tone="info" aria-live="polite">
+      <Alert
+        v-if="initialLoading"
+        class="photos__status"
+        color="gray"
+        variant="surface"
+        role="status"
+      >
         Loading photos...
-      </StatusBanner>
+      </Alert>
 
       <EmptyState
         v-else-if="gallery.loadFailed.value"
@@ -74,7 +75,10 @@ function closeLightbox(): void {
         title="Could not load photos"
         description="Check your connection and try again."
       >
-        <Button variant="secondary" :icon-start="RefreshCw" @click="reload">Retry</Button>
+        <Button variant="surface" @click="reload">
+          <template #left><RefreshCw aria-hidden="true" /></template>
+          Retry
+        </Button>
       </EmptyState>
 
       <EmptyState

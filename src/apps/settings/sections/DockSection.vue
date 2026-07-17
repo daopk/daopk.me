@@ -2,7 +2,7 @@
 import { computed, onUnmounted, shallowRef, watch } from "vue";
 
 import { ActionRow, EmptyState, GroupLabel, Panel, SectionHeader } from "~/components/kit";
-import Switch from "~/components/ui/Switch.vue";
+import { Switch } from "~/components/ui";
 import AppIcon from "~/components/AppIcon.vue";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
@@ -120,7 +120,7 @@ function categoryLabel(category: AppManifest["category"]): string {
         </template>
         <Switch
           :model-value="currentDockAutoHide"
-          aria-labelledby="dock-autohide-label"
+          labelledby="dock-autohide-label"
           @update:model-value="setDockAutoHide"
         />
       </ActionRow>
@@ -156,7 +156,7 @@ function categoryLabel(category: AppManifest["category"]): string {
           <Switch
             class="dock-settings__pin-switch"
             :model-value="isPinned(app.id)"
-            :aria-labelledby="`dock-pin-${app.id}-label`"
+            :labelledby="`dock-pin-${app.id}-label`"
             @update:model-value="setPinned(app.id, $event)"
           />
         </li>

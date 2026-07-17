@@ -75,7 +75,10 @@ async function loadPerson(): Promise<void> {
       :title="t('movies.error.person.title')"
       :description="t('movies.error.person.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
+      <Button @click="$emit('back')">
+        <template #left><ArrowLeft aria-hidden="true" /></template>
+        {{ t("movies.action.back") }}
+      </Button>
     </EmptyState>
 
     <article v-else-if="person" class="movies-person__content">

@@ -44,24 +44,30 @@ const emit = defineEmits<{
 
     <Button
       class="auth-gate__button"
-      variant="primary"
+      variant="solid"
+      color="blue"
       type="button"
       :loading="busy"
       :disabled="!canUnlockSelected"
-      :icon-start="selectedProfile?.authMode === 'guest' ? CloudOff : KeyRound"
       @click="emit('unlock')"
     >
+      <template #left>
+        <component
+          :is="selectedProfile?.authMode === 'guest' ? CloudOff : KeyRound"
+          aria-hidden="true"
+        />
+      </template>
       {{ unlockButtonLabel }}
     </Button>
 
     <Button
       class="auth-gate__button"
-      variant="secondary"
+      variant="surface"
       type="button"
       :disabled="busy || initialImportPending"
-      :icon-start="Plus"
       @click="emit('add-account')"
     >
+      <template #left><Plus aria-hidden="true" /></template>
       {{ addAccountLabel }}
     </Button>
   </div>

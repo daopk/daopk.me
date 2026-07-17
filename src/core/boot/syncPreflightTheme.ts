@@ -7,4 +7,5 @@ if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
   const resolved = readResolvedThemePreflight(localStorage.getItem(SETTINGS_PHYSICAL_STORAGE_KEY));
 
   document.documentElement.dataset.theme = resolved;
+  document.documentElement.dataset.rpColorScheme = resolved;
 }

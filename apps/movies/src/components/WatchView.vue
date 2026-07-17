@@ -390,7 +390,10 @@ defineExpose({
       :title="t('movies.error.playback.title')"
       :description="t('movies.error.playback.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
+      <Button @click="$emit('back')">
+        <template #left><ArrowLeft aria-hidden="true" /></template>
+        {{ t("movies.action.back") }}
+      </Button>
     </EmptyState>
 
     <EmptyState
@@ -400,7 +403,10 @@ defineExpose({
       :title="t('movies.error.playbackUnavailable.title')"
       :description="t('movies.error.playback.description')"
     >
-      <Button :icon-start="ArrowLeft" @click="$emit('back')">{{ t("movies.action.back") }}</Button>
+      <Button @click="$emit('back')">
+        <template #left><ArrowLeft aria-hidden="true" /></template>
+        {{ t("movies.action.back") }}
+      </Button>
     </EmptyState>
 
     <article v-else class="movies-watch__content">
@@ -431,7 +437,8 @@ defineExpose({
             v-for="source in sourceOptions"
             :key="source.index"
             size="sm"
-            :variant="selectedSourceIndex === source.index ? 'primary' : 'secondary'"
+            :variant="selectedSourceIndex === source.index ? 'solid' : 'surface'"
+            :color="selectedSourceIndex === source.index ? 'blue' : 'gray'"
             :aria-pressed="selectedSourceIndex === source.index"
             @click="selectSource(source.index)"
           >
@@ -467,10 +474,10 @@ defineExpose({
           v-if="canChooseAnotherSeason"
           class="movies-watch__series-link"
           size="sm"
-          variant="secondary"
-          :icon-start="Layers2"
+          variant="surface"
           @click="openSeriesDetail"
         >
+          <template #left><Layers2 aria-hidden="true" /></template>
           {{ t("movies.action.seriesOverview") }}
         </Button>
       </section>

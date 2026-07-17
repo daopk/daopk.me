@@ -268,6 +268,7 @@ const context: AppContext = makeContext();
 function mountFinder(kernel: Kernel, appContext: AppContext = context) {
   return mount(App, {
     attachTo: document.body,
+    toastProvider: true,
     global: {
       provide: {
         [KernelInjectionKey as symbol]: kernel,
@@ -423,7 +424,7 @@ describe("Finder App.vue", () => {
     );
 
     await flushPromises();
-    await wrapper.find('button[aria-label="Grid view"]').trigger("click");
+    await wrapper.find('input[type="radio"][aria-label="Grid view"]').trigger("click");
 
     expect(wrapper.find(".finder__entries").classes()).toContain("finder__entries--grid");
 

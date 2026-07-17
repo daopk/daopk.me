@@ -323,7 +323,7 @@ describe("AuthGate", () => {
     await openGuestButton!.trigger("click");
     await nextTick();
 
-    expect(openGuestButton!.classes()).toContain("ds-button--loading");
+    expect(openGuestButton!.attributes("data-loading")).toBe("");
     expect((openGuestButton!.element as HTMLButtonElement).disabled).toBe(true);
 
     await flushPromises();

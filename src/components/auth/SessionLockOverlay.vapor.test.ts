@@ -202,6 +202,24 @@ describe("SessionLockOverlay", () => {
     wrapper.unmount();
   });
 
+  it("keeps the lock modal non-dismissible and initially focuses Unlock", async () => {
+    const { kernel } = makeKernel();
+    const wrapper = mountOverlay(kernel);
+    await flushPromises();
+
+    const unlock = document.body.querySelector(".session-lock__unlock");
+    expect(unlock).toBeInstanceOf(HTMLButtonElement);
+    await vi.waitFor(() => expect(document.activeElement).toBe(unlock));
+
+    unlock?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    const overlay = document.body.querySelector(".session-lock__overlay");
+    overlay?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true }));
+    await nextTick();
+
+    expect(document.body.querySelector(".session-lock")).not.toBeNull();
+    wrapper.unmount();
+  });
+
   it("unlocks guest sessions without calling WebAuthn", async () => {
     const guest: ProfileSessionSnapshot = {
       profileId: "guest",

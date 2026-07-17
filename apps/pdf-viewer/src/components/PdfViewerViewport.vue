@@ -29,7 +29,10 @@ const emit = defineEmits<{
       v-if="viewer.status.value === 'idle'"
       class="pdf-viewer__empty pdf-viewer__empty--idle"
     >
-      <Button variant="primary" :icon-start="Upload" @click="emit('open')">Choose file</Button>
+      <Button variant="solid" color="blue" @click="emit('open')">
+        <template #left><Upload aria-hidden="true" /></template>
+        Choose file
+      </Button>
     </EmptyState>
 
     <EmptyState
@@ -48,7 +51,10 @@ const emit = defineEmits<{
       role="alert"
       :title="viewer.error.value ?? undefined"
     >
-      <Button variant="primary" :icon-start="Upload" @click="emit('open')">Choose file</Button>
+      <Button variant="solid" color="blue" @click="emit('open')">
+        <template #left><Upload aria-hidden="true" /></template>
+        Choose file
+      </Button>
     </EmptyState>
 
     <EmptyState

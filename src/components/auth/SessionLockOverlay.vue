@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, onUnmounted, ref, useTemplateRef, watch } from "vue";
+import { computed, onUnmounted, ref } from "vue";
+import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
 import { Button } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
@@ -21,7 +22,6 @@ const profile = kernel.profile.current();
 const { shellId } = useActiveShell();
 const store = new ProfileStore();
 const passkeys = new PasskeyService();
-const unlockButtonRef = useTemplateRef<{ focus(options?: FocusOptions): void }>("unlockButtonRef");
 const autoUpdate = useAuthAutoUpdate(computed(() => locked.value));
 
 const busy = ref(false);
@@ -40,6 +40,21 @@ const lockScreenStyle = computed<Record<string, string>>(() => ({
     }")`,
   ].join(", "),
 }));
+const dialogLabel = computed(() =>
+  autoUpdate.visible.value ? "Updating WebOS" : `Session locked for ${profile.displayName}`,
+);
+
+const SESSION_LOCK_CONTENT_BASE_Z_INDEX = 1800;
+const focusTrapOptions: ModalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" },
+};
+const modalClassNames = {
+  root: "session-lock",
+  overlay: "session-lock__overlay",
+  panel: "session-lock__modal-panel",
+  body: "session-lock__modal-body",
+};
+const modalStyles = computed(() => ({ root: lockScreenStyle.value }));
 
 function describeError(error: unknown): string {
   if (error instanceof ProfileAuthError || error instanceof Error) {
@@ -84,86 +99,73 @@ function signOut(): void {
   void kernel.profile.signOut();
 }
 
-watch(
-  locked,
-  async (next) => {
-    if (!next || autoUpdate.visible.value) {
-      return;
-    }
-    await nextTick();
-    unlockButtonRef.value?.focus({ preventScroll: true });
-  },
-  { immediate: true },
-);
-
 onUnmounted(() => {
   store.dispose();
 });
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="session-lock">
-      <section
-        v-if="locked"
-        class="session-lock"
-        :style="lockScreenStyle"
-        aria-labelledby="session-lock-title"
-        aria-modal="true"
-        role="dialog"
-        tabindex="-1"
-        @click.stop
-        @keydown.stop
-        @keyup.stop
-        @pointerdown.stop
-        @wheel.stop
-      >
-        <AuthAutoUpdateScreen
-          v-if="autoUpdate.visible.value"
-          title-id="session-lock-title"
-          :failed="autoUpdate.failed.value"
-          :error-message="autoUpdate.errorMessage.value"
-          @retry="autoUpdate.retry"
-        />
+  <Modal
+    :open="locked"
+    :aria-label="dialogLabel"
+    size="100%"
+    :base-z-index="SESSION_LOCK_CONTENT_BASE_Z_INDEX"
+    teleport-to="body"
+    :close-on-overlay-click="false"
+    :close-on-escape="false"
+    :show-close-button="false"
+    initial-focus=".session-lock__unlock, .auth-auto-update__retry"
+    :focus-trap-options="focusTrapOptions"
+    :overlay-props="{ color: 'transparent' }"
+    :class-names="modalClassNames"
+    :styles="modalStyles"
+  >
+    <AuthAutoUpdateScreen
+      v-if="autoUpdate.visible.value"
+      title-id="session-lock-title"
+      :failed="autoUpdate.failed.value"
+      :error-message="autoUpdate.errorMessage.value"
+      @retry="autoUpdate.retry"
+    />
 
-        <div v-else class="session-lock__surface">
-          <div class="session-lock__mark" aria-hidden="true">
-            <Lock class="session-lock__mark-icon" />
-          </div>
+    <div v-else class="session-lock__surface">
+      <div class="session-lock__mark" aria-hidden="true">
+        <Lock class="session-lock__mark-icon" />
+      </div>
 
-          <p class="session-lock__eyebrow">Locked</p>
-          <h2 id="session-lock-title" class="session-lock__title">{{ profile.displayName }}</h2>
-          <p class="session-lock__subtitle">{{ subtitle }}</p>
+      <p class="session-lock__eyebrow">Locked</p>
+      <h2 id="session-lock-title" class="session-lock__title">{{ profile.displayName }}</h2>
+      <p class="session-lock__subtitle">{{ subtitle }}</p>
 
-          <p v-if="errorMessage" class="session-lock__error" role="alert">{{ errorMessage }}</p>
+      <p v-if="errorMessage" class="session-lock__error" role="alert">{{ errorMessage }}</p>
 
-          <form class="session-lock__actions" @submit.prevent="unlockDesktop">
-            <Button
-              ref="unlockButtonRef"
-              variant="primary"
-              type="submit"
-              :loading="busy"
-              :icon-start="Unlock"
-            >
-              {{ unlockLabel }}
-            </Button>
-            <Button
-              variant="secondary"
-              type="button"
-              :disabled="busy"
-              :icon-start="LogOut"
-              @click="signOut"
-            >
-              Sign Out
-            </Button>
-          </form>
-        </div>
-      </section>
-    </Transition>
-  </Teleport>
+      <form class="session-lock__actions" @submit.prevent="unlockDesktop">
+        <Button
+          class="session-lock__button session-lock__unlock"
+          variant="solid"
+          color="blue"
+          type="submit"
+          :loading="busy"
+        >
+          <template #left><Unlock aria-hidden="true" /></template>
+          {{ unlockLabel }}
+        </Button>
+        <Button
+          class="session-lock__button"
+          variant="surface"
+          type="button"
+          :disabled="busy"
+          @click="signOut"
+        >
+          <template #left><LogOut aria-hidden="true" /></template>
+          Sign Out
+        </Button>
+      </form>
+    </div>
+  </Modal>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 .session-lock {
   align-items: center;
   background-color: var(--color-bg);
@@ -179,6 +181,27 @@ onUnmounted(() => {
   place-items: center;
   position: fixed;
   z-index: calc(var(--context-menu-z) + 100);
+}
+
+.session-lock__modal-panel {
+  background: transparent;
+  block-size: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  inline-size: 100%;
+  max-block-size: 100%;
+}
+
+.session-lock__modal-body {
+  align-items: center;
+  display: grid;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: 0;
+  place-items: center;
 }
 
 .session-lock__surface {
@@ -253,19 +276,9 @@ onUnmounted(() => {
   margin-block-start: var(--space-lg);
 }
 
-.session-lock__actions :deep(.ds-button) {
+.session-lock__button {
   justify-content: center;
   min-block-size: 42px;
-}
-
-.session-lock-enter-active,
-.session-lock-leave-active {
-  transition: opacity var(--duration-fast) var(--ease);
-}
-
-.session-lock-enter-from,
-.session-lock-leave-to {
-  opacity: 0;
 }
 
 @media (max-width: 760px) {
@@ -350,7 +363,7 @@ onUnmounted(() => {
     margin-block-start: 28px;
   }
 
-  .session-lock__actions :deep(.ds-button) {
+  .session-lock__button {
     min-block-size: 48px;
   }
 }
@@ -358,13 +371,6 @@ onUnmounted(() => {
 @media (max-width: 360px) {
   .session-lock__title {
     font-size: 30px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .session-lock-enter-active,
-  .session-lock-leave-active {
-    transition: none;
   }
 }
 </style>

@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
 import { nextTick } from "vue";
 
-import { ScrollArea, SegmentedControl, StatusBanner } from "@daopk/kit";
-import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
+import { ScrollArea } from "@daopk/kit";
+import { Alert, Button, ContextMenu, ContextMenuItem, Radio, RadioGroup } from "@daopk/ui";
 import { ChevronRight, Trash2 } from "@daopk/icons";
 
 import HomeHero from "./HomeHero.vue";
@@ -15,6 +15,7 @@ import { homeGroupTitle, homePeriodOptions, homeRowTitle, rowListLabel } from ".
 import {
   HOME_DISCOVERY_GROUPS,
   type MovieEpisodeTarget,
+  type MoviesRowGroupConfig,
   type MovieSummary,
   type MoviesListQuery,
 } from "../moviesApi";
@@ -87,20 +88,25 @@ async function openList(query: MoviesListQuery): Promise<void> {
   await closeTrailerPreviewBeforeNavigation();
   emit("open-list", query);
 }
+
+function updateGroupPeriod(group: MoviesRowGroupConfig, value: string | number | null): void {
+  if (typeof value === "string") setGroupPeriod(group, value);
+}
 </script>
 
 <template>
   <ScrollArea class="movies-home" safe-area>
     <MoviesLoadingOverlay v-if="state === 'loading' && !hasHomeContent" />
 
-    <StatusBanner
+    <Alert
       v-else-if="state === 'error' && !hasHomeContent"
       class="movies-home__status"
-      tone="error"
+      color="red"
+      variant="surface"
       role="alert"
     >
       {{ t("movies.error.homeData") }}
-    </StatusBanner>
+    </Alert>
 
     <HomeHero v-if="hasFeatured" :featured="featured" @open-detail="openDetail" />
 
@@ -181,15 +187,29 @@ async function openList(query: MoviesListQuery): Promise<void> {
           >
             <div class="movies-home__group-header">
               <h2>{{ homeGroupTitle(group, t) }}</h2>
-              <SegmentedControl
+              <RadioGroup
                 v-if="group.periodOptions"
                 class="movies-home__period-control"
-                :label="t('movies.home.periodControlLabel', { group: homeGroupTitle(group, t) })"
+                orientation="horizontal"
+                :ariaLabel="
+                  t('movies.home.periodControlLabel', { group: homeGroupTitle(group, t) })
+                "
                 :model-value="groupPeriodValue(group)"
-                :options="homePeriodOptions(group, t)"
                 size="sm"
-                @change="setGroupPeriod(group, $event)"
-              />
+                @update:model-value="updateGroupPeriod(group, $event)"
+              >
+                <Radio
+                  v-for="option in homePeriodOptions(group, t)"
+                  :key="option.value"
+                  :value="option.value"
+                  :class-names="{
+                    root: 'movies-home__period-option',
+                    indicator: 'movies-home__period-indicator',
+                  }"
+                >
+                  {{ option.label }}
+                </Radio>
+              </RadioGroup>
             </div>
 
             <div class="movies-home__group-rows">
@@ -200,10 +220,11 @@ async function openList(query: MoviesListQuery): Promise<void> {
                     class="movies-home__row-action"
                     size="sm"
                     variant="ghost"
-                    :icon-start="ChevronRight"
                     :aria-label="t('movies.home.viewAll', { label: rowListLabel(group, row, t) })"
                     @click="openList(queryForRow(group, row))"
-                  />
+                  >
+                    <ChevronRight aria-hidden="true" />
+                  </Button>
                 </div>
 
                 <ul class="movies-home__rail">

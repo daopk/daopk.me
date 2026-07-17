@@ -1,10 +1,24 @@
 <script setup vapor lang="ts">
-import { ref, toRef } from "vue";
+import { onBeforeUnmount, ref, toRef, useId } from "vue";
 
-import { EmptyState, ScrollArea, Spinner, StatusBanner } from "~/components/kit";
-import { Button, Dialog, DialogActions } from "~/components/ui";
+import { EmptyState, ScrollArea, Spinner } from "~/components/kit";
+import { Alert, Button, Modal } from "~/components/ui";
 import { basename } from "~/core/vfs/path";
 import { useVfsFilePicker, type VfsFileAcceptPredicate } from "./useVfsFilePicker";
+
+const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
+const modalId = `vfs-picker-${useId()}`;
+const modalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" as const },
+};
+const modalOverlayProps = {
+  color: "color-mix(in oklab, var(--color-bg) 60%, transparent)",
+};
+
+onBeforeUnmount(() => {
+  const portalRoot = document.getElementById(modalId)?.parentElement;
+  queueMicrotask(() => portalRoot?.remove());
+});
 
 const props = withDefaults(
   defineProps<{
@@ -67,7 +81,18 @@ const {
 
 <template>
   <div class="vfs-picker__host">
-    <Dialog :open="open" :title="title" size="lg" class="vfs-picker" @update:open="onDialogOpen">
+    <Modal
+      :id="modalId"
+      :open="open"
+      :title="title"
+      size="lg"
+      :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
+      :show-close-button="false"
+      :focus-trap-options="modalFocusTrapOptions"
+      :overlay-props="modalOverlayProps"
+      :class-names="{ root: 'vfs-picker' }"
+      @update:open="onDialogOpen"
+    >
       <div class="vfs-picker__shell">
         <nav class="vfs-picker__breadcrumbs" aria-label="Current folder">
           <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
@@ -89,13 +114,14 @@ const {
           </template>
         </nav>
 
-        <StatusBanner
+        <Alert
           class="vfs-picker__status"
-          :tone="error === null ? 'info' : 'error'"
-          aria-live="polite"
+          :color="error === null ? 'blue' : 'red'"
+          variant="surface"
+          :role="error === null ? 'status' : 'alert'"
         >
           {{ liveMessage }}
-        </StatusBanner>
+        </Alert>
 
         <div class="vfs-picker__browser">
           <div v-if="loading" class="vfs-picker__loading">
@@ -148,18 +174,19 @@ const {
         </div>
       </div>
 
-      <DialogActions>
+      <template #footer>
         <Button size="sm" @click="cancel">Cancel</Button>
         <Button
           size="sm"
-          variant="primary"
+          variant="solid"
+          color="blue"
           :disabled="!selectedAccepted || loading"
           @click="confirm()"
         >
           {{ confirmLabel }}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </template>
+    </Modal>
   </div>
 </template>
 

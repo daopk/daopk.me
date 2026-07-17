@@ -48,6 +48,7 @@ export class ThemeManager {
 
   applyToDocument(theme: ResolvedTheme): void {
     document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.rpColorScheme = theme;
   }
 
   applyOverrides(next: Readonly<Record<string, string>>): boolean {

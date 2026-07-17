@@ -76,7 +76,7 @@ describe("Terminal App.vue — smoke (M2a.3)", () => {
       },
     });
 
-    const inputEl = wrapper.find<HTMLInputElement>(".terminal__input");
+    const inputEl = wrapper.find<HTMLInputElement>(".terminal__input-control");
     expect(inputEl.exists()).toBe(true);
 
     await inputEl.setValue("help");
@@ -98,7 +98,7 @@ describe("Terminal App.vue — smoke (M2a.3)", () => {
       },
     });
 
-    const inputEl = wrapper.find<HTMLInputElement>(".terminal__input");
+    const inputEl = wrapper.find<HTMLInputElement>(".terminal__input-control");
     await inputEl.setValue("definitely:not:a:real:command");
     await wrapper.find("form").trigger("submit.prevent");
 

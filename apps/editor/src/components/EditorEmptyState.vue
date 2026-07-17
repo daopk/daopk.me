@@ -14,12 +14,8 @@ const emit = defineEmits<{
 
 <template>
   <EmptyState class="editor__empty" title="No file open.">
-    <Button
-      variant="primary"
-      :icon-start="FolderOpen"
-      :disabled="openDisabled"
-      @click="emit('open')"
-    >
+    <Button variant="solid" color="blue" :disabled="openDisabled" @click="emit('open')">
+      <template #left><FolderOpen aria-hidden="true" /></template>
       Open
     </Button>
   </EmptyState>

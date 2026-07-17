@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed } from "vue";
 
-import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Button, Modal } from "@daopk/ui";
 
 const props = defineProps<{
   open: boolean;
@@ -22,15 +22,16 @@ const dialogOpen = computed({
 </script>
 
 <template>
-  <Dialog
+  <Modal
     v-model:open="dialogOpen"
     title="Discard changes?"
     description="Unsaved changes in the current file will be lost."
+    :show-close-button="false"
     @close="emit('cancel')"
   >
-    <DialogActions>
+    <template #footer>
       <Button size="sm" @click="emit('cancel')">Cancel</Button>
-      <Button size="sm" variant="danger" @click="emit('confirm')">Discard</Button>
-    </DialogActions>
-  </Dialog>
+      <Button size="sm" variant="solid" color="red" @click="emit('confirm')">Discard</Button>
+    </template>
+  </Modal>
 </template>

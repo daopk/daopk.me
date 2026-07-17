@@ -1,17 +1,16 @@
 <script setup vapor lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 
-import { IconButton, TextInput } from "@daopk/kit";
-import { Button, Dialog, DialogActions } from "@daopk/ui";
+import { Button, IconButton, Input, Modal } from "@daopk/ui";
 import { ChevronLeft, ChevronRight, Film, Home, Search, Tv, X } from "@daopk/icons";
 
 import { mediaLabel } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import { type MovieMediaType, type MoviesListQuery } from "../moviesApi";
 
-interface TextInputHandle {
-  focus: (options?: FocusOptions) => void;
-  select: () => void;
+interface InputHandle {
+  focus: () => void;
+  nativeElement: HTMLInputElement | null;
 }
 
 interface MoviesToolbarProps {
@@ -46,7 +45,7 @@ const emit = defineEmits<{
 
 const searchDraft = ref(props.activeSearch);
 const isSearchDialogOpen = ref(false);
-const searchInput = ref<TextInputHandle | null>(null);
+const searchInput = ref<InputHandle | null>(null);
 const { t } = useMoviesI18n();
 
 const activeCatalogQuery = computed(() =>
@@ -68,8 +67,8 @@ watch(
 
 async function focusSearchInput(): Promise<void> {
   await nextTick();
-  searchInput.value?.focus({ preventScroll: true });
-  searchInput.value?.select();
+  searchInput.value?.focus();
+  searchInput.value?.nativeElement?.select();
 }
 
 function setSearchDialogOpen(next: boolean): void {
@@ -130,29 +129,35 @@ function selectMedia(media: MovieMediaType): void {
   >
     <nav class="movies-toolbar__history" :aria-label="t('movies.nav.ariaLabel')">
       <IconButton
-        :label="t('movies.action.back')"
+        class="movies-toolbar__history-button"
+        :ariaLabel="t('movies.action.back')"
         size="sm"
-        :icon="ChevronLeft"
         :disabled="!canGoBack"
         :title="t('movies.action.back')"
         @click="$emit('back')"
-      />
+      >
+        <ChevronLeft aria-hidden="true" />
+      </IconButton>
       <IconButton
-        :label="t('movies.action.forward')"
+        class="movies-toolbar__history-button"
+        :ariaLabel="t('movies.action.forward')"
         size="sm"
-        :icon="ChevronRight"
         :disabled="!canGoForward"
         :title="t('movies.action.forward')"
         @click="$emit('forward')"
-      />
+      >
+        <ChevronRight aria-hidden="true" />
+      </IconButton>
       <IconButton
-        :label="t('movies.action.home')"
+        class="movies-toolbar__history-button"
+        :ariaLabel="t('movies.action.home')"
         size="sm"
-        :icon="Home"
         :disabled="!canGoHome"
         :title="t('movies.action.home')"
         @click="$emit('home')"
-      />
+      >
+        <Home aria-hidden="true" />
+      </IconButton>
       <button
         type="button"
         class="movies-toolbar__history-menu-button"
@@ -200,58 +205,75 @@ function selectMedia(media: MovieMediaType): void {
     <div class="movies-toolbar__actions">
       <IconButton
         class="movies-toolbar__search-button"
-        :label="t('movies.action.searchMovies')"
+        :ariaLabel="t('movies.action.searchMovies')"
         size="sm"
-        :active="activeSearch.length > 0 || isSearchDialogOpen"
-        :icon="Search"
-        :pressed="isSearchDialogOpen || undefined"
+        :variant="activeSearch.length > 0 || isSearchDialogOpen ? 'surface' : 'ghost'"
+        :aria-pressed="isSearchDialogOpen || undefined"
         :title="t('movies.action.searchMovies')"
         @click="openSearchDialog"
-      />
+      >
+        <Search aria-hidden="true" />
+      </IconButton>
 
       <IconButton
         v-if="showClose"
         class="movies-toolbar__close"
-        :label="t('movies.action.closeMovies')"
+        :ariaLabel="t('movies.action.closeMovies')"
         size="sm"
-        :icon="X"
         :title="t('movies.action.closeMovies')"
         @click="$emit('close')"
-      />
+      >
+        <X aria-hidden="true" />
+      </IconButton>
     </div>
 
-    <Dialog
+    <Modal
       :open="isSearchDialogOpen"
       :title="t('movies.search.dialog.title')"
-      :portal-to="searchDialogPortalTarget"
-      scope="container"
+      :teleport-to="searchDialogPortalTarget"
+      :show-close-button="false"
+      :initial-focus="'#movies-toolbar-search-input'"
+      :class-names="{
+        root: 'movies-toolbar__search-modal',
+        overlay: 'movies-toolbar__search-modal-overlay',
+        panel: 'movies-toolbar__search-modal-panel',
+      }"
+      :styles="{ root: { position: 'absolute' } }"
       :modal="false"
       @update:open="setSearchDialogOpen"
     >
-      <form class="movies-toolbar__search-form" role="search" @submit.prevent="submitSearch">
-        <TextInput
+      <form
+        id="movies-toolbar-search-form"
+        class="movies-toolbar__search-form"
+        role="search"
+        @submit.prevent="submitSearch"
+      >
+        <Input
+          id="movies-toolbar-search-input"
           ref="searchInput"
           v-model="searchDraft"
-          type="search"
-          :aria-label="t('movies.search.input.ariaLabel')"
+          type="text"
+          :ariaLabel="t('movies.search.input.ariaLabel')"
           :placeholder="t('movies.search.placeholder')"
-          autocomplete="off"
+          :input-attrs="{ autocomplete: 'off', role: 'searchbox' }"
         />
-        <DialogActions align="stretch">
-          <Button type="button" variant="secondary" @click="setSearchDialogOpen(false)">
-            {{ t("movies.action.cancel") }}
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            :disabled="searchDraft.trim().length === 0"
-            :icon-start="Search"
-          >
-            {{ t("movies.action.submitSearch") }}
-          </Button>
-        </DialogActions>
       </form>
-    </Dialog>
+      <template #footer>
+        <Button type="button" variant="surface" @click="setSearchDialogOpen(false)">
+          {{ t("movies.action.cancel") }}
+        </Button>
+        <Button
+          form="movies-toolbar-search-form"
+          type="submit"
+          variant="solid"
+          color="blue"
+          :disabled="searchDraft.trim().length === 0"
+        >
+          <template #left><Search aria-hidden="true" /></template>
+          {{ t("movies.action.submitSearch") }}
+        </Button>
+      </template>
+    </Modal>
   </header>
 </template>
 

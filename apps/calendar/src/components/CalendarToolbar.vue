@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
-import { AppToolbar, IconButton, ToolbarGroup, ToolbarTitle } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { AppToolbar, ToolbarGroup, ToolbarTitle } from "@daopk/kit";
+import { Button, IconButton } from "@daopk/ui";
 import { ChevronLeft, ChevronRight } from "@daopk/icons";
 
 defineProps<{
@@ -27,17 +27,19 @@ const emit = defineEmits<{
       <ToolbarGroup class="calendar__nav" label="Calendar navigation">
         <IconButton
           class="calendar__icon-button"
-          :label="`Previous ${navigationUnitLabel}`"
-          :icon="ChevronLeft"
+          :ariaLabel="`Previous ${navigationUnitLabel}`"
           @click="emit('previous')"
-        />
+        >
+          <ChevronLeft aria-hidden="true" />
+        </IconButton>
         <Button class="calendar__nav-button" size="sm" @click="emit('today')">Today</Button>
         <IconButton
           class="calendar__icon-button"
-          :label="`Next ${navigationUnitLabel}`"
-          :icon="ChevronRight"
+          :ariaLabel="`Next ${navigationUnitLabel}`"
           @click="emit('next')"
-        />
+        >
+          <ChevronRight aria-hidden="true" />
+        </IconButton>
       </ToolbarGroup>
     </div>
   </AppToolbar>

@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createComponent, defineVaporComponent, insert, nextTick, ref } from "vue";
 
+import { Modal } from "ropav/modal";
+import { ToastProvider, useToast, type UseToastReturn } from "ropav/toast";
+
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
-import Dialog from "./Dialog.vue";
 import ToastHost from "./ToastHost.vue";
-import { clearToasts, useToast } from "./useToast";
 
 const mounted: VaporMount[] = [];
 
@@ -16,6 +17,29 @@ function mount(
   const wrapper = mountVaporRoot(component, options);
   mounted.push(wrapper);
   return wrapper;
+}
+
+function mountToastHost(): { readonly toast: UseToastReturn; readonly wrapper: VaporMount } {
+  let toast: UseToastReturn | undefined;
+  const Consumer = defineVaporComponent(() => {
+    toast = useToast();
+    return createComponent(ToastHost);
+  });
+  const Host = defineVaporComponent(() =>
+    createComponent(
+      ToastProvider,
+      {
+        max: 5,
+        duration: 5000,
+        radius: "md",
+        closeLabel: "Dismiss notification",
+      },
+      { default: () => createComponent(Consumer) },
+    ),
+  );
+  const wrapper = mount(Host);
+  if (!toast) throw new Error("Toast host did not mount inside its provider.");
+  return { toast, wrapper };
 }
 
 async function settle(): Promise<void> {
@@ -32,17 +56,16 @@ function pointer(element: Element, type: string, clientX = 0): void {
 
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
-  clearToasts();
   vi.useRealTimers();
   document.body.innerHTML = "";
   document.body.style.overflow = "";
 });
 
-it("keeps dialog and toast roots compiled in Vapor mode", () => {
-  assertVaporComponents({ Dialog, ToastHost });
+it("keeps direct Ropav modal and the local toast host compiled in Vapor mode", () => {
+  assertVaporComponents({ Modal, ToastHost });
 });
 
-describe("Dialog", () => {
+describe("Modal", () => {
   it("renders viewport modal semantics, traps focus and restores the trigger", async () => {
     const open = ref(false);
     const Host = defineVaporComponent(() => {
@@ -54,11 +77,13 @@ describe("Dialog", () => {
       root.append(trigger);
       insert(
         createComponent(
-          Dialog,
+          Modal,
           {
             open: () => open.value,
+            baseZIndex: 1601,
             title: "Confirm change",
             description: "This updates your preferences.",
+            focusTrapOptions: { tabbableOptions: { displayCheck: "none" } },
             "onUpdate:open": () => (next: boolean) => (open.value = next),
           },
           {
@@ -81,14 +106,14 @@ describe("Dialog", () => {
     await settle();
 
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]');
-    const overlay = document.body.querySelector<HTMLElement>(".ds-dialog__overlay");
-    expect(dialog?.classList).toContain("ds-dialog__content--viewport");
+    const modal = document.body.querySelector<HTMLElement>(".rp-modal");
+    const overlay = document.body.querySelector<HTMLElement>(".rp-modal__overlay");
+    expect(dialog?.classList).toContain("rp-modal__panel");
     expect(dialog?.getAttribute("aria-modal")).toBe("true");
     expect(dialog?.getAttribute("aria-labelledby")).toBeTruthy();
     expect(dialog?.getAttribute("aria-describedby")).toBeTruthy();
-    expect(overlay?.classList).toContain("ds-dialog__overlay--default");
-    expect(dialog?.style.zIndex).toBe("1601");
-    expect(overlay?.style.zIndex).toBe("1600");
+    expect(overlay).not.toBeNull();
+    expect(modal?.style.zIndex).toBe("1601");
     expect(document.body.style.overflow).toBe("hidden");
     expect(wrapper.element.inert).toBe(true);
     expect(document.activeElement === dialog || dialog?.contains(document.activeElement)).toBe(
@@ -104,100 +129,47 @@ describe("Dialog", () => {
     expect(document.activeElement).toBe(trigger);
   });
 
-  it("only lets the top dialog handle Escape and outside pointer dismissal", async () => {
-    const firstUpdates: boolean[] = [];
-    const secondUpdates: boolean[] = [];
-    const firstCloseArgs: unknown[][] = [];
-    const secondCloseArgs: unknown[][] = [];
-    mount(Dialog, {
-      props: {
-        open: true,
-        title: "First",
-        "onUpdate:open": (next: boolean) => firstUpdates.push(next),
-        onClose: (...args: unknown[]) => firstCloseArgs.push(args),
-      },
-    });
-    mount(Dialog, {
-      props: {
-        open: true,
-        title: "Second",
-        "onUpdate:open": (next: boolean) => secondUpdates.push(next),
-        onClose: (...args: unknown[]) => secondCloseArgs.push(args),
-      },
-    });
-    await settle();
-
-    const overlays = document.querySelectorAll<HTMLElement>(".ds-dialog__overlay");
-    const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
-    expect(overlays[0]?.style.zIndex).toBe("1600");
-    expect(dialogs[0]?.style.zIndex).toBe("1601");
-    expect(overlays[1]?.style.zIndex).toBe("1602");
-    expect(dialogs[1]?.style.zIndex).toBe("1603");
-
-    document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
-    expect(firstUpdates).toEqual([]);
-    expect(secondUpdates).toEqual([false]);
-    expect(firstCloseArgs).toEqual([]);
-    expect(secondCloseArgs).toEqual([[]]);
-
-    pointer(overlays[0]!, "pointerdown");
-    expect(firstUpdates).toEqual([]);
-    expect(firstCloseArgs).toEqual([]);
-  });
-
-  it("supports non-modal container sheets and non-dismissible system dialogs", async () => {
+  it("supports custom portals, public part classes and non-dismissible surfaces", async () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
     const updates: boolean[] = [];
-    mount(Dialog, {
+    mount(Modal, {
       props: {
         open: true,
-        title: "Scoped sheet",
-        portalTo: target,
-        scope: "container",
-        variant: "sheet",
-        layer: "system",
+        title: "Scoped modal",
+        teleportTo: target,
         modal: false,
-        dismissible: false,
-        class: "consumer-dialog-class",
-        "data-consumer-attr": "preserved",
+        closeOnEscape: false,
+        closeOnOverlayClick: false,
+        showCloseButton: false,
+        classNames: {
+          root: "consumer-modal",
+          panel: "consumer-modal__panel",
+          footer: "consumer-modal__footer",
+        },
         "onUpdate:open": (next: boolean) => updates.push(next),
       },
-      slots: { default: "<button>Explicit action</button>" },
+      slots: {
+        default: "<button>Explicit action</button>",
+        footer: "<button>Footer action</button>",
+      },
     });
     await settle();
 
     const dialog = target.querySelector<HTMLElement>('[role="dialog"]');
-    expect(dialog?.classList).toContain("ds-dialog__content--container");
-    expect(dialog?.classList).toContain("ds-dialog__content--sheet");
-    expect(dialog?.classList).toContain("ds-dialog__content--system");
-    expect(dialog?.classList).toContain("consumer-dialog-class");
-    expect(dialog?.dataset.consumerAttr).toBe("preserved");
+    expect(target.querySelector(".consumer-modal")).not.toBeNull();
+    expect(dialog?.classList).toContain("consumer-modal__panel");
+    expect(target.querySelector(".consumer-modal__footer")?.textContent).toContain("Footer action");
     expect(dialog?.hasAttribute("aria-modal")).toBe(false);
-    expect(dialog?.style.zIndex).toBe("1801");
-    expect(target.querySelector<HTMLElement>(".ds-dialog__overlay")?.style.zIndex).toBe("1800");
     expect(document.body.style.overflow).toBe("");
 
     document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
-    pointer(target.querySelector(".ds-dialog__overlay")!, "pointerdown");
+    pointer(target.querySelector(".rp-modal__overlay")!, "pointerdown");
     expect(updates).toEqual([]);
   });
 
-  it("removes teleported content when an open dialog surface unmounts", async () => {
-    const wrapper = mount(Dialog, {
-      props: { open: true, title: "Transient dialog" },
-      slots: { default: "Transient content" },
-    });
-    await settle();
-    expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
-
-    wrapper.unmount();
-    await settle();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
-  });
-
   it("has no serious accessibility violations while open", async () => {
-    mount(Dialog, {
+    mount(Modal, {
       props: { open: true, title: "Accessible dialog", description: "Dialog details" },
       slots: { default: "<button>Done</button>" },
     });
@@ -219,10 +191,9 @@ describe("Dialog", () => {
 describe("ToastHost", () => {
   it("renders tone-specific live regions and supports manual dismissal", async () => {
     vi.useFakeTimers();
-    const toast = useToast();
+    const { toast, wrapper } = mountToastHost();
     toast.success({ title: "Uploaded", description: "3 files synced", duration: 10_000 });
     toast.error({ title: "Failed", duration: 10_000 });
-    const wrapper = mount(ToastHost);
     await settle();
 
     const items = wrapper.findAll<HTMLElement>(".ds-toast");
@@ -235,38 +206,38 @@ describe("ToastHost", () => {
     expect(wrapper.findAll(".ds-toast")).toHaveLength(1);
   });
 
-  it("flushes pre-mount calls and updates through the provider queue", async () => {
+  it("updates an active toast through the provider queue", async () => {
     vi.useFakeTimers();
-    const toast = useToast();
+    const { toast, wrapper } = mountToastHost();
     const id = toast.info({ title: "Uploading", duration: 10_000 });
-    const wrapper = mount(ToastHost);
     await settle();
 
     expect(wrapper.find(".ds-toast").textContent).toContain("Uploading");
-    toast.update(id, { title: "Uploaded", tone: "success" });
+    toast.update(id, { title: "Uploaded", type: "success" });
     await nextTick();
 
     expect(wrapper.find(".ds-toast").textContent).toContain("Uploaded");
+    expect(wrapper.find<HTMLElement>(".ds-toast-viewport__item").dataset.type).toBe("success");
   });
 
-  it("retains active toasts across provider remounts", async () => {
+  it("dismisses all active toasts through the provider API", async () => {
     vi.useFakeTimers();
-    useToast().info({ title: "Still active", duration: 10_000 });
-
-    const firstHost = mount(ToastHost);
+    const { toast, wrapper } = mountToastHost();
+    toast.info({ title: "First", duration: 10_000 });
+    toast.warning({ title: "Second", duration: 10_000 });
     await settle();
-    expect(firstHost.find(".ds-toast").textContent).toContain("Still active");
+    expect(wrapper.findAll(".ds-toast")).toHaveLength(2);
 
-    firstHost.unmount();
-    const secondHost = mount(ToastHost);
-    await settle();
-    expect(secondHost.find(".ds-toast").textContent).toContain("Still active");
+    toast.dismissAll();
+    expect(toast.toasts.value).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(250);
+    expect(wrapper.findAll(".ds-toast")).toHaveLength(0);
   });
 
   it("auto-dismisses while pausing the remaining timer on hover and focus", async () => {
     vi.useFakeTimers();
-    useToast().info({ title: "Paused", duration: 100 });
-    const wrapper = mount(ToastHost);
+    const { toast, wrapper } = mountToastHost();
+    toast.info({ title: "Paused", duration: 100 });
     await settle();
     const item = wrapper.find<HTMLElement>(".ds-toast");
 
@@ -282,7 +253,7 @@ describe("ToastHost", () => {
     await vi.advanceTimersByTimeAsync(250);
     expect(wrapper.findAll(".ds-toast")).toHaveLength(0);
 
-    useToast().warning({ title: "Focus paused", duration: 50 });
+    toast.warning({ title: "Focus paused", duration: 50 });
     await nextTick();
     const close = wrapper.find<HTMLButtonElement>(".ds-toast__close");
     close.focus();
@@ -296,8 +267,8 @@ describe("ToastHost", () => {
 
   it("dismisses a toast after a rightward swipe", async () => {
     vi.useFakeTimers();
-    useToast().info({ title: "Swipe me", duration: 10_000 });
-    const wrapper = mount(ToastHost);
+    const { toast, wrapper } = mountToastHost();
+    toast.info({ title: "Swipe me", duration: 10_000 });
     await settle();
     const item = wrapper.find<HTMLElement>(".ds-toast");
     const swipeItem = wrapper.find<HTMLElement>(".ds-toast-viewport__item");
@@ -313,10 +284,9 @@ describe("ToastHost", () => {
   });
 
   it("has no serious accessibility violations with both live priorities", async () => {
-    const toast = useToast();
+    const { toast, wrapper } = mountToastHost();
     toast.info({ title: "Information", duration: 10_000 });
     toast.warning({ title: "Warning", description: "Review this", duration: 10_000 });
-    const wrapper = mount(ToastHost);
     await settle();
     const axe = (await import("axe-core")).default;
     const results = await axe.run(wrapper.find(".ds-toast-viewport"), {

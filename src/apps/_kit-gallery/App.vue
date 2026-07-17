@@ -5,40 +5,27 @@ import {
   ActionRow,
   AppFrame,
   AppToolbar,
-  Badge,
-  Checkbox,
-  ChoiceCard,
-  ChoiceGrid,
   DataTable,
   EmptyState,
-  FormField,
   GroupLabel,
-  IconButton,
   ListButton,
   Panel,
-  Progress,
   ScrollArea,
   SectionHeader,
-  SegmentedControl,
-  Select,
   Separator,
   Spinner,
-  StatusBanner,
-  Textarea,
-  TextInput,
   ToolbarTitle,
   useAppChrome,
-  type SegmentedControlOption,
-  type SelectOption,
 } from "~/components/kit";
 import {
+  Alert,
+  Badge,
   Button,
   Card,
+  Checkbox,
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
-  Dialog,
-  DialogActions,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuItem,
@@ -47,16 +34,24 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Progress,
+  Radio,
   RadioGroup,
-  RadioGroupItem,
+  Select,
   Slider,
   Switch,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  Textarea,
   Tooltip,
   useToast,
+  type SelectOption,
 } from "~/components/ui";
 import {
   Download,
@@ -81,11 +76,11 @@ const autoUpdateValue = ref(false);
 const sliderValue = ref(40);
 const textValue = ref("Editable value");
 const textareaValue = ref("Multi-line\ncontent area");
-const selectValue = ref("md");
-const segmentValue = ref("grid");
+const selectValue = ref<string | number | null>("md");
+const segmentValue = ref<string | number | null>("grid");
 const tabValue = ref("overview");
-const choiceValue = ref("comfortable");
-const radioValue = ref("comfortable");
+const choiceValue = ref<string | number | null>("comfortable");
+const radioValue = ref<string | number | null>("comfortable");
 const requiredValue = ref("");
 const progressValue = ref(60);
 const dialogOpen = ref(false);
@@ -101,14 +96,14 @@ function bumpProgress(): void {
   progressValue.value = progressValue.value >= 100 ? 0 : Math.min(100, progressValue.value + 20);
 }
 
-const selectOptions: readonly SelectOption[] = [
+const selectOptions: SelectOption[] = [
   { value: "sm", label: "Small" },
   { value: "md", label: "Medium" },
   { value: "lg", label: "Large" },
   { value: "xl", label: "Extra large (disabled)", disabled: true },
 ];
 
-const segmentOptions: readonly SegmentedControlOption[] = [
+const segmentOptions = [
   { value: "list", label: "List", icon: LayoutGrid },
   { value: "grid", label: "Grid", icon: LayoutGrid },
   { value: "columns", label: "Columns", disabled: true },
@@ -124,6 +119,11 @@ const densityChoices = [
   },
   { id: "spacious", title: "Spacious", description: "Roomy, touch-friendly.", icon: Folder },
 ] as const;
+
+const choiceRadioClassNames = {
+  root: "gallery__choice",
+  label: "gallery__choice-label",
+} as const;
 </script>
 
 <template>
@@ -131,16 +131,16 @@ const densityChoices = [
     <AppToolbar class="kit-gallery__toolbar" density="comfortable">
       <ToolbarTitle title="Kit Gallery" subtitle="components/kit + components/ui" />
       <template #end>
-        <Badge tone="accent">DEV</Badge>
+        <Badge color="blue" variant="subtle">DEV</Badge>
       </template>
     </AppToolbar>
 
     <ScrollArea class="kit-gallery__body" safe-area>
-      <StatusBanner tone="info">
+      <Alert color="blue" variant="surface" role="status">
         Every kit + ui primitive on the token system. Toggle light/dark in Settings &rarr;
         Appearance, and open with <code>?shell=mobile</code> to preview touch density and safe
         areas.
-      </StatusBanner>
+      </Alert>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">Section headers (kit)</GroupLabel>
@@ -153,7 +153,10 @@ const densityChoices = [
         <Separator />
         <SectionHeader title="Section title" subtitle="Default section scale">
           <template #actions>
-            <Button size="sm" variant="secondary" :icon-start="Plus">New</Button>
+            <Button size="sm" variant="surface">
+              <template #left><Plus aria-hidden="true" /></template>
+              New
+            </Button>
           </template>
         </SectionHeader>
       </Panel>
@@ -161,38 +164,49 @@ const densityChoices = [
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">Button (ui)</GroupLabel>
         <div class="gallery__row">
-          <Button variant="primary">Primary</Button>
-          <Button variant="secondary">Secondary</Button>
+          <Button variant="solid" color="blue">Primary</Button>
+          <Button variant="surface">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
-          <Button variant="danger" :icon-start="Trash2">Danger</Button>
+          <Button variant="solid" color="red">
+            <template #left><Trash2 aria-hidden="true" /></template>
+            Danger
+          </Button>
         </div>
         <div class="gallery__row">
-          <Button size="sm" variant="secondary" :icon-start="RefreshCw">Small</Button>
-          <Button size="md" variant="secondary" :icon-end="Download">Medium</Button>
-          <Button variant="primary" loading>Loading</Button>
-          <Button variant="secondary" disabled>Disabled</Button>
-        </div>
-      </Panel>
-
-      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">IconButton (kit)</GroupLabel>
-        <div class="gallery__row">
-          <IconButton :icon="Search" label="Search" variant="ghost" />
-          <IconButton :icon="Settings" label="Settings" variant="subtle" />
-          <IconButton :icon="RefreshCw" label="Refresh" size="sm" />
-          <IconButton :icon="Trash2" label="Delete" active />
-          <IconButton :icon="Plus" label="Add" disabled />
+          <Button size="sm" variant="surface">
+            <template #left><RefreshCw aria-hidden="true" /></template>
+            Small
+          </Button>
+          <Button size="md" variant="surface">
+            Medium
+            <template #right><Download aria-hidden="true" /></template>
+          </Button>
+          <Button variant="solid" color="blue" loading>Loading</Button>
+          <Button variant="surface" disabled>Disabled</Button>
         </div>
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">Badge + Spinner + Separator (kit)</GroupLabel>
+        <GroupLabel as="h2">IconButton (Ropav)</GroupLabel>
         <div class="gallery__row">
-          <Badge tone="neutral">Neutral</Badge>
-          <Badge tone="accent">Accent</Badge>
-          <Badge tone="success">Success</Badge>
-          <Badge tone="danger">Danger</Badge>
-          <Badge tone="accent" size="md">Medium</Badge>
+          <IconButton ariaLabel="Search" variant="ghost"><Search /></IconButton>
+          <IconButton ariaLabel="Settings" variant="subtle"><Settings /></IconButton>
+          <IconButton ariaLabel="Refresh" size="sm"><RefreshCw /></IconButton>
+          <IconButton ariaLabel="Delete" variant="subtle" color="blue" aria-pressed="true">
+            <Trash2 />
+          </IconButton>
+          <IconButton ariaLabel="Add" disabled><Plus /></IconButton>
+        </div>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">Badge (Ropav) + Spinner + Separator (kit)</GroupLabel>
+        <div class="gallery__row">
+          <Badge color="gray" variant="outline">Neutral</Badge>
+          <Badge color="blue" variant="subtle">Accent</Badge>
+          <Badge color="green" variant="subtle">Success</Badge>
+          <Badge color="red" variant="subtle">Danger</Badge>
+          <Badge color="blue" variant="subtle" size="md">Medium</Badge>
         </div>
         <div class="gallery__divider-demo">
           <Spinner size="sm" />
@@ -204,37 +218,54 @@ const densityChoices = [
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">StatusBanner (kit)</GroupLabel>
+        <GroupLabel as="h2">Alert (Ropav)</GroupLabel>
         <div class="gallery__stack">
-          <StatusBanner tone="info">Informational message.</StatusBanner>
-          <StatusBanner tone="success">Saved successfully.</StatusBanner>
-          <StatusBanner tone="warning">Heads up — review before continuing.</StatusBanner>
-          <StatusBanner tone="error">Something went wrong.</StatusBanner>
+          <Alert color="blue" variant="surface" role="status">Informational message.</Alert>
+          <Alert color="green" variant="surface" role="status">Saved successfully.</Alert>
+          <Alert color="yellow" variant="surface" role="status">
+            Heads up — review before continuing.
+          </Alert>
+          <Alert color="red" variant="surface" role="alert">Something went wrong.</Alert>
         </div>
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">Inputs (kit)</GroupLabel>
+        <GroupLabel as="h2">Field + inputs (Ropav)</GroupLabel>
         <div class="gallery__field-grid">
-          <FormField label="Text input" hint="A standard text control">
-            <TextInput v-model="textValue" />
-          </FormField>
-          <FormField label="Invalid" error="This value is required">
-            <TextInput v-model="textValue" invalid />
-          </FormField>
-          <FormField label="Select">
-            <Select v-model="selectValue" :options="selectOptions" />
-          </FormField>
-          <FormField label="Disabled">
-            <TextInput model-value="Read only" disabled />
-          </FormField>
-          <FormField label="Required" :error="requiredError" required>
-            <TextInput v-model="requiredValue" placeholder="Type to clear the error" />
-          </FormField>
+          <Field v-slot="{ controlProps }" label="Text input" description="A standard text control">
+            <Input v-model="textValue" v-bind="controlProps" />
+          </Field>
+          <Field
+            v-slot="{ controlProps }"
+            label="Invalid"
+            description="This value is required"
+            invalid
+          >
+            <Input v-model="textValue" v-bind="controlProps" />
+          </Field>
+          <Field v-slot="{ controlProps }" label="Select">
+            <Select v-model="selectValue" v-bind="controlProps" :options="selectOptions" />
+          </Field>
+          <Field v-slot="{ controlProps }" label="Disabled" disabled>
+            <Input model-value="Read only" v-bind="controlProps" />
+          </Field>
+          <Field
+            v-slot="{ controlProps }"
+            label="Required"
+            :description="requiredError"
+            :invalid="Boolean(requiredError)"
+            required
+          >
+            <Input
+              v-model="requiredValue"
+              v-bind="controlProps"
+              placeholder="Type to clear the error"
+            />
+          </Field>
         </div>
-        <FormField label="Textarea">
-          <Textarea v-model="textareaValue" :rows="3" />
-        </FormField>
+        <Field v-slot="{ controlProps }" label="Textarea">
+          <Textarea v-model="textareaValue" v-bind="controlProps" :rows="3" />
+        </Field>
         <div class="gallery__row">
           <Checkbox v-model="checkboxValue">Enable notifications</Checkbox>
           <Checkbox :model-value="false" disabled>Disabled option</Checkbox>
@@ -246,28 +277,38 @@ const densityChoices = [
         <div class="gallery__row">
           <Switch
             :model-value="switchValue"
-            aria-label="Demo switch"
+            ariaLabel="Demo switch"
             @update:model-value="(v) => (switchValue = v)"
           />
           <span class="gallery__caption">{{ switchValue ? "On" : "Off" }}</span>
           <Separator orientation="vertical" class="gallery__inline-divider" />
-          <Switch :model-value="false" aria-label="Disabled switch" disabled />
+          <Switch :model-value="false" ariaLabel="Disabled switch" disabled />
           <span class="gallery__caption">Disabled</span>
         </div>
         <Slider
           :model-value="sliderValue"
           :min="0"
           :max="100"
-          aria-label="Sample slider"
+          ariaLabel="Sample slider"
           @update:model-value="(v) => (sliderValue = v)"
         />
         <span class="gallery__caption">Value: {{ sliderValue }}</span>
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">SegmentedControl (kit) + Tabs (ui)</GroupLabel>
-        <SegmentedControl v-model="segmentValue" :options="segmentOptions" label="View mode" />
-        <Tabs v-model="tabValue" aria-label="Sample tabs">
+        <GroupLabel as="h2">RadioGroup + Tabs (Ropav)</GroupLabel>
+        <RadioGroup v-model="segmentValue" orientation="horizontal" ariaLabel="View mode">
+          <Radio
+            v-for="option in segmentOptions"
+            :key="option.value"
+            :value="option.value"
+            :disabled="option.disabled"
+          >
+            <component v-if="option.icon" :is="option.icon" aria-hidden="true" />
+            {{ option.label }}
+          </Radio>
+        </RadioGroup>
+        <Tabs v-model="tabValue" ariaLabel="Sample tabs">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="specs">Specs</TabsTrigger>
@@ -281,32 +322,30 @@ const densityChoices = [
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">ChoiceGrid + ChoiceCard (kit)</GroupLabel>
-        <ChoiceGrid label="Density">
-          <ChoiceCard
+        <GroupLabel as="h2">Styled Radio cards (Ropav)</GroupLabel>
+        <RadioGroup v-model="choiceValue" class="gallery__choice-grid" ariaLabel="Density">
+          <Radio
             v-for="choice in densityChoices"
             :key="choice.id"
-            :icon="choice.icon"
-            :title="choice.title"
-            :description="choice.description"
-            :selected="choice.id === choiceValue"
-            @select="choiceValue = choice.id"
-          />
-        </ChoiceGrid>
+            :value="choice.id"
+            :class-names="choiceRadioClassNames"
+          >
+            <component :is="choice.icon" class="gallery__choice-icon" aria-hidden="true" />
+            <span class="gallery__choice-copy">
+              <strong>{{ choice.title }}</strong>
+              <span>{{ choice.description }}</span>
+            </span>
+          </Radio>
+        </RadioGroup>
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">RadioGroup (ui)</GroupLabel>
-        <RadioGroup
-          :model-value="radioValue"
-          label="Density"
-          orientation="horizontal"
-          @update:model-value="(v) => (radioValue = v)"
-        >
-          <RadioGroupItem value="compact" label="Compact" />
-          <RadioGroupItem value="comfortable" label="Comfortable" />
-          <RadioGroupItem value="spacious" label="Spacious" />
-          <RadioGroupItem value="locked" label="Locked" disabled />
+        <RadioGroup :model-value="radioValue" ariaLabel="Density" orientation="horizontal">
+          <Radio value="compact">Compact</Radio>
+          <Radio value="comfortable">Comfortable</Radio>
+          <Radio value="spacious">Spacious</Radio>
+          <Radio value="locked" disabled>Locked</Radio>
         </RadioGroup>
         <p class="gallery__caption">Selected: {{ radioValue }}</p>
       </Panel>
@@ -314,11 +353,20 @@ const densityChoices = [
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">Tooltip (ui)</GroupLabel>
         <div class="gallery__row">
-          <Tooltip label="Refresh the current view">
-            <Button size="sm" variant="secondary" :icon-start="RefreshCw">Hover me</Button>
+          <Tooltip content="Refresh the current view">
+            <template #default="{ triggerProps }">
+              <Button v-bind="triggerProps" size="sm" variant="surface">
+                <template #left><RefreshCw aria-hidden="true" /></template>
+                Hover me
+              </Button>
+            </template>
           </Tooltip>
-          <Tooltip label="Open settings" side="right">
-            <IconButton :icon="Settings" label="Settings" variant="subtle" />
+          <Tooltip content="Open settings" placement="right">
+            <template #default="{ triggerProps }">
+              <IconButton v-bind="triggerProps" ariaLabel="Settings" variant="subtle">
+                <Settings />
+              </IconButton>
+            </template>
           </Tooltip>
         </div>
       </Panel>
@@ -328,28 +376,29 @@ const densityChoices = [
         <div class="gallery__row">
           <Button
             size="sm"
-            variant="secondary"
+            variant="surface"
             @click="toast.info({ title: 'Heads up', description: 'An informational toast.' })"
           >
             Info
           </Button>
           <Button
             size="sm"
-            variant="secondary"
+            variant="surface"
             @click="toast.success({ title: 'Saved', description: 'Your changes were saved.' })"
           >
             Success
           </Button>
           <Button
             size="sm"
-            variant="secondary"
+            variant="surface"
             @click="toast.warning({ title: 'Careful', description: 'Review before continuing.' })"
           >
             Warning
           </Button>
           <Button
             size="sm"
-            variant="danger"
+            variant="surface"
+            color="red"
             @click="toast.error({ title: 'Failed', description: 'Something went wrong.' })"
           >
             Error
@@ -358,11 +407,11 @@ const densityChoices = [
       </Panel>
 
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
-        <GroupLabel as="h2">Progress (kit)</GroupLabel>
-        <Progress :value="progressValue" label="Determinate progress" />
-        <Progress :value="null" label="Indeterminate progress" />
+        <GroupLabel as="h2">Progress (Ropav)</GroupLabel>
+        <Progress :value="progressValue" ariaLabel="Determinate progress" />
+        <Progress indeterminate ariaLabel="Indeterminate progress" />
         <div class="gallery__row">
-          <Button size="sm" variant="secondary" @click="bumpProgress">Advance</Button>
+          <Button size="sm" variant="surface" @click="bumpProgress">Advance</Button>
           <span class="gallery__caption">Value: {{ progressValue }}%</span>
         </div>
       </Panel>
@@ -381,14 +430,14 @@ const densityChoices = [
           >
             <Switch
               :model-value="switchValue"
-              aria-label="Auto-hide dock"
+              ariaLabel="Auto-hide dock"
               @update:model-value="(v) => (switchValue = v)"
             />
           </ActionRow>
           <ActionRow title="Automatic updates" description="Install updates in the background.">
             <Switch
               :model-value="autoUpdateValue"
-              aria-label="Automatic updates"
+              ariaLabel="Automatic updates"
               @update:model-value="(v) => (autoUpdateValue = v)"
             />
           </ActionRow>
@@ -404,10 +453,10 @@ const densityChoices = [
           <Panel variant="plain" padding="md">Plain panel</Panel>
         </div>
         <div class="gallery__field-grid">
-          <Card>Default card</Card>
-          <Card variant="subtle">Subtle card</Card>
-          <Card interactive>Interactive card</Card>
-          <Card interactive selected>Selected card</Card>
+          <Card layer="base">Base card</Card>
+          <Card layer="surface">Surface card</Card>
+          <Card layer="raised">Raised card</Card>
+          <Card layer="surface" border>Bordered card</Card>
         </div>
       </Panel>
 
@@ -440,10 +489,10 @@ const densityChoices = [
       <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
         <GroupLabel as="h2">Overlays (ui)</GroupLabel>
         <div class="gallery__row">
-          <Button variant="secondary" @click="dialogOpen = true">Open dialog</Button>
+          <Button variant="surface" @click="dialogOpen = true">Open dialog</Button>
           <DropdownMenu>
             <template #trigger>
-              <Button variant="secondary">Dropdown menu</Button>
+              <Button variant="surface">Dropdown menu</Button>
             </template>
             <template #items>
               <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -481,17 +530,22 @@ const densityChoices = [
       </Panel>
     </ScrollArea>
 
-    <Dialog
+    <Modal
       v-model:open="dialogOpen"
       title="Standardized dialog"
-      description="Modal with a DialogActions footer that stacks on narrow shells."
+      description="Modal behavior and focus management are provided by Ropav."
+      :show-close-button="false"
     >
       <p class="gallery__dialog-copy">Compose dialog bodies from kit + ui primitives.</p>
-      <DialogActions>
-        <Button size="sm" @click="dialogOpen = false">Cancel</Button>
-        <Button size="sm" variant="primary" @click="dialogOpen = false">Confirm</Button>
-      </DialogActions>
-    </Dialog>
+      <template #footer>
+        <div class="gallery__dialog-actions">
+          <Button size="sm" @click="dialogOpen = false">Cancel</Button>
+          <Button size="sm" variant="solid" color="blue" @click="dialogOpen = false">
+            Confirm
+          </Button>
+        </div>
+      </template>
+    </Modal>
   </AppFrame>
 </template>
 
@@ -533,6 +587,47 @@ const densityChoices = [
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
+.gallery__choice-grid {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+:deep(.gallery__choice) {
+  align-items: flex-start;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+:deep(.gallery__choice:has(input:checked)) {
+  border-color: var(--color-accent);
+}
+
+:deep(.gallery__choice-label) {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.gallery__choice-icon {
+  block-size: 20px;
+  flex: 0 0 auto;
+  inline-size: 20px;
+}
+
+.gallery__choice-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.gallery__choice-copy span {
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-sm);
+}
+
 .gallery__divider-demo {
   align-items: center;
   block-size: 40px;
@@ -571,5 +666,12 @@ const densityChoices = [
 .gallery__dialog-copy {
   color: var(--color-fg-muted);
   margin: 0;
+}
+
+.gallery__dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: flex-end;
 }
 </style>

@@ -24,6 +24,7 @@ describe("kernel reactive effects", () => {
     kernel.dispose();
     localStorage.clear();
     delete document.documentElement.dataset.theme;
+    delete document.documentElement.dataset.rpColorScheme;
     vi.unstubAllGlobals();
   });
 
@@ -39,6 +40,7 @@ describe("kernel reactive effects", () => {
     await nextTick();
 
     expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(document.documentElement.dataset.rpColorScheme).toBe("dark");
 
     kernel.theme.setOverride("--color-accent", "#0284c7");
     await nextTick();

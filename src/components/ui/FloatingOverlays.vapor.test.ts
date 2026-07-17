@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { Tooltip } from "ropav/tooltip";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 import HoverCard from "./HoverCard.vue";
-import Tooltip from "./Tooltip.vue";
 
 const mounted: VaporMount[] = [];
 
@@ -37,21 +37,26 @@ async function settlePosition(): Promise<void> {
 afterEach(() => {
   vi.useRealTimers();
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
-  document.querySelectorAll("[data-floating-test-portal]").forEach((element) => element.remove());
+  document
+    .querySelectorAll("[data-floating-test-portal], [data-floating-test-target]")
+    .forEach((element) => element.remove());
 });
 
 describe("Tooltip", () => {
   it("opens after hover delay, attaches ARIA and closes on Escape", async () => {
     vi.useFakeTimers();
-    const wrapper = mount(Tooltip, {
-      props: { label: "More info", delayDuration: 100 },
-      slots: { default: () => button("Trigger") },
+    const trigger = button("Trigger");
+    trigger.dataset.floatingTestTarget = "";
+    document.body.appendChild(trigger);
+    mount(Tooltip, {
+      props: { content: "More info", openDelay: 100, strategy: "fixed", target: trigger },
     });
-    const trigger = wrapper.find<HTMLButtonElement>("button");
 
-    pointer(trigger, "pointerenter");
+    trigger.dispatchEvent(new MouseEvent("mouseenter"));
     await vi.advanceTimersByTimeAsync(99);
-    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
+    expect(document.body.querySelector<HTMLElement>('[role="tooltip"]')?.dataset.state).toBe(
+      "closed",
+    );
 
     await vi.advanceTimersByTimeAsync(1);
     await settlePosition();
@@ -60,10 +65,12 @@ describe("Tooltip", () => {
     expect(trigger.getAttribute("aria-describedby")).toBe(tooltip?.id);
     expect(tooltip?.style.position).toBe("fixed");
 
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await nextTick();
-    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
-    expect(trigger.hasAttribute("aria-describedby")).toBe(false);
+    expect(document.body.querySelector<HTMLElement>('[role="tooltip"]')?.dataset.state).toBe(
+      "closed",
+    );
+    expect(trigger.getAttribute("aria-describedby")).toBe(tooltip?.id);
   });
 
   it("supports focus, rich content and a custom portal", async () => {
@@ -71,31 +78,33 @@ describe("Tooltip", () => {
     const portal = document.createElement("div");
     portal.dataset.floatingTestPortal = "";
     document.body.appendChild(portal);
-    const wrapper = mount(Tooltip, {
-      props: { delayDuration: 0, portalTo: portal },
-      slots: {
-        default: () => button("Trigger"),
-        content: "<strong>Rich help</strong>",
-      },
+    const trigger = button("Trigger");
+    trigger.dataset.floatingTestTarget = "";
+    document.body.appendChild(trigger);
+    mount(Tooltip, {
+      props: { arrow: true, openDelay: 0, teleportTo: portal, target: trigger },
+      slots: { content: "<strong>Rich help</strong>" },
     });
 
-    wrapper.find<HTMLButtonElement>("button").focus();
+    trigger.focus();
+    trigger.dispatchEvent(new FocusEvent("focusin"));
     await vi.runAllTimersAsync();
     await settlePosition();
     expect(portal.querySelector("strong")?.textContent).toBe("Rich help");
-    expect(portal.querySelector(".ds-tooltip__arrow")).not.toBeNull();
+    expect(portal.querySelector(".rp-tooltip__arrow")).not.toBeNull();
   });
 
   it("keeps a disabled trigger interactive without rendering content", async () => {
     vi.useFakeTimers();
     let clicks = 0;
-    const wrapper = mount(Tooltip, {
-      props: { disabled: true, label: "Hidden" },
-      slots: { default: () => button("Trigger", () => clicks++) },
+    const trigger = button("Trigger", () => clicks++);
+    trigger.dataset.floatingTestTarget = "";
+    document.body.appendChild(trigger);
+    mount(Tooltip, {
+      props: { content: "Hidden", disabled: true, target: trigger },
     });
-    const trigger = wrapper.find<HTMLButtonElement>("button");
     trigger.click();
-    pointer(trigger, "pointerenter");
+    trigger.dispatchEvent(new MouseEvent("mouseenter"));
     await vi.runAllTimersAsync();
 
     expect(clicks).toBe(1);

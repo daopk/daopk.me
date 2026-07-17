@@ -1,8 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, ref } from "vue";
 
-import { IconButton } from "@daopk/kit";
-import { Slider } from "@daopk/ui";
+import { IconButton, Slider } from "@daopk/ui";
 import { Maximize2, Pause, Play, Volume2, VolumeX } from "@daopk/icons";
 
 import { formatTime } from "../utils/playerValues";
@@ -146,6 +145,21 @@ function onSeekPointerCancel(): void {
   clearSeekPointerPreview();
   emit("cancel-seek");
 }
+
+function sliderValueFromChange(event: Event): number | null {
+  const target = event.target;
+  return target instanceof HTMLInputElement ? target.valueAsNumber : null;
+}
+
+function commitSeekFromChange(event: Event): void {
+  const value = sliderValueFromChange(event);
+  if (value !== null) emit("commit-seek", value);
+}
+
+function commitVolumeFromChange(event: Event): void {
+  const value = sliderValueFromChange(event);
+  if (value !== null) emit("set-volume", value);
+}
 </script>
 
 <template>
@@ -162,13 +176,14 @@ function onSeekPointerCancel(): void {
   >
     <IconButton
       class="youtube-player__button"
-      :icon="playPauseIcon"
-      :label="playPauseLabel"
+      :ariaLabel="playPauseLabel"
       size="sm"
-      variant="subtle"
+      variant="surface"
       :disabled="controlsDisabled"
       @click="emit('toggle-playback')"
-    />
+    >
+      <component :is="playPauseIcon" aria-hidden="true" />
+    </IconButton>
     <span class="youtube-player__time">{{ formatTime(currentTime) }}</span>
     <div
       ref="progressRoot"
@@ -186,13 +201,14 @@ function onSeekPointerCancel(): void {
         :min="0"
         :max="sliderMax"
         :step="1"
+        :tooltip="false"
         :disabled="controlsDisabled || duration <= 0"
-        aria-label="Seek"
-        :aria-valuetext="seekValueText"
+        ariaLabel="Seek"
+        :ariaValueText="seekValueText"
         @focusout="emit('cancel-seek')"
         @keydown="onSeekKeydown"
         @update:model-value="emit('preview-seek', $event)"
-        @commit="emit('commit-seek', $event)"
+        @change="commitSeekFromChange"
       />
       <span v-if="seekPointerPreview" class="youtube-player__seek-preview" aria-hidden="true">
         {{ seekPointerPreviewText }}
@@ -201,33 +217,36 @@ function onSeekPointerCancel(): void {
     <span class="youtube-player__time">{{ formatTime(duration) }}</span>
     <IconButton
       class="youtube-player__button"
-      :icon="muteIcon"
-      :label="muteLabel"
+      :ariaLabel="muteLabel"
       size="sm"
-      variant="subtle"
+      variant="surface"
       :disabled="controlsDisabled"
       @click="emit('toggle-mute')"
-    />
+    >
+      <component :is="muteIcon" aria-hidden="true" />
+    </IconButton>
     <Slider
       class="youtube-player__volume"
       :model-value="volume"
       :min="0"
       :max="100"
       :step="1"
+      :tooltip="false"
       :disabled="controlsDisabled"
-      aria-label="Volume"
-      :aria-valuetext="volumeValueText"
+      ariaLabel="Volume"
+      :ariaValueText="volumeValueText"
       @update:model-value="emit('set-volume', $event)"
-      @commit="emit('set-volume', $event)"
+      @change="commitVolumeFromChange"
     />
     <IconButton
       class="youtube-player__button youtube-player__fullscreen"
-      :icon="Maximize2"
-      :label="fullscreenLabel"
+      :ariaLabel="fullscreenLabel"
       size="sm"
-      variant="subtle"
+      variant="surface"
       @click="emit('toggle-fullscreen')"
-    />
+    >
+      <Maximize2 aria-hidden="true" />
+    </IconButton>
   </div>
 </template>
 

@@ -1,120 +1,59 @@
 # `ui` layer
 
-Stateful and behaviorally complex primitives exposed through the stable
-`@daopk/ui` facade. Every SFC in this directory compiles in Vue Vapor mode;
-apps keep using the existing exports, props, events, slots and `ds-*` classes.
+`src/runtime/ui.ts` exposes this directory as the stable `@daopk/ui` runtime
+entry. Standard controls are direct re-exports from Ropav; applications should
+use Ropav's props, events, slots and built-in behavior instead of adding a
+daopk compatibility wrapper.
 
-The implementation is fully Vapor while composing several Ropav behaviors:
+Direct Ropav exports currently include alerts, badges, buttons, cards, form
+controls, modal, popover, progress, tabs, toast and tooltip. Importing through
+`@daopk/ui` keeps first-party apps on the host's single Ropav/Vue runtime copy.
 
-- `Switch`, `Slider`, tabs, radio controls and toast lifecycle/rendering adapt
-  `ropav` through
-  `ropavAdapter.ts` and the design-token bridge in `ropavBridge.scss`.
-- Tooltip and hover card positioning use Ropav's public
-  `ropav/floating` composable through a local Vapor adapter. Dropdown and
-  context menus compose `ropav/dropdown-menu` primitives for disclosure,
-  active-descendant navigation, selection, submenus, outside interactions and
-  collision-aware positioning while retaining the facade's slot API.
-- Portaled overlays inherit `#app-overlays` from the root Ropav
-  `TeleportProvider`; each facade's `portalTo` prop remains a local override.
-- Dialog visuals and its stable facade stay local while `ropav/dialog`
-  primitives own teleporting, focus trapping, stack-aware dismissal,
-  background inerting, scroll locking and focus restoration.
-- Toast calls retain the stable module-level `useToast` facade while Ropav's
-  standalone store owns the bounded queue, updates and timers. Its provider and
-  viewport own rendering, live-region roles and dismissal interactions.
+The local components in this directory are limited to daopk-specific
+composition:
 
-`src/runtime/ui.ts` re-exports `src/components/ui/index.ts`; public exports must
-not bypass those files. Internal DOM structure, implementation component names
-and library-specific `data-*` attributes are not API contracts.
+- `DropdownMenu` and `ContextMenu` preserve the shell's menu item/submenu API
+  while composing `ropav/dropdown-menu` behavior.
+- `HoverCard` composes Ropav hover disclosure and floating positioning for the
+  richer preview surface used by the shell.
+- `ToastHost` applies the daopk viewport class and safe-area styling around
+  Ropav's `ToastViewport`. It must be rendered below a `ToastProvider`.
 
-## Conventions
+## Styling
 
-- **Class prefix:** `ds-*` (the sibling kit uses `ds-kit-*`).
-- **Tokens only:** consume `--color-*`, `--space-*`, `--radius-*`,
-  `--shadow-*`, control-height and chrome z-index tokens. The token audit must
-  stay green.
-- **Portaled styles are global:** teleported menu, dialog, tooltip and toast
-  nodes live outside the component's scoped-style boundary, so use a unique
-  `ds-*` namespace in a non-scoped `<style lang="scss">` block.
-- **Reduced motion:** every animation has a
-  `prefers-reduced-motion: reduce` override.
-- **Vapor runtime:** entry points use `createVaporApp`; test harnesses mount
-  through the same runtime without enabling the VDOM interop plugin.
+Ropav's base stylesheet is loaded once by `src/main.ts`. `ropavBridge.scss`
+maps only Ropav's public CSS custom properties to the existing daopk tokens.
+Use each component's `class`, `classNames` and `styles` APIs for the few local
+visual adjustments a consumer needs; do not depend on Ropav's internal DOM.
 
-## API reference
+Portaled components inherit `#app-overlays` from the root
+`TeleportProvider`. Their `teleportTo` prop is the explicit local override.
 
-Props in **bold** are required.
+## Example
 
-| Component              | Implementation                   | Key props                                                                                                                     | Emits / slots                               |
-| ---------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `Button`               | local Vapor                      | `variant` (`primary`/`secondary`/`ghost`/`danger`), `size` (`sm`/`md`), `loading`, `disabled`, `iconStart`, `iconEnd`, `type` | native `click` · default slot               |
-| `Card`                 | local Vapor                      | `variant` (`default`/`subtle`), `interactive`, `selected`, `as`                                                               | default slot                                |
-| `Switch`               | `ropav/switch` adapter           | **`modelValue`**, `id`, `name`, `disabled`, `required`, `invalid`, ARIA and `inputAttrs`                                      | `update:modelValue`                         |
-| `Slider`               | `ropav/slider` adapter           | **`modelValue`**, `id`, `name`, `min`, `max`, `step`, `orientation`, `disabled`, ARIA and `inputAttrs`                        | `update:modelValue`, `commit`               |
-| `RadioGroup` + item    | `ropav/radio` adapter            | `modelValue`, `id`, `name`, `orientation`, validation and ARIA; item **`value`**, `label`, overrides and `inputAttrs`         | `update:modelValue` · item default slot     |
-| `Tabs` compound        | `ropav/tabs` adapter             | `modelValue`, `size`, `variant`, `orientation`, `activationMode`; trigger/content **`value`**                                 | `update:modelValue` · default slots         |
-| `Tooltip`              | local Vapor + Floating UI        | `label`, `side`, `align`, `delayDuration`, `sideOffset`, `disabled`, `portalTo`                                               | default trigger slot · `content`            |
-| `HoverCard`            | local Vapor + Floating UI        | `open`, `defaultOpen`, `side`, `align`, delays, offsets, `reference`, `enableTouch`, `portalTo`                               | `update:open` · default trigger / `content` |
-| `Dialog`               | `ropav/dialog` primitives        | **`open`**, **`title`**, `description`, `variant`, `size`, `layer`, `scope`, `modal`, `dismissible`, `portalTo`               | `update:open`, `close` · default slot       |
-| `DialogActions`        | local Vapor                      | `align`                                                                                                                       | default slot                                |
-| `DropdownMenu` + items | `ropav/dropdown-menu` primitives | `align`, `modal`, `sideOffset`, `portalTo`, `contentClass`                                                                    | `update:open` · `trigger` / `items`         |
-| `ContextMenu` + items  | `ropav/dropdown-menu` primitives | `modal`, `portalTo`                                                                                                           | `update:open` · `trigger` / `items`         |
-| `ToastHost`            | Ropav provider + viewport        | none; mount once globally                                                                                                     | renders the buffered `useToast` facade      |
-
-Dropdown menu exports include item, checkbox item, separator, label, radio
-group/item, item indicator and submenu root/trigger/content. Item `select`
-receives a cancelable `Event`; calling `preventDefault()` keeps the menu open.
-Dropdown triggers support click, ArrowUp and ArrowDown. Open menus use Ropav's
-active-descendant model for Arrow keys, Home/End, Enter/Space, Escape, Tab,
-disabled-item skipping and focus restoration. A small facade adapter retains
-the existing 700 ms `textValue`-aware typeahead behavior until Ropav provides
-it. Context menus use Ropav's context trigger for pointer-position anchoring,
-keyboard opening and touch/pen long-press behavior.
-
-## Portals and trigger slots
-
-`portalTo` accepts a selector or `HTMLElement` and overrides the nearest
-Ropav `TeleportProvider`. The root app provides `#app-overlays`; standalone
-apps and tests without a provider fall back to `body`.
-
-Floating triggers use a `display: contents` host, locate the first element in
-the trigger slot and attach events/ARIA directly. They do not clone or inspect
-slot VNodes. Supply exactly one element as a trigger.
-
-## Toasts
-
-Mount one `<ToastHost />` (the root app already does) and enqueue from any app:
-
-```ts
-import { useToast } from "@daopk/ui";
+```vue
+<script setup lang="ts">
+import { Button, Modal, useToast } from "@daopk/ui";
 
 const toast = useToast();
-toast.success({ title: "Saved", description: "Your changes were saved." });
-const id = toast.error({ title: "Upload failed", duration: 8000 });
-toast.update(id, { title: "Retrying upload", tone: "info" });
-toast.dismiss(id); // or toast.clear()
+</script>
+
+<template>
+  <Button variant="solid" @click="toast.success({ title: 'Saved' })">Save</Button>
+  <Modal :open="false" title="Preferences" />
+</template>
 ```
 
-The module-level Ropav store accepts calls before `ToastHost` mounts and retains
-them across provider remounts. The queue keeps the five newest notifications.
-
-`show(options)` returns the toast id; `info`, `success`, `warning` and `error`
-are tone shortcuts. Ropav maps tones to colors; error/warning use
-alert roles while info/success use status roles. Ropav owns item timers,
-hover/focus pause and manual dismissal. The host retains rightward-swipe
-dismissal, the bottom safe area and `--toast-z` integration.
+`useToast()` requires an ancestor `ToastProvider`; the root application owns
+that provider and a single `ToastHost`.
 
 ## Verification
 
-Behavioral component tests live in `*.vapor.test.ts` and mount through the same
-native Vapor runtime as production. The required phase gates are:
+Behavioral integration tests in this directory mount the public Ropav exports
+through the native Vapor runtime. Relevant gates are:
 
 ```sh
-pnpm run typecheck
+pnpm run typecheck:root
 pnpm run typecheck:test
-pnpm test
-pnpm run lint
-pnpm run format:check
-pnpm run lint:tokens:audit
-pnpm run build
+pnpm exec vitest run src/components/ui
 ```

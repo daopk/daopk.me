@@ -575,6 +575,42 @@ function activeHeroLoopLabel(wrapper: VaporTestWrapper): string | undefined {
     .attributes("aria-label");
 }
 
+function comboboxElement(wrapper: VaporTestWrapper, label: string): HTMLElement {
+  const combobox = wrapper
+    .findAll<HTMLElement>('[role="combobox"]')
+    .find((candidate) => candidate.attributes("aria-label") === label);
+  if (combobox === undefined) throw new Error(`Combobox not found: ${label}`);
+  return combobox.element;
+}
+
+async function comboboxOptionLabels(wrapper: VaporTestWrapper, label: string): Promise<string[]> {
+  comboboxElement(wrapper, label).click();
+  await nextTick();
+  const root = comboboxElement(wrapper, label).parentElement;
+  const labels = Array.from(root?.querySelectorAll('[role="option"]') ?? [], (option) =>
+    (option.textContent ?? "").trim(),
+  );
+  comboboxElement(wrapper, label).click();
+  await nextTick();
+  return labels;
+}
+
+async function selectComboboxOption(
+  wrapper: VaporTestWrapper,
+  label: string,
+  optionLabel: string,
+): Promise<void> {
+  comboboxElement(wrapper, label).click();
+  await nextTick();
+  const root = comboboxElement(wrapper, label).parentElement;
+  const option = Array.from(root?.querySelectorAll<HTMLElement>('[role="option"]') ?? []).find(
+    (candidate) => candidate.textContent?.trim() === optionLabel,
+  );
+  if (option === undefined) throw new Error(`Combobox option not found: ${optionLabel}`);
+  option.click();
+  await nextTick();
+}
+
 function stubHoverPreviewCapability(matches = true): () => void {
   const previous = window.matchMedia;
   Object.defineProperty(window, "matchMedia", {
@@ -732,7 +768,7 @@ describe("Movies app", () => {
     expect(wrapper.find('[aria-label="View all Popular Movies"]').exists()).toBe(false);
     expect(wrapper.find('[aria-label="View all Popular TV"]').exists()).toBe(false);
     expect(wrapper.find(".movies-toolbar__credit").exists()).toBe(false);
-    expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Country"]').exists()).toBe(false);
     expect(wrapper.findAll(".movies-toolbar__menu-button").map((button) => button.text())).toEqual([
       "Movies",
       "TV Shows",
@@ -1356,18 +1392,13 @@ describe("Movies app", () => {
     await settle();
 
     expect(wrapper.text()).toContain("Phim bộ");
-    expect(
-      wrapper
-        .get('select[aria-label="Loại"]')
-        .findAll("option")
-        .map((option) => option.text()),
-    ).toEqual(["Tất cả", "Phim lẻ", "Phim bộ"]);
-    expect(
-      wrapper
-        .get('select[aria-label="Quốc gia"]')
-        .findAll("option")
-        .map((option) => option.text()),
-    ).toEqual(["Tất cả quốc gia", "Việt Nam", "Hoa Kỳ", "Hàn Quốc"]);
+    expect(await comboboxOptionLabels(wrapper, "Loại")).toEqual(["Tất cả", "Phim lẻ", "Phim bộ"]);
+    expect(await comboboxOptionLabels(wrapper, "Quốc gia")).toEqual([
+      "Tất cả quốc gia",
+      "Việt Nam",
+      "Hoa Kỳ",
+      "Hàn Quốc",
+    ]);
   });
 
   it("emits app URL changes for the initial home view and detail navigation", async () => {
@@ -2015,7 +2046,7 @@ describe("Movies app", () => {
     expect(episodeInfo.text()).toContain("Episode 1 · 2024-01-01 · 42 min · 7.8 rating");
     expect(episodeInfo.text()).toContain("Pilot overview.");
 
-    await wrapper.get("select.movies-season-episodes__season-select").setValue("2");
+    await selectComboboxOption(wrapper, "Choose another season", "Season 2");
     await settle();
 
     expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());
@@ -2089,20 +2120,15 @@ describe("Movies app", () => {
       expect.anything(),
     );
     expect(wrapper.text()).toContain("TV Shows");
-    expect(
-      wrapper
-        .get('select[aria-label="Type"]')
-        .findAll("option")
-        .map((option) => option.text()),
-    ).toEqual(["All", "Movies", "TV Shows"]);
-    expect(
-      wrapper
-        .get('select[aria-label="Country"]')
-        .findAll("option")
-        .map((option) => option.text()),
-    ).toEqual(["All countries", "Vietnam", "United States of America", "South Korea"]);
+    expect(await comboboxOptionLabels(wrapper, "Type")).toEqual(["All", "Movies", "TV Shows"]);
+    expect(await comboboxOptionLabels(wrapper, "Country")).toEqual([
+      "All countries",
+      "Vietnam",
+      "United States of America",
+      "South Korea",
+    ]);
 
-    await wrapper.get('select[aria-label="Genre"]').setValue("18");
+    await selectComboboxOption(wrapper, "Genre", "Drama");
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
@@ -2117,7 +2143,7 @@ describe("Movies app", () => {
     );
     expect(wrapper.text()).toContain("TV Shows · Drama");
 
-    await wrapper.get('select[aria-label="Country"]').setValue("KR");
+    await selectComboboxOption(wrapper, "Country", "South Korea");
     await settle();
 
     expect(fetchMoviesList).toHaveBeenLastCalledWith(
@@ -2134,7 +2160,7 @@ describe("Movies app", () => {
     );
     expect(wrapper.text()).toContain("TV Shows · Drama · South Korea");
 
-    await wrapper.get('select[aria-label="Type"]').setValue("all");
+    await selectComboboxOption(wrapper, "Type", "All");
     await settle();
 
     const [allQuery] = vi.mocked(fetchMoviesList).mock.calls.at(-1)!;
@@ -2156,7 +2182,7 @@ describe("Movies app", () => {
     await settle();
 
     vi.mocked(fetchMoviesList).mockClear();
-    await wrapper.get('[aria-label="Trending period"] button[data-value="day"]').trigger("click");
+    await wrapper.get('[aria-label="Trending period"] input[value="day"]').trigger("click");
     await settle();
 
     expect(fetchMoviesList).toHaveBeenCalledWith(
@@ -2180,7 +2206,7 @@ describe("Movies app", () => {
     });
     vi.mocked(fetchMoviesList).mockImplementation(() => refreshResult);
 
-    await wrapper.get('[aria-label="Trending period"] button[data-value="day"]').trigger("click");
+    await wrapper.get('[aria-label="Trending period"] input[value="day"]').trigger("click");
 
     expect(wrapper.find(".movies-home__hero-backdrop").exists()).toBe(true);
     expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
@@ -2218,8 +2244,8 @@ describe("Movies app", () => {
 
     expect(wrapper.text()).toContain("TV Shows");
     expect(wrapper.find(".movies-list__filters").exists()).toBe(true);
-    expect(wrapper.find('select[aria-label="Type"]').exists()).toBe(true);
-    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(true);
+    expect(wrapper.find('[role="combobox"][aria-label="Type"]').exists()).toBe(true);
+    expect(wrapper.find('[role="combobox"][aria-label="Genre"]').exists()).toBe(true);
     expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
     expect(wrapper.find('.movies-list__results[aria-busy="true"]').exists()).toBe(true);
     expect(wrapper.find(".movies-list__loading").exists()).toBe(true);
@@ -2283,8 +2309,7 @@ describe("Movies app", () => {
     const loadingButton = wrapper.get<HTMLButtonElement>(".movies-list__load-more");
     expect(loadingButton.attributes("aria-busy")).toBe("true");
     expect(loadingButton.element.disabled).toBe(true);
-    expect(loadingButton.classes()).toContain("ds-button--loading");
-    expect(loadingButton.find(".ds-button__spinner").exists()).toBe(true);
+    expect(loadingButton.attributes("data-loading")).toBe("");
     expect(loadingButton.text()).toBe("");
     expect(loadingButton.attributes("aria-label")).toBe("Load more");
     expect(wrapper.text()).toContain("Fight Club");
@@ -2316,9 +2341,7 @@ describe("Movies app", () => {
     vi.mocked(fetchMoviesList).mockImplementation(() => searchListResult);
 
     const moviesApp = wrapper.get(".movies-app").element;
-    const searchInput = moviesApp.querySelector<HTMLInputElement>(
-      'input[type="search"][aria-label="Search movies"]',
-    );
+    const searchInput = moviesApp.querySelector<HTMLInputElement>("#movies-toolbar-search-input");
     expect(searchInput).toBeInstanceOf(HTMLInputElement);
     searchInput!.value = "Matrix";
     searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2334,7 +2357,7 @@ describe("Movies app", () => {
       wrapper.find('.movies-list__search-input-shell input[aria-label="Keyword"]').exists(),
     ).toBe(true);
     expect(wrapper.find(".movies-list__tabs").exists()).toBe(true);
-    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Genre"]').exists()).toBe(false);
     expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
     expect(wrapper.find('.movies-list__results[aria-busy="true"]').exists()).toBe(true);
     expect(wrapper.find(".movies-list__loading").exists()).toBe(true);
@@ -2357,9 +2380,7 @@ describe("Movies app", () => {
     await settle();
 
     const moviesApp = wrapper.get(".movies-app").element;
-    const searchInput = moviesApp.querySelector<HTMLInputElement>(
-      'input[type="search"][aria-label="Search movies"]',
-    );
+    const searchInput = moviesApp.querySelector<HTMLInputElement>("#movies-toolbar-search-input");
     expect(searchInput).toBeInstanceOf(HTMLInputElement);
     searchInput!.value = "Fight";
     searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2389,17 +2410,15 @@ describe("Movies app", () => {
 
     const moviesApp = wrapper.get(".movies-app").element;
     const dialog = moviesApp.querySelector('[role="dialog"]');
-    const overlay = moviesApp.querySelector(".ds-dialog__overlay");
+    const overlay = moviesApp.querySelector(".movies-toolbar__search-modal-overlay");
     expect(dialog).toBeInstanceOf(HTMLElement);
     expect(overlay).toBeInstanceOf(HTMLElement);
-    expect(dialog?.classList.contains("ds-dialog__content--container")).toBe(true);
-    expect(overlay?.classList.contains("ds-dialog__overlay--container")).toBe(true);
+    expect(dialog?.classList.contains("movies-toolbar__search-modal-panel")).toBe(true);
+    expect(moviesApp.querySelector(".movies-toolbar__search-modal")).toBeInstanceOf(HTMLElement);
     expect(dialog?.querySelector("h2")?.textContent).toBe("Search");
     expect(dialog?.textContent).not.toContain("Movies and TV");
 
-    const searchInput = moviesApp.querySelector<HTMLInputElement>(
-      'input[type="search"][aria-label="Search movies"]',
-    );
+    const searchInput = moviesApp.querySelector<HTMLInputElement>("#movies-toolbar-search-input");
     expect(searchInput).toBeInstanceOf(HTMLInputElement);
     searchInput!.value = "Fight";
     searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2422,12 +2441,12 @@ describe("Movies app", () => {
     expect(moviesApp.querySelector('[role="dialog"]')).toBeNull();
 
     const keywordInput = wrapper.get<HTMLInputElement>(
-      '.movies-list__search-input-shell input[type="search"][aria-label="Keyword"]',
+      '.movies-list__search-input-shell input[aria-label="Keyword"]',
     );
     expect(keywordInput.element.value).toBe("Fight");
-    expect(wrapper.find('select[aria-label="Genre"]').exists()).toBe(false);
-    expect(wrapper.find('select[aria-label="Country"]').exists()).toBe(false);
-    expect(wrapper.find('select[aria-label="Sort"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Genre"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Country"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Sort"]').exists()).toBe(false);
 
     keywordInput.element.value = "Matrix";
     keywordInput.element.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2903,7 +2922,7 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Pilot");
     expect(wrapper.find(".movies-episode-list__media").exists()).toBe(true);
     expect(wrapper.find(".movies-episode-list__overview").text()).toBe("Pilot overview.");
-    expect(wrapper.find('select[aria-label="Season"]').exists()).toBe(false);
+    expect(wrapper.find('[role="combobox"][aria-label="Season"]').exists()).toBe(false);
     const scrollIntoView = vi.fn();
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
@@ -3005,7 +3024,7 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-episode-list__overview").text()).toBe("Pilot overview.");
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
 
-    await wrapper.get("select.movies-season-episodes__season-select").setValue("2");
+    await selectComboboxOption(wrapper, "Choose another season", "Season 2");
     await settle();
 
     expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());

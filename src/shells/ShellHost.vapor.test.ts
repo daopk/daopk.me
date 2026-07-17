@@ -1,4 +1,8 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import {
+  mountVaporTest,
+  type VaporTestComponent,
+  type VaporTestMountOptions,
+} from "~/test/mountVapor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ShellHost from "./ShellHost.vue";
@@ -6,6 +10,10 @@ import ShellHost from "./ShellHost.vue";
 import { KernelInjectionKey } from "~/types/kernel";
 import type { Kernel } from "~/types/kernel";
 import type { DeviceProfile, ShellId } from "~/types/shell";
+
+function mount(component: VaporTestComponent, options: VaporTestMountOptions = {}) {
+  return mountVaporTest(component, { ...options, toastProvider: true });
+}
 
 const shellHostMocks = vi.hoisted(() => ({
   breakpointProfile: null as unknown as { value: DeviceProfile },

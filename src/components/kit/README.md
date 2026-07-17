@@ -1,132 +1,76 @@
 # Component kit
 
-The design-system layer apps build on. It is split into **two independent
-layers** with separate imports and a clear boundary. Apps import from each
-directly; there is no shared barrel and `kit` never re-exports `ui`.
+The app-composition layer built around Ropav. Apps import behavior and controls
+directly from `~/components/ui` (the stable Ropav façade) and use `kit` only for
+daopk-specific layout and shell chrome. `kit` never re-exports `ui`.
 
+```text
+~/components/ui    →  rp-*       Ropav controls and interactive primitives
+~/components/kit   →  ds-kit-*   daopk layout and app chrome
 ```
-~/components/ui    →  ds-*       interactive / behaviorally complex primitives
-~/components/kit   →  ds-kit-*   layout, app-chrome, and plain-HTML controls
-```
 
-## kit vs ui — which layer?
+## Choosing the layer
 
-| Layer | Prefix     | Owns                                                          | Examples                                                                                                                                                                                                                                                                                                                                                    |
-| ----- | ---------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui`  | `ds-*`     | Vapor-native stateful / behaviorally complex primitives       | `Button`, `Card`, `Dialog`, `DialogActions`, `Switch`, `Slider`, `Tabs`, `DropdownMenu`, `ContextMenu`, `RadioGroup`, `Tooltip`, `ToastHost` (+ `useToast`)                                                                                                                                                                                                 |
-| `kit` | `ds-kit-*` | Layout, app chrome, and plain-HTML form / list / nav controls | `AppFrame`, `AppToolbar`, `ToolbarGroup`, `ToolbarTitle`, `Panel`, `SectionHeader`, `GroupLabel`, `ScrollArea`, `Separator`, `Spinner`, `Badge`, `StatusBanner`, `EmptyState`, `DataTable`, `ActionRow`, `ListButton`, `IconButton`, `FormField`, `TextInput`, `Textarea`, `Select`, `Checkbox`, `Progress`, `SegmentedControl`, `ChoiceCard`, `ChoiceGrid` |
+| Layer | Owns                                         | Examples                                                                                                               |
+| ----- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `ui`  | Ropav behavior, accessibility, and controls  | `Button`, `Modal`, `Input`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Tabs`, `Tooltip`, `ToastProvider` |
+| `kit` | Product-specific layout and app-shell chrome | `AppFrame`, `AppToolbar`, `Panel`, `SectionHeader`, `ScrollArea`, `EmptyState`, `DataTable`, `ActionRow`               |
 
-A live, interactive reference for every primitive ships as the dev-only **Kit
-Gallery** app ([`src/apps/_kit-gallery`](../../apps/_kit-gallery)). For ui-layer
-API details see [`src/components/ui/README.md`](../ui/README.md).
+Rules:
 
-Rules of thumb:
+- Use the Ropav export from `ui` directly for every form control, button,
+  status component, floating layer, or composite keyboard widget.
+- Use `kit` for product-specific layout or app chrome.
+- Style Ropav through its public tokens and Styles API. Do not reimplement its
+  state, focus, keyboard, portal, dismissal, or validation behavior.
+- First-party runtime apps consume the same surfaces through `@daopk/ui` and
+  `@daopk/kit`.
 
-- Needs non-trivial interaction state (focus traps, floating layers, composite
-  keyboard navigation, drag) → **ui**.
-- Pure layout, app chrome, or a thin wrapper over a native form control →
-  **kit**.
-- Apps consume these primitives through `@daopk/ui`; implementation dependencies
-  stay private to the `ui` layer.
+The dev-only [Kit Gallery](../../apps/_kit-gallery) is the interactive reference
+for both layers. See the [ui README](../ui/README.md) for Ropav exports and
+integration details.
 
-## Tokens
+## Tokens, density, and safe areas
 
-`src/assets/scss/tokens/**` is the styling authority, loaded through
-`src/assets/scss/_tokens.scss`. Components must read these instead of
-hardcoding values. Never introduce raw hex outside token sources or documented
-app-owned palettes (`pnpm lint:tokens:audit` enforces this).
+`src/assets/scss/tokens/**` remains the product styling authority. The Ropav
+bridge in [`../ui/ropavBridge.scss`](../ui/ropavBridge.scss) maps those product
+tokens to Ropav's public variables, including touch-aware control sizes.
 
-| Group          | Tokens                                                                                                                                                                                                   |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Type scale     | `--font-size-xs` `--font-size-sm` `--font-size-base` `--font-size-lg` `--font-size-xl` `--font-size-2xl` (all `calc()` off `--font-size-base`, so the Comfort base-size control scales the whole system) |
-| Weight         | `--font-weight-medium` `--font-weight-semibold` `--font-weight-bold`                                                                                                                                     |
-| Leading        | `--leading-tight` `--leading-snug` `--leading-normal` `--leading-relaxed`                                                                                                                                |
-| Control height | `--control-height-sm` `--control-height-md` `--control-height-lg` (touch-aware, see below)                                                                                                               |
-| Spacing        | `--space-2xs` `--space-xs` `--space-sm` `--space-md` `--space-lg` `--space-xl` `--space-2xl` (scaled by `--density-scale`; do not add numeric aliases like `--space-2`)                                  |
-| Radius         | `--radius-sm` `--radius-md` `--radius-lg` `--radius-full`                                                                                                                                                |
-| Color          | `--color-bg*`, `--color-fg` / `--color-fg-muted` / `--color-fg-subtle`, `--color-border`, `--color-accent*`, `--color-fg-on-accent`, `--color-error*`, `--color-success`                                 |
-| Motion         | `--duration-fast` `--duration-base` `--ease`                                                                                                                                                             |
-
-## Density & touch
-
-Control heights are the core of the "native on both shells" behavior. The same
-component is **compact for a mouse** and **comfortable for a finger** with no
-per-call props:
-
-- Desktop / fine pointer: `sm 28 · md 32 · lg 40`.
-- Coarse pointer **or** the mobile shell: bumped to `sm 36 · md 44 · lg 52`
-  (the ~44px native floor).
-
-`ShellHost` writes `data-shell` / `data-pointer` on `<html>`, and the density
-token partial raises the control-height tokens via `@media (pointer: coarse)` and
-`:root[data-shell="mobile"]`. Bind interactive heights to `--control-height-*`
-(inputs use `--control-height-md`) rather than fixed pixels. For controls that
-must keep a small visual size on touch (e.g. `Switch`, `Checkbox`), expand the
-tap target with a transparent `::before` of `max(100%, 44px)` under
-`@media (pointer: coarse)`.
-
-### Safe areas
+`ShellHost` writes `data-shell` and `data-pointer` on `<html>`. Desktop controls
+stay compact while mobile/coarse-pointer controls use a touch-friendly floor.
+Do not hardcode control sizes in individual callsites.
 
 The mobile shell exposes `--mobile-shell-app-safe-area-*` and
-`--mobile-shell-app-bottom-padding` on the app body. Consume them through:
+`--mobile-shell-app-bottom-padding`. Consume them through:
 
-- `AppFrame`'s `safeArea` prop: `true` (default — bottom + horizontal),
-  `"all"`, `"bottom"`, or `false`.
-- `ScrollArea`'s `safeArea` boolean to pad scrolled content past the home
-  indicator.
+- `AppFrame.safeArea`: `true` (default), `"all"`, `"bottom"`, or `false`.
+- `ScrollArea.safeArea`: pads scroll content beyond the home indicator.
 
-## Accessibility floor
+## Accessibility
 
-- Every interactive control is reachable and operable by keyboard, with a
-  visible `:focus-visible` ring.
-- Icon-only controls (`IconButton`) require a `label`; decorative icons get
-  `aria-hidden`.
-- Touch targets are ≥44px on coarse pointers (via control-height or a tap-area
-  pseudo-element).
-- Respect `prefers-reduced-motion`: gate or shorten transitions/animations.
-- Tables expose `role="table"/"row"/"columnheader"/"cell"`; choice sets use
-  `role="radiogroup"` + `role="radio"`.
-- Composite widgets follow their WAI-ARIA pattern. `Tabs` (ui) owns the
-  `tablist`/`tab`/`tabpanel` linkage, roving `tabindex`, and Arrow / Home / End
-  navigation (disabled tabs are skipped). `RadioGroup` (ui) gives the same
-  arrow-key roving focus.
-- `FormField` auto-associates the control it wraps (see **Forms** below), so
-  hints/errors are programmatically linked and errors are announced.
+- Let Ropav own keyboard, focus, ARIA, portal, and dismissal behavior.
+- Ropav `IconButton` requires `ariaLabel`; decorative icons use `aria-hidden`.
+- Tables expose their documented table/row/header/cell roles.
+- Respect reduced motion and preserve visible focus indicators.
 
-## Forms
-
-`FormField` is the labelling spine for kit controls. It generates a stable id
-(via `useId`), mirrors it onto the `<label for>`, and **provides** a context the
-nested control injects — so you do not thread ids by hand:
+For forms, compose Ropav `Field` with the direct control. Pass the slot's
+accessibility bindings to the control rather than adding a wrapper:
 
 ```vue
-<FormField label="Email" hint="Work address" :error="emailError" required>
-  <TextInput v-model="email" type="email" />
-</FormField>
+<Field label="Email" description="Work address" :error="emailError" required>
+  <template #default="control">
+    <Input v-model="email" type="email" v-bind="control" />
+  </template>
+</Field>
 ```
 
-The control (`TextInput`, `Textarea`, `Select`, `Checkbox`) inherits:
-
-- `id` ↔ the label's `for` (explicit `id` / `for` still win).
-- `aria-describedby` → the hint **or** error message node.
-- `aria-invalid` + the invalid styling whenever `error` is set.
-- `aria-required` from the field's `required` flag.
-
-The error message renders with `role="alert"` + `aria-live="assertive"` so it is
-announced when it appears.
-
 ## App recipe
-
-Compose apps from kit layout primitives + ui controls so they inherit tokens,
-density and safe-area behavior on both shells. The canonical skeleton lives in
-[`src/apps/_template/App.vue`](../../apps/_template/App.vue):
 
 ```vue
 <script setup lang="ts">
 import { AppFrame, AppToolbar, ScrollArea, ToolbarTitle, useAppChrome } from "~/components/kit";
 import { Button } from "~/components/ui";
 
-// Sets the mobile header title / back action; no-ops on the desktop window.
 useAppChrome({ title: () => "My App" });
 </script>
 
@@ -138,52 +82,26 @@ useAppChrome({ title: () => "My App" });
         <Button size="sm">Action</Button>
       </template>
     </AppToolbar>
-    <ScrollArea safe-area>
-      <!-- app content -->
-    </ScrollArea>
+    <ScrollArea safe-area><!-- content --></ScrollArea>
   </AppFrame>
 </template>
 ```
 
-### `useAppChrome()`
+`useAppChrome()` synchronizes the mobile header title/back action and is a no-op
+in the desktop window. Its state is cleared on unmount.
 
-Wraps `AppChromeInjectionKey` so apps set the shell title / back action the same
-way regardless of shell. The mobile shell provides the controller (it drives the
-`AppView` header); the desktop window does not, so calls no-op there. Pass
-reactive `title` / `backAction`, or call the returned `setTitle` / `setBackAction`
-imperatively — whatever the scope sets is cleared on unmount.
+## Kit API
 
-## API reference (kit)
-
-Props in **bold** are required. Every component reads tokens and inherits the
-density / safe-area behavior above; the live demos are in the Kit Gallery.
-
-| Component          | Purpose                          | Key props                                                                                            | Emits / slots                                         |
-| ------------------ | -------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `AppFrame`         | App root element                 | `background`, `layout`, `safeArea` (`true`/`"all"`/`"bottom"`/`false`)                               | default slot · exposes `element`                      |
-| `AppToolbar`       | Top/bottom app bar               | `density`, `wrap`                                                                                    | `start` / default / `end` slots                       |
-| `ToolbarGroup`     | Grouped toolbar controls         | `label`, `separated`                                                                                 | default slot (`role="group"`)                         |
-| `ToolbarTitle`     | Toolbar title block              | `title`, `subtitle`                                                                                  | —                                                     |
-| `Panel`            | Surface container                | `as`, `variant` (`default`/`subtle`/`elevated`/`plain`), `padding`                                   | default slot                                          |
-| `SectionHeader`    | Section/page heading             | `title`, `subtitle`, `icon`, `size` (`section`/`page`)                                               | `actions` slot                                        |
-| `GroupLabel`       | Small group caption              | `as`                                                                                                 | default slot                                          |
-| `ScrollArea`       | Scroll container                 | `axis` (`vertical`/`horizontal`), `safeArea`                                                         | default slot · exposes `element`                      |
-| `Separator`        | Divider                          | `orientation`, `decorative`                                                                          | —                                                     |
-| `Spinner`          | Busy indicator                   | `size` (`sm`/`md`/`lg`), `label`                                                                     | — (`role="status"`)                                   |
-| `Progress`         | Progress bar                     | `value` (`number`/`null` = indeterminate), `max`, `label`, `size`                                    | — (`role="progressbar"`)                              |
-| `Badge`            | Inline status pill               | `tone`, `size`                                                                                       | default slot                                          |
-| `StatusBanner`     | Block status message             | `tone` (`info`/`success`/`warning`/`error`), `as`, `role`                                            | default slot                                          |
-| `EmptyState`       | Empty placeholder                | `icon`, `title`, `description`                                                                       | default slot                                          |
-| `DataTable`        | ARIA grid wrapper                | **`label`**, `variant` (`plain`/`lined`)                                                             | default slot (`role="row"` rows)                      |
-| `ActionRow`        | Setting row + control            | `title`, `description`                                                                               | default slot (control)                                |
-| `ListButton`       | Selectable list item             | `title`, `meta`, `icon`, `active`                                                                    | click                                                 |
-| `IconButton`       | Icon-only button                 | **`icon`**, **`label`**, `variant`, `size`, `pressed`, `active`, `disabled`                          | click                                                 |
-| `FormField`        | Label + a11y wiring              | `label`, `for`, `hint`, `error`, `required`                                                          | default slot (control)                                |
-| `TextInput`        | Text field                       | `modelValue`, `type`, `variant`, `invalid`, `id`, `name`, `placeholder`, `inputmode`, `autocomplete` | `update:modelValue` · exposes `focus`/`blur`/`select` |
-| `Textarea`         | Multi-line field                 | `modelValue`, `rows`, `resize`, `variant`, `invalid`, `id`, `name`, `placeholder`                    | `update:modelValue` · exposes `focus`/`blur`          |
-| `Select`           | Native select                    | **`modelValue`**, **`options`**, `placeholder`, `invalid`, `id`, `name`                              | `update:modelValue` · exposes `focus`/`blur`          |
-| `Checkbox`         | Checkbox + label                 | `modelValue`, `indeterminate`, `disabled`, `ariaLabel`, `id`, `name`                                 | `update:modelValue` · default slot                    |
-| `SegmentedControl` | Single-select button group       | **`modelValue`**, **`options`**, **`label`**, `showLabels`, `size`                                   | `update:modelValue`, `change`                         |
-| `ChoiceCard`       | Selectable radio card            | `selected`, `title`, `description`, `icon`                                                           | `select`                                              |
-| `ChoiceGrid`       | Radiogroup of choice cards       | **`label`**                                                                                          | default slot                                          |
-| `PreviewHost`      | Resolves an app preview provider | **`input`**, **`surface`**, `fallbackTitle`                                                          | —                                                     |
+| Component                       | Purpose                                            |
+| ------------------------------- | -------------------------------------------------- |
+| `AppFrame`                      | App root, layout, background, and safe-area policy |
+| `AppToolbar`                    | Top/bottom app bar with start/default/end slots    |
+| `ToolbarGroup` / `ToolbarTitle` | Toolbar grouping and title metadata                |
+| `Panel`                         | Product surface container                          |
+| `SectionHeader` / `GroupLabel`  | Page, section, and group headings                  |
+| `ScrollArea`                    | Tokenized scroll container with safe-area support  |
+| `Separator` / `Spinner`         | Layout separator and loading indicator             |
+| `EmptyState`                    | Product empty placeholder                          |
+| `DataTable`                     | ARIA table layout wrapper                          |
+| `ActionRow` / `ListButton`      | Product setting row and selectable list item       |
+| `PreviewHost`                   | Resolves an app preview provider                   |

@@ -8,13 +8,33 @@
  * closes apps and reloads into AuthGate.
  */
 
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref, useId } from "vue";
 
-import { Panel, SectionHeader, StatusBanner, TextInput } from "~/components/kit";
-import { Button, Dialog } from "~/components/ui";
+import { Panel, SectionHeader } from "~/components/kit";
+import { Alert, Button, Input, Modal } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { AlertCircle, CloudOff, KeyRound, Lock, LogOut, Shield, Trash2 } from "~/icons/lucide";
+
+const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
+const deleteAccountModalId = `delete-account-${useId()}`;
+const deleteConfirmationLabelId = `${deleteAccountModalId}-confirmation-label`;
+const modalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" as const },
+};
+const modalOverlayProps = {
+  color: "color-mix(in oklab, var(--color-bg) 60%, transparent)",
+};
+const deleteInputClassNames = {
+  root: "account__delete-input",
+  input: "account__delete-input-control",
+} as const;
+const deleteInputAttrs = { autocomplete: "off", spellcheck: false } as const;
+
+onBeforeUnmount(() => {
+  const portalRoot = document.getElementById(deleteAccountModalId)?.parentElement;
+  queueMicrotask(() => portalRoot?.remove());
+});
 
 const props = withDefaults(defineProps<{ showHeader?: boolean }>(), {
   showHeader: true,
@@ -119,22 +139,12 @@ async function confirmDeleteAccount(): Promise<void> {
       </div>
 
       <div class="account__actions">
-        <Button
-          class="account__action"
-          variant="secondary"
-          type="button"
-          :icon-start="Lock"
-          @click="lockSession"
-        >
+        <Button class="account__action" variant="surface" type="button" @click="lockSession">
+          <template #left><Lock aria-hidden="true" /></template>
           {{ t("settings.account.lockSession") }}
         </Button>
-        <Button
-          class="account__action"
-          variant="primary"
-          type="button"
-          :icon-start="LogOut"
-          @click="signOut"
-        >
+        <Button class="account__action" variant="solid" color="blue" type="button" @click="signOut">
+          <template #left><LogOut aria-hidden="true" /></template>
           {{ t("settings.account.signOut") }}
         </Button>
       </div>
@@ -181,52 +191,64 @@ async function confirmDeleteAccount(): Promise<void> {
       </div>
       <Button
         class="account__danger-button"
-        variant="danger"
+        variant="solid"
+        color="red"
         type="button"
-        :icon-start="Trash2"
         @click="requestDeleteAccount"
       >
+        <template #left><Trash2 aria-hidden="true" /></template>
         {{ t("settings.account.deleteButton") }}
       </Button>
     </Panel>
 
-    <Dialog
+    <Modal
+      :id="deleteAccountModalId"
       v-model:open="deleteDialogOpen"
       :title="t('settings.account.deleteDialogTitle')"
       :description="deleteDialogDescription"
-      :dismissible="!deletingAccount"
+      size="420px"
+      :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
+      :close-on-overlay-click="!deletingAccount"
+      :close-on-escape="!deletingAccount"
+      :show-close-button="false"
+      :focus-trap-options="modalFocusTrapOptions"
+      :overlay-props="modalOverlayProps"
       @close="cancelDeleteAccount"
     >
       <div class="account__delete-dialog">
-        <StatusBanner as="p" class="account__delete-warning" tone="warning" role="alert">
-          <AlertCircle class="account__delete-warning-icon" aria-hidden="true" />
+        <Alert class="account__delete-warning" color="yellow" variant="surface" role="alert">
+          <template #icon>
+            <AlertCircle class="account__delete-warning-icon" aria-hidden="true" />
+          </template>
           {{ t("settings.account.deleteWarning") }}
-        </StatusBanner>
+        </Alert>
 
-        <label class="account__delete-field">
-          <span class="account__delete-label">
+        <div class="account__delete-field">
+          <span :id="deleteConfirmationLabelId" class="account__delete-label">
             {{ t("settings.account.deleteConfirmLabel", { name: profile.displayName }) }}
           </span>
-          <TextInput
+          <Input
             v-model="deleteConfirmationText"
-            class="account__delete-input"
-            autocomplete="off"
+            :class-names="deleteInputClassNames"
+            :input-attrs="deleteInputAttrs"
+            :labelledby="deleteConfirmationLabelId"
             :disabled="deletingAccount"
-            :spellcheck="false"
             type="text"
           />
-        </label>
+        </div>
 
-        <StatusBanner
+        <Alert
           v-if="deleteError"
-          as="p"
           class="account__delete-error"
-          tone="error"
+          color="red"
+          variant="surface"
           role="alert"
         >
           {{ deleteError }}
-        </StatusBanner>
+        </Alert>
+      </div>
 
+      <template #footer>
         <div class="account__dialog-actions">
           <Button size="sm" :disabled="deletingAccount" @click="cancelDeleteAccount">
             {{ t("settings.account.cancel") }}
@@ -234,17 +256,18 @@ async function confirmDeleteAccount(): Promise<void> {
           <Button
             size="sm"
             class="account__danger-button"
-            variant="danger"
+            variant="solid"
+            color="red"
             :disabled="!canConfirmDelete"
-            :icon-start="Trash2"
             :loading="deletingAccount"
             @click="confirmDeleteAccount"
           >
+            <template #left><Trash2 aria-hidden="true" /></template>
             {{ t("settings.account.deleteConfirmButton") }}
           </Button>
         </div>
-      </div>
-    </Dialog>
+      </template>
+    </Modal>
   </article>
 </template>
 
@@ -441,7 +464,7 @@ async function confirmDeleteAccount(): Promise<void> {
   font-weight: 600;
 }
 
-.account__delete-input {
+:deep(.account__delete-input-control) {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -451,7 +474,7 @@ async function confirmDeleteAccount(): Promise<void> {
   padding: 0 var(--space-md);
 }
 
-.account__delete-input:focus-visible {
+:deep(.account__delete-input-control:focus-visible) {
   border-color: var(--color-error-soft);
   outline: 2px solid color-mix(in srgb, var(--color-error-soft) 30%, transparent);
   outline-offset: 2px;

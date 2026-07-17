@@ -2,9 +2,8 @@
 import { computed, ref } from "vue";
 import { Upload as UploadIcon } from "~/icons/lucide";
 
-import { ActionRow, Badge, Panel, SectionHeader, StatusBanner } from "~/components/kit";
-import Button from "~/components/ui/Button.vue";
-import Switch from "~/components/ui/Switch.vue";
+import { ActionRow, Panel, SectionHeader } from "~/components/kit";
+import { Alert, Badge, Button, Switch } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
@@ -172,7 +171,9 @@ function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: fals
   >
     <SectionHeader v-if="props.showHeader" size="page" :title="t('settings.background.title')">
       <template #actions>
-        <Badge class="background__count">{{ wallpaperCountLabel }}</Badge>
+        <Badge class="background__count" color="gray" variant="outline">
+          {{ wallpaperCountLabel }}
+        </Badge>
       </template>
     </SectionHeader>
 
@@ -203,12 +204,12 @@ function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: fals
           </div>
           <Button
             id="background-upload-trigger"
-            variant="secondary"
+            variant="surface"
             :loading="isUploading"
-            :icon-start="UploadIcon"
             aria-controls="background-file-input"
             @click="triggerFilePicker"
           >
+            <template #left><UploadIcon aria-hidden="true" /></template>
             {{
               isUploading
                 ? t("settings.background.processing")
@@ -239,21 +240,22 @@ function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: fals
             <Switch
               data-testid="background-blur-switch"
               :model-value="blurEnabled"
-              aria-labelledby="background-blur-label"
+              labelledby="background-blur-label"
               @update:model-value="setBlurEnabled"
             />
           </ActionRow>
         </section>
 
-        <StatusBanner
+        <Alert
           v-if="status"
-          as="p"
           class="background__status"
-          :tone="status.tone"
+          :color="status.tone === 'error' ? 'red' : 'blue'"
+          variant="surface"
+          :role="status.tone === 'error' ? 'alert' : 'status'"
           :class="{ 'background__status--error': status.tone === 'error' }"
         >
           {{ status.message }}
-        </StatusBanner>
+        </Alert>
       </Panel>
     </section>
 

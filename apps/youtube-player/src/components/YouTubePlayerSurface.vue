@@ -1,10 +1,10 @@
 <script setup vapor lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue";
 
-import { EmptyState, TextInput } from "@daopk/kit";
+import { EmptyState } from "@daopk/kit";
 import { Play } from "@daopk/icons";
 import type { AppChromeContentSize } from "@daopk/sdk";
-import { Button } from "@daopk/ui";
+import { Button, Input } from "@daopk/ui";
 
 import YouTubeEmbed from "./YouTubeEmbed.vue";
 import YouTubePlayerControls from "./YouTubePlayerControls.vue";
@@ -255,18 +255,20 @@ function submitManualVideo(): void {
               class="youtube-player__open-group"
               :class="{ 'youtube-player__open-group--invalid': manualVideoInputInvalid }"
             >
-              <TextInput
+              <Input
                 id="youtube-player-video-input"
                 v-model="manualVideoInput"
-                class="youtube-player__open-input"
+                class="youtube-player__open-input-root"
+                :class-names="{ input: 'youtube-player__open-input' }"
                 type="text"
-                variant="plain"
-                autocomplete="url"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                inputmode="url"
                 placeholder="YouTube URL or video ID"
+                :input-attrs="{
+                  autocomplete: 'url',
+                  autocapitalize: 'off',
+                  autocorrect: 'off',
+                  spellcheck: false,
+                  inputmode: 'url',
+                }"
                 :invalid="manualVideoInputInvalid"
                 @update:model-value="clearManualVideoInputError"
               />
@@ -274,10 +276,11 @@ function submitManualVideo(): void {
                 class="youtube-player__open-button"
                 type="submit"
                 size="sm"
-                variant="primary"
-                :icon-start="Play"
+                variant="solid"
+                color="blue"
                 :disabled="manualVideoInput.trim().length === 0"
               >
+                <template #left><Play aria-hidden="true" /></template>
                 Play
               </Button>
             </div>
@@ -455,13 +458,19 @@ function submitManualVideo(): void {
   white-space: nowrap;
 }
 
-.youtube-player__open-input {
+.youtube-player__open-input-root {
+  background: transparent;
+  border: 0;
+  min-inline-size: 0;
+}
+
+:deep(.youtube-player__open-input) {
   color: var(--color-fg);
   min-inline-size: 0;
   padding-inline: var(--space-md) var(--space-sm);
 }
 
-.youtube-player__open-input:focus-visible {
+:deep(.youtube-player__open-input:focus-visible) {
   outline: none;
 }
 

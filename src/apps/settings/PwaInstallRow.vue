@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { Download as InstallIcon } from "~/icons/lucide";
 
-import Button from "~/components/ui/Button.vue";
+import { Button } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { pwaInstallController } from "~/service-worker/installController";
 
@@ -58,12 +58,13 @@ function dismiss(): void {
     <div class="pwa-install-row__actions">
       <Button
         v-if="isNativePrompt"
-        variant="primary"
+        variant="solid"
+        color="blue"
         size="sm"
-        :icon-start="InstallIcon"
         :loading="isPrompting"
         @click="install"
       >
+        <template #left><InstallIcon aria-hidden="true" /></template>
         {{ t("settings.pwa.install") }}
       </Button>
       <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.pwa.later") }}</Button>

@@ -1,4 +1,8 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import {
+  mountVaporTest,
+  type VaporTestComponent,
+  type VaporTestMountOptions,
+} from "~/test/mountVapor";
 import { defineVaporComponent, type Component } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +19,10 @@ import {
   useWindowManager,
 } from "./useWindowManager";
 import { clearDockReveal, setDockReveal } from "../dock/dockReveal";
+
+function mount(component: VaporTestComponent, options: VaporTestMountOptions = {}) {
+  return mountVaporTest(component, { ...options, toastProvider: true });
+}
 
 const windowHostMocks = vi.hoisted(() => ({
   contentSize: null as { width: number; height: number } | null,

@@ -1,12 +1,20 @@
 import { createPinia, setActivePinia } from "pinia";
-import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { flushPromises, mountVaporTest } from "~/test/mountVapor";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineVaporComponent, inject, nextTick, onMounted, type Component } from "vue";
+import {
+  createComponent,
+  defineVaporComponent,
+  inject,
+  nextTick,
+  onMounted,
+  type Component,
+} from "vue";
+
+import { createToastStore, ToastProvider, type ToastStore } from "ropav/toast";
 
 import { AppChromeInjectionKey, type AppHandle, type AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 import { useSettingsStore } from "~/core/storage/SettingsStore";
-import { clearToasts, toastQueue } from "~/components/ui/useToast";
 
 import MobileShell from "./MobileShell.vue";
 import { __resetNavigationForTest } from "./navigation";
@@ -39,6 +47,23 @@ let currentKernel: Pick<
   "apps" | "processes" | "lifecycleCoordinator" | "events" | "widgets"
 >;
 let launchCount = 0;
+let toastStore: ToastStore;
+
+const MobileShellWithToast = defineVaporComponent(() =>
+  createComponent(
+    ToastProvider,
+    { store: toastStore },
+    { default: () => createComponent(MobileShell) },
+  ),
+);
+
+function mount(
+  component: typeof MobileShell,
+  options?: Parameters<typeof mountVaporTest>[1],
+): ReturnType<typeof mountVaporTest> {
+  if (component !== MobileShell) throw new Error("Mobile shell tests only mount MobileShell.");
+  return mountVaporTest(MobileShellWithToast, options);
+}
 
 vi.mock("~/composables/useKernel", () => ({
   useKernel(): Pick<Kernel, "apps" | "processes" | "lifecycleCoordinator" | "events" | "widgets"> {
@@ -140,7 +165,7 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     __resetNavigationForTest();
     window.history.replaceState(null, "", "/");
     document.title = "WebOS";
-    clearToasts();
+    toastStore = createToastStore({ max: 5, duration: 5000 });
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-11T09:41:00"));
@@ -367,10 +392,12 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
       await nextTick();
 
       expect(launchCount).toBe(0);
-      expect(toastQueue.value).toHaveLength(1);
-      expect(toastQueue.value[0]).toMatchObject({
-        tone: "warning",
-        description: "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
+      expect(toastStore.toasts.value).toHaveLength(1);
+      expect(toastStore.toasts.value[0]).toMatchObject({
+        type: "warning",
+        props: {
+          description: "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
+        },
       });
       expect(wrapper.find(FOREGROUND_APPVIEW).exists()).toBe(false);
       expect(wrapper.find(".unsupported-app-view").exists()).toBe(false);

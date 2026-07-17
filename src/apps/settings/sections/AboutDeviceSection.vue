@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
 import { computed } from "vue";
 
-import { Badge, Panel, SectionHeader } from "~/components/kit";
-import Button from "~/components/ui/Button.vue";
+import { Panel, SectionHeader } from "~/components/kit";
+import { Badge, Button } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useSettings } from "~/composables/useSettings";
 import { ExternalLink as ExternalLinkIcon, RefreshCw as RefreshIcon } from "~/icons/lucide";
@@ -41,10 +41,13 @@ const isUpdateRefreshing = computed(
 );
 const isUpdateInstalling = computed(() => updateState.value.kind === "update-installing");
 const isCheckingForUpdates = computed(() => updateCheckState.value.kind === "checking");
-const updateButtonVariant = computed<"primary" | "secondary">(() =>
+const updateButtonVariant = computed<"solid" | "surface">(() =>
   updateState.value.kind === "update-available" || updateState.value.kind === "refresh-error"
-    ? "primary"
-    : "secondary",
+    ? "solid"
+    : "surface",
+);
+const updateButtonColor = computed(() =>
+  updateButtonVariant.value === "solid" ? ("blue" as const) : undefined,
 );
 const updateButtonLabel = computed((): string => {
   if (updateState.value.kind === "refresh-error") {
@@ -83,18 +86,18 @@ const softwareUpdateTone = computed<"muted" | "success" | "warning" | "danger">(
 
   return "muted";
 });
-const softwareUpdateBadgeTone = computed<"neutral" | "accent" | "success" | "danger">(() => {
+const softwareUpdateBadgeColor = computed<"gray" | "blue" | "green" | "red">(() => {
   switch (softwareUpdateTone.value) {
     case "success":
-      return "success";
+      return "green";
     case "warning":
-      return "accent";
+      return "blue";
     case "danger":
-      return "danger";
+      return "red";
     case "muted":
-      return "neutral";
+      return "gray";
   }
-  return "neutral";
+  return "gray";
 });
 const softwareUpdateStatus = computed((): string => {
   switch (updateState.value.kind) {
@@ -175,7 +178,8 @@ function runSoftwareUpdateAction(): void {
           <Badge
             v-if="showSoftwareUpdateStatus"
             class="about-device__update-status"
-            :tone="softwareUpdateBadgeTone"
+            :color="softwareUpdateBadgeColor"
+            variant="subtle"
             :data-tone="softwareUpdateTone"
           >
             {{ softwareUpdateStatus }}
@@ -189,11 +193,12 @@ function runSoftwareUpdateAction(): void {
         class="about-device__update-action"
         size="sm"
         :variant="updateButtonVariant"
-        :icon-start="RefreshIcon"
+        :color="updateButtonColor"
         :disabled="isUpdateInstalling"
         :loading="isCheckingForUpdates || isUpdateRefreshing || isUpdateInstalling"
         @click="runSoftwareUpdateAction"
       >
+        <template #left><RefreshIcon aria-hidden="true" /></template>
         {{ updateButtonLabel }}
       </Button>
     </Panel>

@@ -1,8 +1,7 @@
 <script setup vapor lang="ts">
 import { ref } from "vue";
 
-import { RopavToastProvider, RopavToastViewport } from "./ropavAdapter";
-import { ropavToastStore } from "./useToast";
+import { ToastViewport } from "ropav/toast";
 
 const region = ref<HTMLElement | null>(null);
 const toastViewportClassNames = {
@@ -74,24 +73,22 @@ function onPointerUp(event: PointerEvent): void {
 </script>
 
 <template>
-  <RopavToastProvider :store="ropavToastStore">
-    <div
-      ref="region"
-      role="region"
-      aria-label="Notifications"
-      @pointercancel="resetSwipe"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-    >
-      <RopavToastViewport
-        :teleport="false"
-        position="bottom-right"
-        label="Notification list"
-        :class-names="toastViewportClassNames"
-      />
-    </div>
-  </RopavToastProvider>
+  <div
+    ref="region"
+    role="region"
+    aria-label="Notifications"
+    @pointercancel="resetSwipe"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+  >
+    <ToastViewport
+      :teleport="false"
+      position="bottom-right"
+      label="Notification list"
+      :class-names="toastViewportClassNames"
+    />
+  </div>
 </template>
 
 <style lang="scss">

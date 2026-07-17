@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
-import { AppToolbar, IconButton, SegmentedControl } from "@daopk/kit";
-import type { SegmentedControlOption } from "@daopk/kit";
+import { AppToolbar } from "@daopk/kit";
 import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "@daopk/icons";
+import { IconButton, Radio, RadioGroup } from "@daopk/ui";
 
 import type { FinderBreadcrumb, FinderViewMode } from "../composables/useFinder";
 
@@ -18,16 +18,22 @@ const emit = defineEmits<{
   setViewMode: [mode: FinderViewMode];
 }>();
 
-const viewModeOptions: readonly SegmentedControlOption[] = [
+const viewModeOptions = [
   { value: "list", label: "List", ariaLabel: "List view", icon: List },
   { value: "grid", label: "Grid", ariaLabel: "Grid view", icon: Grid2X2 },
 ];
 
-function onViewModeChange(value: string): void {
+function onViewModeChange(value: string | number | null): void {
   if (value === "list" || value === "grid") {
     emit("setViewMode", value);
   }
 }
+
+const viewModeRadioClassNames = {
+  root: "finder__view-option",
+  indicator: "finder__view-indicator",
+  label: "finder__view-label",
+} as const;
 </script>
 
 <template>
@@ -35,11 +41,12 @@ function onViewModeChange(value: string): void {
     <template #start>
       <IconButton
         class="finder__icon-button"
-        label="Go to parent folder"
-        :icon="ArrowUp"
+        ariaLabel="Go to parent folder"
         :disabled="cwd === '/'"
         @click="emit('goUp')"
-      />
+      >
+        <ArrowUp aria-hidden="true" />
+      </IconButton>
     </template>
 
     <nav class="finder__breadcrumbs" aria-label="Current folder">
@@ -62,21 +69,27 @@ function onViewModeChange(value: string): void {
     </nav>
 
     <template #end>
-      <IconButton
-        class="finder__icon-button"
-        label="Refresh folder"
-        :icon="RefreshCw"
-        @click="emit('refresh')"
-      />
+      <IconButton class="finder__icon-button" ariaLabel="Refresh folder" @click="emit('refresh')">
+        <RefreshCw aria-hidden="true" />
+      </IconButton>
 
-      <SegmentedControl
+      <RadioGroup
         class="finder__view-toggle"
         :model-value="viewMode"
-        :options="viewModeOptions"
-        label="View mode"
-        :show-labels="false"
+        orientation="horizontal"
+        ariaLabel="View mode"
         @update:model-value="onViewModeChange"
-      />
+      >
+        <Radio
+          v-for="option in viewModeOptions"
+          :key="option.value"
+          :value="option.value"
+          :ariaLabel="option.ariaLabel"
+          :class-names="viewModeRadioClassNames"
+        >
+          <component :is="option.icon" aria-hidden="true" />
+        </Radio>
+      </RadioGroup>
     </template>
   </AppToolbar>
 </template>
@@ -128,5 +141,37 @@ function onViewModeChange(value: string): void {
 .finder__breadcrumb-separator {
   color: var(--color-fg-muted);
   flex: 0 0 auto;
+}
+
+.finder__view-toggle {
+  align-items: center;
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+:deep(.finder__view-option) {
+  border-radius: var(--radius-sm);
+  min-block-size: var(--control-height-sm);
+  min-inline-size: var(--control-height-sm);
+  padding: 0;
+}
+
+:deep(.finder__view-option:has(input:checked)) {
+  background: var(--color-bg-elevated);
+  color: var(--color-accent);
+}
+
+:deep(.finder__view-indicator) {
+  display: none;
+}
+
+:deep(.finder__view-label) {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
 }
 </style>

@@ -1,53 +1,162 @@
+/*
+ * Ropav's public token contract adapted to the WebOS design tokens.
+ * Keep every --rp-* name in sync with ropav/src/styles/styles-manifest.json;
+ * component internals and generated .rp-* selectors are intentionally avoided.
+ */
 :root {
-  --rp-font-family: inherit;
+  /* Typography */
+  --rp-font-family: var(--font-family-base);
   --rp-font-size-xs: var(--font-size-xs);
   --rp-font-size-sm: var(--font-size-sm);
   --rp-font-size-md: var(--font-size-base);
   --rp-font-size-lg: var(--font-size-lg);
   --rp-font-size-xl: var(--font-size-xl);
+  --rp-font-weight-normal: 400;
+  --rp-font-weight-medium: var(--font-weight-medium);
+  --rp-font-weight-semibold: var(--font-weight-semibold);
+  --rp-font-weight-bold: var(--font-weight-bold);
+  --rp-line-height-xs: var(--leading-tight);
+  --rp-line-height-sm: var(--leading-snug);
   --rp-line-height-md: var(--leading-normal);
+  --rp-line-height-lg: var(--leading-relaxed);
+  --rp-line-height-xl: var(--leading-relaxed);
 
+  /* Spacing and shape */
+  --rp-spacing-0: 0;
   --rp-spacing-1: var(--space-2xs);
   --rp-spacing-2: var(--space-xs);
   --rp-spacing-3: var(--space-sm);
   --rp-spacing-4: var(--space-md);
   --rp-spacing-5: var(--space-lg);
   --rp-spacing-6: var(--space-xl);
-
+  --rp-spacing-8: var(--space-2xl);
+  --rp-spacing-10: calc(var(--space-base) * 10 * var(--density-scale));
+  --rp-spacing-12: calc(var(--space-base) * 12 * var(--density-scale));
+  --rp-radius-none: 0;
+  --rp-radius-xs: var(--radius-sm);
   --rp-radius-sm: var(--radius-sm);
   --rp-radius-md: var(--radius-md);
   --rp-radius-lg: var(--radius-lg);
+  --rp-radius-xl: var(--radius-lg);
   --rp-radius-full: var(--radius-full);
+  --rp-border-width-thin: 1px;
+  --rp-border-width-medium: 2px;
+
+  /* Elevation, motion and density */
   --rp-shadow-sm: var(--shadow-sm);
+  --rp-shadow-base: var(--shadow-sm);
   --rp-shadow-md: var(--shadow-md);
   --rp-shadow-lg: var(--shadow-lg);
   --rp-transition-fast: var(--duration-fast) var(--ease);
-
-  --rp-color-text: var(--color-fg);
-  --rp-color-dimmed: var(--color-fg-muted);
-  --rp-color-default: var(--color-bg-elevated);
-  --rp-color-default-border: var(--color-border);
-  --rp-color-control-bg: var(--color-bg-elevated);
-  --rp-color-control-track-bg: var(--color-bg-subtle);
-  --rp-color-control-thumb-bg: var(--color-bg-elevated);
-  --rp-color-control-border: var(--color-border);
-  --rp-color-control-border-focus: var(--color-accent);
-  --rp-color-control-selected-bg: var(--color-accent);
-  --rp-color-control-selected-fg: var(--color-fg-on-accent);
-  --rp-color-body: var(--color-bg);
-  --rp-color-default-hover: var(--color-bg-subtle);
-  --rp-color-focus-ring: var(--color-accent);
-  --rp-primary-color-filled: var(--color-accent);
-  --rp-primary-color-filled-hover: var(--color-accent-hover);
-  --rp-color-blue-light-color: var(--color-accent);
-  --rp-color-blue-outline: var(--color-accent);
-  --rp-color-green-light-color: var(--color-success);
-  --rp-color-green-outline: var(--color-success);
-  --rp-color-red-light-color: var(--color-error-soft);
-  --rp-color-red-outline: var(--color-error-soft);
-  --rp-color-yellow-light-color: var(--color-accent-sheen);
-  --rp-color-yellow-outline: var(--color-accent-sheen);
+  --rp-transition-base: var(--duration-base) var(--ease);
+  --rp-transition-slow: var(--duration-base) var(--ease);
   --rp-opacity-disabled: 0.6;
+  --rp-size-control-xs: var(--control-height-sm);
   --rp-size-control-sm: var(--control-height-sm);
   --rp-size-control-md: var(--control-height-md);
+  --rp-size-control-lg: var(--control-height-lg);
+  --rp-size-control-xl: var(--control-height-lg);
+
+  /* Surfaces and control states */
+  --rp-color-body: var(--color-bg);
+  --rp-color-text: var(--color-fg);
+  --rp-color-bright: var(--color-fg);
+  --rp-color-dimmed: var(--color-fg-muted);
+  --rp-color-placeholder: var(--color-fg-subtle);
+  --rp-color-default: var(--color-bg-elevated);
+  --rp-color-default-hover: var(--color-bg-subtle);
+  --rp-color-default-color: var(--color-fg);
+  --rp-color-default-border: var(--color-border);
+  --rp-color-default-border-hover: color-mix(in srgb, var(--color-fg) 20%, transparent);
+  --rp-color-disabled: var(--color-bg-subtle);
+  --rp-color-disabled-color: var(--color-fg-subtle);
+  --rp-color-disabled-border: var(--color-border);
+  --rp-color-focus-ring: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  --rp-color-control-bg: var(--color-bg-elevated);
+  --rp-color-control-readonly-bg: var(--color-bg-subtle);
+  --rp-color-control-fg: var(--color-fg);
+  --rp-color-control-placeholder: var(--color-fg-subtle);
+  --rp-color-control-icon: var(--color-fg-muted);
+  --rp-color-control-border: var(--color-border);
+  --rp-color-control-border-hover: color-mix(in srgb, var(--color-fg) 20%, transparent);
+  --rp-color-control-border-focus: var(--color-accent);
+  --rp-color-control-track-bg: var(--color-bg-subtle);
+  --rp-color-control-thumb-bg: var(--color-bg-elevated);
+  --rp-color-control-selected-bg: var(--color-accent);
+  --rp-color-control-selected-fg: var(--color-fg-on-accent);
+
+  /* Primary/accent role */
+  --rp-primary-color-filled: var(--color-accent);
+  --rp-primary-color-filled-hover: var(--color-accent-hover);
+  --rp-primary-color-contrast: var(--color-fg-on-accent);
+  --rp-primary-color-light: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --rp-primary-color-light-hover: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  --rp-primary-color-light-color: var(--color-accent);
+  --rp-primary-color-outline: var(--color-accent);
+  --rp-primary-color-outline-hover: color-mix(in srgb, var(--color-accent) 8%, transparent);
+
+  /* Blue is the named form of the product accent. */
+  --rp-color-blue-filled: var(--color-accent);
+  --rp-color-blue-filled-hover: var(--color-accent-hover);
+  --rp-color-blue-contrast: var(--color-fg-on-accent);
+  --rp-color-blue-light: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  --rp-color-blue-light-hover: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  --rp-color-blue-light-color: var(--color-accent);
+  --rp-color-blue-outline: var(--color-accent);
+  --rp-color-blue-outline-hover: color-mix(in srgb, var(--color-accent) 8%, transparent);
+
+  /* Semantic roles */
+  --rp-color-green-filled: var(--color-success);
+  --rp-color-green-filled-hover: color-mix(
+    in srgb,
+    var(--color-success) 88%,
+    var(--rp-color-black) 12%
+  );
+  --rp-color-green-contrast: var(--color-bg);
+  --rp-color-green-light: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --rp-color-green-light-hover: color-mix(in srgb, var(--color-success) 18%, transparent);
+  --rp-color-green-light-color: var(--color-success);
+  --rp-color-green-outline: var(--color-success);
+  --rp-color-green-outline-hover: color-mix(in srgb, var(--color-success) 8%, transparent);
+
+  --rp-color-red-filled: var(--color-error);
+  --rp-color-red-filled-hover: color-mix(
+    in srgb,
+    var(--color-error) 88%,
+    var(--rp-color-black) 12%
+  );
+  --rp-color-red-contrast: var(--color-bg);
+  --rp-color-red-light: color-mix(in srgb, var(--color-error) 12%, transparent);
+  --rp-color-red-light-hover: color-mix(in srgb, var(--color-error) 18%, transparent);
+  --rp-color-red-light-color: var(--color-error-soft);
+  --rp-color-red-outline: var(--color-error-soft);
+  --rp-color-red-outline-hover: color-mix(in srgb, var(--color-error) 8%, transparent);
+
+  --rp-color-yellow-filled: var(--color-accent-sheen);
+  --rp-color-yellow-filled-hover: color-mix(
+    in srgb,
+    var(--color-accent-sheen) 88%,
+    var(--rp-color-black) 12%
+  );
+  --rp-color-yellow-contrast: var(--color-fg);
+  --rp-color-yellow-light: color-mix(in srgb, var(--color-accent-sheen) 12%, transparent);
+  --rp-color-yellow-light-hover: color-mix(in srgb, var(--color-accent-sheen) 18%, transparent);
+  --rp-color-yellow-light-color: var(--color-accent-sheen);
+  --rp-color-yellow-outline: var(--color-accent-sheen);
+  --rp-color-yellow-outline-hover: color-mix(in srgb, var(--color-accent-sheen) 8%, transparent);
+}
+
+:root[data-rp-color-scheme="light"] {
+  --rp-color-scheme: light;
+}
+
+:root[data-rp-color-scheme="dark"] {
+  --rp-color-scheme: dark;
+  --rp-color-focus-ring: color-mix(in srgb, var(--color-accent-sheen) 45%, transparent);
+  --rp-color-control-border-focus: var(--color-accent-sheen);
+  --rp-primary-color-light-color: var(--color-accent-sheen);
+  --rp-primary-color-outline: var(--color-accent-sheen);
+  --rp-color-blue-light-color: var(--color-accent-sheen);
+  --rp-color-blue-outline: var(--color-accent-sheen);
+  --rp-color-yellow-contrast: var(--color-bg);
 }

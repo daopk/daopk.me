@@ -1,5 +1,4 @@
 <script setup vapor lang="ts">
-import { IconButton } from "@daopk/kit";
 import {
   DropdownMenu,
   DropdownMenuItemIndicator,
@@ -7,6 +6,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  IconButton,
   Slider,
 } from "@daopk/ui";
 import {
@@ -128,6 +128,21 @@ const {
 defineExpose({
   handleAppKeydown,
 });
+
+function sliderValueFromChange(event: Event): number | null {
+  const target = event.target;
+  return target instanceof HTMLInputElement ? target.valueAsNumber : null;
+}
+
+function commitSeekFromChange(event: Event): void {
+  const value = sliderValueFromChange(event);
+  if (value !== null) commitSeek(value);
+}
+
+function setVolumeFromChange(event: Event): void {
+  const value = sliderValueFromChange(event);
+  if (value !== null) setVolumeFromSlider(value);
+}
 </script>
 <template>
   <div class="movies-hls-player">
@@ -225,12 +240,13 @@ defineExpose({
         >
           <IconButton
             class="movies-hls-player__button movies-hls-player__back-button"
-            :icon="ChevronLeft"
-            :label="t('movies.action.back')"
+            :ariaLabel="t('movies.action.back')"
             size="sm"
-            variant="subtle"
+            variant="surface"
             @click="emit('back')"
-          />
+          >
+            <ChevronLeft aria-hidden="true" />
+          </IconButton>
         </div>
 
         <div class="movies-hls-player__topline">
@@ -255,13 +271,14 @@ defineExpose({
         >
           <IconButton
             class="movies-hls-player__button movies-hls-player__top-volume-button"
-            :icon="mutedOrSilent ? VolumeX : Volume2"
-            :label="muteLabel"
+            :ariaLabel="muteLabel"
             size="sm"
-            variant="subtle"
+            variant="surface"
             :disabled="playbackError.length > 0"
             @click="toggleMute"
-          />
+          >
+            <component :is="mutedOrSilent ? VolumeX : Volume2" aria-hidden="true" />
+          </IconButton>
         </div>
       </div>
 
@@ -310,13 +327,14 @@ defineExpose({
               :min="0"
               :max="seekMax"
               :step="1"
+              :tooltip="false"
               :disabled="!hasDuration || playbackError.length > 0"
-              :aria-label="t('movies.player.seek')"
-              :aria-valuetext="seekValueText"
+              :ariaLabel="t('movies.player.seek')"
+              :ariaValueText="seekValueText"
               @focusout="cancelSeekPreview"
               @keydown="onSeekKeydown"
               @update:model-value="previewSeek"
-              @commit="commitSeek"
+              @change="commitSeekFromChange"
             />
             <span
               v-if="seekPointerPreview"
@@ -334,13 +352,14 @@ defineExpose({
           <div class="movies-hls-player__volume-control">
             <IconButton
               class="movies-hls-player__button"
-              :icon="mutedOrSilent ? VolumeX : Volume2"
-              :label="muteLabel"
+              :ariaLabel="muteLabel"
               size="sm"
-              variant="subtle"
+              variant="surface"
               :disabled="playbackError.length > 0"
               @click="toggleMute"
-            />
+            >
+              <component :is="mutedOrSilent ? VolumeX : Volume2" aria-hidden="true" />
+            </IconButton>
 
             <div class="movies-hls-player__volume-popover">
               <Slider
@@ -350,11 +369,12 @@ defineExpose({
                 :min="0"
                 :max="100"
                 :step="1"
+                :tooltip="false"
                 :disabled="playbackError.length > 0"
-                :aria-label="t('movies.player.volume')"
-                :aria-valuetext="`${volumeSliderValue}%`"
+                :ariaLabel="t('movies.player.volume')"
+                :ariaValueText="`${volumeSliderValue}%`"
                 @update:model-value="setVolumeFromSlider"
-                @commit="setVolumeFromSlider"
+                @change="setVolumeFromChange"
               />
             </div>
           </div>
@@ -362,23 +382,28 @@ defineExpose({
           <IconButton
             v-if="showNextEpisodeButton"
             class="movies-hls-player__button movies-hls-player__next-episode-button"
-            :icon="SkipForward"
-            :label="nextEpisodeButtonLabel"
+            :ariaLabel="nextEpisodeButtonLabel"
             size="sm"
-            variant="subtle"
+            variant="surface"
             @click="emit('next-episode')"
-          />
+          >
+            <SkipForward aria-hidden="true" />
+          </IconButton>
 
           <IconButton
             v-if="pictureInPictureSupported"
             class="movies-hls-player__button movies-hls-player__pip-button"
-            :icon="pictureInPicture ? PictureInPicture : PictureInPicture2"
-            :label="pictureInPictureLabel"
+            :ariaLabel="pictureInPictureLabel"
             size="sm"
-            variant="subtle"
+            variant="surface"
             :disabled="playbackError.length > 0"
             @click="togglePictureInPicture"
-          />
+          >
+            <component
+              :is="pictureInPicture ? PictureInPicture : PictureInPicture2"
+              aria-hidden="true"
+            />
+          </IconButton>
 
           <DropdownMenu
             v-if="hasSettingsMenu"
@@ -389,11 +414,12 @@ defineExpose({
             <template #trigger>
               <IconButton
                 class="movies-hls-player__button"
-                :icon="MoreHorizontal"
-                :label="t('movies.player.settings')"
+                :ariaLabel="t('movies.player.settings')"
                 size="sm"
-                variant="subtle"
-              />
+                variant="surface"
+              >
+                <MoreHorizontal aria-hidden="true" />
+              </IconButton>
             </template>
             <template #items>
               <DropdownMenuLabel class="ds-dropdown-menu__label">
@@ -443,12 +469,13 @@ defineExpose({
           <IconButton
             v-if="!pictureInPicture"
             class="movies-hls-player__button movies-hls-player__fullscreen-button"
-            :icon="fullscreen ? Minimize2 : Maximize2"
-            :label="fullscreenLabel"
+            :ariaLabel="fullscreenLabel"
             size="sm"
-            variant="subtle"
+            variant="surface"
             @click="toggleFullscreen"
-          />
+          >
+            <component :is="fullscreen ? Minimize2 : Maximize2" aria-hidden="true" />
+          </IconButton>
         </div>
       </div>
     </div>

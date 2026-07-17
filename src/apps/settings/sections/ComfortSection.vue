@@ -3,7 +3,7 @@ import { computed, onUnmounted, ref } from "vue";
 import { Check as CheckIcon } from "~/icons/lucide";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
-import Card from "~/components/ui/Card.vue";
+import { Radio, RadioGroup } from "~/components/ui";
 import { useSettingsI18n, type SettingsTranslationKey } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import { useSettings } from "~/composables/useSettings";
@@ -220,6 +220,39 @@ function selectSize(option: FontSizeOption): void {
   }
   kernel.theme.setOverride("--font-size-base", option.value);
 }
+
+function selectDensityValue(value: string | number | null): void {
+  const option = DENSITY_OPTIONS.find((candidate) => candidate.id === value);
+  if (option) {
+    selectDensity(option);
+  }
+}
+
+function selectMotionValue(value: string | number | null): void {
+  const option = MOTION_OPTIONS.find((candidate) => candidate.id === value);
+  if (option) {
+    selectMotion(option);
+  }
+}
+
+function selectFamilyValue(value: string | number | null): void {
+  const option = FONT_FAMILY_OPTIONS.find((candidate) => candidate.id === value);
+  if (option) {
+    selectFamily(option);
+  }
+}
+
+function selectSizeValue(value: string | number | null): void {
+  const option = FONT_SIZE_OPTIONS.find((candidate) => candidate.id === value);
+  if (option) {
+    selectSize(option);
+  }
+}
+
+const choiceRadioClassNames = {
+  indicator: "comfort__radio-indicator",
+  label: "comfort__radio-label",
+} as const;
 </script>
 
 <template>
@@ -241,18 +274,18 @@ function selectSize(option: FontSizeOption): void {
       <GroupLabel id="comfort-density-label" as="h3">
         {{ t("settings.comfort.density") }}
       </GroupLabel>
-      <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-density-label">
-        <Card
+      <RadioGroup
+        class="comfort__grid"
+        :model-value="selectedDensity"
+        labelledby="comfort-density-label"
+        @update:model-value="selectDensityValue"
+      >
+        <Radio
           v-for="option in DENSITY_OPTIONS"
           :key="option.id"
-          as="button"
           class="comfort__choice-card comfort__density-card"
-          interactive
-          :selected="option.id === selectedDensity"
-          type="button"
-          role="radio"
-          :aria-checked="option.id === selectedDensity"
-          @click="selectDensity(option)"
+          :class-names="choiceRadioClassNames"
+          :value="option.id"
         >
           <span class="comfort__density-preview" :data-density="option.id" aria-hidden="true">
             <span class="comfort__density-preview-row" />
@@ -268,8 +301,8 @@ function selectSize(option: FontSizeOption): void {
             class="comfort__card-check"
             aria-hidden="true"
           />
-        </Card>
-      </div>
+        </Radio>
+      </RadioGroup>
       <p v-if="selectedDensity === 'custom'" class="comfort__custom-hint">
         {{ t("settings.comfort.customDensityHint") }}
       </p>
@@ -285,18 +318,18 @@ function selectSize(option: FontSizeOption): void {
       <GroupLabel id="comfort-motion-label" as="h3">
         {{ t("settings.comfort.motion") }}
       </GroupLabel>
-      <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-motion-label">
-        <Card
+      <RadioGroup
+        class="comfort__grid"
+        :model-value="currentMotion"
+        labelledby="comfort-motion-label"
+        @update:model-value="selectMotionValue"
+      >
+        <Radio
           v-for="option in MOTION_OPTIONS"
           :key="option.id"
-          as="button"
           class="comfort__choice-card comfort__motion-card"
-          interactive
-          :selected="option.id === currentMotion"
-          type="button"
-          role="radio"
-          :aria-checked="option.id === currentMotion"
-          @click="selectMotion(option)"
+          :class-names="choiceRadioClassNames"
+          :value="option.id"
         >
           <span class="comfort__card-meta">
             <span class="comfort__card-label">{{ t(option.labelKey) }}</span>
@@ -307,8 +340,8 @@ function selectSize(option: FontSizeOption): void {
             class="comfort__card-check"
             aria-hidden="true"
           />
-        </Card>
-      </div>
+        </Radio>
+      </RadioGroup>
     </Panel>
 
     <Panel
@@ -325,18 +358,18 @@ function selectSize(option: FontSizeOption): void {
         <h4 id="comfort-family-label" class="comfort__subgroup-title">
           {{ t("settings.comfort.fontFamily") }}
         </h4>
-        <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-family-label">
-          <Card
+        <RadioGroup
+          class="comfort__grid"
+          :model-value="selectedFamily"
+          labelledby="comfort-family-label"
+          @update:model-value="selectFamilyValue"
+        >
+          <Radio
             v-for="option in FONT_FAMILY_OPTIONS"
             :key="option.id"
-            as="button"
             class="comfort__choice-card comfort__type-card"
-            interactive
-            :selected="option.id === selectedFamily"
-            type="button"
-            role="radio"
-            :aria-checked="option.id === selectedFamily"
-            @click="selectFamily(option)"
+            :class-names="choiceRadioClassNames"
+            :value="option.id"
           >
             <span class="comfort__type-preview" :style="{ fontFamily: option.value }">Aa</span>
             <span class="comfort__card-meta">
@@ -348,8 +381,8 @@ function selectSize(option: FontSizeOption): void {
               class="comfort__card-check"
               aria-hidden="true"
             />
-          </Card>
-        </div>
+          </Radio>
+        </RadioGroup>
         <p v-if="selectedFamily === 'custom'" class="comfort__custom-hint">
           {{ t("settings.comfort.customFamilyHint") }}
         </p>
@@ -359,18 +392,18 @@ function selectSize(option: FontSizeOption): void {
         <h4 id="comfort-size-label" class="comfort__subgroup-title">
           {{ t("settings.comfort.baseSize") }}
         </h4>
-        <div class="comfort__grid" role="radiogroup" aria-labelledby="comfort-size-label">
-          <Card
+        <RadioGroup
+          class="comfort__grid"
+          :model-value="selectedSize"
+          labelledby="comfort-size-label"
+          @update:model-value="selectSizeValue"
+        >
+          <Radio
             v-for="option in FONT_SIZE_OPTIONS"
             :key="option.id"
-            as="button"
             class="comfort__choice-card comfort__type-card"
-            interactive
-            :selected="option.id === selectedSize"
-            type="button"
-            role="radio"
-            :aria-checked="option.id === selectedSize"
-            @click="selectSize(option)"
+            :class-names="choiceRadioClassNames"
+            :value="option.id"
           >
             <span class="comfort__type-preview" :style="{ fontSize: option.value }">Aa</span>
             <span class="comfort__card-meta">
@@ -382,8 +415,8 @@ function selectSize(option: FontSizeOption): void {
               class="comfort__card-check"
               aria-hidden="true"
             />
-          </Card>
-        </div>
+          </Radio>
+        </RadioGroup>
         <p v-if="selectedSize === 'custom'" class="comfort__custom-hint">
           {{ t("settings.comfort.customSizeHint") }}
         </p>
@@ -427,9 +460,37 @@ function selectSize(option: FontSizeOption): void {
 }
 
 .comfort__choice-card {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
   font: inherit;
   min-block-size: 0;
+  padding: var(--space-md);
+  position: relative;
+  text-align: start;
+}
+
+.comfort__choice-card:hover,
+.comfort__choice-card:focus-within {
+  border-color: var(--color-accent);
+}
+
+.comfort__choice-card:has(input:checked) {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent) inset;
+}
+
+:deep(.comfort__radio-indicator) {
+  display: none;
+}
+
+:deep(.comfort__radio-label) {
+  display: contents;
 }
 
 .comfort__density-preview,

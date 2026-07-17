@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
-import { EmptyState, StatusBanner } from "@daopk/kit";
-import { PreviewHost } from "@daopk/kit";
+import { EmptyState, PreviewHost } from "@daopk/kit";
 import type { AppPreviewInput } from "@daopk/sdk";
+import { Alert } from "@daopk/ui";
 
 import type { BlogIndexPost } from "../composables/useBlogIndex";
 import type { BlogPostContentBlock, BlogPostStatus } from "../composables/useBlogPost";
@@ -54,9 +54,15 @@ function previewInput(url: string): AppPreviewInput {
         />
       </template>
     </div>
-    <StatusBanner v-if="status === 'loading'" class="blog__status" aria-live="polite">
+    <Alert
+      v-if="status === 'loading'"
+      class="blog__status"
+      color="gray"
+      variant="surface"
+      role="status"
+    >
       Loading post...
-    </StatusBanner>
+    </Alert>
     <EmptyState
       v-else-if="notFound"
       class="blog__state"
@@ -64,8 +70,8 @@ function previewInput(url: string): AppPreviewInput {
       title="Post not found"
       :description="notFoundDescription"
     />
-    <StatusBanner v-else-if="loadFailed" class="blog__error" tone="error">
+    <Alert v-else-if="loadFailed" class="blog__error" color="red" variant="surface" role="alert">
       Could not load blog post.
-    </StatusBanner>
+    </Alert>
   </div>
 </template>

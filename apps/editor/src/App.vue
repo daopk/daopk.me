@@ -1,6 +1,7 @@
 <script setup vapor lang="ts">
-import { AppFrame, Textarea } from "@daopk/kit";
+import { AppFrame } from "@daopk/kit";
 import { VfsFilePickerDialog } from "@daopk/files";
+import { Textarea } from "@daopk/ui";
 
 import EditorDiscardDialog from "./components/EditorDiscardDialog.vue";
 import EditorEmptyState from "./components/EditorEmptyState.vue";
@@ -72,13 +73,13 @@ function setTextareaRef(value: unknown): void {
       <Textarea
         v-else
         :ref="setTextareaRef"
-        class="editor__textarea"
-        variant="plain"
+        class="editor__textarea-root"
+        :class-names="{ input: 'editor__textarea' }"
         resize="none"
         :model-value="editor.draft.value"
         :readonly="editor.readOnly.value || editor.loading.value || editor.saving.value"
-        :aria-label="`Editing ${editor.currentPath.value}`"
-        spellcheck="false"
+        :ariaLabel="`Editing ${editor.currentPath.value}`"
+        :input-attrs="{ spellcheck: false }"
         @update:model-value="editor.setDraft"
       />
 

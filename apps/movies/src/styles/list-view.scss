@@ -96,7 +96,7 @@
   padding: var(--space-2xs);
 }
 
-.movies-list__tabs :deep(.ds-button) {
+.movies-list__tab {
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -104,26 +104,26 @@
   padding-inline: var(--space-md);
 }
 
-.movies-list__tabs :deep(.ds-button--secondary) {
+.movies-list__tab:not(.movies-list__tab--active) {
   background: transparent;
   border-color: transparent;
   color: color-mix(in srgb, var(--color-fg) 70%, transparent);
 }
 
-.movies-list__tabs :deep(.ds-button--secondary:hover),
-.movies-list__tabs :deep(.ds-button--secondary:focus-visible) {
+.movies-list__tab:not(.movies-list__tab--active):hover,
+.movies-list__tab:not(.movies-list__tab--active):focus-visible {
   background: color-mix(in srgb, var(--color-bg-elevated) 50%, transparent);
   border-color: color-mix(in srgb, var(--color-fg) 10%, transparent);
   color: var(--color-fg);
 }
 
-.movies-list__tabs :deep(.ds-button--primary) {
+.movies-list__tab--active {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, white 18%, transparent),
     0 6px 14px -12px color-mix(in srgb, var(--color-accent) 62%, black);
 }
 
-.movies-list__tabs :deep(.ds-button:focus-visible) {
+.movies-list__tab:focus-visible {
   outline-offset: 1px;
 }
 
@@ -164,7 +164,7 @@
   margin-inline-start: 2px;
 }
 
-.movies-list__search-input-shell input {
+.movies-list__search-input-shell :deep(.movies-list__search-input) {
   appearance: none;
   background: transparent;
   border: 0;
@@ -175,11 +175,11 @@
   padding: 0;
 }
 
-.movies-list__search-input-shell input::placeholder {
+.movies-list__search-input-shell :deep(.movies-list__search-input::placeholder) {
   color: color-mix(in srgb, var(--color-fg-muted) 72%, transparent);
 }
 
-.movies-list__search-input-shell input:focus-visible {
+.movies-list__search-input-shell :deep(.movies-list__search-input:focus-visible) {
   outline: 0;
 }
 
@@ -206,26 +206,13 @@
   text-transform: uppercase;
 }
 
-.movies-list__filter-field select {
-  appearance: none;
-  background:
-    linear-gradient(45deg, transparent 50%, currentColor 50%) calc(100% - 15px) 50% / 5px 5px
-      no-repeat,
-    linear-gradient(135deg, currentColor 50%, transparent 50%) calc(100% - 10px) 50% / 5px 5px
-      no-repeat,
-    color-mix(in srgb, var(--color-bg-elevated) 56%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 12%, transparent);
-  border-radius: var(--radius-md);
-  color: var(--color-fg);
-  font: inherit;
-  min-block-size: var(--control-height-md);
+.movies-list__filter-select {
+  inline-size: 100%;
   min-inline-size: 0;
-  padding: 0 calc(var(--space-xl) + var(--space-xs)) 0 var(--space-sm);
 }
 
-.movies-list__filter-field select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent) 52%, transparent);
-  outline-offset: 2px;
+.movies-list__filter-select :deep(button) {
+  min-inline-size: 0;
 }
 
 .movies-list__item {
@@ -239,7 +226,7 @@
   padding-block-start: var(--space-2xl);
 }
 
-.movies-list__footer :deep(.movies-list__load-more.ds-button) {
+.movies-list__load-more {
   background: color-mix(in srgb, var(--color-bg-elevated) 42%, transparent);
   border-color: color-mix(in srgb, var(--color-fg) 12%, transparent);
   border-radius: var(--radius-full);
@@ -252,14 +239,14 @@
   padding-inline: var(--space-lg);
 }
 
-.movies-list__footer :deep(.movies-list__load-more.ds-button:hover),
-.movies-list__footer :deep(.movies-list__load-more.ds-button:focus-visible) {
+.movies-list__load-more:hover,
+.movies-list__load-more:focus-visible {
   background: color-mix(in srgb, var(--color-bg-elevated) 58%, transparent);
   border-color: color-mix(in srgb, var(--color-accent) 36%, var(--color-border));
   color: var(--color-fg);
 }
 
-.movies-list__footer :deep(.movies-list__load-more.ds-button--loading) {
+.movies-list__load-more[data-loading] {
   opacity: 0.68;
 }
 
@@ -289,7 +276,7 @@
     padding: var(--space-xs);
   }
 
-  .movies-list__tabs :deep(.ds-button) {
+  .movies-list__tab {
     flex: 1 1 0;
     min-block-size: var(--control-height-lg);
     padding-inline: var(--space-sm);
@@ -298,4 +285,9 @@
   .movies-list__filters {
     grid-template-columns: 1fr;
   }
+}
+.movies-list__search-input-root {
+  background: transparent;
+  border: 0;
+  min-inline-size: 0;
 }

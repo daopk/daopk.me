@@ -1,9 +1,9 @@
 <script setup vapor lang="ts">
 import { computed, ref, watch } from "vue";
+import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
-import { IconButton } from "@daopk/kit";
+import { IconButton } from "@daopk/ui";
 import { ChevronLeft, ChevronRight, X as CloseIcon } from "@daopk/icons";
-import { useFocusTrap } from "@daopk/ui";
 
 import { photoLabel } from "./photoLabel";
 import type { Photo } from "./usePhotos";
@@ -44,24 +44,19 @@ function showNext(): void {
   }
 }
 
-function onScrimClick(event: MouseEvent): void {
-  if (event.target === event.currentTarget) {
-    close();
-  }
-}
-
 const stage = ref<HTMLElement | null>(null);
 const image = ref<HTMLImageElement | null>(null);
-const lightbox = ref<HTMLElement | null>(null);
 
-useFocusTrap(lightbox, {
-  escapeDeactivates: false,
-  initialFocus: () =>
-    lightbox.value?.querySelector<HTMLElement>(".photos__lightbox-close") ??
-    lightbox.value ??
-    false,
-  preventScroll: true,
-});
+const LIGHTBOX_CONTENT_BASE_Z_INDEX = 5;
+const focusTrapOptions: ModalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" },
+};
+const modalClassNames = {
+  root: "photos__lightbox",
+  overlay: "photos__lightbox-overlay",
+  panel: "photos__lightbox-panel",
+  body: "photos__lightbox-body",
+};
 
 const { transformStyle, isZoomed, reset } = useLightboxGestures(stage, {
   content: image,
@@ -76,70 +71,85 @@ watch(
     reset();
   },
 );
+
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    showPrevious();
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    showNext();
+  }
+}
 </script>
 
 <template>
-  <div
+  <Modal
     v-if="activePhoto"
-    ref="lightbox"
-    class="photos__lightbox"
-    role="dialog"
-    aria-modal="true"
+    :open="true"
     :aria-label="label"
-    tabindex="-1"
-    @click="onScrimClick"
-    @keydown.esc.prevent.stop="close"
-    @keydown.left.prevent="showPrevious"
-    @keydown.right.prevent="showNext"
+    size="100%"
+    :base-z-index="LIGHTBOX_CONTENT_BASE_Z_INDEX"
+    :teleport="false"
+    :show-close-button="false"
+    initial-focus=".photos__lightbox-close"
+    :focus-trap-options="focusTrapOptions"
+    :overlay-props="{
+      color: 'color-mix(in oklab, var(--color-bg) 18%, rgb(0 0 0 / 82%))',
+    }"
+    :class-names="modalClassNames"
+    @close="close"
   >
-    <div class="photos__lightbox-bar">
-      <span class="photos__lightbox-title">{{ photoLabel(activePhoto.key) }}</span>
-      <IconButton
-        class="photos__lightbox-close"
-        label="Close photo viewer"
-        :icon="CloseIcon"
-        variant="subtle"
-        @click="close"
-      />
+    <div class="photos__lightbox-content" @keydown="onKeydown">
+      <div class="photos__lightbox-bar">
+        <span class="photos__lightbox-title">{{ photoLabel(activePhoto.key) }}</span>
+        <IconButton
+          class="photos__lightbox-close"
+          ariaLabel="Close photo viewer"
+          variant="subtle"
+          @click="close"
+        >
+          <CloseIcon aria-hidden="true" />
+        </IconButton>
+      </div>
+
+      <button
+        v-if="hasPrevious"
+        type="button"
+        class="photos__nav photos__nav--prev"
+        aria-label="Previous photo"
+        @click.stop="showPrevious"
+      >
+        <ChevronLeft :size="30" aria-hidden="true" />
+      </button>
+
+      <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
+        <img
+          ref="image"
+          class="photos__lightbox-image"
+          :style="transformStyle"
+          :src="activePhoto.url"
+          :alt="photoLabel(activePhoto.key)"
+          draggable="false"
+        />
+      </div>
+
+      <button
+        v-if="hasNext"
+        type="button"
+        class="photos__nav photos__nav--next"
+        aria-label="Next photo"
+        @click.stop="showNext"
+      >
+        <ChevronRight :size="30" aria-hidden="true" />
+      </button>
     </div>
-
-    <button
-      v-if="hasPrevious"
-      type="button"
-      class="photos__nav photos__nav--prev"
-      aria-label="Previous photo"
-      @click.stop="showPrevious"
-    >
-      <ChevronLeft :size="30" aria-hidden="true" />
-    </button>
-
-    <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
-      <img
-        ref="image"
-        class="photos__lightbox-image"
-        :style="transformStyle"
-        :src="activePhoto.url"
-        :alt="photoLabel(activePhoto.key)"
-        draggable="false"
-      />
-    </div>
-
-    <button
-      v-if="hasNext"
-      type="button"
-      class="photos__nav photos__nav--next"
-      aria-label="Next photo"
-      @click.stop="showNext"
-    >
-      <ChevronRight :size="30" aria-hidden="true" />
-    </button>
-  </div>
+  </Modal>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 .photos__lightbox {
   align-items: center;
-  background: color-mix(in oklab, var(--color-bg) 18%, rgb(0 0 0 / 82%));
   box-sizing: border-box;
   display: flex;
   inset: 0;
@@ -147,6 +157,36 @@ watch(
   padding: var(--space-2xl) var(--space-lg);
   position: absolute;
   z-index: 5;
+}
+
+.photos__lightbox-panel {
+  background: transparent;
+  block-size: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  inline-size: 100%;
+  max-block-size: 100%;
+  overflow: visible;
+}
+
+.photos__lightbox-body {
+  min-block-size: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.photos__lightbox-content {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  block-size: 100%;
+  inline-size: 100%;
+  justify-content: center;
+  min-block-size: 0;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
 }
 
 .photos__lightbox-bar {

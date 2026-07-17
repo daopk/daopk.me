@@ -1,13 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createComponent, defineVaporComponent, nextTick, ref } from "vue";
+import { Tabs, TabsContent, TabsList, TabsTrigger, type TabsValue } from "ropav/tabs";
 
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
-
-import Tabs from "./Tabs.vue";
-import TabsContent from "./TabsContent.vue";
-import TabsList from "./TabsList.vue";
-import TabsTrigger from "./TabsTrigger.vue";
-import type { TabsValue } from "./tabsTypes";
 
 const mounted: VaporMount[] = [];
 
@@ -87,7 +82,7 @@ afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
 });
 
-it("keeps the tabs facade compiled in Vapor mode", () => {
+it("keeps the direct Ropav tabs exports compiled in Vapor mode", () => {
   assertVaporComponents({ Tabs, TabsContent, TabsList, TabsTrigger });
 });
 

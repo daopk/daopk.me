@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { AppFrame, Progress } from "@daopk/kit";
+import { AppFrame } from "@daopk/kit";
+import { Progress } from "@daopk/ui";
 
 import FinderDeleteDialog from "./components/FinderDeleteDialog.vue";
 import FinderEntries from "./components/FinderEntries.vue";
@@ -69,9 +70,9 @@ const {
       <Progress
         v-if="loading"
         class="finder__loading-bar"
-        :value="null"
+        indeterminate
         size="sm"
-        label="Loading folder"
+        ariaLabel="Loading folder"
       />
     </div>
 

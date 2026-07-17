@@ -67,7 +67,7 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it("renders the sheet variant on open (Dialog content class includes --sheet)", async () => {
+  it("renders the Ropav Modal sheet preset on open", async () => {
     kernel.apps.register(makeManifest("rss", "RSS", "productivity"));
     mountHost();
 
@@ -75,11 +75,11 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     await flushAndPaint();
 
     const dialog = document.body.querySelector('[role="dialog"]');
-    const overlay = document.body.querySelector(".ds-dialog__overlay");
+    const overlay = document.body.querySelector(".ds-permission-prompt__overlay");
     expect(dialog).not.toBeNull();
-    expect(dialog?.className).toContain("ds-dialog__content--sheet");
-    expect(dialog?.className).toContain("ds-dialog__content--system");
-    expect(overlay?.className).toContain("ds-dialog__overlay--system");
+    expect(dialog?.className).toContain("ds-permission-prompt__panel--sheet");
+    expect(dialog?.className).toContain("ds-permission-prompt__panel--system");
+    expect(overlay?.className).toContain("ds-permission-prompt__overlay--system");
 
     const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
     buttons.find((b) => b.textContent?.trim() === "Don't allow")!.click();

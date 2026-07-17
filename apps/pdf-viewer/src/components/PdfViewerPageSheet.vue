@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Dialog } from "@daopk/ui";
+import { Modal } from "@daopk/ui";
 
 defineProps<{
   readonly currentPage: number;
@@ -14,10 +14,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <Dialog
+  <Modal
     :open="open"
     title="Select page"
-    variant="sheet"
+    :show-close-button="false"
+    :class-names="{
+      panel: 'pdf-viewer__page-sheet-panel',
+      body: 'pdf-viewer__page-sheet-body',
+    }"
     @update:open="emit('update:open', $event)"
   >
     <div class="pdf-viewer__page-sheet-list" role="listbox" aria-label="PDF pages">
@@ -34,5 +38,5 @@ const emit = defineEmits<{
         <span>Page {{ page }}</span>
       </button>
     </div>
-  </Dialog>
+  </Modal>
 </template>

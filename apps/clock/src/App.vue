@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
 import { computed, ref } from "vue";
 
-import { AppFrame, Badge, FormField, ScrollArea, TextInput } from "@daopk/kit";
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@daopk/ui";
+import { AppFrame, ScrollArea } from "@daopk/kit";
+import { Badge, Button, Field, Input, Tabs, TabsContent, TabsList, TabsTrigger } from "@daopk/ui";
 import type { TabsValue } from "@daopk/ui";
 import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "@daopk/icons";
 
@@ -138,49 +138,45 @@ function durationDatetime(ms: number): string {
             <time :datetime="`PT${Math.floor(clock.timerRemainingMs.value / 1000)}S`">
               {{ clock.timerDisplay.value }}
             </time>
-            <Badge v-if="timerFinished" tone="accent" size="md" role="status">Time's up</Badge>
+            <Badge v-if="timerFinished" color="blue" variant="subtle" size="md" role="status">
+              Time's up
+            </Badge>
           </div>
 
           <div class="clock-app__inputs" aria-label="Timer duration">
-            <FormField class="clock-app__number-field" label="Hours">
-              <TextInput
+            <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Hours">
+              <Input
+                v-bind="controlProps"
                 type="number"
-                min="0"
-                max="23"
-                step="1"
-                inputmode="numeric"
-                aria-label="Timer hours"
+                ariaLabel="Timer hours"
+                :input-attrs="{ min: 0, max: 23, step: 1, inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
                 :model-value="String(timerPartValue('hours'))"
                 @update:model-value="clock.setTimerPart('hours', $event)"
               />
-            </FormField>
-            <FormField class="clock-app__number-field" label="Minutes">
-              <TextInput
+            </Field>
+            <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Minutes">
+              <Input
+                v-bind="controlProps"
                 type="number"
-                min="0"
-                max="59"
-                step="1"
-                inputmode="numeric"
-                aria-label="Timer minutes"
+                ariaLabel="Timer minutes"
+                :input-attrs="{ min: 0, max: 59, step: 1, inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
                 :model-value="String(timerPartValue('minutes'))"
                 @update:model-value="clock.setTimerPart('minutes', $event)"
               />
-            </FormField>
-            <FormField class="clock-app__number-field" label="Seconds">
-              <TextInput
+            </Field>
+            <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Seconds">
+              <Input
+                v-bind="controlProps"
                 type="number"
-                min="0"
-                max="59"
-                step="1"
-                inputmode="numeric"
-                aria-label="Timer seconds"
+                ariaLabel="Timer seconds"
+                :input-attrs="{ min: 0, max: 59, step: 1, inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
                 :model-value="String(timerPartValue('seconds'))"
                 @update:model-value="clock.setTimerPart('seconds', $event)"
               />
-            </FormField>
+            </Field>
           </div>
 
           <div class="clock-app__presets" aria-label="Timer presets">
@@ -193,8 +189,8 @@ function durationDatetime(ms: number): string {
           <div class="clock-app__controls">
             <Button
               v-if="clock.timerStatus.value !== 'running'"
-              variant="primary"
-              :icon-start="Play"
+              variant="solid"
+              color="blue"
               :disabled="
                 clock.timerStatus.value === 'paused'
                   ? !clock.timerCanResume.value
@@ -202,12 +198,17 @@ function durationDatetime(ms: number): string {
               "
               @click="runTimerPrimary"
             >
+              <template #left><Play aria-hidden="true" /></template>
               {{ timerPrimaryLabel }}
             </Button>
-            <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseTimer">
+            <Button v-else variant="solid" color="blue" @click="clock.pauseTimer">
+              <template #left><Pause aria-hidden="true" /></template>
               Pause
             </Button>
-            <Button :icon-start="RotateCcw" @click="clock.resetTimer">Reset</Button>
+            <Button @click="clock.resetTimer">
+              <template #left><RotateCcw aria-hidden="true" /></template>
+              Reset
+            </Button>
           </div>
         </TabsContent>
 
@@ -229,23 +230,25 @@ function durationDatetime(ms: number): string {
           <div class="clock-app__controls">
             <Button
               v-if="clock.stopwatchStatus.value !== 'running'"
-              variant="primary"
-              :icon-start="Play"
+              variant="solid"
+              color="blue"
               @click="runStopwatchPrimary"
             >
+              <template #left><Play aria-hidden="true" /></template>
               {{ stopwatchPrimaryLabel }}
             </Button>
-            <Button v-else variant="primary" :icon-start="Pause" @click="clock.pauseStopwatch">
+            <Button v-else variant="solid" color="blue" @click="clock.pauseStopwatch">
+              <template #left><Pause aria-hidden="true" /></template>
               Pause
             </Button>
-            <Button
-              :icon-start="Flag"
-              :disabled="!clock.stopwatchCanLap.value"
-              @click="clock.lapStopwatch"
-            >
+            <Button :disabled="!clock.stopwatchCanLap.value" @click="clock.lapStopwatch">
+              <template #left><Flag aria-hidden="true" /></template>
               Lap
             </Button>
-            <Button :icon-start="RotateCcw" @click="clock.resetStopwatch">Reset</Button>
+            <Button @click="clock.resetStopwatch">
+              <template #left><RotateCcw aria-hidden="true" /></template>
+              Reset
+            </Button>
           </div>
 
           <ScrollArea
@@ -376,7 +379,7 @@ function durationDatetime(ms: number): string {
   justify-content: center;
 }
 
-.clock-app__number-field input {
+.clock-app__number-field :deep(input) {
   font-variant-numeric: tabular-nums;
   min-block-size: 38px;
   text-align: center;
@@ -494,8 +497,8 @@ function durationDatetime(ms: number): string {
     justify-self: center;
   }
 
-  .clock-app__presets :deep(.ds-button),
-  .clock-app__controls :deep(.ds-button) {
+  .clock-app__presets :deep(button),
+  .clock-app__controls :deep(button) {
     inline-size: 100%;
     justify-content: center;
     min-block-size: 44px;

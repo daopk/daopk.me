@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { defineVaporComponent, nextTick } from "vue";
+import { nextTick } from "vue";
+import { Button } from "ropav/button";
+import { Card } from "ropav/card";
 
-import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
-
-import Button from "./Button.vue";
-import Card from "./Card.vue";
-import DialogActions from "./DialogActions.vue";
+import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
 const mounted: VaporMount[] = [];
+
+function text(value: string): Text {
+  return document.createTextNode(value);
+}
 
 function mount(
   component: Parameters<typeof mountVaporRoot>[0],
@@ -22,82 +24,83 @@ afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
 });
 
+it("keeps the direct Ropav layout exports compiled in Vapor mode", () => {
+  assertVaporComponents({ Button, Card });
+});
+
 describe("Button", () => {
-  it("preserves variants, size, type and slot content", () => {
+  it("preserves native attributes, variants and compound slots", () => {
     const wrapper = mount(Button, {
-      props: { variant: "primary", size: "sm", type: "submit" },
-      slots: { default: "<span>Save</span>" },
+      props: { variant: "solid", size: "sm", type: "submit", "data-action": "save" },
+      slots: {
+        left: () => text("Before"),
+        default: () => text("Save"),
+        right: () => text("After"),
+      },
     });
     const button = wrapper.find<HTMLButtonElement>("button");
 
     expect(button.type).toBe("submit");
-    expect(button.textContent).toBe("Save");
-    expect(button.classList).toContain("ds-button--primary");
-    expect(button.classList).toContain("ds-button--sm");
+    expect(button.dataset.action).toBe("save");
+    expect(button.classList).toContain("rp-button--solid");
+    expect(button.classList).toContain("rp-button--size-sm");
+    expect(wrapper.find(".rp-button__left").textContent).toBe("Before");
+    expect(wrapper.find(".rp-button__label").textContent).toBe("Save");
+    expect(wrapper.find(".rp-button__right").textContent).toBe("After");
   });
 
-  it("disables interaction while loading and swaps icons for status", async () => {
+  it("disables interaction and exposes busy state while loading", async () => {
     let clicks = 0;
-    const Icon = defineVaporComponent(() => {
-      const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      icon.dataset.testid = "icon";
-      return icon;
-    });
+    const loader = () => {
+      const loader = document.createElement("span");
+      loader.dataset.testid = "loader";
+      return loader;
+    };
     const wrapper = mount(Button, {
-      props: { loading: true, iconStart: Icon, iconEnd: Icon, onClick: () => clicks++ },
-      slots: { default: () => "Save" },
+      props: { loading: true, onClick: () => clicks++ },
+      slots: { loading: loader, default: () => text("Save") },
     });
     const button = wrapper.find<HTMLButtonElement>("button");
 
     expect(button.disabled).toBe(true);
     expect(button.getAttribute("aria-busy")).toBe("true");
-    expect(wrapper.find('[role="status"]').getAttribute("aria-label")).toBe("Loading");
-    expect(wrapper.findAll('[data-testid="icon"]')).toHaveLength(0);
+    expect(button.hasAttribute("data-loading")).toBe(true);
+    expect(wrapper.findAll('[data-testid="loader"]')).toHaveLength(1);
     button.click();
     await nextTick();
     expect(clicks).toBe(0);
   });
-
-  it("forwards click listeners when active", async () => {
-    let clicks = 0;
-    const wrapper = mount(Button, { props: { onClick: () => clicks++ } });
-    wrapper.find<HTMLButtonElement>("button").click();
-    await nextTick();
-    expect(clicks).toBe(1);
-  });
 });
 
 describe("Card", () => {
-  it("preserves dynamic roots, state classes and fallthrough attrs", () => {
+  it("renders semantic sections and exposes the public Styles API", () => {
     const wrapper = mount(Card, {
       props: {
-        as: "button",
-        interactive: true,
-        selected: true,
-        variant: "subtle",
-        role: "radio",
-        "aria-checked": "true",
+        title: "Storage",
+        description: "12 GB available",
+        layer: "raised",
+        padding: "lg",
+        radius: "md",
+        headerBorder: true,
+        footerBorder: true,
+        classNames: { root: "consumer-card", body: "consumer-body" },
+        "data-card": "storage",
       },
-      slots: { default: () => "Choice" },
+      slots: {
+        default: () => text("Card body"),
+        footer: () => text("Card footer"),
+      },
     });
-    const card = wrapper.find<HTMLButtonElement>("button");
+    const card = wrapper.find<HTMLElement>(".rp-card");
 
-    expect(card.textContent).toBe("Choice");
-    expect(card.getAttribute("role")).toBe("radio");
-    expect(card.getAttribute("aria-checked")).toBe("true");
-    expect(card.classList).toContain("ds-card--interactive");
-    expect(card.classList).toContain("ds-card--selected");
-    expect(card.classList).toContain("ds-card--subtle");
-  });
-});
-
-describe("DialogActions", () => {
-  it("renders slots with the default and requested alignment", () => {
-    const end = mount(DialogActions, { slots: { default: "<button>OK</button>" } });
-    expect(end.find(".ds-dialog-actions").classList).toContain("ds-dialog-actions--end");
-    expect(end.find("button").textContent).toBe("OK");
-
-    const between = mount(DialogActions, { props: { align: "between" } });
-    expect(between.find(".ds-dialog-actions").classList).toContain("ds-dialog-actions--between");
+    expect(card.dataset.card).toBe("storage");
+    expect(card.classList).toContain("consumer-card");
+    expect(card.classList).toContain("rp-card--layer-raised");
+    expect(card.classList).toContain("rp-card--padding-lg");
+    expect(card.classList).toContain("rp-card--radius-md");
+    expect(wrapper.find(".rp-card__title").textContent).toBe("Storage");
+    expect(wrapper.find(".rp-card__description").textContent).toBe("12 GB available");
+    expect(wrapper.find(".consumer-body").textContent).toBe("Card body");
+    expect(wrapper.find(".rp-card__footer").textContent).toBe("Card footer");
   });
 });

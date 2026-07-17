@@ -4,11 +4,10 @@ import {
   AppToolbar,
   ScrollArea,
   SectionHeader,
-  StatusBanner,
   ToolbarTitle,
   useAppChrome,
 } from "~/components/kit";
-import { Button } from "~/components/ui";
+import { Alert, Button } from "~/components/ui";
 import { RefreshCw } from "~/icons/lucide";
 
 // Mirrors the title (and, if needed, a back action) into the mobile header.
@@ -26,12 +25,17 @@ useAppChrome({ title: () => "Template" });
     <AppToolbar class="template-app__toolbar" density="comfortable">
       <ToolbarTitle title="Template" subtitle="A token-based app shell" />
       <template #end>
-        <Button size="sm" variant="secondary" :icon-start="RefreshCw">Action</Button>
+        <Button size="sm" variant="surface">
+          <template #left><RefreshCw aria-hidden="true" /></template>
+          Action
+        </Button>
       </template>
     </AppToolbar>
 
     <ScrollArea class="template-app__body" safe-area>
-      <StatusBanner tone="info">Replace this skeleton with your app content.</StatusBanner>
+      <Alert color="blue" variant="surface" role="status">
+        Replace this skeleton with your app content.
+      </Alert>
       <SectionHeader title="Section" subtitle="Group related controls under section headers." />
     </ScrollArea>
   </AppFrame>

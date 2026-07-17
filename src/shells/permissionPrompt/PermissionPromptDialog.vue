@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, useId } from "vue";
 
-import { Button, Dialog } from "~/components/ui";
+import { Button, Modal } from "~/components/ui";
 import { usePermissionPromptQueue } from "~/composables/usePermissionPromptQueue";
 import { permissionLabel } from "~/core/permissions/copy";
 
@@ -53,11 +53,16 @@ function onDeny(): void {
 
 const actionConfig: Record<
   PermissionActionId,
-  { label: string; variant: "primary" | "secondary"; onClick: () => void }
+  { label: string; variant: "solid" | "surface"; color?: "blue"; onClick: () => void }
 > = {
-  deny: { label: "Don't allow", variant: "secondary", onClick: onDeny },
-  allowOnce: { label: "Allow once", variant: "secondary", onClick: onAllowOnce },
-  allowRemember: { label: "Allow and remember", variant: "primary", onClick: onAllowRemember },
+  deny: { label: "Don't allow", variant: "surface", onClick: onDeny },
+  allowOnce: { label: "Allow once", variant: "surface", onClick: onAllowOnce },
+  allowRemember: {
+    label: "Allow and remember",
+    variant: "solid",
+    color: "blue",
+    onClick: onAllowRemember,
+  },
 };
 
 const resolvedLayout = computed(
@@ -73,32 +78,93 @@ const resolvedOrder = computed<readonly PermissionActionId[]>(
 );
 
 const actions = computed(() => resolvedOrder.value.map((id) => ({ id, ...actionConfig[id] })));
+
+const SYSTEM_DIALOG_CONTENT_BASE_Z_INDEX = 1801;
+const modalId = `permission-prompt-${useId()}`;
+const modalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" as const },
+};
+const modalSize = computed(() => (props.variant === "sheet" ? "100%" : "420px"));
+const modalOverlayProps = computed(() => ({
+  color:
+    props.variant === "sheet"
+      ? "color-mix(in oklab, var(--color-bg) 35%, transparent)"
+      : "color-mix(in oklab, var(--color-bg) 60%, transparent)",
+}));
+const modalStyles = computed(() =>
+  props.variant === "sheet"
+    ? {
+        root: {
+          alignItems: "end",
+          overflow: "hidden",
+          padding: "0",
+        },
+        panel: {
+          borderBlockEnd: "0",
+          borderRadius: "var(--radius-lg) var(--radius-lg) 0 0",
+          maxHeight: "calc(100% - var(--space-lg))",
+        },
+        footer: {
+          paddingBlockEnd: "calc(var(--space-lg) + max(0px, env(safe-area-inset-bottom, 0px)))",
+        },
+      }
+    : undefined,
+);
+const modalClassNames = computed(() => ({
+  root: [
+    "ds-permission-prompt__modal",
+    `ds-permission-prompt__modal--${props.variant}`,
+    "ds-permission-prompt__modal--system",
+  ],
+  overlay: ["ds-permission-prompt__overlay", "ds-permission-prompt__overlay--system"],
+  panel: [
+    "ds-permission-prompt__panel",
+    `ds-permission-prompt__panel--${props.variant}`,
+    "ds-permission-prompt__panel--system",
+  ],
+  footer: "ds-permission-prompt__footer",
+}));
+
+onBeforeUnmount(() => {
+  const portalRoot = document.getElementById(modalId)?.parentElement;
+  queueMicrotask(() => portalRoot?.remove());
+});
 </script>
 
 <template>
   <div class="ds-permission-prompt__host">
-    <Dialog
+    <Modal
+      :id="modalId"
       :open="isOpen"
       :title="headline"
       :description="description"
-      :variant="variant"
-      layer="system"
-      :dismissible="false"
+      :size="modalSize"
+      :base-z-index="SYSTEM_DIALOG_CONTENT_BASE_Z_INDEX"
+      :close-on-overlay-click="false"
+      :close-on-escape="false"
+      :show-close-button="false"
+      :focus-trap-options="modalFocusTrapOptions"
+      :overlay-props="modalOverlayProps"
+      :class-names="modalClassNames"
+      :styles="modalStyles"
     >
-      <div
-        class="ds-permission-prompt__actions"
-        :class="`ds-permission-prompt__actions--${resolvedLayout}`"
-      >
-        <Button
-          v-for="action in actions"
-          :key="action.id"
-          :variant="action.variant"
-          @click="action.onClick"
+      <template #footer>
+        <div
+          class="ds-permission-prompt__actions"
+          :class="`ds-permission-prompt__actions--${resolvedLayout}`"
         >
-          {{ action.label }}
-        </Button>
-      </div>
-    </Dialog>
+          <Button
+            v-for="action in actions"
+            :key="action.id"
+            :variant="action.variant"
+            :color="action.color"
+            @click="action.onClick"
+          >
+            {{ action.label }}
+          </Button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -110,7 +176,7 @@ const actions = computed(() => resolvedOrder.value.map((id) => ({ id, ...actionC
 .ds-permission-prompt__actions {
   display: flex;
   gap: var(--space-sm);
-  margin-block-start: var(--space-md);
+  inline-size: 100%;
 }
 
 .ds-permission-prompt__actions--row {
@@ -121,7 +187,7 @@ const actions = computed(() => resolvedOrder.value.map((id) => ({ id, ...actionC
 .ds-permission-prompt__actions--column {
   flex-direction: column;
 
-  :deep(.ds-button) {
+  > :deep(*) {
     justify-content: center;
     inline-size: 100%;
   }

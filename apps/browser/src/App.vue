@@ -5,15 +5,12 @@ import {
   AppFrame,
   AppToolbar,
   EmptyState,
-  IconButton,
   ListButton,
   ScrollArea,
   Spinner,
-  StatusBanner,
-  TextInput,
   ToolbarGroup,
 } from "@daopk/kit";
-import { Button, ContextMenu, ContextMenuItem } from "@daopk/ui";
+import { Alert, Button, ContextMenu, ContextMenuItem, IconButton, Input } from "@daopk/ui";
 import {
   ArrowLeft,
   ArrowRight,
@@ -102,13 +99,14 @@ function openExternally(): void {
           <ContextMenu :modal="false">
             <template #trigger>
               <IconButton
-                label="Back"
+                ariaLabel="Back"
                 size="sm"
-                :icon="ArrowLeft"
                 :disabled="!browser.canGoBack.value"
                 title="Back"
                 @click="goBack"
-              />
+              >
+                <ArrowLeft aria-hidden="true" />
+              </IconButton>
             </template>
             <template #items>
               <ContextMenuItem v-if="browser.backHistory.value.length === 0" disabled>
@@ -131,13 +129,14 @@ function openExternally(): void {
           <ContextMenu :modal="false">
             <template #trigger>
               <IconButton
-                label="Forward"
+                ariaLabel="Forward"
                 size="sm"
-                :icon="ArrowRight"
                 :disabled="!browser.canGoForward.value"
                 title="Forward"
                 @click="goForward"
-              />
+              >
+                <ArrowRight aria-hidden="true" />
+              </IconButton>
             </template>
             <template #items>
               <ContextMenuItem v-if="browser.forwardHistory.value.length === 0" disabled>
@@ -158,14 +157,17 @@ function openExternally(): void {
             </template>
           </ContextMenu>
           <IconButton
-            label="Reload"
+            ariaLabel="Reload"
             size="sm"
-            :icon="RefreshCw"
             :disabled="!browser.canPreview.value"
             title="Reload"
             @click="browser.reload"
-          />
-          <IconButton label="Home" size="sm" :icon="Home" title="Home" @click="goHome" />
+          >
+            <RefreshCw aria-hidden="true" />
+          </IconButton>
+          <IconButton ariaLabel="Home" size="sm" title="Home" @click="goHome">
+            <Home aria-hidden="true" />
+          </IconButton>
         </ToolbarGroup>
       </template>
 
@@ -186,39 +188,37 @@ function openExternally(): void {
           aria-hidden="true"
         />
         <Globe v-else class="browser__address-icon" aria-hidden="true" />
-        <TextInput
+        <Input
           id="browser-address"
           v-model="addressInput"
-          class="browser__address-input"
-          variant="plain"
+          class="browser__address-input-root"
+          :class-names="{ input: 'browser__address-input' }"
           type="text"
-          autocomplete="url"
-          autocapitalize="off"
-          autocorrect="off"
-          spellcheck="false"
-          inputmode="url"
           placeholder="Search or enter address"
-          @focus="selectAddress"
+          :input-attrs="{
+            autocomplete: 'url',
+            autocapitalize: 'off',
+            autocorrect: 'off',
+            spellcheck: false,
+            inputmode: 'url',
+            onFocus: selectAddress,
+          }"
         />
-        <Button
-          type="submit"
-          size="sm"
-          variant="primary"
-          :icon-start="Search"
-          aria-label="Go"
-          title="Go"
-        />
+        <Button type="submit" size="sm" variant="solid" color="blue" aria-label="Go" title="Go">
+          <template #left><Search aria-hidden="true" /></template>
+        </Button>
       </form>
 
       <template #end>
         <IconButton
-          label="Open externally"
+          ariaLabel="Open externally"
           size="sm"
-          :icon="ExternalLink"
           :disabled="browser.current.value.kind !== 'web'"
           title="Open externally"
           @click="openExternally"
-        />
+        >
+          <ExternalLink aria-hidden="true" />
+        </IconButton>
       </template>
     </AppToolbar>
 
@@ -272,11 +272,12 @@ function openExternally(): void {
         </template>
         <p class="browser__blocked-copy">{{ browser.current.value.url }}</p>
         <Button
-          variant="primary"
-          :icon-start="ExternalLink"
+          variant="solid"
+          color="blue"
           aria-label="Open current site externally"
           @click="openExternally"
         >
+          <template #left><ExternalLink aria-hidden="true" /></template>
           Open externally
         </Button>
       </EmptyState>
@@ -305,10 +306,12 @@ function openExternally(): void {
       />
     </main>
 
-    <StatusBanner as="footer" class="browser__status">
-      <Spinner v-if="browser.isLoading.value" size="sm" />
-      {{ browser.message.value }}
-    </StatusBanner>
+    <footer class="browser__status">
+      <Alert class="browser__status-alert" color="gray" variant="surface" role="status">
+        <Spinner v-if="browser.isLoading.value" size="sm" />
+        {{ browser.message.value }}
+      </Alert>
+    </footer>
   </AppFrame>
 </template>
 

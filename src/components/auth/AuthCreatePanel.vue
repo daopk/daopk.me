@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Button } from "~/components/ui";
+import { Button, Input } from "~/components/ui";
 import { CloudOff, KeyRound, Plus } from "~/icons/lucide";
 
 const props = defineProps<{
@@ -17,59 +17,58 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-function updateName(event: Event): void {
-  emit("update:modelValue", (event.target as HTMLInputElement).value);
-}
+const nameInputClassNames = { input: "auth-gate__input-control" } as const;
 </script>
 
 <template>
   <form class="auth-gate__form" @submit.prevent="emit('create-passkey')">
     <label class="auth-gate__field">
       <span class="auth-gate__label">Name</span>
-      <input
-        :value="props.modelValue"
+      <Input
+        :model-value="props.modelValue"
         class="auth-gate__input"
-        autocomplete="name"
         :disabled="busy"
-        maxlength="40"
         type="text"
-        @input="updateName"
+        :class-names="nameInputClassNames"
+        :input-attrs="{ autocomplete: 'name', maxlength: 40 }"
+        @update:model-value="emit('update:modelValue', $event)"
       />
     </label>
 
     <Button
       class="auth-gate__button"
-      variant="primary"
+      variant="solid"
+      color="blue"
       type="submit"
       :loading="busy"
       :disabled="!passkeyAvailable"
-      :icon-start="Plus"
     >
+      <template #left><Plus aria-hidden="true" /></template>
       Create passkey
     </Button>
 
     <Button
       v-if="!hasGuestProfile"
       class="auth-gate__button"
-      variant="secondary"
+      variant="surface"
       type="button"
       :loading="busy"
       :disabled="busy"
-      :icon-start="CloudOff"
       @click="emit('create-guest')"
     >
+      <template #left><CloudOff aria-hidden="true" /></template>
       Continue as guest
     </Button>
 
     <Button
       v-if="hasProfiles"
       class="auth-gate__button"
-      variant="secondary"
+      variant="surface"
       type="button"
       :disabled="busy"
-      :icon-start="KeyRound"
       @click="emit('back')"
     >
+      <template #left><KeyRound aria-hidden="true" /></template>
       Back to accounts
     </Button>
   </form>
@@ -97,7 +96,7 @@ function updateName(event: Event): void {
   font-weight: 600;
 }
 
-.auth-gate__input {
+.auth-gate__input-control {
   background: color-mix(in srgb, var(--color-bg) 52%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-border) 64%, transparent);
   border-radius: var(--radius-md);
@@ -107,7 +106,7 @@ function updateName(event: Event): void {
   padding: 0 var(--space-md);
 }
 
-.auth-gate__input:focus-visible {
+.auth-gate__input-control:focus-visible {
   border-color: var(--color-accent);
   outline: 2px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
   outline-offset: 2px;
@@ -129,7 +128,7 @@ function updateName(event: Event): void {
     min-block-size: 48px;
   }
 
-  .auth-gate__input {
+  .auth-gate__input-control {
     backdrop-filter: blur(18px) saturate(1.08);
     background: color-mix(in srgb, var(--color-bg-elevated) 58%, transparent);
   }

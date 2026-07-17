@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { EmptyState, ListButton, SectionHeader, StatusBanner } from "@daopk/kit";
+import { EmptyState, ListButton, SectionHeader } from "@daopk/kit";
+import { Alert } from "@daopk/ui";
 
 import type { BlogIndexPost } from "../composables/useBlogIndex";
 
@@ -19,7 +20,9 @@ defineEmits<{
   <section class="blog__index" aria-label="Latest blog posts">
     <SectionHeader class="blog__index-header" title="Latest posts" :level="1" size="page" />
 
-    <StatusBanner v-if="loading" class="blog__status">Loading posts...</StatusBanner>
+    <Alert v-if="loading" class="blog__status" color="gray" variant="surface" role="status">
+      Loading posts...
+    </Alert>
     <EmptyState
       v-else-if="loadFailed"
       class="blog__state"

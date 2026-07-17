@@ -1,14 +1,16 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createComponent, defineVaporComponent, nextTick, ref } from "vue";
+import { Radio, RadioGroup } from "ropav/radio";
+import { Slider } from "ropav/slider";
+import { Switch } from "ropav/switch";
 
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
-import RadioGroup from "./RadioGroup.vue";
-import RadioGroupItem from "./RadioGroupItem.vue";
-import Slider from "./Slider.vue";
-import Switch from "./Switch.vue";
-
 const mounted: VaporMount[] = [];
+
+function text(value: string): Text {
+  return document.createTextNode(value);
+}
 
 function mount(
   component: Parameters<typeof mountVaporRoot>[0],
@@ -23,8 +25,8 @@ afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
 });
 
-it("keeps form controls compiled in Vapor mode", () => {
-  assertVaporComponents({ RadioGroup, RadioGroupItem, Slider, Switch });
+it("keeps the direct Ropav form controls compiled in Vapor mode", () => {
+  assertVaporComponents({ Radio, RadioGroup, Slider, Switch });
 });
 
 describe("Switch", () => {
@@ -42,9 +44,9 @@ describe("Switch", () => {
     expect(input.checked).toBe(false);
     expect(input.getAttribute("aria-checked")).toBe("false");
     expect(input.getAttribute("aria-label")).toBe("Enable widget");
-    expect(wrapper.find(".ds-switch").getAttribute("data-state")).toBe("unchecked");
-    expect(wrapper.find(".ds-switch__track")).toBeTruthy();
-    expect(wrapper.find(".ds-switch__thumb")).toBeTruthy();
+    expect(wrapper.find(".rp-switch").getAttribute("data-state")).toBe("unchecked");
+    expect(wrapper.find(".rp-switch__track")).toBeTruthy();
+    expect(wrapper.find(".rp-switch__thumb")).toBeTruthy();
 
     input.click();
     await nextTick();
@@ -90,7 +92,7 @@ describe("Switch", () => {
         name: "notifications",
         required: true,
         invalid: true,
-        ariaDescribedby: "notifications-error",
+        describedby: "notifications-error",
         inputAttrs: {
           form: "preferences",
           autocomplete: "off",
@@ -111,31 +113,26 @@ describe("Switch", () => {
 });
 
 describe("Slider", () => {
-  it("emits scalar updates and commits from native input/change events", async () => {
+  it("emits scalar updates from the native input event", async () => {
     const updates: number[] = [];
-    const commits: number[] = [];
     const wrapper = mount(Slider, {
       props: {
         modelValue: 0.2,
         min: 0,
         max: 1,
         step: 0.05,
+        tooltip: false,
         "onUpdate:modelValue": (next: number) => updates.push(next),
-        onCommit: (next: number) => commits.push(next),
       },
     });
     const input = wrapper.find<HTMLInputElement>('input[type="range"]');
 
-    expect(input.classList).toContain("ds-slider__input");
+    expect(input.classList).toContain("rp-slider__native");
 
     input.value = "0.45";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     await nextTick();
     expect(updates.at(-1)).toBeCloseTo(0.45, 2);
-
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    await nextTick();
-    expect(commits).toEqual([0.45]);
   });
 
   it("clamps values and preserves orientation, disabled and ARIA attributes", () => {
@@ -146,11 +143,12 @@ describe("Slider", () => {
         max: 1,
         orientation: "vertical",
         disabled: true,
-        ariaLabelledby: "dim-label",
-        ariaValuetext: "100% darkening",
+        labelledby: "dim-label",
+        ariaValueText: "100% darkening",
+        tooltip: false,
       },
     });
-    const root = wrapper.find(".ds-slider");
+    const root = wrapper.find(".rp-slider");
     const input = wrapper.find<HTMLInputElement>('input[type="range"]');
 
     expect(root.getAttribute("data-orientation")).toBe("vertical");
@@ -167,7 +165,8 @@ describe("Slider", () => {
         modelValue: 25,
         id: "volume",
         name: "volume",
-        ariaDescribedby: "volume-help",
+        describedby: "volume-help",
+        tooltip: false,
         inputAttrs: { form: "player-settings", list: "volume-marks" },
       },
     });
@@ -186,15 +185,15 @@ describe("RadioGroup", () => {
     return mount(RadioGroup, {
       props: {
         modelValue,
-        label: "Density",
+        ariaLabel: "Density",
         name: "density",
         "onUpdate:modelValue": onUpdate,
       },
       slots: {
         default: () => [
-          createComponent(RadioGroupItem, { value: "a", label: "A" }),
-          createComponent(RadioGroupItem, { value: "b", label: "B" }),
-          createComponent(RadioGroupItem, { value: "c", label: "C", disabled: true }),
+          createComponent(Radio, { value: "a" }, { default: () => text("A") }),
+          createComponent(Radio, { value: "b" }, { default: () => text("B") }),
+          createComponent(Radio, { value: "c", disabled: true }, { default: () => text("C") }),
         ],
       },
     });
@@ -213,7 +212,7 @@ describe("RadioGroup", () => {
     expect(radios[0]?.checked).toBe(true);
     expect(radios[0]?.name).toBe("density");
     expect(radios[2]?.disabled).toBe(true);
-    expect(wrapper.findAll(".ds-radio__indicator")).toHaveLength(3);
+    expect(wrapper.findAll(".rp-radio__dot")).toHaveLength(3);
 
     radios[1]?.click();
     await nextTick();
@@ -222,11 +221,11 @@ describe("RadioGroup", () => {
 
   it("keeps the orientation modifier and rich item labels", () => {
     const wrapper = mount(RadioGroup, {
-      props: { modelValue: "a", orientation: "horizontal", label: "Density" },
+      props: { modelValue: "a", orientation: "horizontal", ariaLabel: "Density" },
       slots: {
         default: () =>
           createComponent(
-            RadioGroupItem,
+            Radio,
             { value: "a" },
             {
               default: () => {
@@ -239,8 +238,8 @@ describe("RadioGroup", () => {
       },
     });
 
-    expect(wrapper.find(".ds-radio-group").classList).toContain("ds-radio-group--horizontal");
-    expect(wrapper.find(".ds-radio__label").textContent).toBe("Comfortable");
+    expect(wrapper.find<HTMLElement>(".rp-radio-group").dataset.orientation).toBe("horizontal");
+    expect(wrapper.find(".rp-radio__label").textContent).toBe("Comfortable");
   });
 
   it("forwards group validation and item-level native attributes", () => {
@@ -249,18 +248,21 @@ describe("RadioGroup", () => {
         id: "density-group",
         modelValue: undefined,
         name: "density",
-        label: "Density",
+        ariaLabel: "Density",
         required: true,
         invalid: true,
-        ariaDescribedby: "density-error",
+        describedby: "density-error",
       },
       slots: {
         default: () =>
-          createComponent(RadioGroupItem, {
-            value: "compact",
-            label: "Compact",
-            inputAttrs: { form: "appearance", autocomplete: "off" },
-          }),
+          createComponent(
+            Radio,
+            {
+              value: "compact",
+              inputAttrs: { form: "appearance", autocomplete: "off" },
+            },
+            { default: () => text("Compact") },
+          ),
       },
     });
     const group = wrapper.find<HTMLElement>('[role="radiogroup"]');

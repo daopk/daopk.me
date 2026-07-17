@@ -2,9 +2,9 @@
 import { nextTick, onMounted, onUnmounted, ref, watch, type VaporComponent } from "vue";
 
 import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";
-import { Badge, EmptyState, ScrollArea, StatusBanner } from "@daopk/kit";
+import { EmptyState, ScrollArea } from "@daopk/kit";
 import { useKernel, type VfsDirEntry } from "@daopk/sdk";
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
+import { Alert, Badge, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
 
 import AppIcon from "~/components/AppIcon.vue";
 
@@ -274,7 +274,9 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   <ContextMenu :modal="false">
     <template #trigger>
       <section class="finder__browser" aria-label="Directory browser">
-        <StatusBanner v-if="error" class="finder__notice" tone="error">{{ error }}</StatusBanner>
+        <Alert v-if="error" class="finder__notice" color="red" variant="surface" role="alert">
+          {{ error }}
+        </Alert>
         <EmptyState v-else-if="!error && entries.length === 0" class="finder__empty">
           This folder is empty.
         </EmptyState>
@@ -317,7 +319,14 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   }}</span>
                   <span class="finder__entry-date">{{ formatModified(entry.updatedAt) }}</span>
                   <span class="finder__entry-badge-slot">
-                    <Badge v-if="entry.readonly" class="finder__entry-badge">Read only</Badge>
+                    <Badge
+                      v-if="entry.readonly"
+                      class="finder__entry-badge"
+                      color="gray"
+                      variant="outline"
+                    >
+                      Read only
+                    </Badge>
                   </span>
                 </div>
               </template>

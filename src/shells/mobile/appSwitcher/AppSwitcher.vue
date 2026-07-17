@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
 import { Trash2 as DismissAllIcon, X as CloseIcon } from "~/icons/lucide";
-import { computed, ref, useId, type VaporComponent } from "vue";
+import { computed, type VaporComponent } from "vue";
+import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
-import { useFocusTrap } from "~/components/ui/useFocusTrap";
 import { useKernel } from "~/composables/useKernel";
 
 import type { NavigationFrame } from "../navigation";
@@ -19,18 +19,18 @@ const emit = defineEmits<{
   (e: "dismiss-all"): void;
 }>();
 
-const headingId = useId();
 const kernel = useKernel();
-const appSwitcherRef = ref<HTMLElement | null>(null);
 
-useFocusTrap(appSwitcherRef, {
-  escapeDeactivates: false,
-  initialFocus: () =>
-    appSwitcherRef.value?.querySelector<HTMLElement>(".app-switcher__close") ??
-    appSwitcherRef.value ??
-    false,
-  preventScroll: true,
-});
+const APP_SWITCHER_CONTENT_BASE_Z_INDEX = 951;
+const focusTrapOptions: ModalFocusTrapOptions = {
+  tabbableOptions: { displayCheck: "none" },
+};
+const modalClassNames = {
+  root: "app-switcher",
+  overlay: "app-switcher__overlay",
+  panel: "app-switcher__panel",
+  body: "app-switcher__modal-body",
+};
 
 interface ResolvedFrame extends NavigationFrame {
   name: string;
@@ -77,70 +77,63 @@ function onDismissAll(): void {
     emit("dismiss-all");
   }
 }
-
-function onScrimClick(event: MouseEvent): void {
-  // descendant cards / chrome bubble through but should not count as a
-  if (event.target === event.currentTarget) {
-    emit("close");
-  }
-}
 </script>
 
 <template>
-  <div
-    ref="appSwitcherRef"
-    class="app-switcher"
-    role="dialog"
-    aria-modal="true"
-    :aria-labelledby="headingId"
-    tabindex="-1"
-    @click="onScrimClick"
-    @keydown.esc.prevent.stop="onClose"
+  <Modal
+    :open="true"
+    aria-label="Recent apps"
+    size="full"
+    :base-z-index="APP_SWITCHER_CONTENT_BASE_Z_INDEX"
+    :teleport="false"
+    :show-close-button="false"
+    initial-focus=".app-switcher__close"
+    :focus-trap-options="focusTrapOptions"
+    :overlay-props="{ color: 'var(--app-switcher-scrim)' }"
+    :class-names="modalClassNames"
+    @close="onClose"
   >
-    <div class="app-switcher__panel">
-      <header class="app-switcher__header">
-        <button
-          type="button"
-          class="app-switcher__close"
-          aria-label="Close recent apps"
-          @click="onClose"
-        >
-          <CloseIcon :size="18" :stroke-width="2" aria-hidden="true" />
-        </button>
-        <h2 :id="headingId" class="app-switcher__title">Recent apps</h2>
-        <button
-          type="button"
-          class="app-switcher__dismiss-all"
-          aria-label="Close all recent apps"
-          :disabled="!canDismissAll"
-          @click="onDismissAll"
-        >
-          <DismissAllIcon :size="18" :stroke-width="2" aria-hidden="true" />
-        </button>
-      </header>
-      <div class="app-switcher__body">
-        <p v-if="cards.length === 0" class="app-switcher__empty">No running apps</p>
-        <ul v-else class="app-switcher__list">
-          <li v-for="card in cards" :key="card.frameId" class="app-switcher__item">
-            <AppSwitcherCard
-              :frame-id="card.frameId"
-              :handle-id="card.handleId"
-              :manifest-id="card.manifestId"
-              :name="card.name"
-              :icon="card.icon"
-              @select="onSelect"
-              @dismiss="onDismiss"
-            />
-          </li>
-        </ul>
-      </div>
+    <header class="app-switcher__header">
+      <button
+        type="button"
+        class="app-switcher__close"
+        aria-label="Close recent apps"
+        @click="onClose"
+      >
+        <CloseIcon :size="18" :stroke-width="2" aria-hidden="true" />
+      </button>
+      <h2 class="app-switcher__title">Recent apps</h2>
+      <button
+        type="button"
+        class="app-switcher__dismiss-all"
+        aria-label="Close all recent apps"
+        :disabled="!canDismissAll"
+        @click="onDismissAll"
+      >
+        <DismissAllIcon :size="18" :stroke-width="2" aria-hidden="true" />
+      </button>
+    </header>
+    <div class="app-switcher__body">
+      <p v-if="cards.length === 0" class="app-switcher__empty">No running apps</p>
+      <ul v-else class="app-switcher__list">
+        <li v-for="card in cards" :key="card.frameId" class="app-switcher__item">
+          <AppSwitcherCard
+            :frame-id="card.frameId"
+            :handle-id="card.handleId"
+            :manifest-id="card.manifestId"
+            :name="card.name"
+            :icon="card.icon"
+            @select="onSelect"
+            @dismiss="onDismiss"
+          />
+        </li>
+      </ul>
     </div>
-  </div>
+  </Modal>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 .app-switcher {
-  background: var(--app-switcher-scrim);
   block-size: 100%;
   display: flex;
   flex-direction: column;
@@ -156,6 +149,15 @@ function onScrimClick(event: MouseEvent): void {
   display: flex;
   flex-direction: column;
   inline-size: 100%;
+}
+
+.app-switcher__modal-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 .app-switcher__header {

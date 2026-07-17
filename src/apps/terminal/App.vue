@@ -1,14 +1,15 @@
 <script setup vapor lang="ts">
-import { inject, nextTick, ref, useTemplateRef, watch } from "vue";
+import { inject, nextTick, ref, useTemplateRef, watch, type InputHTMLAttributes } from "vue";
 
-import { AppFrame, ScrollArea, TextInput } from "~/components/kit";
+import { AppFrame, ScrollArea } from "~/components/kit";
+import { Input } from "~/components/ui";
 import { useAppLifecycle } from "~/composables/useAppLifecycle";
 import { AppContextInjectionKey } from "~/types/app";
 import { useTerminalSession } from "./useTerminalSession";
 
 interface TerminalInputRef {
-  blur: () => void;
-  focus: (options?: FocusOptions) => void;
+  nativeElement: HTMLInputElement | null;
+  focus: () => void;
 }
 
 const ctx = inject(AppContextInjectionKey, null);
@@ -21,7 +22,7 @@ const input = ref<string>("");
 const scrollbackRef = useTemplateRef<{ element: HTMLElement | null }>("scrollbackRef");
 const inputRef = useTemplateRef<TerminalInputRef>("inputRef");
 onPhase("suspended", () => {
-  inputRef.value?.blur();
+  inputRef.value?.nativeElement?.blur();
 });
 
 function scrollToBottom(): void {
@@ -73,6 +74,19 @@ function onKeydown(event: KeyboardEvent): void {
 function onInputEdit(): void {
   resetHistoryCursor();
 }
+
+const terminalInputClassNames = {
+  root: "terminal__input",
+  input: "terminal__input-control",
+} as const;
+
+const terminalInputAttrs = {
+  autocomplete: "off",
+  autocorrect: "off",
+  autocapitalize: "off",
+  spellcheck: false,
+  onKeydown,
+} as InputHTMLAttributes;
 </script>
 
 <template>
@@ -98,19 +112,14 @@ function onInputEdit(): void {
 
     <form class="terminal__prompt-row" @submit.prevent="onSubmit">
       <span class="terminal__prompt" aria-hidden="true">{{ cwd }} $</span>
-      <TextInput
+      <Input
         ref="inputRef"
         v-model="input"
-        class="terminal__input"
-        variant="plain"
+        :class-names="terminalInputClassNames"
+        :input-attrs="terminalInputAttrs"
         type="text"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-        aria-label="Terminal input"
-        @keydown="onKeydown"
-        @input="onInputEdit"
+        ariaLabel="Terminal input"
+        @update:model-value="onInputEdit"
       />
     </form>
   </AppFrame>
@@ -188,24 +197,29 @@ function onInputEdit(): void {
 }
 
 .terminal__input {
+  flex: 1 1 auto;
+  min-inline-size: 4ch;
+}
+
+:deep(.terminal__input-control) {
   background: transparent;
   border: none;
   color: inherit;
-  flex: 1 1 auto;
   font: inherit;
   min-block-size: 0;
-  min-inline-size: 4ch;
+  min-inline-size: 0;
   outline: none;
   padding: 0;
+  width: 100%;
 }
 
-.terminal__input:focus-visible {
+:deep(.terminal__input-control:focus-visible) {
   outline: none;
 }
 
 // iOS Safari zooms in on focus when font-size < 16px. Setting 16px satisfies
 @media (hover: none) and (pointer: coarse) {
-  .terminal__input {
+  :deep(.terminal__input-control) {
     font-size: 16px;
     transform: scale(0.8125);
     transform-origin: left center;
