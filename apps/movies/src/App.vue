@@ -209,6 +209,7 @@ onUnmounted(() => {
       @scroll="updateToolbarSolid"
       @back="goBack"
       @open-detail="openDetail"
+      @open-person="openPerson"
       @watch-episode="openWatchEpisode"
     />
     <PersonView

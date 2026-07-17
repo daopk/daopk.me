@@ -8,6 +8,7 @@ import { ArrowLeft, Layers2 } from "@daopk/icons";
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import SeasonEpisodesSection from "./SeasonEpisodesSection.vue";
+import DetailContent from "./detail/DetailContent.vue";
 import {
   episodeLabel as formatEpisodeLabel,
   episodeMetaLabel,
@@ -22,6 +23,7 @@ import {
   type MovieEpisodeDetail,
   type MovieEpisodeTarget,
   type MoviePlayInfo,
+  type MoviePersonCredit,
   type MovieSummary,
   type MovieSeasonEpisode,
 } from "../moviesApi";
@@ -63,6 +65,7 @@ interface WatchEpisodeRequest {
 const emit = defineEmits<{
   back: [];
   "open-detail": [movie: MovieSummary];
+  "open-person": [person: MoviePersonCredit];
   "watch-episode": [request: WatchEpisodeRequest];
 }>();
 
@@ -412,6 +415,13 @@ defineExpose({
           </Button>
         </div>
       </section>
+
+      <DetailContent
+        v-if="movieDetail !== null"
+        :detail="movieDetail"
+        @open-detail="$emit('open-detail', $event)"
+        @open-person="$emit('open-person', $event)"
+      />
 
       <section
         v-if="episodeInfo !== null"

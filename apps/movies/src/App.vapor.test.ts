@@ -1712,7 +1712,12 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
     expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+    expect(wrapper.find(".movies-watch__sources").exists()).toBe(false);
     expect(wrapper.find(".movies-watch__episode-info").exists()).toBe(false);
+    const movieInfo = wrapper.get(".movies-detail-content");
+    expect(movieInfo.text()).toContain("An insomniac office worker meets a soap maker.");
+    expect(movieInfo.text()).toContain("Release Date");
+    expect(movieInfo.text()).toContain("Edward Norton");
   });
 
   it("opens a Continue Watching movie with the last saved source", async () => {
