@@ -58,14 +58,14 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
           aria-label="Back to Calendar"
           @click="emit('back')"
         >
-          <template #left><ArrowLeft aria-hidden="true" /></template>
+          <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
           Back
         </Button>
         <ToolbarTitle class="calendar-settings__title" title="Calendar settings" />
       </div>
       <template #end>
         <Button class="calendar-settings__action-button" size="md" @click="settings.reset">
-          <template #left><RotateCcw aria-hidden="true" /></template>
+          <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
           Reset
         </Button>
       </template>
@@ -128,7 +128,7 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
 
       <footer v-if="!showHeader" class="calendar-settings__footer">
         <Button class="calendar-settings__action-button" size="md" @click="settings.reset">
-          <template #left><RotateCcw aria-hidden="true" /></template>
+          <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
           Reset
         </Button>
       </footer>

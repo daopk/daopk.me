@@ -108,7 +108,7 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
         :aria-label="t('settings.background.deleteWallpaper', { name: tile.name })"
         @click="(e) => emit('remove', tile.id, e)"
       >
-        <TrashIcon aria-hidden="true" />
+        <TrashIcon size="14" aria-hidden="true" />
       </button>
     </div>
   </div>

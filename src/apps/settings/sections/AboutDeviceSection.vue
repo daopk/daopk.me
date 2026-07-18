@@ -198,7 +198,7 @@ function runSoftwareUpdateAction(): void {
         :loading="isCheckingForUpdates || isUpdateRefreshing || isUpdateInstalling"
         @click="runSoftwareUpdateAction"
       >
-        <template #left><RefreshIcon aria-hidden="true" /></template>
+        <template #left><RefreshIcon size="1em" aria-hidden="true" /></template>
         {{ updateButtonLabel }}
       </Button>
     </Panel>

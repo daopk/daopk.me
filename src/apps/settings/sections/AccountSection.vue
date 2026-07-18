@@ -140,11 +140,11 @@ async function confirmDeleteAccount(): Promise<void> {
 
       <div class="account__actions">
         <Button class="account__action" variant="surface" type="button" @click="lockSession">
-          <template #left><Lock aria-hidden="true" /></template>
+          <template #left><Lock size="1em" aria-hidden="true" /></template>
           {{ t("settings.account.lockSession") }}
         </Button>
         <Button class="account__action" variant="solid" color="blue" type="button" @click="signOut">
-          <template #left><LogOut aria-hidden="true" /></template>
+          <template #left><LogOut size="1em" aria-hidden="true" /></template>
           {{ t("settings.account.signOut") }}
         </Button>
       </div>
@@ -196,7 +196,7 @@ async function confirmDeleteAccount(): Promise<void> {
         type="button"
         @click="requestDeleteAccount"
       >
-        <template #left><Trash2 aria-hidden="true" /></template>
+        <template #left><Trash2 size="1em" aria-hidden="true" /></template>
         {{ t("settings.account.deleteButton") }}
       </Button>
     </Panel>
@@ -262,7 +262,7 @@ async function confirmDeleteAccount(): Promise<void> {
             :loading="deletingAccount"
             @click="confirmDeleteAccount"
           >
-            <template #left><Trash2 aria-hidden="true" /></template>
+            <template #left><Trash2 size="1em" aria-hidden="true" /></template>
             {{ t("settings.account.deleteConfirmButton") }}
           </Button>
         </div>

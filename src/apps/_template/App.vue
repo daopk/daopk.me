@@ -26,7 +26,7 @@ useAppChrome({ title: () => "Template" });
       <ToolbarTitle title="Template" subtitle="A token-based app shell" />
       <template #end>
         <Button size="sm" variant="surface">
-          <template #left><RefreshCw aria-hidden="true" /></template>
+          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
           Action
         </Button>
       </template>

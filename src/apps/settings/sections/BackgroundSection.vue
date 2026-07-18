@@ -209,7 +209,7 @@ function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: fals
             aria-controls="background-file-input"
             @click="triggerFilePicker"
           >
-            <template #left><UploadIcon aria-hidden="true" /></template>
+            <template #left><UploadIcon size="1em" aria-hidden="true" /></template>
             {{
               isUploading
                 ? t("settings.background.processing")

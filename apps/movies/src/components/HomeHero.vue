@@ -136,7 +136,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
-            <template #right><ChevronRight aria-hidden="true" /></template>
+            <template #right><ChevronRight size="1em" aria-hidden="true" /></template>
           </Button>
         </div>
       </div>
@@ -252,7 +252,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
-            <template #right><ChevronRight aria-hidden="true" /></template>
+            <template #right><ChevronRight size="1em" aria-hidden="true" /></template>
           </Button>
         </div>
       </div>

@@ -64,7 +64,7 @@ function dismiss(): void {
         :loading="isPrompting"
         @click="install"
       >
-        <template #left><InstallIcon aria-hidden="true" /></template>
+        <template #left><InstallIcon size="1em" aria-hidden="true" /></template>
         {{ t("settings.pwa.install") }}
       </Button>
       <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.pwa.later") }}</Button>

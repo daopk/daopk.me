@@ -117,7 +117,7 @@ const {
         <div class="desktop-widget-gallery__actions">
           <Button v-if="item.visible" variant="ghost" size="sm" @click="hide(item)">Remove</Button>
           <Button v-else variant="solid" color="blue" size="sm" @click="show(item)">
-            <template #left><Plus aria-hidden="true" /></template>
+            <template #left><Plus size="1em" aria-hidden="true" /></template>
             Add
           </Button>
         </div>

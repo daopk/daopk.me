@@ -52,7 +52,7 @@ const emit = defineEmits<{
         type="button"
         @click="emit('retry')"
       >
-        <template #left><RefreshCw aria-hidden="true" /></template>
+        <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
         Retry update
       </Button>
     </div>

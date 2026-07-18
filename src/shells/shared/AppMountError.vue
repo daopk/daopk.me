@@ -21,7 +21,7 @@ const retry = inject(AppMountRetryKey, null);
       }}
     </p>
     <Button v-if="retry" class="app-mount-error__retry" variant="surface" size="sm" @click="retry">
-      <template #left><RefreshCw aria-hidden="true" /></template>
+      <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
       Try again
     </Button>
   </div>

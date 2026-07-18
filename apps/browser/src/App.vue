@@ -291,7 +291,7 @@ function openExternally(): void {
           aria-label="Open current site externally"
           @click="openExternally"
         >
-          <template #left><ExternalLink aria-hidden="true" /></template>
+          <template #left><ExternalLink size="1em" aria-hidden="true" /></template>
           Open externally
         </Button>
       </EmptyState>

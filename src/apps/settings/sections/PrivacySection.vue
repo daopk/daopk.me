@@ -206,7 +206,7 @@ function permissionCopy(permission: AppPermission): string {
               "
               @click="revoke(row)"
             >
-              <template #left><RevokeIcon aria-hidden="true" /></template>
+              <template #left><RevokeIcon size="1em" aria-hidden="true" /></template>
               {{ t("settings.privacy.revoke") }}
             </Button>
           </ActionRow>

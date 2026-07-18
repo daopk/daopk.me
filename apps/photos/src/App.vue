@@ -76,7 +76,7 @@ function closeLightbox(): void {
         description="Check your connection and try again."
       >
         <Button variant="surface" @click="reload">
-          <template #left><RefreshCw aria-hidden="true" /></template>
+          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
           Retry
         </Button>
       </EmptyState>

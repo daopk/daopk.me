@@ -154,7 +154,7 @@ const choiceRadioClassNames = {
         <SectionHeader title="Section title" subtitle="Default section scale">
           <template #actions>
             <Button size="sm" variant="surface">
-              <template #left><Plus aria-hidden="true" /></template>
+              <template #left><Plus size="1em" aria-hidden="true" /></template>
               New
             </Button>
           </template>
@@ -168,18 +168,18 @@ const choiceRadioClassNames = {
           <Button variant="surface">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="solid" color="red">
-            <template #left><Trash2 aria-hidden="true" /></template>
+            <template #left><Trash2 size="1em" aria-hidden="true" /></template>
             Danger
           </Button>
         </div>
         <div class="gallery__row">
           <Button size="sm" variant="surface">
-            <template #left><RefreshCw aria-hidden="true" /></template>
+            <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
             Small
           </Button>
           <Button size="md" variant="surface">
             Medium
-            <template #right><Download aria-hidden="true" /></template>
+            <template #right><Download size="1em" aria-hidden="true" /></template>
           </Button>
           <Button variant="solid" color="blue" loading>Loading</Button>
           <Button variant="surface" disabled>Disabled</Button>
@@ -356,7 +356,7 @@ const choiceRadioClassNames = {
           <Tooltip content="Refresh the current view">
             <template #default="{ triggerProps }">
               <Button v-bind="triggerProps" size="sm" variant="surface">
-                <template #left><RefreshCw aria-hidden="true" /></template>
+                <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
                 Hover me
               </Button>
             </template>

@@ -147,7 +147,7 @@ onUnmounted(() => {
           type="submit"
           :loading="busy"
         >
-          <template #left><Unlock aria-hidden="true" /></template>
+          <template #left><Unlock size="1em" aria-hidden="true" /></template>
           {{ unlockLabel }}
         </Button>
         <Button
@@ -157,7 +157,7 @@ onUnmounted(() => {
           :disabled="busy"
           @click="signOut"
         >
-          <template #left><LogOut aria-hidden="true" /></template>
+          <template #left><LogOut size="1em" aria-hidden="true" /></template>
           Sign Out
         </Button>
       </form>

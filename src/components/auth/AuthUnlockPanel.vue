@@ -54,6 +54,7 @@ const emit = defineEmits<{
       <template #left>
         <component
           :is="selectedProfile?.authMode === 'guest' ? CloudOff : KeyRound"
+          size="1em"
           aria-hidden="true"
         />
       </template>
@@ -67,7 +68,7 @@ const emit = defineEmits<{
       :disabled="busy || initialImportPending"
       @click="emit('add-account')"
     >
-      <template #left><Plus aria-hidden="true" /></template>
+      <template #left><Plus size="1em" aria-hidden="true" /></template>
       {{ addAccountLabel }}
     </Button>
   </div>

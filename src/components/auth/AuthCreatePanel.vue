@@ -43,7 +43,7 @@ const nameInputClassNames = { input: "auth-gate__input-control" } as const;
       :loading="busy"
       :disabled="!passkeyAvailable"
     >
-      <template #left><Plus aria-hidden="true" /></template>
+      <template #left><Plus size="1em" aria-hidden="true" /></template>
       Create passkey
     </Button>
 
@@ -56,7 +56,7 @@ const nameInputClassNames = { input: "auth-gate__input-control" } as const;
       :disabled="busy"
       @click="emit('create-guest')"
     >
-      <template #left><CloudOff aria-hidden="true" /></template>
+      <template #left><CloudOff size="1em" aria-hidden="true" /></template>
       Continue as guest
     </Button>
 
@@ -68,7 +68,7 @@ const nameInputClassNames = { input: "auth-gate__input-control" } as const;
       :disabled="busy"
       @click="emit('back')"
     >
-      <template #left><KeyRound aria-hidden="true" /></template>
+      <template #left><KeyRound size="1em" aria-hidden="true" /></template>
       Back to accounts
     </Button>
   </form>
