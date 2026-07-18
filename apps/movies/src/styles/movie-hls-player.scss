@@ -280,23 +280,42 @@
 .movies-hls-player__progress {
   --movies-player-slider-thumb-size: 16px;
 
+  display: grid;
   min-inline-size: 0;
   position: relative;
 }
 
-.movies-hls-player__progress::before {
-  background: rgb(255 255 255 / 24%);
+.movies-hls-player__seek-track-layer {
+  background: rgb(255 255 255 / 22%);
   block-size: 3px;
   border-radius: var(--radius-full);
-  content: "";
   inline-size: calc(100% - var(--movies-player-slider-thumb-size));
   inset-block-start: calc(50% - 1.5px);
   inset-inline-start: calc(var(--movies-player-slider-thumb-size) / 2);
+  overflow: hidden;
   pointer-events: none;
   position: absolute;
-  transform: scaleX(var(--movies-player-loaded, 0));
-  transform-origin: left center;
   z-index: 0;
+}
+
+.movies-hls-player__seek-loaded,
+.movies-hls-player__seek-played {
+  block-size: 100%;
+  border-radius: inherit;
+  inline-size: 100%;
+  inset: 0;
+  position: absolute;
+  transform-origin: left center;
+}
+
+.movies-hls-player__seek-loaded {
+  background: rgb(255 255 255 / 42%);
+  transform: scaleX(var(--movies-player-loaded, 0));
+}
+
+.movies-hls-player__seek-played {
+  background: #fff;
+  transform: scaleX(var(--movies-player-played, 0));
 }
 
 .movies-hls-player__ad-markers {
@@ -308,23 +327,49 @@
   inset-inline-start: calc(var(--movies-player-slider-thumb-size) / 2);
   pointer-events: none;
   position: absolute;
-  z-index: 0;
-}
-
-.movies-hls-player__seek {
-  --color-accent: #fff;
-  --color-bg-subtle: rgb(255 255 255 / 22%);
-  --ds-slider-hit-size: 36px;
-  --ds-slider-thumb-opacity: 0;
-
-  position: relative;
   z-index: 1;
 }
 
-.movies-hls-player__seek:hover,
-.movies-hls-player__seek:focus-within,
-.movies-hls-player__seek:active {
-  --ds-slider-thumb-opacity: 1;
+.movies-hls-player__seek {
+  --rp-slider-thumb-border-width: 0;
+  --rp-slider-thumb-size: var(--movies-player-slider-thumb-size);
+  --rp-slider-track-thickness: 3px;
+
+  position: relative;
+  z-index: 2;
+}
+
+:deep(.movies-hls-player__seek-range) {
+  background: transparent;
+}
+
+:deep(.movies-hls-player__seek-input)::-webkit-slider-thumb {
+  opacity: 0;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease);
+}
+
+:deep(.movies-hls-player__seek-input)::-moz-range-thumb {
+  opacity: 0;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease),
+    opacity var(--duration-fast) var(--ease);
+}
+
+.movies-hls-player__progress:hover :deep(.movies-hls-player__seek-input)::-webkit-slider-thumb,
+.movies-hls-player__progress--previewing
+  :deep(.movies-hls-player__seek-input)::-webkit-slider-thumb,
+:deep(.movies-hls-player__seek-input:focus-visible)::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.movies-hls-player__progress:hover :deep(.movies-hls-player__seek-input)::-moz-range-thumb,
+.movies-hls-player__progress--previewing :deep(.movies-hls-player__seek-input)::-moz-range-thumb,
+:deep(.movies-hls-player__seek-input:focus-visible)::-moz-range-thumb {
+  opacity: 1;
 }
 
 .movies-hls-player__seek-preview {

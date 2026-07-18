@@ -892,6 +892,16 @@ content-c.ts
     expect(
       wrapper.get(".movies-hls-player__control-row .movies-hls-player__progress").exists(),
     ).toBe(true);
+    expect(wrapper.get(".movies-hls-player__seek-input").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__seek-range").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__seek-loaded").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__seek-played").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(
+      "--movies-player-loaded: 0.5333333333333333",
+    );
+    expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(
+      "--movies-player-played: 0.375",
+    );
     expect(wrapper.get(".movies-hls-player__time").text()).toBe("0:45");
     expect(wrapper.get(".movies-hls-player__duration").text()).toBe("2:00");
   });
@@ -906,16 +916,23 @@ content-c.ts
     const progress = wrapper.get(".movies-hls-player__progress").element;
     setProgressRect(progress);
 
-    pointerEvent("pointerdown", progress, { clientX: 108 });
+    pointerEvent("pointermove", progress, { clientX: 108 });
     await settle();
 
     expect(wrapper.get(".movies-hls-player__seek-preview").text()).toBe("1:00");
+    expect(wrapper.get(".movies-hls-player__progress").classes()).toContain(
+      "movies-hls-player__progress--previewing",
+    );
 
+    pointerEvent("pointerdown", progress, { clientX: 108 });
     pointerEvent("pointerup", progress, { clientX: 108 });
     await settle();
 
     expect(video.currentTime).toBe(60);
     expect(wrapper.get(".movies-hls-player__time").text()).toBe("1:00");
+    expect(wrapper.get(".movies-hls-player__progress").classes()).not.toContain(
+      "movies-hls-player__progress--previewing",
+    );
   });
 
   it("updates volume and mute state from custom controls", async () => {

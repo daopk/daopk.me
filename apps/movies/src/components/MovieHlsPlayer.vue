@@ -310,12 +310,19 @@ function setVolumeFromChange(event: Event): void {
           <div
             ref="progressRoot"
             class="movies-hls-player__progress"
+            :class="{
+              'movies-hls-player__progress--previewing': seekPointerPreview !== null,
+            }"
             @pointercancel="onSeekPointerCancel"
             @pointerdown="onSeekPointerDown"
             @pointerleave="onSeekPointerLeave"
             @pointermove="onSeekPointerMove"
             @pointerup="onSeekPointerUp"
           >
+            <span class="movies-hls-player__seek-track-layer" aria-hidden="true">
+              <span class="movies-hls-player__seek-loaded" />
+              <span class="movies-hls-player__seek-played" />
+            </span>
             <span
               v-if="hasPlaybackAdMarkers"
               class="movies-hls-player__ad-markers"
@@ -323,6 +330,10 @@ function setVolumeFromChange(event: Event): void {
             />
             <Slider
               class="movies-hls-player__seek"
+              :class-names="{
+                input: 'movies-hls-player__seek-input',
+                range: 'movies-hls-player__seek-range',
+              }"
               :model-value="seekPosition"
               :min="0"
               :max="seekMax"

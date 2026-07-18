@@ -106,6 +106,9 @@ export function useMoviePlayerViewState({
   );
   const seekMax = computed(() => Math.max(1, Math.round(duration.value)));
   const displayTime = computed(() => (seeking.value ? seekPosition.value : currentTime.value));
+  const playedFraction = computed(() =>
+    hasDuration.value ? clampNumber(displayTime.value / duration.value, 0, 1) : 0,
+  );
   const seekValueText = computed(() =>
     hasDuration.value
       ? t("movies.player.seekValue", {
@@ -135,6 +138,7 @@ export function useMoviePlayerViewState({
   const controlsStyle = computed<Record<string, string>>(() => ({
     "--movies-player-ad-markers": adMarkersBackground.value,
     "--movies-player-loaded": String(loadedFraction.value),
+    "--movies-player-played": String(playedFraction.value),
     "--movies-player-preview-left": `${
       seekPointerPreview.value?.leftPx ?? seekPreviewThumbSizePx / 2
     }px`,
