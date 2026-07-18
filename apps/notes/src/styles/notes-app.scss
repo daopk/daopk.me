@@ -121,9 +121,7 @@
   border-color: color-mix(in srgb, var(--color-accent) 34%, var(--color-border));
 }
 
-.notes__note-button:focus-visible,
-:deep(.notes__title-input:focus-visible),
-:deep(.notes__textarea:focus-visible) {
+.notes__note-button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
@@ -194,17 +192,27 @@
 .notes__editor-header {
   border-block-end: 1px solid var(--color-border);
   display: grid;
-  gap: var(--space-xs);
-  padding: var(--space-md);
-}
-
-.notes--compact .notes__editor-header {
-  padding: var(--space-lg) var(--space-md) var(--space-sm);
+  gap: 0;
+  padding: 0;
 }
 
 .notes__title-input-root {
   inline-size: 100%;
   min-inline-size: 0;
+}
+
+:deep(.notes__title-input-root.rp-input) {
+  background: transparent;
+  border-color: transparent;
+  block-size: auto;
+  box-shadow: none;
+  padding: 0;
+}
+
+:deep(.notes__title-input-root.rp-input:hover:not(.rp-input--disabled)),
+:deep(.notes__title-input-root.rp-input:focus-within:not(.rp-input--disabled)) {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 :deep(.notes__title-input) {
@@ -216,13 +224,26 @@
   font-weight: var(--font-weight-semibold);
   inline-size: 100%;
   min-block-size: 34px;
-  padding: 0;
+  padding: var(--space-sm) var(--space-md);
 }
 
 .notes__textarea-root {
   block-size: 100%;
   min-block-size: 0;
   min-inline-size: 0;
+}
+
+:deep(.notes__textarea-root.rp-textarea) {
+  background: var(--color-bg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:deep(.notes__textarea-root.rp-textarea:hover:not(.rp-textarea--disabled)),
+:deep(.notes__textarea-root.rp-textarea:focus-within:not(.rp-textarea--disabled)) {
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .notes--compact :deep(.notes__title-input) {
@@ -235,6 +256,7 @@
   font-size: var(--font-size-xs);
   min-block-size: 18px;
   overflow: hidden;
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -251,6 +273,7 @@
   inline-size: 100%;
   line-height: 1.6;
   min-block-size: 0;
+  outline: none;
   padding: var(--space-md);
   resize: none;
 }

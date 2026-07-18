@@ -304,7 +304,7 @@ function labelForStatus(status: NotesStatus): string {
           :disabled="newButtonDisabled"
           @click="createNote"
         >
-          <template #left><Plus aria-hidden="true" /></template>
+          <template #left><Plus size="1.2em" aria-hidden="true" /></template>
           New
         </Button>
       </AppToolbar>

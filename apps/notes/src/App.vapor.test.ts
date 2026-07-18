@@ -258,6 +258,9 @@ describe("Notes App.vue", () => {
     const newButton = wrapper.find(".notes__new-button");
     expect(newButton.textContent).toContain("New");
     expect(newButton.tagName).toBe("BUTTON");
+    const newIcon = newButton.querySelector("svg");
+    expect(newIcon?.getAttribute("width")).toBe("1.2em");
+    expect(newIcon?.getAttribute("height")).toBe("1.2em");
 
     wrapper.unmount();
   });
