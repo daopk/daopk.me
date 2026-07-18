@@ -162,7 +162,7 @@ async function loadEpisode(): Promise<void> {
       :description="t('movies.error.episode.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft aria-hidden="true" /></template>
+        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>
@@ -216,7 +216,7 @@ async function loadEpisode(): Promise<void> {
             variant="surface"
             @click="openSeriesDetail"
           >
-            <template #left><Layers2 aria-hidden="true" /></template>
+            <template #left><Layers2 size="1em" aria-hidden="true" /></template>
             {{ t("movies.action.seriesOverview") }}
           </Button>
         </div>

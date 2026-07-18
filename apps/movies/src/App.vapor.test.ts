@@ -2354,8 +2354,13 @@ describe("Movies app", () => {
     expect(wrapper.text()).toContain("Search: Matrix");
     expect(wrapper.find(".movies-list__search-panel").exists()).toBe(true);
     expect(
-      wrapper.find('.movies-list__search-input-shell input[aria-label="Keyword"]').exists(),
+      wrapper.find('.movies-list__search-input-root input[aria-label="Keyword"]').exists(),
     ).toBe(true);
+    const resultSearchInput = wrapper.get(".movies-list__search-input-root");
+    expect(resultSearchInput.classes()).toContain("rp-input--size-lg");
+    expect(resultSearchInput.classes()).toContain("rp-input--radius-xl");
+    expect(resultSearchInput.get(".rp-input__left svg").attributes("width")).toBe("1em");
+    expect(resultSearchInput.get(".rp-input__left svg").attributes("height")).toBe("1em");
     expect(wrapper.find(".movies-list__tabs").exists()).toBe(true);
     expect(wrapper.find('[role="combobox"][aria-label="Genre"]').exists()).toBe(false);
     expect(wrapper.find(".movies-loading-overlay").exists()).toBe(false);
@@ -2384,10 +2389,15 @@ describe("Movies app", () => {
     expect(searchInput).toBeInstanceOf(HTMLInputElement);
     searchInput!.value = "Fight";
     searchInput!.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
 
-    const searchForm = moviesApp.querySelector<HTMLFormElement>('form[role="search"]');
-    expect(searchForm).toBeInstanceOf(HTMLFormElement);
-    searchForm!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    const submitSearchButton = Array.from(
+      moviesApp.querySelectorAll<HTMLButtonElement>("button"),
+    ).find((button) => button.textContent?.trim() === "Search");
+    expect(submitSearchButton).toBeInstanceOf(HTMLButtonElement);
+    expect(submitSearchButton?.type).toBe("button");
+    expect(submitSearchButton?.disabled).toBe(false);
+    submitSearchButton!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     await settle();
     await hoverFirstListCard(wrapper);
 
@@ -2441,7 +2451,7 @@ describe("Movies app", () => {
     expect(moviesApp.querySelector('[role="dialog"]')).toBeNull();
 
     const keywordInput = wrapper.get<HTMLInputElement>(
-      '.movies-list__search-input-shell input[aria-label="Keyword"]',
+      '.movies-list__search-input-root input[aria-label="Keyword"]',
     );
     expect(keywordInput.element.value).toBe("Fight");
     expect(wrapper.find('[role="combobox"][aria-label="Genre"]').exists()).toBe(false);

@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, toRef } from "vue";
+import { computed, nextTick, toRef, useTemplateRef, watch } from "vue";
 
 import { EmptyState, ScrollArea, Spinner } from "@daopk/kit";
 import { Search } from "@daopk/icons";
@@ -91,6 +91,16 @@ const sortOptions = computed<SelectOption[]>(() => [
   { label: sortLabel("newest", t), value: "newest" },
   { label: sortLabel("top-rated", t), value: "top-rated" },
 ]);
+const resultsElement = useTemplateRef<HTMLElement>("resultsElement");
+
+// Vue Vapor beta can lose its render context when this attribute updates inside ScrollArea.
+watch(
+  () => [resultsElement.value, loadingInitial.value] as const,
+  ([element, loading]) => {
+    element?.setAttribute("aria-busy", loading ? "true" : "false");
+  },
+  { flush: "post", immediate: true },
+);
 
 function updateStringValue(value: string | number | null, update: (value: string) => void): void {
   if (value !== null) update(String(value));
@@ -116,35 +126,38 @@ async function openList(query: MoviesListQuery): Promise<void> {
   <ScrollArea class="movies-list" safe-area>
     <div class="movies-list__content">
       <header class="movies-list__header">
-        <h1>{{ title }}</h1>
+        <h1 id="movies-list-title">{{ title }}</h1>
         <div
           v-if="isSearchList"
           class="movies-list__search-panel"
-          :aria-label="t('movies.search.results.ariaLabel')"
+          role="group"
+          aria-labelledby="movies-list-title"
         >
           <form
             class="movies-list__search-form"
             role="search"
             @submit.prevent="submitSearchKeyword"
           >
-            <div class="movies-list__search-input-shell">
-              <Search class="movies-list__search-input-icon" aria-hidden="true" />
-              <Input
-                v-model="searchDraft"
-                class="movies-list__search-input-root"
-                :class-names="{ input: 'movies-list__search-input' }"
-                type="text"
-                :ariaLabel="t('movies.search.keyword.ariaLabel')"
-                :placeholder="t('movies.search.titlesPlaceholder')"
-                :input-attrs="{
-                  autocomplete: 'off',
-                  role: 'searchbox',
-                }"
-                @search="submitSearchKeyword"
-              />
-            </div>
+            <Input
+              v-model="searchDraft"
+              class="movies-list__search-input-root"
+              type="text"
+              size="lg"
+              radius="xl"
+              :ariaLabel="t('movies.search.keyword.ariaLabel')"
+              :placeholder="t('movies.search.titlesPlaceholder')"
+              :input-attrs="{
+                autocomplete: 'off',
+                role: 'searchbox',
+              }"
+              @search="submitSearchKeyword"
+            >
+              <template #left>
+                <Search class="movies-list__search-input-icon" size="1em" aria-hidden="true" />
+              </template>
+            </Input>
           </form>
-          <div class="movies-list__tabs" :aria-label="t('movies.search.mediaType.ariaLabel')">
+          <div class="movies-list__tabs" role="group" aria-labelledby="movies-list-title">
             <Button
               v-for="option in searchMediaOptions"
               :key="option.value"
@@ -160,9 +173,10 @@ async function openList(query: MoviesListQuery): Promise<void> {
           </div>
         </div>
         <div
-          v-else
+          v-if="!isSearchList"
           class="movies-list__filters"
-          :aria-label="t('movies.filters.catalog.ariaLabel')"
+          role="group"
+          aria-labelledby="movies-list-title"
         >
           <label class="movies-list__filter-field">
             <span>{{ t("movies.filters.type") }}</span>
@@ -222,11 +236,7 @@ async function openList(query: MoviesListQuery): Promise<void> {
         </Alert>
       </header>
 
-      <section
-        class="movies-list__results"
-        :aria-busy="loadingInitial ? 'true' : 'false'"
-        aria-live="polite"
-      >
+      <section ref="resultsElement" class="movies-list__results" aria-live="polite">
         <div v-if="loadingInitial" class="movies-list__loading">
           <Spinner size="lg" :label="t('movies.loading.movies')" />
         </div>

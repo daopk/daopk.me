@@ -120,7 +120,7 @@ async function loadSeason(): Promise<void> {
       :description="t('movies.error.season.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft aria-hidden="true" /></template>
+        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>

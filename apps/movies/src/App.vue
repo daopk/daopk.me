@@ -240,7 +240,7 @@ onUnmounted(() => {
           color="blue"
           @click="switchSystemThemeToDark"
         >
-          <template #left><Palette aria-hidden="true" /></template>
+          <template #left><Palette size="1em" aria-hidden="true" /></template>
           {{ t("movies.themeSuggestion.switch") }}
         </Button>
       </template>

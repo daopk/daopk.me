@@ -231,14 +231,19 @@ async function loadSelectedSeason(seasonNumber: number | null): Promise<void> {
 }
 
 .movies-season-episodes__season-select {
-  appearance: none;
-  background-color: var(--color-bg-elevated);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f4f4f7' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-position: right var(--space-sm) center;
-  background-repeat: no-repeat;
-  background-size: 16px 16px;
+  /* Match Ropav's upstream Select metrics instead of the compact WebOS token bridge. */
+  --rp-font-size-md: 1rem;
+  --rp-size-control-md: 42px;
+  --rp-spacing-1: 0.25rem;
+  --rp-spacing-2: 0.5rem;
+  --rp-spacing-4: 1rem;
+
   max-inline-size: 220px;
-  padding-inline-end: calc(var(--space-lg) + var(--space-sm));
+}
+
+.movies-season-episodes__season-select :deep(.rp-select__trigger),
+.movies-season-episodes__season-select :deep(.rp-select__option) {
+  box-sizing: content-box;
 }
 
 @media (max-width: 620px) {

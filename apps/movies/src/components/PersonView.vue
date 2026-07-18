@@ -76,7 +76,7 @@ async function loadPerson(): Promise<void> {
       :description="t('movies.error.person.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft aria-hidden="true" /></template>
+        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>

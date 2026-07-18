@@ -263,13 +263,13 @@ function selectMedia(media: MovieMediaType): void {
           {{ t("movies.action.cancel") }}
         </Button>
         <Button
-          form="movies-toolbar-search-form"
-          type="submit"
+          type="button"
           variant="solid"
           color="blue"
           :disabled="searchDraft.trim().length === 0"
+          @click="submitSearch"
         >
-          <template #left><Search aria-hidden="true" /></template>
+          <template #left><Search size="1em" aria-hidden="true" /></template>
           {{ t("movies.action.submitSearch") }}
         </Button>
       </template>

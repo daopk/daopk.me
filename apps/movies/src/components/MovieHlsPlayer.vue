@@ -242,7 +242,7 @@ function setVolumeFromChange(event: Event): void {
             class="movies-hls-player__button movies-hls-player__back-button"
             :ariaLabel="t('movies.action.back')"
             size="sm"
-            variant="surface"
+            variant="ghost"
             @click="emit('back')"
           >
             <ChevronLeft aria-hidden="true" />
@@ -273,7 +273,7 @@ function setVolumeFromChange(event: Event): void {
             class="movies-hls-player__button movies-hls-player__top-volume-button"
             :ariaLabel="muteLabel"
             size="sm"
-            variant="surface"
+            variant="ghost"
             :disabled="playbackError.length > 0"
             @click="toggleMute"
           >
@@ -354,7 +354,7 @@ function setVolumeFromChange(event: Event): void {
               class="movies-hls-player__button"
               :ariaLabel="muteLabel"
               size="sm"
-              variant="surface"
+              variant="ghost"
               :disabled="playbackError.length > 0"
               @click="toggleMute"
             >
@@ -384,7 +384,7 @@ function setVolumeFromChange(event: Event): void {
             class="movies-hls-player__button movies-hls-player__next-episode-button"
             :ariaLabel="nextEpisodeButtonLabel"
             size="sm"
-            variant="surface"
+            variant="ghost"
             @click="emit('next-episode')"
           >
             <SkipForward aria-hidden="true" />
@@ -395,7 +395,7 @@ function setVolumeFromChange(event: Event): void {
             class="movies-hls-player__button movies-hls-player__pip-button"
             :ariaLabel="pictureInPictureLabel"
             size="sm"
-            variant="surface"
+            variant="ghost"
             :disabled="playbackError.length > 0"
             @click="togglePictureInPicture"
           >
@@ -416,7 +416,7 @@ function setVolumeFromChange(event: Event): void {
                 class="movies-hls-player__button"
                 :ariaLabel="t('movies.player.settings')"
                 size="sm"
-                variant="surface"
+                variant="ghost"
               >
                 <MoreHorizontal aria-hidden="true" />
               </IconButton>
@@ -471,7 +471,7 @@ function setVolumeFromChange(event: Event): void {
             class="movies-hls-player__button movies-hls-player__fullscreen-button"
             :ariaLabel="fullscreenLabel"
             size="sm"
-            variant="surface"
+            variant="ghost"
             @click="toggleFullscreen"
           >
             <component :is="fullscreen ? Minimize2 : Maximize2" aria-hidden="true" />

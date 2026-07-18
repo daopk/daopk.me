@@ -531,6 +531,22 @@ describe("MovieHlsPlayer", () => {
     expect(hlsMock.instances[0]!.attachMedia).toHaveBeenCalledWith(video);
   });
 
+  it("uses the ghost variant for player chrome icon buttons", async () => {
+    const wrapper = mountPlayer({
+      nextEpisodeLabel: "Next episode: Episode 2 - The Edit",
+      showBackButton: true,
+    });
+    await settle();
+
+    const buttons = wrapper.element.querySelectorAll(".movies-hls-player__button");
+    expect(buttons.length).toBeGreaterThan(0);
+
+    for (const button of buttons) {
+      expect(button.classList).toContain("rp-button--ghost");
+      expect(button.classList).not.toContain("rp-button--surface");
+    }
+  });
+
   it("sizes the player stage from the loaded video dimensions", async () => {
     const wrapper = mountPlayer();
     await settle();

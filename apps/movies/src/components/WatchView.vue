@@ -391,7 +391,7 @@ defineExpose({
       :description="t('movies.error.playback.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft aria-hidden="true" /></template>
+        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>
@@ -404,7 +404,7 @@ defineExpose({
       :description="t('movies.error.playback.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft aria-hidden="true" /></template>
+        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>
@@ -477,7 +477,7 @@ defineExpose({
           variant="surface"
           @click="openSeriesDetail"
         >
-          <template #left><Layers2 aria-hidden="true" /></template>
+          <template #left><Layers2 size="1em" aria-hidden="true" /></template>
           {{ t("movies.action.seriesOverview") }}
         </Button>
       </section>

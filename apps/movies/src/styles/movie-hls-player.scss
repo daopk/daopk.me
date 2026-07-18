@@ -429,6 +429,7 @@
   --color-accent: #fff;
   --color-bg-subtle: rgb(255 255 255 / 22%);
   --ds-slider-thumb-opacity: 1;
+  --rp-slider-track-length: 104px;
 
   block-size: 104px;
   inline-size: 20px;
@@ -508,6 +509,24 @@
   .movies-hls-player__button {
     min-block-size: 44px;
     min-inline-size: 44px;
+  }
+
+  :global(html[data-shell="mobile"] .movies-hls-player__button) {
+    block-size: 36px;
+    font-size: 20px;
+    inline-size: 36px;
+    min-block-size: 36px;
+    min-inline-size: 36px;
+  }
+
+  :global(html[data-shell="mobile"] .movies-hls-player__center-play) {
+    block-size: 56px;
+    inline-size: 56px;
+  }
+
+  :global(html[data-shell="mobile"] .movies-hls-player__center-play svg) {
+    block-size: 34px;
+    inline-size: 34px;
   }
 
   .movies-hls-player__time,
