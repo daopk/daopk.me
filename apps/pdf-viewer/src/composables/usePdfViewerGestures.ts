@@ -4,6 +4,7 @@ import type { PdfViewerBindings, PdfViewerZoomPoint } from "../usePdfViewer";
 
 const WHEEL_ZOOM_INTENSITY = 0.0035;
 const WHEEL_COMMIT_DELAY_MS = 140;
+const PAN_ACTIVATION_DISTANCE_PX = 4;
 
 type PdfViewerGestureBindings = Pick<
   PdfViewerBindings,
@@ -26,6 +27,15 @@ interface GestureZoomState {
   readonly startScale: number;
 }
 
+interface PanState {
+  readonly pointerId: number;
+  readonly startX: number;
+  readonly startY: number;
+  readonly startScrollLeft: number;
+  readonly startScrollTop: number;
+  readonly active: boolean;
+}
+
 interface WebKitGestureEvent extends Event {
   readonly clientX?: number;
   readonly clientY?: number;
@@ -43,6 +53,7 @@ export function usePdfViewerGestures(
   let attachedEl: HTMLElement | undefined;
   let pinch: PinchState | null = null;
   let gestureZoom: GestureZoomState | null = null;
+  let pan: PanState | null = null;
   let wheelCommitTimer: number | undefined;
   const pointers = new Map<number, PointerPosition>();
 
@@ -67,6 +78,65 @@ export function usePdfViewerGestures(
       clientX: rect.left + rect.width / 2,
       clientY: rect.top + rect.height / 2,
     };
+  }
+
+  function canPan(): boolean {
+    return (
+      attachedEl !== undefined &&
+      (attachedEl.scrollWidth > attachedEl.clientWidth ||
+        attachedEl.scrollHeight > attachedEl.clientHeight)
+    );
+  }
+
+  function syncPannable(): void {
+    attachedEl?.toggleAttribute("data-pannable", canPan());
+  }
+
+  function clearPan(): void {
+    pan = null;
+    attachedEl?.removeAttribute("data-panning");
+  }
+
+  function beginPan(event: PointerEvent): void {
+    syncPannable();
+    if (event.pointerType === "touch" || event.button !== 0 || !canPan()) {
+      clearPan();
+      return;
+    }
+
+    pan = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startScrollLeft: attachedEl?.scrollLeft ?? 0,
+      startScrollTop: attachedEl?.scrollTop ?? 0,
+      active: false,
+    };
+  }
+
+  function updatePan(event: PointerEvent): void {
+    if (pan === null || pan.pointerId !== event.pointerId || attachedEl === undefined) {
+      return;
+    }
+
+    const deltaX = event.clientX - pan.startX;
+    const deltaY = event.clientY - pan.startY;
+    if (!pan.active) {
+      if (Math.hypot(deltaX, deltaY) < PAN_ACTIVATION_DISTANCE_PX) {
+        return;
+      }
+      pan = { ...pan, active: true };
+      attachedEl.setAttribute("data-panning", "");
+      try {
+        attachedEl.setPointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    event.preventDefault();
+    const maxScrollLeft = Math.max(0, attachedEl.scrollWidth - attachedEl.clientWidth);
+    const maxScrollTop = Math.max(0, attachedEl.scrollHeight - attachedEl.clientHeight);
+    attachedEl.scrollLeft = Math.min(maxScrollLeft, Math.max(0, pan.startScrollLeft - deltaX));
+    attachedEl.scrollTop = Math.min(maxScrollTop, Math.max(0, pan.startScrollTop - deltaY));
   }
 
   function gesturePoint(event: WebKitGestureEvent): PdfViewerZoomPoint | null {
@@ -148,12 +218,16 @@ export function usePdfViewerGestures(
 
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.size >= 2) {
+      clearPan();
       event.preventDefault();
       try {
         attachedEl?.setPointerCapture(event.pointerId);
       } catch {}
       beginPinch();
+      return;
     }
+
+    beginPan(event);
   }
 
   function onPointerMove(event: PointerEvent): void {
@@ -165,7 +239,10 @@ export function usePdfViewerGestures(
     if (pinch !== null) {
       event.preventDefault();
       updatePinch();
+      return;
     }
+
+    updatePan(event);
   }
 
   function onPointerEnd(event: PointerEvent): void {
@@ -174,10 +251,15 @@ export function usePdfViewerGestures(
     }
 
     const wasPinching = pinch !== null;
+    const endedPan = pan?.pointerId === event.pointerId;
     pointers.delete(event.pointerId);
     try {
       attachedEl?.releasePointerCapture(event.pointerId);
     } catch {}
+
+    if (endedPan) {
+      clearPan();
+    }
 
     if (!wasPinching) {
       return;
@@ -265,10 +347,12 @@ export function usePdfViewerGestures(
 
   function attach(el: HTMLElement): void {
     attachedEl = el;
+    syncPannable();
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("pointermove", onPointerMove);
     el.addEventListener("pointerup", onPointerEnd);
     el.addEventListener("pointercancel", onPointerCancel);
+    el.addEventListener("pointerenter", syncPannable);
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("gesturestart", beginGestureZoom, { passive: false });
     el.addEventListener("gesturechange", updateGestureZoom, { passive: false });
@@ -285,15 +369,20 @@ export function usePdfViewerGestures(
     attachedEl.removeEventListener("pointermove", onPointerMove);
     attachedEl.removeEventListener("pointerup", onPointerEnd);
     attachedEl.removeEventListener("pointercancel", onPointerCancel);
+    attachedEl.removeEventListener("pointerenter", syncPannable);
     attachedEl.removeEventListener("wheel", onWheel);
     attachedEl.removeEventListener("gesturestart", beginGestureZoom);
     attachedEl.removeEventListener("gesturechange", updateGestureZoom);
     attachedEl.removeEventListener("gestureend", endGestureZoom);
+    clearPan();
+    attachedEl.removeAttribute("data-pannable");
     attachedEl = undefined;
     pointers.clear();
     pinch = null;
     gestureZoom = null;
   }
+
+  const stopScaleWatch = watch(viewer.scale, syncPannable, { flush: "post" });
 
   const stopWatch = watch(
     target,
@@ -309,6 +398,7 @@ export function usePdfViewerGestures(
 
   function dispose(): void {
     stopWatch();
+    stopScaleWatch();
     detach();
   }
 

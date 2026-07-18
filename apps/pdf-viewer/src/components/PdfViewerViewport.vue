@@ -30,7 +30,7 @@ const emit = defineEmits<{
       class="pdf-viewer__empty pdf-viewer__empty--idle"
     >
       <Button variant="solid" color="blue" @click="emit('open')">
-        <template #left><Upload aria-hidden="true" /></template>
+        <template #left><Upload size="1em" aria-hidden="true" /></template>
         Choose file
       </Button>
     </EmptyState>
@@ -52,7 +52,7 @@ const emit = defineEmits<{
       :title="viewer.error.value ?? undefined"
     >
       <Button variant="solid" color="blue" @click="emit('open')">
-        <template #left><Upload aria-hidden="true" /></template>
+        <template #left><Upload size="1em" aria-hidden="true" /></template>
         Choose file
       </Button>
     </EmptyState>

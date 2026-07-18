@@ -10,6 +10,8 @@ interface PointerInit {
   pointerId?: number;
   clientX?: number;
   clientY?: number;
+  button?: number;
+  pointerType?: string;
 }
 
 interface WheelInit {
@@ -72,6 +74,8 @@ function pointerEvent(type: string, init: PointerInit = {}): PointerEvent {
     pointerId: { value: init.pointerId ?? 1 },
     clientX: { value: init.clientX ?? 0 },
     clientY: { value: init.clientY ?? 0 },
+    button: { value: init.button ?? 0 },
+    pointerType: { value: init.pointerType ?? "touch" },
   });
   return event;
 }
@@ -157,6 +161,74 @@ describe("usePdfViewerGestures", () => {
     await Promise.resolve();
 
     expect(harness.viewer.commitPreviewScale).toHaveBeenCalledTimes(1);
+    harness.unmount();
+  });
+
+  it("drags an overflowed zoomed viewport to pan with a mouse", async () => {
+    const harness = mountGestures();
+    Object.defineProperties(harness.el, {
+      clientWidth: { configurable: true, value: 200 },
+      clientHeight: { configurable: true, value: 200 },
+      scrollWidth: { configurable: true, value: 500 },
+      scrollHeight: { configurable: true, value: 600 },
+    });
+    harness.el.scrollLeft = 100;
+    harness.el.scrollTop = 120;
+    await nextTick();
+
+    harness.el.dispatchEvent(
+      pointerEvent("pointerdown", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 100,
+        clientY: 100,
+      }),
+    );
+    const move = pointerEvent("pointermove", {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 60,
+      clientY: 70,
+    });
+    harness.el.dispatchEvent(move);
+
+    expect(move.defaultPrevented).toBe(true);
+    expect(harness.el.scrollLeft).toBe(140);
+    expect(harness.el.scrollTop).toBe(150);
+    expect(harness.el.hasAttribute("data-panning")).toBe(true);
+
+    harness.el.dispatchEvent(
+      pointerEvent("pointerup", {
+        pointerId: 1,
+        pointerType: "mouse",
+        clientX: 60,
+        clientY: 70,
+      }),
+    );
+
+    expect(harness.el.hasAttribute("data-panning")).toBe(false);
+    harness.unmount();
+  });
+
+  it("leaves single-touch panning to the native scroll area", async () => {
+    const harness = mountGestures();
+    Object.defineProperties(harness.el, {
+      clientWidth: { configurable: true, value: 200 },
+      clientHeight: { configurable: true, value: 200 },
+      scrollWidth: { configurable: true, value: 500 },
+      scrollHeight: { configurable: true, value: 600 },
+    });
+    await nextTick();
+
+    harness.el.dispatchEvent(
+      pointerEvent("pointerdown", { pointerId: 1, clientX: 100, clientY: 100 }),
+    );
+    const move = pointerEvent("pointermove", { pointerId: 1, clientX: 60, clientY: 70 });
+    harness.el.dispatchEvent(move);
+
+    expect(move.defaultPrevented).toBe(false);
+    expect(harness.el.scrollLeft).toBe(0);
+    expect(harness.el.scrollTop).toBe(0);
     harness.unmount();
   });
 

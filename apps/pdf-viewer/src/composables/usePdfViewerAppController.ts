@@ -1,4 +1,4 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
+import { computed, nextTick, ref, watch, type ComputedRef, type Ref } from "vue";
 
 import { useAppChrome } from "@daopk/kit";
 import { normalizeVfsPath, type AppContext, type Kernel } from "@daopk/sdk";
@@ -45,6 +45,7 @@ export function usePdfViewerAppController({
   const fileInput = ref<HTMLInputElement | null>(null);
   const pageDraft = ref("1");
   const pageSheetOpen = ref(false);
+  let viewportRefRevision = 0;
 
   const hasDocument = computed(() => viewer.pageCount.value > 0);
   const showChrome = computed(() => viewer.sourceKind.value !== "empty");
@@ -163,11 +164,28 @@ export function usePdfViewerAppController({
   }
 
   function setViewportRef(el: unknown): void {
-    const node =
-      el !== null && typeof el === "object" && "element" in el
-        ? (el as { element: HTMLElement | null }).element
-        : el;
-    viewer.viewportEl.value = node instanceof HTMLElement ? node : null;
+    const revision = ++viewportRefRevision;
+    if (el instanceof HTMLElement) {
+      viewer.viewportEl.value = el;
+      return;
+    }
+    if (el === null || typeof el !== "object" || !("element" in el)) {
+      viewer.viewportEl.value = null;
+      return;
+    }
+
+    const exposed = el as { readonly element: HTMLElement | null };
+    const resolveExposedElement = (): void => {
+      if (revision !== viewportRefRevision) {
+        return;
+      }
+      viewer.viewportEl.value = exposed.element instanceof HTMLElement ? exposed.element : null;
+    };
+
+    resolveExposedElement();
+    if (viewer.viewportEl.value === null) {
+      void nextTick(resolveExposedElement);
+    }
   }
 
   function setCanvasRef(el: unknown): void {

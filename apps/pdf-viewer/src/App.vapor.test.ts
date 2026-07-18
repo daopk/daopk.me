@@ -216,6 +216,9 @@ describe("PDF Viewer App.vue", () => {
 
     expect(wrapper.text()).toContain("Choose file");
     expect(wrapper.text()).not.toContain("Open a PDF");
+    const chooseFileIcon = wrapper.find<SVGElement>(".pdf-viewer__empty button svg");
+    expect(chooseFileIcon.attributes("width")).toBe("1em");
+    expect(chooseFileIcon.attributes("height")).toBe("1em");
     expect(wrapper.find(".pdf-viewer__toolbar").exists()).toBe(false);
     expect(wrapper.find(".pdf-viewer__status").exists()).toBe(false);
     expect(wrapper.find(".pdf-viewer__page").attributes("style")).toContain("display: none");
@@ -223,6 +226,31 @@ describe("PDF Viewer App.vue", () => {
       vfs: expect.anything(),
       initialPath: undefined,
     });
+
+    wrapper.unmount();
+  });
+
+  it("wires trackpad pinch zoom to the rendered viewport", async () => {
+    const viewer = makeViewer({ pageCount: 1, status: "ready", sourceKind: "vfs" });
+    const wrapper = mountPdfViewer(viewer);
+
+    await nextTick();
+    await nextTick();
+
+    const viewport = wrapper.find<HTMLElement>(".pdf-viewer__viewport");
+    expect(viewer.viewportEl.value).toBe(viewport.element);
+
+    const event = new Event("wheel", { bubbles: true, cancelable: true }) as WheelEvent;
+    Object.defineProperties(event, {
+      clientX: { value: 120 },
+      clientY: { value: 80 },
+      ctrlKey: { value: true },
+      deltaY: { value: -100 },
+    });
+    viewport.element.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(viewer.previewScaleAt).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });

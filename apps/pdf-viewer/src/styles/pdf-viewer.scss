@@ -191,6 +191,14 @@
   justify-items: center;
 }
 
+.pdf-viewer__viewport[data-pannable] {
+  cursor: grab;
+}
+
+.pdf-viewer__viewport[data-panning] {
+  cursor: grabbing;
+}
+
 .pdf-viewer__empty {
   align-items: center;
   color: var(--color-fg-muted);
