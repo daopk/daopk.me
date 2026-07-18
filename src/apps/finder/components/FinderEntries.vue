@@ -207,20 +207,29 @@ function onEntryPointerCancel(event: PointerEvent): void {
   }
 }
 
-const pointerBoundEntries = new WeakSet<HTMLElement>();
+interface DirectEntryPointerHandlers {
+  readonly pointercancel: (event: PointerEvent) => void;
+  readonly pointerdown: (event: PointerEvent) => void;
+  readonly pointerup: (event: PointerEvent) => void;
+}
 
-function bindEntryPointerHandlers(entry: VfsDirEntry, value: unknown): void {
-  if (!(value instanceof HTMLElement) || pointerBoundEntries.has(value)) {
-    return;
+const directEntryPointerHandlers = new WeakMap<VfsDirEntry, DirectEntryPointerHandlers>();
+
+// Object-form v-on opts these handlers out of Vapor's document-level
+// delegation so they run before the nested ContextMenu stops propagation.
+function directPointerHandlers(entry: VfsDirEntry): DirectEntryPointerHandlers {
+  const cached = directEntryPointerHandlers.get(entry);
+  if (cached) {
+    return cached;
   }
-  pointerBoundEntries.add(value);
 
-  // These listeners must run on the entry before the nested ContextMenu's
-  // parent trigger sees the bubbling event. Vapor delegates template events
-  // at `document`, which is too late for this nested stopPropagation case.
-  value.addEventListener("pointercancel", onEntryPointerCancel);
-  value.addEventListener("pointerdown", (event) => onEntryPointerDown(entry, event));
-  value.addEventListener("pointerup", (event) => onEntryPointerUp(entry, event));
+  const handlers: DirectEntryPointerHandlers = {
+    pointercancel: onEntryPointerCancel,
+    pointerdown: (event) => onEntryPointerDown(entry, event),
+    pointerup: (event) => onEntryPointerUp(entry, event),
+  };
+  directEntryPointerHandlers.set(entry, handlers);
+  return handlers;
 }
 
 function onEntryContextMenu(entry: VfsDirEntry): void {
@@ -296,11 +305,11 @@ function onBrowserKeydown(event: KeyboardEvent): void {
               <template #trigger>
                 <div
                   :id="entryId(index)"
-                  :ref="(value) => bindEntryPointerHandlers(entry, value)"
                   class="finder__entry"
                   :class="{ 'finder__entry--selected': selectedPath === entry.path }"
                   role="option"
                   :aria-selected="selectedPath === entry.path"
+                  v-on="directPointerHandlers(entry)"
                   @click="emit('entryClick', entry)"
                   @contextmenu.stop="onEntryContextMenu(entry)"
                   @dblclick="emit('entryDoubleClick', entry)"

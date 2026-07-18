@@ -13,7 +13,7 @@ function vueEsmRuntime(packageName: string, fileName: string): string {
 }
 
 /**
- * Vue 3.6 beta exposes Vapor only from its ESM/browser module graph. Resolve
+ * Vue 3.6 exposes Vapor only from its ESM/browser module graph. Resolve
  * every Vue package to that graph so tests never mix runtime identities.
  */
 export function vueEsmRuntimeAliases() {
