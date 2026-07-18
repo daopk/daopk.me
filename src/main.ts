@@ -5,6 +5,9 @@ import "~/core/boot/syncPreflightTheme";
 import "~/assets/scss/base.scss";
 import "ropav/base.css";
 import "~/components/ui/ropavBridge.scss";
+// Standalone first-party apps import @daopk/ui through the import map; preload
+// the UI runtime once so Vite links every Ropav component stylesheet with the shell HTML.
+import "~/runtime/ui";
 // Standalone first-party apps import @daopk/kit through the import map; preload
 // the kit once so Vite links its scoped component CSS with the shell HTML.
 import "~/runtime/kit";
