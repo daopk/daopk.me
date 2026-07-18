@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 
 const scssPath = resolve(process.cwd(), "src/assets/scss");
 const readScss = (path: string) => readFileSync(resolve(scssPath, path), "utf8");
+const indexHtml = readFileSync(resolve(process.cwd(), "index.html"), "utf8");
+const globalLayerOrder =
+  "@layer reset, tokens, base, vendor, utilities, ropav.tokens, ropav.components;";
 
 const foundationEntrypoint = readScss("tokens/_foundation.scss");
 const foundationPartials = [
@@ -47,10 +50,15 @@ const base = [
 
 describe("design tokens", () => {
   it("loads global styles through named cascade layers", () => {
-    expect(baseEntrypoint).toContain("@layer reset, tokens, base, vendor, utilities;");
+    expect(baseEntrypoint).toContain(globalLayerOrder);
     expect(baseEntrypoint).toContain('@include meta.load-css("tokens");');
     expect(baseEntrypoint).toContain('@include meta.load-css("base/document");');
     expect(baseEntrypoint).toContain('@include meta.load-css("vendor/shiki");');
+  });
+
+  it("seeds the global layer order before production stylesheets are linked", () => {
+    expect(indexHtml).toContain(globalLayerOrder);
+    expect(indexHtml.indexOf(globalLayerOrder)).toBeLessThan(indexHtml.indexOf("</head>"));
   });
 
   it("keeps foundation tokens split behind a stable entrypoint", () => {
