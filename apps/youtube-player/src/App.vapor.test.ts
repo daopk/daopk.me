@@ -962,6 +962,12 @@ describe("YouTube Player App", () => {
   it("shows the seek time preview while hovering and dragging the progress bar", async () => {
     const { wrapper } = await mountReadyPlayer();
     const progress = progressBar(wrapper);
+    expect(wrapper.get(".youtube-player__seek").classes()).toContain(
+      "rp-slider--thumb-interaction",
+    );
+    expect(wrapper.get(".youtube-player__volume").classes()).not.toContain(
+      "rp-slider--thumb-interaction",
+    );
     stubElementRect(progress.element, { left: 100, top: 0, width: 200, height: 20 });
 
     await progress.trigger("pointermove", { clientX: 200, clientY: 10 });

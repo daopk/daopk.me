@@ -343,35 +343,6 @@
   background: transparent;
 }
 
-:deep(.movies-hls-player__seek-input)::-webkit-slider-thumb {
-  opacity: 0;
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease),
-    opacity var(--duration-fast) var(--ease);
-}
-
-:deep(.movies-hls-player__seek-input)::-moz-range-thumb {
-  opacity: 0;
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease),
-    opacity var(--duration-fast) var(--ease);
-}
-
-.movies-hls-player__progress:hover :deep(.movies-hls-player__seek-input)::-webkit-slider-thumb,
-.movies-hls-player__progress--previewing
-  :deep(.movies-hls-player__seek-input)::-webkit-slider-thumb,
-:deep(.movies-hls-player__seek-input:focus-visible)::-webkit-slider-thumb {
-  opacity: 1;
-}
-
-.movies-hls-player__progress:hover :deep(.movies-hls-player__seek-input)::-moz-range-thumb,
-.movies-hls-player__progress--previewing :deep(.movies-hls-player__seek-input)::-moz-range-thumb,
-:deep(.movies-hls-player__seek-input:focus-visible)::-moz-range-thumb {
-  opacity: 1;
-}
-
 .movies-hls-player__seek-preview {
   background: rgb(18 20 28 / 90%);
   border: 1px solid rgb(255 255 255 / 16%);

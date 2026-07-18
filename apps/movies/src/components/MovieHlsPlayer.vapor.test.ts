@@ -894,6 +894,9 @@ content-c.ts
     ).toBe(true);
     expect(wrapper.get(".movies-hls-player__seek-input").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player__seek-range").exists()).toBe(true);
+    expect(wrapper.get(".movies-hls-player__seek").classes()).toContain(
+      "rp-slider--thumb-interaction",
+    );
     expect(wrapper.get(".movies-hls-player__seek-loaded").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player__seek-played").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(

@@ -201,6 +201,7 @@ function commitVolumeFromChange(event: Event): void {
         :min="0"
         :max="sliderMax"
         :step="1"
+        thumb="interaction"
         :tooltip="false"
         :disabled="controlsDisabled || duration <= 0"
         ariaLabel="Seek"
@@ -315,23 +316,12 @@ function commitVolumeFromChange(event: Event): void {
 
 .youtube-player__seek,
 .youtube-player__volume {
-  --ds-slider-thumb-opacity: 0;
-
   position: relative;
   z-index: 1;
 }
 
 .youtube-player__volume {
   --rp-slider-track-length: 72px;
-}
-
-.youtube-player__seek:hover,
-.youtube-player__seek:focus-within,
-.youtube-player__seek:active,
-.youtube-player__volume:hover,
-.youtube-player__volume:focus-within,
-.youtube-player__volume:active {
-  --ds-slider-thumb-opacity: 1;
 }
 
 .youtube-player__seek-preview {

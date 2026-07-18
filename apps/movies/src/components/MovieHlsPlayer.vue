@@ -338,6 +338,7 @@ function setVolumeFromChange(event: Event): void {
               :min="0"
               :max="seekMax"
               :step="1"
+              thumb="interaction"
               :tooltip="false"
               :disabled="!hasDuration || playbackError.length > 0"
               :ariaLabel="t('movies.player.seek')"
