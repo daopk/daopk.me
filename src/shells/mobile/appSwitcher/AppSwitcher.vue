@@ -1,5 +1,7 @@
 <script setup vapor lang="ts">
-import { Trash2 as DismissAllIcon, X as CloseIcon } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import DismissAllIcon from "~icons/lucide/trash-2";
+import CloseIcon from "~icons/lucide/x";
 import { computed, type VaporComponent } from "vue";
 import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
@@ -100,7 +102,7 @@ function onDismissAll(): void {
         aria-label="Close recent apps"
         @click="onClose"
       >
-        <CloseIcon :size="18" :stroke-width="2" aria-hidden="true" />
+        <Icon :icon="CloseIcon" :size="18" :stroke-width="2" aria-hidden="true" />
       </button>
       <h2 class="app-switcher__title">Recent apps</h2>
       <button
@@ -110,7 +112,7 @@ function onDismissAll(): void {
         :disabled="!canDismissAll"
         @click="onDismissAll"
       >
-        <DismissAllIcon :size="18" :stroke-width="2" aria-hidden="true" />
+        <Icon :icon="DismissAllIcon" :size="18" :stroke-width="2" aria-hidden="true" />
       </button>
     </header>
     <div class="app-switcher__body">

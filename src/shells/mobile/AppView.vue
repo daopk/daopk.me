@@ -1,5 +1,8 @@
 <script setup vapor lang="ts">
-import { ArrowLeft, Layers2, Minimize2 } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import ArrowLeft from "~icons/lucide/arrow-left";
+import Layers2 from "~icons/lucide/layers-2";
+import Minimize2 from "~icons/lucide/minimize-2";
 import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
@@ -193,7 +196,7 @@ watch(
         :tabindex="isCurrent ? 0 : -1"
         @click="onBackClick"
       >
-        <ArrowLeft :size="20" :stroke-width="2.25" aria-hidden="true" />
+        <Icon :icon="ArrowLeft" :size="20" :stroke-width="2.25" aria-hidden="true" />
       </button>
       <h1 class="app-view__title">{{ displayTitle }}</h1>
       <button
@@ -203,7 +206,7 @@ watch(
         :tabindex="isCurrent ? 0 : -1"
         @click="onRecentsClick"
       >
-        <Layers2 :size="20" :stroke-width="2" aria-hidden="true" />
+        <Icon :icon="Layers2" :size="20" :stroke-width="2" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -212,7 +215,7 @@ watch(
         :tabindex="isCurrent ? 0 : -1"
         @click="onHideClick"
       >
-        <Minimize2 :size="20" :stroke-width="2" aria-hidden="true" />
+        <Icon :icon="Minimize2" :size="20" :stroke-width="2" aria-hidden="true" />
       </button>
     </header>
     <div class="app-view__body" :style="appContentSafeAreaStyle">

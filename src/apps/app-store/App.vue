@@ -1,4 +1,5 @@
 <script setup vapor lang="ts">
+import Icon from "~/icons/Icon.vue";
 import { computed } from "vue";
 
 import {
@@ -11,7 +12,9 @@ import {
 } from "~/components/kit";
 import { Alert, Badge, Button } from "~/components/ui";
 import AppIcon from "~/components/AppIcon.vue";
-import { Download as UpdateIcon, ExternalLink as LaunchIcon, RefreshCw } from "~/icons/lucide";
+import UpdateIcon from "~icons/lucide/download";
+import LaunchIcon from "~icons/lucide/external-link";
+import RefreshCw from "~icons/lucide/refresh-cw";
 
 import { useAppStoreController } from "./useAppStoreController";
 
@@ -58,7 +61,7 @@ const statusColor = computed(() => {
           :loading="checkState.kind === 'checking'"
           @click="checkForUpdates"
         >
-          <template #left><RefreshCw size="14" aria-hidden="true" /></template>
+          <template #left><Icon :icon="RefreshCw" size="14" aria-hidden="true" /></template>
           Check updates
         </Button>
       </template>
@@ -122,7 +125,7 @@ const statusColor = computed(() => {
                 :loading="isUpdating(app.id)"
                 @click="updateApp(app)"
               >
-                <template #left><UpdateIcon size="14" aria-hidden="true" /></template>
+                <template #left><Icon :icon="UpdateIcon" size="14" aria-hidden="true" /></template>
                 Update
               </Button>
               <Button
@@ -131,7 +134,7 @@ const statusColor = computed(() => {
                 size="sm"
                 @click="launchApp(app.id)"
               >
-                <template #left><LaunchIcon size="14" aria-hidden="true" /></template>
+                <template #left><Icon :icon="LaunchIcon" size="14" aria-hidden="true" /></template>
                 Open
               </Button>
             </li>

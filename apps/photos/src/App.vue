@@ -10,7 +10,7 @@ import {
   useAppChrome,
 } from "@daopk/kit";
 import { Alert, Button, IconButton } from "@daopk/ui";
-import { RefreshCw } from "@daopk/icons";
+import RefreshCw from "~icons/lucide/refresh-cw";
 
 import { PHOTO_THUMB_WIDTH, PHOTO_THUMB_WIDTH_2X, photoThumbUrl } from "./photosContentConfig";
 
@@ -76,7 +76,7 @@ function closeLightbox(): void {
         description="Check your connection and try again."
       >
         <Button variant="surface" @click="reload">
-          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+          <template #left><RefreshCw aria-hidden="true" /></template>
           Retry
         </Button>
       </EmptyState>

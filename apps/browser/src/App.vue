@@ -10,17 +10,15 @@ import {
   Spinner,
   ToolbarGroup,
 } from "@daopk/kit";
-import { Alert, Button, ContextMenu, ContextMenuItem, IconButton, Input } from "@daopk/ui";
-import {
-  ArrowLeft,
-  ArrowRight,
-  ExternalLink,
-  Globe,
-  Home,
-  RefreshCw,
-  Search,
-  Shield,
-} from "@daopk/icons";
+import { Icon, Alert, Button, ContextMenu, ContextMenuItem, IconButton, Input } from "@daopk/ui";
+import ArrowLeft from "~icons/lucide/arrow-left";
+import ArrowRight from "~icons/lucide/arrow-right";
+import ExternalLink from "~icons/lucide/external-link";
+import Globe from "~icons/lucide/globe";
+import Home from "~icons/lucide/home";
+import RefreshCw from "~icons/lucide/refresh-cw";
+import Search from "~icons/lucide/search";
+import Shield from "~icons/lucide/shield";
 import { AppContextInjectionKey } from "@daopk/sdk";
 
 import { BROWSER_QUICK_LINKS, useBrowser } from "./useBrowser";
@@ -267,7 +265,7 @@ function openExternally(): void {
               </template>
               <span>{{ link.label }}</span>
               <template #end>
-                <ExternalLink aria-hidden="true" :size="14" :stroke-width="2" />
+                <Icon :icon="ExternalLink" aria-hidden="true" :size="14" :stroke-width="2" />
               </template>
             </ListButton>
           </li>
@@ -281,7 +279,7 @@ function openExternally(): void {
       >
         <template #icon>
           <span class="browser__blocked-mark" aria-hidden="true">
-            <ExternalLink :size="32" :stroke-width="1.9" />
+            <Icon :icon="ExternalLink" :size="32" :stroke-width="1.9" />
           </span>
         </template>
         <p class="browser__blocked-copy">{{ browser.current.value.url }}</p>
@@ -291,7 +289,7 @@ function openExternally(): void {
           aria-label="Open current site externally"
           @click="openExternally"
         >
-          <template #left><ExternalLink size="1em" aria-hidden="true" /></template>
+          <template #left><ExternalLink aria-hidden="true" /></template>
           Open externally
         </Button>
       </EmptyState>

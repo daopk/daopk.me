@@ -3,7 +3,10 @@ import { ref } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { Button } from "~/components/ui";
-import { Check, Plus, Search, X } from "~/icons/lucide";
+import Check from "~icons/lucide/check";
+import Plus from "~icons/lucide/plus";
+import Search from "~icons/lucide/search";
+import X from "~icons/lucide/x";
 import { SettingsWidgetsIcon as WidgetsIcon } from "~/icons/fluentColor";
 
 import { useDesktopWidgetGallery } from "./useDesktopWidgetGallery";
@@ -117,7 +120,7 @@ const {
         <div class="desktop-widget-gallery__actions">
           <Button v-if="item.visible" variant="ghost" size="sm" @click="hide(item)">Remove</Button>
           <Button v-else variant="solid" color="blue" size="sm" @click="show(item)">
-            <template #left><Plus size="1em" aria-hidden="true" /></template>
+            <template #left><Plus aria-hidden="true" /></template>
             Add
           </Button>
         </div>

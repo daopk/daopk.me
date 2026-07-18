@@ -3,7 +3,9 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft, Layers2, Play } from "@daopk/icons";
+import ArrowLeft from "~icons/lucide/arrow-left";
+import Layers2 from "~icons/lucide/layers-2";
+import Play from "~icons/lucide/play";
 
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import SeasonEpisodesSection from "./SeasonEpisodesSection.vue";
@@ -162,7 +164,7 @@ async function loadEpisode(): Promise<void> {
       :description="t('movies.error.episode.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
+        <template #left><ArrowLeft aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>
@@ -216,7 +218,7 @@ async function loadEpisode(): Promise<void> {
             variant="surface"
             @click="openSeriesDetail"
           >
-            <template #left><Layers2 size="1em" aria-hidden="true" /></template>
+            <template #left><Layers2 aria-hidden="true" /></template>
             {{ t("movies.action.seriesOverview") }}
           </Button>
         </div>

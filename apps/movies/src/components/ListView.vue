@@ -2,7 +2,7 @@
 import { computed, nextTick, toRef, useTemplateRef, watch } from "vue";
 
 import { EmptyState, ScrollArea, Spinner } from "@daopk/kit";
-import { Search } from "@daopk/icons";
+import Search from "~icons/lucide/search";
 import { Alert, Button, Input, Select, type SelectOption } from "@daopk/ui";
 
 import MovieCard from "./MovieCard.vue";
@@ -153,7 +153,7 @@ async function openList(query: MoviesListQuery): Promise<void> {
               @search="submitSearchKeyword"
             >
               <template #left>
-                <Search class="movies-list__search-input-icon" size="1em" aria-hidden="true" />
+                <Search class="movies-list__search-input-icon" aria-hidden="true" />
               </template>
             </Input>
           </form>

@@ -2,7 +2,11 @@
 import { computed, ref } from "vue";
 
 import { IconButton, Slider } from "@daopk/ui";
-import { Maximize2, Pause, Play, Volume2, VolumeX } from "@daopk/icons";
+import Maximize2 from "~icons/lucide/maximize-2";
+import Pause from "~icons/lucide/pause";
+import Play from "~icons/lucide/play";
+import Volume2 from "~icons/lucide/volume-2";
+import VolumeX from "~icons/lucide/volume-x";
 
 import { formatTime } from "../utils/playerValues";
 

@@ -5,7 +5,8 @@ import { Panel, SectionHeader } from "~/components/kit";
 import { Badge, Button } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useSettings } from "~/composables/useSettings";
-import { ExternalLink as ExternalLinkIcon, RefreshCw as RefreshIcon } from "~/icons/lucide";
+import ExternalLinkIcon from "~icons/lucide/external-link";
+import RefreshIcon from "~icons/lucide/refresh-cw";
 import { serviceWorkerUpdateController } from "~/service-worker/updateController";
 
 const settings = useSettings();
@@ -198,7 +199,7 @@ function runSoftwareUpdateAction(): void {
         :loading="isCheckingForUpdates || isUpdateRefreshing || isUpdateInstalling"
         @click="runSoftwareUpdateAction"
       >
-        <template #left><RefreshIcon size="1em" aria-hidden="true" /></template>
+        <template #left><RefreshIcon aria-hidden="true" /></template>
         {{ updateButtonLabel }}
       </Button>
     </Panel>

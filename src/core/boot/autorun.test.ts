@@ -1,4 +1,4 @@
-import { Terminal } from "~/icons/lucide";
+import Terminal from "~icons/lucide/terminal";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent } from "vue";
 

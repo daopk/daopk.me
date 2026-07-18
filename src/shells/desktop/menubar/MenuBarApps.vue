@@ -3,7 +3,7 @@ import { onUnmounted, shallowRef } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel } from "~/components/ui";
-import { Grid2X2 } from "~/icons/lucide";
+import Grid2X2 from "~icons/lucide/grid-2x2";
 import { useKernel } from "~/composables/useKernel";
 import type { AppManifest } from "~/types/app";
 

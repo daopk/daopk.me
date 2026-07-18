@@ -2,8 +2,10 @@
 import { computed, ref, watch } from "vue";
 import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
-import { IconButton } from "@daopk/ui";
-import { ChevronLeft, ChevronRight, X as CloseIcon } from "@daopk/icons";
+import { Icon, IconButton } from "@daopk/ui";
+import ChevronLeft from "~icons/lucide/chevron-left";
+import ChevronRight from "~icons/lucide/chevron-right";
+import CloseIcon from "~icons/lucide/x";
 
 import { photoLabel } from "./photoLabel";
 import type { Photo } from "./usePhotos";
@@ -120,7 +122,7 @@ function onKeydown(event: KeyboardEvent): void {
         aria-label="Previous photo"
         @click.stop="showPrevious"
       >
-        <ChevronLeft :size="30" aria-hidden="true" />
+        <Icon :icon="ChevronLeft" :size="30" aria-hidden="true" />
       </button>
 
       <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
@@ -141,7 +143,7 @@ function onKeydown(event: KeyboardEvent): void {
         aria-label="Next photo"
         @click.stop="showNext"
       >
-        <ChevronRight :size="30" aria-hidden="true" />
+        <Icon :icon="ChevronRight" :size="30" aria-hidden="true" />
       </button>
     </div>
   </Modal>

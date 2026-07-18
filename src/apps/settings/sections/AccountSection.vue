@@ -14,7 +14,13 @@ import { Panel, SectionHeader } from "~/components/kit";
 import { Alert, Button, Input, Modal } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
-import { AlertCircle, CloudOff, KeyRound, Lock, LogOut, Shield, Trash2 } from "~/icons/lucide";
+import AlertCircle from "~icons/lucide/alert-circle";
+import CloudOff from "~icons/lucide/cloud-off";
+import KeyRound from "~icons/lucide/key-round";
+import Lock from "~icons/lucide/lock";
+import LogOut from "~icons/lucide/log-out";
+import Shield from "~icons/lucide/shield";
+import Trash2 from "~icons/lucide/trash-2";
 
 const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
 const deleteAccountModalId = `delete-account-${useId()}`;
@@ -140,11 +146,11 @@ async function confirmDeleteAccount(): Promise<void> {
 
       <div class="account__actions">
         <Button class="account__action" variant="surface" type="button" @click="lockSession">
-          <template #left><Lock size="1em" aria-hidden="true" /></template>
+          <template #left><Lock aria-hidden="true" /></template>
           {{ t("settings.account.lockSession") }}
         </Button>
         <Button class="account__action" variant="solid" color="blue" type="button" @click="signOut">
-          <template #left><LogOut size="1em" aria-hidden="true" /></template>
+          <template #left><LogOut aria-hidden="true" /></template>
           {{ t("settings.account.signOut") }}
         </Button>
       </div>
@@ -196,7 +202,7 @@ async function confirmDeleteAccount(): Promise<void> {
         type="button"
         @click="requestDeleteAccount"
       >
-        <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+        <template #left><Trash2 aria-hidden="true" /></template>
         {{ t("settings.account.deleteButton") }}
       </Button>
     </Panel>
@@ -262,7 +268,7 @@ async function confirmDeleteAccount(): Promise<void> {
             :loading="deletingAccount"
             @click="confirmDeleteAccount"
           >
-            <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+            <template #left><Trash2 aria-hidden="true" /></template>
             {{ t("settings.account.deleteConfirmButton") }}
           </Button>
         </div>

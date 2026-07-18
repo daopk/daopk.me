@@ -5,7 +5,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "~/components/ui";
-import { Info, Lock, LogOut, Palette, Search, Settings } from "~/icons/lucide";
+import Info from "~icons/lucide/info";
+import Lock from "~icons/lucide/lock";
+import LogOut from "~icons/lucide/log-out";
+import Palette from "~icons/lucide/palette";
+import Search from "~icons/lucide/search";
+import Settings from "~icons/lucide/settings";
 import { useKernel } from "~/composables/useKernel";
 import type { CommandDispatchOptions } from "~/types/command";
 

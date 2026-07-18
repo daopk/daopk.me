@@ -1,7 +1,9 @@
 <script setup vapor lang="ts">
+import Icon from "~/icons/Icon.vue";
 import { nextTick, ref, watch } from "vue";
 
-import { Check as CheckIcon, Trash2 as TrashIcon } from "~/icons/lucide";
+import CheckIcon from "~icons/lucide/check";
+import TrashIcon from "~icons/lucide/trash-2";
 
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { previewStyleForTile, type BackgroundTile } from "./wallpaperTiles";
@@ -108,7 +110,7 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
         :aria-label="t('settings.background.deleteWallpaper', { name: tile.name })"
         @click="(e) => emit('remove', tile.id, e)"
       >
-        <TrashIcon size="14" aria-hidden="true" />
+        <Icon :icon="TrashIcon" size="14" aria-hidden="true" />
       </button>
     </div>
   </div>

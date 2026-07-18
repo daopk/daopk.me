@@ -40,14 +40,14 @@ describe("Settings menu bitmap icons", () => {
     ]);
   });
 
-  it("renders each asset through the image icon component", () => {
+  it("renders each asset without hardcoded dimensions", () => {
     for (const section of Object.keys(components) as SettingsSectionId[]) {
       const wrapper = mountVaporTest(components[section]);
 
       expect(wrapper.element.tagName).toBe("IMG");
       expect(wrapper.attributes("src")).toBe(SETTINGS_MENU_ICON_ASSETS[section]);
-      expect(wrapper.attributes("width")).toBe("24");
-      expect(wrapper.attributes("height")).toBe("24");
+      expect(wrapper.attributes("width")).toBeUndefined();
+      expect(wrapper.attributes("height")).toBeUndefined();
       expect(wrapper.attributes("alt")).toBe("");
 
       wrapper.unmount();

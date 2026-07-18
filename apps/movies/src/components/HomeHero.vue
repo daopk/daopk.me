@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, toRef } from "vue";
 
-import { ChevronRight } from "@daopk/icons";
+import ChevronRight from "~icons/lucide/chevron-right";
 import { Button } from "@daopk/ui";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
@@ -136,7 +136,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
-            <template #right><ChevronRight size="1em" aria-hidden="true" /></template>
+            <template #right><ChevronRight aria-hidden="true" /></template>
           </Button>
         </div>
       </div>
@@ -252,7 +252,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
             @click="openHero(activeHero)"
           >
             {{ t("movies.action.details") }}
-            <template #right><ChevronRight size="1em" aria-hidden="true" /></template>
+            <template #right><ChevronRight aria-hidden="true" /></template>
           </Button>
         </div>
       </div>

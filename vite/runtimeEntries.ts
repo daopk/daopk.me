@@ -5,9 +5,8 @@ import { fileURLToPath, URL } from "node:url";
  * build-only `externalRuntimeImportMap` plugin maps each bare specifier to its
  * hashed chunk via an import map in index.html. This makes the host and every
  * independently-published first-party app share ONE copy of Vue, the SDK, the
- * kit/ui component layers, and the icon set (one Vue instance + one set of
- * injection keys + one design system). See src/runtime/{vue,sdk,kit,ui,icons}.ts
- * + README.
+ * kit/ui component layers (one Vue instance + one set of injection keys + one
+ * design system). See src/runtime/{vue,sdk,kit,ui}.ts + README.
  *
  * `specifier` is what apps import (and mark `external`); `chunkName` is the
  * Rollup entry name; `entry` is the façade module (path relative to the repo
@@ -22,7 +21,6 @@ export const EXTERNAL_RUNTIME_ENTRIES = [
   { specifier: "@daopk/sdk", chunkName: "daopk-sdk-runtime", entry: "src/runtime/sdk.ts" },
   { specifier: "@daopk/kit", chunkName: "daopk-kit-runtime", entry: "src/runtime/kit.ts" },
   { specifier: "@daopk/ui", chunkName: "daopk-ui-runtime", entry: "src/runtime/ui.ts" },
-  { specifier: "@daopk/icons", chunkName: "daopk-icons-runtime", entry: "src/runtime/icons.ts" },
   { specifier: "@daopk/files", chunkName: "daopk-files-runtime", entry: "src/runtime/files.ts" },
   {
     specifier: "@daopk/markdown",

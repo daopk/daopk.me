@@ -3,7 +3,8 @@ import { nextTick } from "vue";
 
 import { ScrollArea } from "@daopk/kit";
 import { Alert, Button, ContextMenu, ContextMenuItem, Radio, RadioGroup } from "@daopk/ui";
-import { ChevronRight, Trash2 } from "@daopk/icons";
+import ChevronRight from "~icons/lucide/chevron-right";
+import Trash2 from "~icons/lucide/trash-2";
 
 import HomeHero from "./HomeHero.vue";
 import MovieCard from "./MovieCard.vue";

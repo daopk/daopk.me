@@ -1,5 +1,7 @@
 <script setup vapor lang="ts">
-import { LayoutGrid, Minimize2 } from "@daopk/icons";
+import { Icon } from "@daopk/ui";
+import LayoutGrid from "~icons/lucide/layout-grid";
+import Minimize2 from "~icons/lucide/minimize-2";
 
 import { backgroundOptions } from "../babyTouchBackgroundOptions";
 import type { BabyTouchBackground } from "../babyTouchTypes";
@@ -26,7 +28,7 @@ const emit = defineEmits<{
       aria-label="Open sticker gallery"
       @click="emit('open-gallery')"
     >
-      <LayoutGrid :size="22" aria-hidden="true" />
+      <Icon :icon="LayoutGrid" :size="22" aria-hidden="true" />
     </button>
 
     <button
@@ -36,7 +38,7 @@ const emit = defineEmits<{
       aria-label="Hide app"
       @click="emit('hide')"
     >
-      <Minimize2 :size="22" aria-hidden="true" />
+      <Icon :icon="Minimize2" :size="22" aria-hidden="true" />
     </button>
 
     <div class="baby-touch__home-brand">

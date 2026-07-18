@@ -12,7 +12,9 @@ import {
   DEFAULT_WALLPAPER_MOBILE_URL,
 } from "~/core/theme/wallpapers";
 import { useKernel } from "~/composables/useKernel";
-import { Lock, LogOut, Unlock } from "~/icons/lucide";
+import Lock from "~icons/lucide/lock";
+import LogOut from "~icons/lucide/log-out";
+import Unlock from "~icons/lucide/unlock";
 
 import { useAuthAutoUpdate } from "./useAuthAutoUpdate";
 
@@ -147,7 +149,7 @@ onUnmounted(() => {
           type="submit"
           :loading="busy"
         >
-          <template #left><Unlock size="1em" aria-hidden="true" /></template>
+          <template #left><Unlock aria-hidden="true" /></template>
           {{ unlockLabel }}
         </Button>
         <Button
@@ -157,7 +159,7 @@ onUnmounted(() => {
           :disabled="busy"
           @click="signOut"
         >
-          <template #left><LogOut size="1em" aria-hidden="true" /></template>
+          <template #left><LogOut aria-hidden="true" /></template>
           Sign Out
         </Button>
       </form>

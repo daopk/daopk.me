@@ -1,6 +1,8 @@
 <script setup vapor lang="ts">
 import { Button } from "~/components/ui";
-import { AlertCircle, Loader2, RefreshCw } from "~/icons/lucide";
+import AlertCircle from "~icons/lucide/alert-circle";
+import Loader2 from "~icons/lucide/loader-2";
+import RefreshCw from "~icons/lucide/refresh-cw";
 
 defineProps<{
   failed: boolean;
@@ -52,7 +54,7 @@ const emit = defineEmits<{
         type="button"
         @click="emit('retry')"
       >
-        <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+        <template #left><RefreshCw aria-hidden="true" /></template>
         Retry update
       </Button>
     </div>

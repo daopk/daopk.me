@@ -1,5 +1,8 @@
 <script setup vapor lang="ts">
 import { computed, type VaporComponent } from "vue";
+import Icon from "~/icons/Icon.vue";
+
+defineOptions({ inheritAttrs: false });
 
 /**
  * Canonical renderer for an app/identity icon. The resolved icon is always a
@@ -21,5 +24,5 @@ const resolved = computed<VaporComponent | null>(() => props.icon ?? props.fallb
 </script>
 
 <template>
-  <component :is="resolved" v-if="resolved" :size="size" :stroke-width="strokeWidth" />
+  <Icon v-if="resolved" v-bind="$attrs" :icon="resolved" :size="size" :stroke-width="strokeWidth" />
 </template>

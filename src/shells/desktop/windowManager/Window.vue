@@ -1,11 +1,9 @@
 <script setup vapor lang="ts">
 import { computed, ref, useId } from "vue";
-import {
-  Maximize2 as MaximizeIcon,
-  Minimize2 as RestoreIcon,
-  Minus as MinimizeIcon,
-  X as CloseIcon,
-} from "~/icons/lucide";
+import MaximizeIcon from "~icons/lucide/maximize-2";
+import RestoreIcon from "~icons/lucide/minimize-2";
+import MinimizeIcon from "~icons/lucide/minus";
+import CloseIcon from "~icons/lucide/x";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";

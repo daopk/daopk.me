@@ -2,7 +2,10 @@ import { computed, nextTick, ref, watch, type Ref } from "vue";
 
 import { compareEntries } from "~/core/vfs/entrySort";
 import { normalizeVfsPath, type VfsPath } from "~/core/vfs/path";
-import { File, FileText, Folder, FolderOpen } from "~/icons/lucide";
+import File from "~icons/lucide/file";
+import FileText from "~icons/lucide/file-text";
+import Folder from "~icons/lucide/folder";
+import FolderOpen from "~icons/lucide/folder-open";
 import { useVfs, type VfsDirEntry } from "~/runtime/sdk";
 import { formatBytes, formatDateTime } from "~/utils/format";
 import { toErrorMessage } from "~/utils/errors";

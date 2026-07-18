@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { computed } from "vue";
-import { Download as InstallIcon } from "~/icons/lucide";
+import InstallIcon from "~icons/lucide/download";
 
 import { Button } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
@@ -64,7 +64,7 @@ function dismiss(): void {
         :loading="isPrompting"
         @click="install"
       >
-        <template #left><InstallIcon size="1em" aria-hidden="true" /></template>
+        <template #left><InstallIcon aria-hidden="true" /></template>
         {{ t("settings.pwa.install") }}
       </Button>
       <Button variant="ghost" size="sm" @click="dismiss">{{ t("settings.pwa.later") }}</Button>

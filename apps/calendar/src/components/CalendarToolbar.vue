@@ -1,7 +1,8 @@
 <script setup vapor lang="ts">
 import { AppToolbar, ToolbarTitle } from "@daopk/kit";
 import { Button, ButtonGroup, IconButton } from "@daopk/ui";
-import { ChevronLeft, ChevronRight } from "@daopk/icons";
+import ChevronLeft from "~icons/lucide/chevron-left";
+import ChevronRight from "~icons/lucide/chevron-right";
 
 defineProps<{
   readonly navigationUnitLabel: string;

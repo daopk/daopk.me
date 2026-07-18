@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { Search as SearchIcon } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import SearchIcon from "~icons/lucide/search";
 import { computed, ref, toRef, type CSSProperties, type Ref } from "vue";
 
 import Spotlight from "~/components/spotlight/Spotlight.vue";
@@ -87,7 +88,7 @@ defineExpose({ openSpotlight, closeSpotlight });
     aria-hidden="true"
   >
     <span class="mobile-spotlight-host__peek-pill">
-      <SearchIcon :size="14" :stroke-width="2" aria-hidden="true" />
+      <Icon :icon="SearchIcon" :size="14" :stroke-width="2" aria-hidden="true" />
       <span class="mobile-spotlight-host__peek-label">Search</span>
     </span>
   </div>

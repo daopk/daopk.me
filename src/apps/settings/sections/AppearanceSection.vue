@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { computed, onUnmounted, ref } from "vue";
-import { Check as CheckIcon } from "~/icons/lucide";
+import CheckIcon from "~icons/lucide/check";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import { useSettingsI18n, type SettingsTranslationKey } from "~/apps/settings/i18n/useSettingsI18n";

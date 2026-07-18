@@ -4,6 +4,7 @@ import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch } 
 
 import { AppFrame, AppToolbar, EmptyState, ScrollArea, useAppChrome } from "@daopk/kit";
 import {
+  Icon,
   Button,
   ContextMenu,
   ContextMenuItem,
@@ -13,7 +14,8 @@ import {
   Textarea,
   useToast,
 } from "@daopk/ui";
-import { FileText, Plus } from "@daopk/icons";
+import FileText from "~icons/lucide/file-text";
+import Plus from "~icons/lucide/plus";
 import {
   AppContextInjectionKey,
   formatDateTime,
@@ -304,7 +306,7 @@ function labelForStatus(status: NotesStatus): string {
           :disabled="newButtonDisabled"
           @click="createNote"
         >
-          <template #left><Plus size="1.2em" aria-hidden="true" /></template>
+          <template #left><Icon :icon="Plus" size="1.2em" aria-hidden="true" /></template>
           New
         </Button>
       </AppToolbar>

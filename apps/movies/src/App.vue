@@ -3,7 +3,7 @@ import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "v
 
 import { AppFrame } from "@daopk/kit";
 import { Button, Modal } from "@daopk/ui";
-import { Palette } from "@daopk/icons";
+import Palette from "~icons/lucide/palette";
 import { AppContextInjectionKey, KernelInjectionKey } from "@daopk/sdk";
 
 import DetailView from "./components/DetailView.vue";
@@ -240,7 +240,7 @@ onUnmounted(() => {
           color="blue"
           @click="switchSystemThemeToDark"
         >
-          <template #left><Palette size="1em" aria-hidden="true" /></template>
+          <template #left><Palette aria-hidden="true" /></template>
           {{ t("movies.themeSuggestion.switch") }}
         </Button>
       </template>

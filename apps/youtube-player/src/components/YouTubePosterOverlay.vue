@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, ref, watch } from "vue";
 
-import { Play } from "@daopk/icons";
+import Play from "~icons/lucide/play";
 
 import { youtubeThumbnailUrls } from "../utils/youtubeVideo";
 

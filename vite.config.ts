@@ -2,6 +2,9 @@ import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig, type UserConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import { FileSystemIconLoader } from "unplugin-icons/loaders";
+import icons from "unplugin-icons/vite";
+import { vaporIconCompiler } from "ropav/unplugin-icons";
 
 import { crossOriginIsolationHeaders } from "./vite/crossOriginIsolation";
 import { appsContentPreviewServer } from "./vite/plugins/appsContentPreviewServer";
@@ -63,6 +66,20 @@ export function createViteConfig(command: ViteCommand): UserConfig {
       appsContentPreviewServer(),
       externalRuntimeImportMap(),
       vue({ features: { vapor: true } }),
+      icons({
+        compiler: vaporIconCompiler(),
+        scale: 1,
+        defaultClass: "daopk-vapor-icon",
+        customCollections: {
+          daopk: FileSystemIconLoader(
+            fileURLToPath(new URL("./src/icons/custom", import.meta.url)),
+          ),
+        },
+        iconCustomizer(_collection, _icon, props) {
+          props.role = "img";
+          props["aria-hidden"] = "true";
+        },
+      }),
       pwaPlugin(),
       sameOriginRootHtmlAssets(),
     ],

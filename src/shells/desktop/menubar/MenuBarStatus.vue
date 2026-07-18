@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { CloudOff } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import CloudOff from "~icons/lucide/cloud-off";
 
 import WidgetHost from "~/components/widgets/WidgetHost.vue";
 import { useOnlineStatus } from "~/composables/useOnlineStatus";
@@ -11,7 +12,7 @@ const { isOffline } = useOnlineStatus();
   <div class="menubar-status">
     <WidgetHost surface="desktop:menubar" />
     <span v-if="isOffline" class="menubar-status__offline" role="status" aria-label="Offline">
-      <CloudOff class="menubar-status__offline-icon" aria-hidden="true" :size="13" />
+      <Icon :icon="CloudOff" class="menubar-status__offline-icon" aria-hidden="true" :size="13" />
       <span>offline</span>
     </span>
   </div>

@@ -9,17 +9,15 @@ import {
   IconButton,
   Input,
 } from "@daopk/ui";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  MoreHorizontal,
-  MoveHorizontal,
-  RotateCwSquare,
-  Upload,
-  ZoomIn,
-  ZoomOut,
-} from "@daopk/icons";
+import ChevronLeft from "~icons/lucide/chevron-left";
+import ChevronRight from "~icons/lucide/chevron-right";
+import Download from "~icons/lucide/download";
+import MoreHorizontal from "~icons/lucide/more-horizontal";
+import MoveHorizontal from "~icons/lucide/move-horizontal";
+import RotateCwSquare from "~icons/daopk/rotate-cw-square";
+import Upload from "~icons/lucide/upload";
+import ZoomIn from "~icons/lucide/zoom-in";
+import ZoomOut from "~icons/lucide/zoom-out";
 
 import { usePdfViewerToolbarLayout } from "../composables/usePdfViewerToolbarLayout";
 import type { PdfViewerBindings } from "../usePdfViewer";

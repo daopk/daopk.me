@@ -2,7 +2,8 @@
 import { inject } from "vue";
 
 import { Button } from "~/components/ui";
-import { AlertCircle as ErrorIcon, RefreshCw } from "~/icons/lucide";
+import ErrorIcon from "~icons/lucide/alert-circle";
+import RefreshCw from "~icons/lucide/refresh-cw";
 
 import { AppMountRetryKey } from "./appMountContext";
 
@@ -21,7 +22,7 @@ const retry = inject(AppMountRetryKey, null);
       }}
     </p>
     <Button v-if="retry" class="app-mount-error__retry" variant="surface" size="sm" @click="retry">
-      <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+      <template #left><RefreshCw aria-hidden="true" /></template>
       Try again
     </Button>
   </div>

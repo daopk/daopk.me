@@ -3,7 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
-import { ArrowLeft } from "@daopk/icons";
+import ArrowLeft from "~icons/lucide/arrow-left";
 
 import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
@@ -76,7 +76,7 @@ async function loadPerson(): Promise<void> {
       :description="t('movies.error.person.description')"
     >
       <Button @click="$emit('back')">
-        <template #left><ArrowLeft size="1em" aria-hidden="true" /></template>
+        <template #left><ArrowLeft aria-hidden="true" /></template>
         {{ t("movies.action.back") }}
       </Button>
     </EmptyState>

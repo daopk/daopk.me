@@ -1,6 +1,8 @@
 <script setup vapor lang="ts">
 import { Button } from "~/components/ui";
-import { CloudOff, KeyRound, Plus } from "~/icons/lucide";
+import CloudOff from "~icons/lucide/cloud-off";
+import KeyRound from "~icons/lucide/key-round";
+import Plus from "~icons/lucide/plus";
 import type { ProfileRecord } from "~/types/profile";
 
 import { profileMeta } from "./authGateLabels";
@@ -54,7 +56,6 @@ const emit = defineEmits<{
       <template #left>
         <component
           :is="selectedProfile?.authMode === 'guest' ? CloudOff : KeyRound"
-          size="1em"
           aria-hidden="true"
         />
       </template>
@@ -68,7 +69,7 @@ const emit = defineEmits<{
       :disabled="busy || initialImportPending"
       @click="emit('add-account')"
     >
-      <template #left><Plus size="1em" aria-hidden="true" /></template>
+      <template #left><Plus aria-hidden="true" /></template>
       {{ addAccountLabel }}
     </Button>
   </div>

@@ -12,6 +12,7 @@ export { Checkbox } from "ropav/checkbox";
 export type { CheckboxProps } from "ropav/checkbox";
 export { Field } from "ropav/field";
 export type { FieldControlProps, FieldProps, FieldSlotProps } from "ropav/field";
+export { default as Icon } from "~/icons/Icon.vue";
 export { IconButton } from "ropav/icon-button";
 export type { IconButtonProps } from "ropav/icon-button";
 export { Input } from "ropav/input";

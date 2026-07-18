@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState } from "@daopk/kit";
-import { Play } from "@daopk/icons";
+import Play from "~icons/lucide/play";
 import type { AppChromeContentSize } from "@daopk/sdk";
 import { Button, Input } from "@daopk/ui";
 
@@ -275,7 +275,7 @@ function submitManualVideo(): void {
                   color="blue"
                   :disabled="manualVideoInput.trim().length === 0"
                 >
-                  <template #left><Play size="1em" aria-hidden="true" /></template>
+                  <template #left><Play aria-hidden="true" /></template>
                   Play
                 </Button>
               </template>

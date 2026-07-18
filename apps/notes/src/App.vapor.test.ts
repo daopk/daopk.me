@@ -262,8 +262,9 @@ describe("Notes App.vue", () => {
     expect(newButton.textContent).toContain("New");
     expect(newButton.tagName).toBe("BUTTON");
     const newIcon = newButton.querySelector("svg");
-    expect(newIcon?.getAttribute("width")).toBe("1.2em");
-    expect(newIcon?.getAttribute("height")).toBe("1.2em");
+    expect(newIcon?.getAttribute("width")).toBe("1em");
+    expect(newIcon?.getAttribute("height")).toBe("1em");
+    expect(newIcon?.style.fontSize).toBe("1.2em");
 
     wrapper.unmount();
   });

@@ -1,8 +1,6 @@
-import type { IconifyIcon } from "@iconify/utils";
 import { markRaw, type VaporComponent } from "vue";
 
 import ImageIcon from "./ImageIcon.vue";
-import SvgIcon from "./SvgIcon.vue";
 
 type ComponentOptions = Record<string, unknown> & {
   props?: Record<string, unknown>;
@@ -19,8 +17,8 @@ function getComponentOptions(component: VaporComponent): ComponentOptions {
 function cloneWithDefaultProp(
   base: VaporComponent,
   componentName: string,
-  propName: "icon" | "src",
-  defaultValue: IconifyIcon | string,
+  propName: "src",
+  defaultValue: string,
 ): VaporComponent {
   const options = getComponentOptions(base);
   const propOptions = options.props ?? {};
@@ -39,26 +37,13 @@ function cloneWithDefaultProp(
       [propName]: {
         ...existingProp,
         required: false,
-        default: typeof defaultValue === "string" ? defaultValue : () => defaultValue,
+        default: defaultValue,
       },
     },
   }) as VaporComponent;
 }
 
-export function createIcon(icon: IconifyIcon, componentName: string): VaporComponent {
-  return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
-}
-
-/**
- * Build a Vapor icon component that renders app-owned image artwork through an
- * `<img>` element. It deliberately accepts the same `size`/`strokeWidth` props
- * as SVG icons so all icon components remain interchangeable; `strokeWidth` is
- * ignored for image sources.
- */
+/** Build a Vapor glyph that renders app-owned image artwork through an `<img>`. */
 export function createImageIcon(src: string, componentName: string): VaporComponent {
   return cloneWithDefaultProp(ImageIcon, componentName, "src", src);
-}
-
-export function createPaletteIcon(icon: IconifyIcon, componentName: string): VaporComponent {
-  return cloneWithDefaultProp(SvgIcon, componentName, "icon", icon);
 }

@@ -1,4 +1,5 @@
 <script setup vapor lang="ts">
+import Icon from "~/icons/Icon.vue";
 import {
   FinderFileIcon,
   FinderFolderIcon,
@@ -7,7 +8,7 @@ import {
   FinderTextFileIcon,
 } from "~/icons/fluentColor";
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
-import { Search as SearchIcon } from "~/icons/lucide";
+import SearchIcon from "~icons/lucide/search";
 import { computed, ref, useId, watch, type VaporComponent } from "vue";
 import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
@@ -274,7 +275,13 @@ function onRowHover(index: number): void {
   >
     <div class="spotlight__content" @keydown="onKeydown">
       <div class="spotlight__inputRow">
-        <SearchIcon class="spotlight__inputIcon" :size="18" :stroke-width="2" aria-hidden="true" />
+        <Icon
+          :icon="SearchIcon"
+          class="spotlight__inputIcon"
+          :size="18"
+          :stroke-width="2"
+          aria-hidden="true"
+        />
         <input
           :id="inputId"
           class="spotlight__input"

@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { Layers2 } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import Layers2 from "~icons/lucide/layers-2";
 import { computed, ref } from "vue";
 
 import HomeIconPage from "./HomeIconPage.vue";
@@ -100,7 +101,7 @@ defineExpose({ scrollEl });
       :tabindex="recentsFabHidden ? -1 : 0"
       @click="onRecents"
     >
-      <Layers2 :size="20" :stroke-width="2" aria-hidden="true" />
+      <Icon :icon="Layers2" :size="20" :stroke-width="2" aria-hidden="true" />
     </button>
   </main>
 </template>

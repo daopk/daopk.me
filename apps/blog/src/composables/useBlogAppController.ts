@@ -1,7 +1,8 @@
 import { computed, onUnmounted, ref, type ComputedRef, type Ref, type VaporComponent } from "vue";
 
 import { useAppChrome } from "@daopk/kit";
-import { Check, Share2 } from "@daopk/icons";
+import Check from "~icons/lucide/check";
+import Share2 from "~icons/lucide/share-2";
 import type { AppChromeBackAction, AppContext, Kernel } from "@daopk/sdk";
 
 import type { BlogIndexBindings, BlogIndexPost } from "./useBlogIndex";

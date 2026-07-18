@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, inject, ref, watch } from "vue";
 
-import { Play } from "@daopk/icons";
+import Play from "~icons/lucide/play";
 import { PreviewHost } from "@daopk/kit";
 import { KernelInjectionKey, type AppPreviewInput, type AppPreviewSurface } from "@daopk/sdk";
 

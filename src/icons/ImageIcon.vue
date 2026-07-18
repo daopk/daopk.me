@@ -1,26 +1,14 @@
 <script setup lang="ts" vapor>
-type IconSize = number | string;
-
-const props = withDefaults(
-  defineProps<{
-    src: string;
-    size?: IconSize;
-    strokeWidth?: IconSize;
-  }>(),
-  {
-    size: 24,
-    strokeWidth: undefined,
-  },
-);
+const props = defineProps<{ src: string }>();
 </script>
 
 <template>
-  <img
-    :src="props.src"
-    :width="props.size"
-    :height="props.size"
-    alt=""
-    :draggable="false"
-    decoding="async"
-  />
+  <img :src="props.src" alt="" :draggable="false" decoding="async" />
 </template>
+
+<style scoped>
+img {
+  block-size: 1em;
+  inline-size: 1em;
+}
+</style>

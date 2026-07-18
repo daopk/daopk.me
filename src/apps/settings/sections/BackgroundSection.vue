@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { computed, ref } from "vue";
-import { Upload as UploadIcon } from "~/icons/lucide";
+import UploadIcon from "~icons/lucide/upload";
 
 import { ActionRow, Panel, SectionHeader } from "~/components/kit";
 import { Alert, Badge, Button, Switch } from "~/components/ui";
@@ -209,7 +209,7 @@ function describeUploadFailure(result: Extract<WallpaperUploadResult, { ok: fals
             aria-controls="background-file-input"
             @click="triggerFilePicker"
           >
-            <template #left><UploadIcon size="1em" aria-hidden="true" /></template>
+            <template #left><UploadIcon aria-hidden="true" /></template>
             {{
               isUploading
                 ? t("settings.background.processing")

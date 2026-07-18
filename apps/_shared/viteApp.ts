@@ -1,7 +1,10 @@
 import { fileURLToPath, URL } from "node:url";
 
 import vue from "@vitejs/plugin-vue";
+import { FileSystemIconLoader } from "unplugin-icons/loaders";
+import Icons from "unplugin-icons/vite";
 import { defineConfig, type Plugin, type UserConfig } from "vite";
+import { vaporIconCompiler } from "ropav/unplugin-icons";
 
 /**
  * Shared Vite preset for first-party app packages (`apps/<id>`). Each app builds
@@ -23,7 +26,6 @@ const HOST_RUNTIME_EXTERNALS = [
   "@daopk/sdk",
   "@daopk/kit",
   "@daopk/ui",
-  "@daopk/icons",
   "@daopk/files",
   "@daopk/markdown",
   "@daopk/content",
@@ -78,6 +80,7 @@ export interface DaopkAppOptions {
 }
 
 const WORKSPACE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const CUSTOM_ICON_DIRECTORY = fileURLToPath(new URL("../../src/icons/custom", import.meta.url));
 
 /**
  * Build config for a first-party app package. `id` is the published app id; the
@@ -86,7 +89,23 @@ const WORKSPACE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export function defineDaopkApp(id: string, options: DaopkAppOptions = {}): UserConfig {
   return defineConfig({
     envDir: WORKSPACE_ROOT,
-    plugins: [vue({ features: { vapor: true } }), injectCssOnLoad(id), ...(options.plugins ?? [])],
+    plugins: [
+      vue({ features: { vapor: true } }),
+      Icons({
+        compiler: vaporIconCompiler(),
+        scale: 1,
+        defaultClass: "daopk-vapor-icon",
+        customCollections: {
+          daopk: FileSystemIconLoader(CUSTOM_ICON_DIRECTORY),
+        },
+        iconCustomizer(_collection, _icon, props) {
+          props.role = "img";
+          props["aria-hidden"] = "true";
+        },
+      }),
+      injectCssOnLoad(id),
+      ...(options.plugins ?? []),
+    ],
     build: {
       target: "es2022",
       cssCodeSplit: false,

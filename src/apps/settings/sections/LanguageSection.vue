@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Check as CheckIcon } from "~/icons/lucide";
+import CheckIcon from "~icons/lucide/check";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";

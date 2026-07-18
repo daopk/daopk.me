@@ -1,7 +1,13 @@
 <script setup vapor lang="ts">
+import Icon from "~/icons/Icon.vue";
 import { nextTick, onMounted, onUnmounted, ref, watch, type VaporComponent } from "vue";
 
-import { Copy, FolderOpen, FolderPlus, Loader2, RefreshCw, Trash2 } from "@daopk/icons";
+import Copy from "~icons/lucide/copy";
+import FolderOpen from "~icons/lucide/folder-open";
+import FolderPlus from "~icons/lucide/folder-plus";
+import Loader2 from "~icons/lucide/loader-2";
+import RefreshCw from "~icons/lucide/refresh-cw";
+import Trash2 from "~icons/lucide/trash-2";
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { useKernel, type VfsDirEntry } from "@daopk/sdk";
 import { Alert, Badge, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
@@ -344,7 +350,12 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   v-if="entry.kind === 'directory'"
                   @select="emit('openEntry', entry)"
                 >
-                  <FolderOpen class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <Icon
+                    :icon="FolderOpen"
+                    class="finder__context-icon"
+                    :size="15"
+                    aria-hidden="true"
+                  />
                   <span>Open</span>
                 </ContextMenuItem>
                 <ContextMenuItem
@@ -361,7 +372,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   <span>{{ suggestion.label }}</span>
                 </ContextMenuItem>
                 <ContextMenuItem @select="emit('copyPath', entry.path)">
-                  <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
                   <span>Copy Path</span>
                 </ContextMenuItem>
                 <template v-if="entry.kind === 'file'">
@@ -370,7 +381,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                     :disabled="!canMutateEntry(entry)"
                     @select="emit('duplicateEntry', entry)"
                   >
-                    <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+                    <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
                     <span>Duplicate</span>
                   </ContextMenuItem>
                 </template>
@@ -379,7 +390,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   :disabled="!canMutateEntry(entry)"
                   @select="emit('requestDeleteEntry', entry)"
                 >
-                  <Trash2 class="finder__context-icon" :size="15" aria-hidden="true" />
+                  <Icon :icon="Trash2" class="finder__context-icon" :size="15" aria-hidden="true" />
                   <span>Delete...</span>
                 </ContextMenuItem>
               </template>
@@ -390,16 +401,16 @@ function onBrowserKeydown(event: KeyboardEvent): void {
     </template>
     <template #items>
       <ContextMenuItem :disabled="mutationDisabled" @select="emit('createFolder')">
-        <FolderPlus class="finder__context-icon" :size="15" aria-hidden="true" />
+        <Icon :icon="FolderPlus" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>New Folder</span>
       </ContextMenuItem>
       <ContextMenuItem @select="emit('refresh')">
-        <RefreshCw class="finder__context-icon" :size="15" aria-hidden="true" />
+        <Icon :icon="RefreshCw" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>Refresh</span>
       </ContextMenuItem>
       <ContextMenuSeparator />
       <ContextMenuItem @select="emit('copyPath', cwd)">
-        <Copy class="finder__context-icon" :size="15" aria-hidden="true" />
+        <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>Copy Current Folder Path</span>
       </ContextMenuItem>
     </template>

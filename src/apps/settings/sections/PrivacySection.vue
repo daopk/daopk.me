@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 import { SettingsPrivacyIcon as ShieldIcon } from "~/icons/fluentColor";
-import { X as RevokeIcon } from "~/icons/lucide";
+import RevokeIcon from "~icons/lucide/x";
 
 import { ActionRow, EmptyState, Panel, SectionHeader } from "~/components/kit";
 import { Button, Switch } from "~/components/ui";
@@ -206,7 +206,7 @@ function permissionCopy(permission: AppPermission): string {
               "
               @click="revoke(row)"
             >
-              <template #left><RevokeIcon size="1em" aria-hidden="true" /></template>
+              <template #left><RevokeIcon aria-hidden="true" /></template>
               {{ t("settings.privacy.revoke") }}
             </Button>
           </ActionRow>

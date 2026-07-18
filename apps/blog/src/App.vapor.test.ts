@@ -722,8 +722,9 @@ Event body`,
     expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
     const backIcon = wrapper.find(".blog__back svg");
     expect(backIcon.exists()).toBe(true);
-    expect(backIcon.attributes("width")).toBe("14");
-    expect(backIcon.attributes("height")).toBe("14");
+    expect(backIcon.attributes("width")).toBe("1em");
+    expect(backIcon.attributes("height")).toBe("1em");
+    expect((backIcon.element as SVGElement).style.fontSize).toBe("14px");
 
     await wrapper.find(".blog__share").trigger("click");
 

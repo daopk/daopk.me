@@ -2,7 +2,13 @@
 import { computed, nextTick, ref, watch } from "vue";
 
 import { Button, IconButton, Input, Modal } from "@daopk/ui";
-import { ChevronLeft, ChevronRight, Film, Home, Search, Tv, X } from "@daopk/icons";
+import ChevronLeft from "~icons/lucide/chevron-left";
+import ChevronRight from "~icons/lucide/chevron-right";
+import Film from "~icons/lucide/film";
+import Home from "~icons/lucide/home";
+import Search from "~icons/lucide/search";
+import Tv from "~icons/lucide/tv";
+import X from "~icons/lucide/x";
 
 import { mediaLabel } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
@@ -269,7 +275,7 @@ function selectMedia(media: MovieMediaType): void {
           :disabled="searchDraft.trim().length === 0"
           @click="submitSearch"
         >
-          <template #left><Search size="1em" aria-hidden="true" /></template>
+          <template #left><Search aria-hidden="true" /></template>
           {{ t("movies.action.submitSearch") }}
         </Button>
       </template>

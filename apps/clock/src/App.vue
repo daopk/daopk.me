@@ -4,7 +4,12 @@ import { computed, ref } from "vue";
 import { AppFrame, ScrollArea } from "@daopk/kit";
 import { Badge, Button, Field, Input, Tabs, TabsContent, TabsList, TabsTrigger } from "@daopk/ui";
 import type { TabsValue } from "@daopk/ui";
-import { Clock, Flag, Pause, Play, RotateCcw, Timer } from "@daopk/icons";
+import Clock from "~icons/lucide/clock";
+import Flag from "~icons/lucide/flag";
+import Pause from "~icons/lucide/pause";
+import Play from "~icons/lucide/play";
+import RotateCcw from "~icons/lucide/rotate-ccw";
+import Timer from "~icons/lucide/timer";
 
 import { formatClockLongDate, formatClockSecond, toLocalIsoSecond } from "./useClockNow";
 import {
@@ -198,15 +203,15 @@ function durationDatetime(ms: number): string {
               "
               @click="runTimerPrimary"
             >
-              <template #left><Play size="1em" aria-hidden="true" /></template>
+              <template #left><Play aria-hidden="true" /></template>
               {{ timerPrimaryLabel }}
             </Button>
             <Button v-else variant="solid" color="blue" @click="clock.pauseTimer">
-              <template #left><Pause size="1em" aria-hidden="true" /></template>
+              <template #left><Pause aria-hidden="true" /></template>
               Pause
             </Button>
             <Button @click="clock.resetTimer">
-              <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
+              <template #left><RotateCcw aria-hidden="true" /></template>
               Reset
             </Button>
           </div>
@@ -234,19 +239,19 @@ function durationDatetime(ms: number): string {
               color="blue"
               @click="runStopwatchPrimary"
             >
-              <template #left><Play size="1em" aria-hidden="true" /></template>
+              <template #left><Play aria-hidden="true" /></template>
               {{ stopwatchPrimaryLabel }}
             </Button>
             <Button v-else variant="solid" color="blue" @click="clock.pauseStopwatch">
-              <template #left><Pause size="1em" aria-hidden="true" /></template>
+              <template #left><Pause aria-hidden="true" /></template>
               Pause
             </Button>
             <Button :disabled="!clock.stopwatchCanLap.value" @click="clock.lapStopwatch">
-              <template #left><Flag size="1em" aria-hidden="true" /></template>
+              <template #left><Flag aria-hidden="true" /></template>
               Lap
             </Button>
             <Button @click="clock.resetStopwatch">
-              <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
+              <template #left><RotateCcw aria-hidden="true" /></template>
               Reset
             </Button>
           </div>

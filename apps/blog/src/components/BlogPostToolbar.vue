@@ -2,8 +2,8 @@
 import type { VaporComponent } from "vue";
 
 import { AppToolbar } from "@daopk/kit";
-import { ArrowLeft } from "@daopk/icons";
-import { Button, IconButton } from "@daopk/ui";
+import ArrowLeft from "~icons/lucide/arrow-left";
+import { Icon, Button, IconButton } from "@daopk/ui";
 
 defineProps<{
   readonly shareButtonIcon: VaporComponent;
@@ -20,7 +20,7 @@ defineEmits<{
 <template>
   <AppToolbar class="blog__post-toolbar" density="comfortable" wrap>
     <Button class="blog__back" size="sm" @click="$emit('back')">
-      <template #left><ArrowLeft size="14" aria-hidden="true" /></template>
+      <template #left><Icon :icon="ArrowLeft" size="14" aria-hidden="true" /></template>
       All posts
     </Button>
     <template #end>

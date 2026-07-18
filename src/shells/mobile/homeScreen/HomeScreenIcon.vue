@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { Loader2 } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import Loader2 from "~icons/lucide/loader-2";
 import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
@@ -57,7 +58,7 @@ function onActivate(): void {
         :stroke-width="2"
       />
       <span v-if="launching" class="home-icon__spinner" aria-hidden="true">
-        <Loader2 :size="20" :stroke-width="2.25" />
+        <Icon :icon="Loader2" :size="20" :stroke-width="2.25" />
       </span>
     </span>
     <span class="home-icon__label">{{ manifest.name }}</span>

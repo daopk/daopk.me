@@ -8,7 +8,7 @@ import {
   useAppChrome,
 } from "~/components/kit";
 import { Alert, Button } from "~/components/ui";
-import { RefreshCw } from "~/icons/lucide";
+import RefreshCw from "~icons/lucide/refresh-cw";
 
 // Mirrors the title (and, if needed, a back action) into the mobile header.
 // No-ops on the desktop window, which titles itself from the app manifest.
@@ -26,7 +26,7 @@ useAppChrome({ title: () => "Template" });
       <ToolbarTitle title="Template" subtitle="A token-based app shell" />
       <template #end>
         <Button size="sm" variant="surface">
-          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+          <template #left><RefreshCw aria-hidden="true" /></template>
           Action
         </Button>
       </template>

@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Shield } from "~/icons/lucide";
+import Shield from "~icons/lucide/shield";
 
 defineProps<{
   label: string;

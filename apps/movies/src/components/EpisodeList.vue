@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Play } from "@daopk/icons";
+import Play from "~icons/lucide/play";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSeasonEpisode } from "../moviesApi";

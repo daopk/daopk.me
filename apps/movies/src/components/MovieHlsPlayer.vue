@@ -9,20 +9,18 @@ import {
   IconButton,
   Slider,
 } from "@daopk/ui";
-import {
-  AlertCircle,
-  Check,
-  ChevronLeft,
-  Maximize2,
-  Minimize2,
-  MoreHorizontal,
-  PictureInPicture,
-  PictureInPicture2,
-  Play,
-  SkipForward,
-  Volume2,
-  VolumeX,
-} from "@daopk/icons";
+import AlertCircle from "~icons/lucide/alert-circle";
+import Check from "~icons/lucide/check";
+import ChevronLeft from "~icons/lucide/chevron-left";
+import Maximize2 from "~icons/lucide/maximize-2";
+import Minimize2 from "~icons/lucide/minimize-2";
+import MoreHorizontal from "~icons/lucide/more-horizontal";
+import PictureInPicture from "~icons/lucide/picture-in-picture";
+import PictureInPicture2 from "~icons/lucide/picture-in-picture-2";
+import Play from "~icons/lucide/play";
+import SkipForward from "~icons/lucide/skip-forward";
+import Volume2 from "~icons/lucide/volume-2";
+import VolumeX from "~icons/lucide/volume-x";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {

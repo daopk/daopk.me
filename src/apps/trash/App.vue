@@ -11,7 +11,10 @@ import {
   Spinner,
 } from "~/components/kit";
 import { Alert, Button, Modal } from "~/components/ui";
-import { AlertCircle, RefreshCw, RotateCw, Trash2 } from "~/icons/lucide";
+import AlertCircle from "~icons/lucide/alert-circle";
+import RefreshCw from "~icons/lucide/refresh-cw";
+import RotateCw from "~icons/lucide/rotate-cw";
+import Trash2 from "~icons/lucide/trash-2";
 import { formatBytes } from "~/utils/format";
 
 import { useTrashApp } from "./useTrashApp";
@@ -71,7 +74,7 @@ const {
       <template #end>
         <div class="trash__actions">
           <Button size="sm" :loading="loading" @click="refresh">
-            <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+            <template #left><RefreshCw aria-hidden="true" /></template>
             Refresh
           </Button>
           <Button
@@ -82,7 +85,7 @@ const {
             :loading="emptying"
             @click="requestEmptyTrash"
           >
-            <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+            <template #left><Trash2 aria-hidden="true" /></template>
             Empty Trash...
           </Button>
         </div>
@@ -175,7 +178,7 @@ const {
                   :disabled="emptying"
                   @click="restore(item)"
                 >
-                  <template #left><RotateCw size="1em" aria-hidden="true" /></template>
+                  <template #left><RotateCw aria-hidden="true" /></template>
                   Restore
                 </Button>
                 <Button
@@ -187,7 +190,7 @@ const {
                   :disabled="emptying"
                   @click="requestRemovePermanently(item)"
                 >
-                  <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+                  <template #left><Trash2 aria-hidden="true" /></template>
                   Delete...
                 </Button>
               </span>
@@ -222,7 +225,7 @@ const {
           :loading="mutatingId === pendingPermanentDelete?.id"
           @click="confirmRemovePermanently"
         >
-          <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+          <template #left><Trash2 aria-hidden="true" /></template>
           Delete Permanently
         </Button>
       </template>
@@ -251,7 +254,7 @@ const {
           :loading="emptying"
           @click="confirmEmptyTrash"
         >
-          <template #left><Trash2 size="1em" aria-hidden="true" /></template>
+          <template #left><Trash2 aria-hidden="true" /></template>
           Empty Trash
         </Button>
       </template>

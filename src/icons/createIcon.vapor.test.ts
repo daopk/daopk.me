@@ -2,88 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createComponent, type VaporComponent } from "vue";
 import { IconButton } from "ropav/icon-button";
 import { mountVapor } from "~/test/mountVapor";
+import Search from "~icons/lucide/search";
 
 import { TrashAppIcon } from "./fluentColor";
-import { Search } from "./lucide";
-import * as runtimeIcons from "../runtime/icons";
+import Icon from "./Icon.vue";
 import { SETTINGS_MENU_ICON_ASSETS, SettingsAppearanceIcon } from "./settingsMenuIcons";
-
-const PUBLIC_LUCIDE_EXPORTS = [
-  "Activity",
-  "AlertCircle",
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "Box",
-  "CalendarDays",
-  "CalendarRange",
-  "Check",
-  "ChevronLeft",
-  "ChevronRight",
-  "Clock",
-  "Cloud",
-  "CloudOff",
-  "Copy",
-  "Download",
-  "Eraser",
-  "ExternalLink",
-  "File",
-  "FileText",
-  "Film",
-  "Flag",
-  "Folder",
-  "FolderOpen",
-  "FolderPlus",
-  "Globe",
-  "Grid2X2",
-  "Home",
-  "Image",
-  "Info",
-  "KeyRound",
-  "Layers2",
-  "LayoutGrid",
-  "List",
-  "Loader2",
-  "Lock",
-  "LogOut",
-  "Maximize2",
-  "Menu",
-  "Minimize2",
-  "Minus",
-  "MoreHorizontal",
-  "MoveHorizontal",
-  "Palette",
-  "Pause",
-  "Pencil",
-  "PictureInPicture",
-  "PictureInPicture2",
-  "Play",
-  "Plus",
-  "RefreshCw",
-  "RotateCcw",
-  "RotateCw",
-  "RotateCwSquare",
-  "Save",
-  "Search",
-  "Settings",
-  "Share2",
-  "Shield",
-  "SkipForward",
-  "Sparkles",
-  "Terminal",
-  "Timer",
-  "Trash2",
-  "Tv",
-  "Type",
-  "Unlock",
-  "Upload",
-  "Volume2",
-  "VolumeX",
-  "Wallpaper",
-  "X",
-  "ZoomIn",
-  "ZoomOut",
-] as const;
 
 function referencedIds(svg: SVGElement): string[] {
   return Array.from(svg.querySelectorAll("[fill], [filter], [mask], [clip-path]"))
@@ -106,16 +29,27 @@ function isVaporDefinition(component: VaporComponent): boolean {
 }
 
 describe("Vapor icon components", () => {
-  it("keeps every factory output on the Vapor runtime", () => {
+  it("keeps every icon definition on the Vapor runtime", () => {
     expect(isVaporDefinition(Search)).toBe(true);
     expect(isVaporDefinition(TrashAppIcon)).toBe(true);
     expect(isVaporDefinition(SettingsAppearanceIcon)).toBe(true);
   });
 
-  it("renders Lucide SVG defaults, custom props, attrs, and events", () => {
+  it("keeps compiled SVG dimensions relative to the surrounding font size", () => {
+    const wrapper = mountVapor(Search);
+    const svg = wrapper.find<SVGElement>("svg");
+
+    expect(svg.getAttribute("width")).toBe("1em");
+    expect(svg.getAttribute("height")).toBe("1em");
+    expect(svg.getAttribute("viewBox")).toBe("0 0 24 24");
+    wrapper.unmount();
+  });
+
+  it("sizes a glyph and forwards attrs and events through Icon", () => {
     let clicks = 0;
-    const wrapper = mountVapor(Search, {
+    const wrapper = mountVapor(Icon, {
       props: {
+        icon: Search,
         size: 32,
         strokeWidth: 1.5,
         class: "search-icon",
@@ -126,15 +60,17 @@ describe("Vapor icon components", () => {
     });
     const svg = wrapper.find<SVGElement>("svg");
 
-    expect(svg.getAttribute("width")).toBe("32");
-    expect(svg.getAttribute("height")).toBe("32");
+    expect(svg.getAttribute("width")).toBe("1em");
+    expect(svg.getAttribute("height")).toBe("1em");
     expect(svg.getAttribute("viewBox")).toBe("0 0 24 24");
     expect(svg.getAttribute("role")).toBe("img");
     expect(svg.getAttribute("aria-hidden")).toBe("true");
     expect(svg.getAttribute("aria-label")).toBe("Search");
     expect(svg.getAttribute("data-testid")).toBe("search");
     expect(svg.classList.contains("search-icon")).toBe(true);
-    expect(svg.querySelector("[stroke-width]")?.getAttribute("stroke-width")).toBe("1.5");
+    expect(svg.style.fontSize).toBe("32px");
+    expect(svg.style.strokeWidth).toBe("1.5");
+    expect(svg.classList.contains("daopk-vapor-icon")).toBe(true);
 
     svg.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(clicks).toBe(1);
@@ -160,14 +96,13 @@ describe("Vapor icon components", () => {
   });
 
   it("renders image icons with their compatibility props", () => {
-    const wrapper = mountVapor(SettingsAppearanceIcon, {
-      props: { size: "2rem", class: "settings-icon" },
+    const wrapper = mountVapor(Icon, {
+      props: { icon: SettingsAppearanceIcon, size: "2rem", class: "settings-icon" },
     });
     const image = wrapper.find<HTMLImageElement>("img");
 
     expect(image.getAttribute("src")).toBe(SETTINGS_MENU_ICON_ASSETS.appearance);
-    expect(image.getAttribute("width")).toBe("2rem");
-    expect(image.getAttribute("height")).toBe("2rem");
+    expect(image.style.fontSize).toBe("2rem");
     expect(image.getAttribute("alt")).toBe("");
     expect(image.getAttribute("draggable")).toBe("false");
     expect(image.getAttribute("decoding")).toBe("async");
@@ -178,19 +113,16 @@ describe("Vapor icon components", () => {
   it("renders inside a Vapor component through the production component boundary", () => {
     const wrapper = mountVapor(IconButton, {
       props: { ariaLabel: "Search" },
-      slots: { default: () => createComponent(Search, { size: 24 }) },
+      slots: { default: () => createComponent(Icon, { icon: Search, size: 24 }) },
     });
     const button = wrapper.find<HTMLButtonElement>("button");
     const icon = wrapper.find<SVGElement>("svg");
 
     expect(button.getAttribute("aria-label")).toBe("Search");
     expect(icon.parentElement?.classList.contains("rp-icon-button__icon")).toBe(true);
-    expect(icon.getAttribute("width")).toBe("24");
-    expect(icon.getAttribute("height")).toBe("24");
+    expect(icon.getAttribute("width")).toBe("1em");
+    expect(icon.getAttribute("height")).toBe("1em");
+    expect(icon.style.fontSize).toBe("24px");
     wrapper.unmount();
-  });
-
-  it("preserves the complete public @daopk/icons export surface", () => {
-    expect(Object.keys(runtimeIcons).sort()).toEqual([...PUBLIC_LUCIDE_EXPORTS].sort());
   });
 });

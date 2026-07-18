@@ -9,7 +9,7 @@ import {
   type VaporComponent,
 } from "vue";
 import { AppFrame, ListButton, useAppChrome } from "~/components/kit";
-import { ChevronRight as NavChevronIcon } from "~/icons/lucide";
+import NavChevronIcon from "~icons/lucide/chevron-right";
 import {
   SettingsAccountIcon as AccountIcon,
   SettingsAboutDeviceIcon as AboutIcon,

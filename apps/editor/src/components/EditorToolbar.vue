@@ -1,7 +1,10 @@
 <script setup vapor lang="ts">
 import { AppToolbar } from "@daopk/kit";
 import { Button, IconButton } from "@daopk/ui";
-import { FileText, FolderOpen, RefreshCw, Save } from "@daopk/icons";
+import FileText from "~icons/lucide/file-text";
+import FolderOpen from "~icons/lucide/folder-open";
+import RefreshCw from "~icons/lucide/refresh-cw";
+import Save from "~icons/lucide/save";
 
 defineProps<{
   browseDisabled: boolean;
@@ -43,11 +46,11 @@ const emit = defineEmits<{
           :loading="saving"
           @click="emit('save')"
         >
-          <template #left><Save size="1em" aria-hidden="true" /></template>
+          <template #left><Save aria-hidden="true" /></template>
           Save
         </Button>
         <Button size="sm" :disabled="!dirty || loading || saving" @click="emit('revert')">
-          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
+          <template #left><RefreshCw aria-hidden="true" /></template>
           Revert
         </Button>
         <IconButton

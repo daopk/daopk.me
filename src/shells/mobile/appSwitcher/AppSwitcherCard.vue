@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { X as DismissIcon } from "~/icons/lucide";
+import Icon from "~/icons/Icon.vue";
+import DismissIcon from "~icons/lucide/x";
 import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
@@ -53,7 +54,7 @@ function onDismiss(): void {
       :aria-label="dismissLabel"
       @click="onDismiss"
     >
-      <DismissIcon :size="18" :stroke-width="2" aria-hidden="true" />
+      <Icon :icon="DismissIcon" :size="18" :stroke-width="2" aria-hidden="true" />
     </button>
   </div>
 </template>

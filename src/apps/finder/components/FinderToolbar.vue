@@ -1,6 +1,11 @@
 <script setup vapor lang="ts">
+import Icon from "~/icons/Icon.vue";
 import { AppToolbar } from "@daopk/kit";
-import { ArrowUp, ChevronRight, Grid2X2, List, RefreshCw } from "@daopk/icons";
+import ArrowUp from "~icons/lucide/arrow-up";
+import ChevronRight from "~icons/lucide/chevron-right";
+import Grid2X2 from "~icons/lucide/grid-2x2";
+import List from "~icons/lucide/list";
+import RefreshCw from "~icons/lucide/refresh-cw";
 import { IconButton, Radio, RadioGroup } from "@daopk/ui";
 
 import type { FinderBreadcrumb, FinderViewMode } from "../composables/useFinder";
@@ -59,8 +64,9 @@ const viewModeRadioClassNames = {
         >
           {{ crumb.label }}
         </button>
-        <ChevronRight
+        <Icon
           v-if="index < breadcrumbs.length - 1"
+          :icon="ChevronRight"
           class="finder__breadcrumb-separator"
           :size="14"
           aria-hidden="true"

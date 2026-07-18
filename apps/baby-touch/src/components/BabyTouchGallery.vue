@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { ArrowLeft } from "@daopk/icons";
+import { Icon } from "@daopk/ui";
+import ArrowLeft from "~icons/lucide/arrow-left";
 
 import {
   babyTouchStickerCategories,
@@ -38,7 +39,7 @@ function stickerStyle(sticker: BabyTouchStickerCatalogItem): Record<string, stri
         aria-label="Back to Baby Touch home"
         @click="emit('back')"
       >
-        <ArrowLeft :size="22" aria-hidden="true" />
+        <Icon :icon="ArrowLeft" :size="22" aria-hidden="true" />
       </button>
 
       <h1 id="baby-touch-gallery-title">Sticker Gallery</h1>
