@@ -173,26 +173,12 @@ function openExternally(): void {
 
       <form class="browser__address" role="search" @submit.prevent="submitAddress">
         <label class="browser__address-label" for="browser-address">URL</label>
-        <img
-          v-if="browser.faviconUrl.value"
-          :key="browser.faviconUrl.value"
-          class="browser__favicon"
-          :src="browser.faviconUrl.value"
-          alt=""
-          decoding="async"
-          @error="hideBrokenIcon"
-        />
-        <Shield
-          v-else-if="browser.isSecure.value"
-          class="browser__address-icon"
-          aria-hidden="true"
-        />
-        <Globe v-else class="browser__address-icon" aria-hidden="true" />
         <Input
           id="browser-address"
           v-model="addressInput"
           class="browser__address-input-root"
-          :class-names="{ input: 'browser__address-input' }"
+          size="sm"
+          radius="md"
           type="text"
           placeholder="Search or enter address"
           :input-attrs="{
@@ -203,10 +189,38 @@ function openExternally(): void {
             inputmode: 'url',
             onFocus: selectAddress,
           }"
-        />
-        <Button type="submit" size="sm" variant="solid" color="blue" aria-label="Go" title="Go">
-          <template #left><Search aria-hidden="true" /></template>
-        </Button>
+        >
+          <template #left>
+            <img
+              v-if="browser.faviconUrl.value"
+              :key="browser.faviconUrl.value"
+              class="browser__favicon"
+              :src="browser.faviconUrl.value"
+              alt=""
+              decoding="async"
+              @error="hideBrokenIcon"
+            />
+            <Shield
+              v-else-if="browser.isSecure.value"
+              class="browser__address-icon"
+              aria-hidden="true"
+            />
+            <Globe v-else class="browser__address-icon" aria-hidden="true" />
+          </template>
+          <template #right>
+            <IconButton
+              class="browser__address-submit"
+              ariaLabel="Go"
+              type="submit"
+              size="sm"
+              variant="ghost"
+              color="gray"
+              title="Go"
+            >
+              <Search aria-hidden="true" />
+            </IconButton>
+          </template>
+        </Input>
       </form>
 
       <template #end>

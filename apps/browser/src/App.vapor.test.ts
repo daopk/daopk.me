@@ -38,6 +38,9 @@ describe("Browser App.vue", () => {
     expect(wrapper.find(".browser__start").exists()).toBe(false);
     expect(wrapper.find("iframe").attributes("src")).toBe("https://www.google.com/webhp?igu=1");
     expect(inputValue(wrapper)).toBe("https://www.google.com/webhp?igu=1");
+    expect(wrapper.find(".browser__address-input-root .browser__favicon").exists()).toBe(true);
+    const submit = wrapper.find('.browser__address-input-root button[aria-label="Go"]');
+    expect((submit.element as HTMLButtonElement).type).toBe("submit");
 
     wrapper.unmount();
   });

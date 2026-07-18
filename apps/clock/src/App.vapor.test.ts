@@ -64,6 +64,8 @@ describe("Clock App", () => {
     expect(wrapper.find("#clock-tab-now").getAttribute("aria-selected")).toBe("true");
     expect(wrapper.find("#clock-tab-now").getAttribute("aria-controls")).toBe("clock-panel-now");
     expect(elementText(wrapper.find("#clock-panel-now time"))).toBe("14:30:00");
+    expect(wrapper.find("#clock-panel-now").hasAttribute("hidden")).toBe(false);
+    expect(wrapper.find("#clock-panel-stopwatch").hasAttribute("hidden")).toBe(true);
 
     await selectTab(wrapper, "Stopwatch");
 
@@ -71,6 +73,8 @@ describe("Clock App", () => {
     expect(wrapper.find("#clock-panel-stopwatch").getAttribute("aria-labelledby")).toBe(
       "clock-tab-stopwatch",
     );
+    expect(wrapper.find("#clock-panel-now").hasAttribute("hidden")).toBe(true);
+    expect(wrapper.find("#clock-panel-stopwatch").hasAttribute("hidden")).toBe(false);
   });
 
   it("keeps tab navigation in the topbar without duplicating the app title", () => {
@@ -143,5 +147,19 @@ describe("Clock App", () => {
     expect(wrapper.exists('input[aria-label="Timer hours"]')).toBe(true);
     expect(wrapper.exists('input[aria-label="Timer minutes"]')).toBe(true);
     expect(wrapper.exists('input[aria-label="Timer seconds"]')).toBe(true);
+  });
+
+  it("sizes action button icons relative to the button text", async () => {
+    const wrapper = mountClockApp();
+
+    await selectTab(wrapper, "Timer");
+    await selectTab(wrapper, "Stopwatch");
+
+    const icons = wrapper.findAll<SVGElement>(".clock-app__controls svg");
+    expect(icons.length).toBeGreaterThan(0);
+    for (const icon of icons) {
+      expect(icon.getAttribute("width")).toBe("1em");
+      expect(icon.getAttribute("height")).toBe("1em");
+    }
   });
 });

@@ -58,7 +58,7 @@ const statusColor = computed(() => {
           :loading="checkState.kind === 'checking'"
           @click="checkForUpdates"
         >
-          <template #left><RefreshCw aria-hidden="true" /></template>
+          <template #left><RefreshCw size="14" aria-hidden="true" /></template>
           Check updates
         </Button>
       </template>
@@ -119,22 +119,19 @@ const statusColor = computed(() => {
                 v-if="updateEntryFor(app)"
                 class="app-store__action app-store__update"
                 size="sm"
-                variant="solid"
-                color="blue"
                 :loading="isUpdating(app.id)"
                 @click="updateApp(app)"
               >
-                <template #left><UpdateIcon aria-hidden="true" /></template>
+                <template #left><UpdateIcon size="14" aria-hidden="true" /></template>
                 Update
               </Button>
               <Button
                 v-else
                 class="app-store__action app-store__launch"
                 size="sm"
-                variant="surface"
                 @click="launchApp(app.id)"
               >
-                <template #left><LaunchIcon aria-hidden="true" /></template>
+                <template #left><LaunchIcon size="14" aria-hidden="true" /></template>
                 Open
               </Button>
             </li>

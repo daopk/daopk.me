@@ -198,15 +198,15 @@ function durationDatetime(ms: number): string {
               "
               @click="runTimerPrimary"
             >
-              <template #left><Play aria-hidden="true" /></template>
+              <template #left><Play size="1em" aria-hidden="true" /></template>
               {{ timerPrimaryLabel }}
             </Button>
             <Button v-else variant="solid" color="blue" @click="clock.pauseTimer">
-              <template #left><Pause aria-hidden="true" /></template>
+              <template #left><Pause size="1em" aria-hidden="true" /></template>
               Pause
             </Button>
             <Button @click="clock.resetTimer">
-              <template #left><RotateCcw aria-hidden="true" /></template>
+              <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
               Reset
             </Button>
           </div>
@@ -234,19 +234,19 @@ function durationDatetime(ms: number): string {
               color="blue"
               @click="runStopwatchPrimary"
             >
-              <template #left><Play aria-hidden="true" /></template>
+              <template #left><Play size="1em" aria-hidden="true" /></template>
               {{ stopwatchPrimaryLabel }}
             </Button>
             <Button v-else variant="solid" color="blue" @click="clock.pauseStopwatch">
-              <template #left><Pause aria-hidden="true" /></template>
+              <template #left><Pause size="1em" aria-hidden="true" /></template>
               Pause
             </Button>
             <Button :disabled="!clock.stopwatchCanLap.value" @click="clock.lapStopwatch">
-              <template #left><Flag aria-hidden="true" /></template>
+              <template #left><Flag size="1em" aria-hidden="true" /></template>
               Lap
             </Button>
             <Button @click="clock.resetStopwatch">
-              <template #left><RotateCcw aria-hidden="true" /></template>
+              <template #left><RotateCcw size="1em" aria-hidden="true" /></template>
               Reset
             </Button>
           </div>
@@ -296,12 +296,15 @@ function durationDatetime(ms: number): string {
 
 .clock-app__topbar {
   align-items: center;
-  border-block-end: 1px solid var(--color-border);
   display: flex;
   gap: var(--space-md);
   grid-area: topbar;
   justify-content: space-between;
-  padding: var(--space-md);
+  padding-block: var(--space-md);
+}
+
+.clock-app__tabs {
+  padding-inline: var(--space-md);
 }
 
 .clock-app__body {
@@ -311,10 +314,13 @@ function durationDatetime(ms: number): string {
 
 .clock-app__panel {
   align-content: center;
-  display: grid;
   gap: var(--space-lg);
   min-block-size: 100%;
   padding: clamp(20px, 5vw, 48px);
+}
+
+.clock-app__panel:not([hidden]) {
+  display: grid;
 }
 
 .clock-app__panel--now {

@@ -4,6 +4,8 @@ export { Badge } from "ropav/badge";
 export type { BadgeProps } from "ropav/badge";
 export { Button } from "ropav/button";
 export type { ButtonProps } from "ropav/button";
+export { ButtonGroup } from "ropav/button-group";
+export type { ButtonGroupOrientation, ButtonGroupPart, ButtonGroupProps } from "ropav/button-group";
 export { Card } from "ropav/card";
 export type { CardProps } from "ropav/card";
 export { Checkbox } from "ropav/checkbox";

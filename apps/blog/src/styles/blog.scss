@@ -130,6 +130,10 @@
   object-fit: cover;
 }
 
+.blog__back {
+  padding-inline: var(--space-sm);
+}
+
 .blog__share-status {
   color: var(--color-fg-muted);
   font-size: var(--font-size-xs);

@@ -233,6 +233,12 @@ describe("Calendar App.vue", () => {
     const wrapper = mountCalendar();
 
     await flushPromises();
+    const navigation = document.body.querySelector(".calendar__nav");
+    expect(navigation?.getAttribute("role")).toBe("group");
+    expect(navigation?.getAttribute("aria-label")).toBe("Calendar navigation");
+    expect(navigation?.classList.contains("rp-button-group--attached")).toBe(true);
+    expect(navigation?.querySelectorAll(":scope > .rp-button")).toHaveLength(3);
+
     await wrapper.click('button[aria-label="Next month"]');
     expect(wrapper.text()).toContain("June 2026");
 

@@ -29,20 +29,9 @@
 }
 
 .browser__address {
-  align-items: center;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   display: flex;
   flex: 1 1 auto;
-  gap: var(--space-xs);
   min-inline-size: 120px;
-  padding-block: 2px;
-  padding-inline: var(--space-sm) 2px;
-}
-
-.browser__address:focus-within {
-  border-color: var(--color-accent);
 }
 
 .browser__address-label {
@@ -70,22 +59,15 @@
 
 .browser__address-input-root {
   flex: 1 1 auto;
-  min-inline-size: 4ch;
-}
-
-:deep(.browser__address-input) {
-  background: transparent;
-  border: 0;
-  color: var(--color-fg);
-  font: inherit;
   inline-size: 100%;
-  min-inline-size: 0;
-  outline: none;
-  padding: 0;
+  min-inline-size: 4ch;
+  padding-inline-end: 2px;
 }
 
-:deep(.browser__address-input:focus-visible) {
-  outline: none;
+.browser__address-submit {
+  block-size: 22px;
+  font-size: 14px;
+  inline-size: 22px;
 }
 
 .browser__bookmarks {

@@ -720,7 +720,10 @@ Event body`,
     await waitForContent(wrapper);
 
     expect(wrapper.find(".blog__post-toolbar").exists()).toBe(true);
-    expect(wrapper.find(".blog__back svg").exists()).toBe(true);
+    const backIcon = wrapper.find(".blog__back svg");
+    expect(backIcon.exists()).toBe(true);
+    expect(backIcon.attributes("width")).toBe("14");
+    expect(backIcon.attributes("height")).toBe("14");
 
     await wrapper.find(".blog__share").trigger("click");
 

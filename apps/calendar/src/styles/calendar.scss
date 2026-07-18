@@ -71,13 +71,12 @@
 
 .calendar__nav {
   flex: 0 0 auto;
-  gap: var(--space-xs);
+  gap: 0;
 }
 
 .calendar__icon-button {
   background: var(--calendar-panel-bg);
   border: 1px solid var(--calendar-border-soft);
-  border-radius: var(--radius-md);
   color: var(--color-fg);
   transition:
     background-color var(--duration-fast) var(--ease),

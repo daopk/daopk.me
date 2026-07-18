@@ -20,7 +20,7 @@ defineEmits<{
 <template>
   <AppToolbar class="blog__post-toolbar" density="comfortable" wrap>
     <Button class="blog__back" size="sm" @click="$emit('back')">
-      <template #left><ArrowLeft aria-hidden="true" /></template>
+      <template #left><ArrowLeft size="14" aria-hidden="true" /></template>
       All posts
     </Button>
     <template #end>
