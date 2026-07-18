@@ -313,12 +313,23 @@ describe("YouTube Player App", () => {
     expect(youtubeApi.loadYouTubeIframeApi).not.toHaveBeenCalled();
     expect(wrapper.find(".youtube-player__controls").exists()).toBe(false);
     expect(wrapper.get('form[aria-label="Open YouTube video"]').exists()).toBe(true);
-    expect(wrapper.get("#youtube-player-video-input").attributes("placeholder")).toBe(
-      "YouTube URL or video ID",
+    const input = wrapper.get("#youtube-player-video-input");
+    expect(input.attributes("placeholder")).toBe("YouTube URL or video ID");
+    expect(input.attributes("aria-label")).toBe("YouTube URL or video ID");
+    expect(wrapper.get(".youtube-player__open-input-root").classes()).toContain(
+      "rp-input--size-lg",
     );
     const submit = wrapper.get<HTMLButtonElement>(".youtube-player__open-button");
     expect(submit.element.type).toBe("submit");
     expect(submit.text()).toContain("Play");
+    expect(submit.classes()).toContain("rp-button--ghost");
+    expect(submit.classes()).toContain("rp-button--size-md");
+    expect(wrapper.get(".youtube-player__open-input-root .rp-input__right").element).toContain(
+      submit.element,
+    );
+    const submitIcon = submit.get(".rp-button__left svg");
+    expect(submitIcon.attributes("width")).toBe("1em");
+    expect(submitIcon.attributes("height")).toBe("1em");
 
     wrapper.unmount();
   });

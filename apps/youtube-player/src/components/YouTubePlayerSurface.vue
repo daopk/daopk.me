@@ -248,42 +248,38 @@ function submitManualVideo(): void {
             aria-label="Open YouTube video"
             @submit.prevent="submitManualVideo"
           >
-            <label class="youtube-player__input-label" for="youtube-player-video-input">
-              YouTube URL or video ID
-            </label>
-            <div
-              class="youtube-player__open-group"
-              :class="{ 'youtube-player__open-group--invalid': manualVideoInputInvalid }"
+            <Input
+              id="youtube-player-video-input"
+              v-model="manualVideoInput"
+              class="youtube-player__open-input-root"
+              type="text"
+              size="lg"
+              placeholder="YouTube URL or video ID"
+              ariaLabel="YouTube URL or video ID"
+              :input-attrs="{
+                autocomplete: 'url',
+                autocapitalize: 'off',
+                autocorrect: 'off',
+                spellcheck: false,
+                inputmode: 'url',
+              }"
+              :invalid="manualVideoInputInvalid"
+              @update:model-value="clearManualVideoInputError"
             >
-              <Input
-                id="youtube-player-video-input"
-                v-model="manualVideoInput"
-                class="youtube-player__open-input-root"
-                :class-names="{ input: 'youtube-player__open-input' }"
-                type="text"
-                placeholder="YouTube URL or video ID"
-                :input-attrs="{
-                  autocomplete: 'url',
-                  autocapitalize: 'off',
-                  autocorrect: 'off',
-                  spellcheck: false,
-                  inputmode: 'url',
-                }"
-                :invalid="manualVideoInputInvalid"
-                @update:model-value="clearManualVideoInputError"
-              />
-              <Button
-                class="youtube-player__open-button"
-                type="submit"
-                size="sm"
-                variant="solid"
-                color="blue"
-                :disabled="manualVideoInput.trim().length === 0"
-              >
-                <template #left><Play aria-hidden="true" /></template>
-                Play
-              </Button>
-            </div>
+              <template #right>
+                <Button
+                  class="youtube-player__open-button"
+                  type="submit"
+                  size="md"
+                  variant="ghost"
+                  color="blue"
+                  :disabled="manualVideoInput.trim().length === 0"
+                >
+                  <template #left><Play size="1em" aria-hidden="true" /></template>
+                  Play
+                </Button>
+              </template>
+            </Input>
             <p v-if="manualVideoInputInvalid" class="youtube-player__input-error" role="alert">
               Enter a valid YouTube URL or video ID.
             </p>
@@ -413,72 +409,9 @@ function submitManualVideo(): void {
   inline-size: min(100%, 34rem);
 }
 
-.youtube-player__open-group {
-  align-items: center;
-  background:
-    linear-gradient(
-      color-mix(in srgb, var(--color-bg-elevated) 78%, transparent),
-      color-mix(in srgb, var(--color-bg-elevated) 78%, transparent)
-    ),
-    color-mix(in srgb, var(--color-bg) 88%, black);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 14%, transparent);
-  border-radius: var(--radius-md);
-  box-shadow:
-    0 16px 48px color-mix(in srgb, black 18%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
-  display: grid;
-  gap: var(--space-xs);
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-block-size: 52px;
-  padding: var(--space-2xs);
-  transition:
-    border-color var(--duration-fast) var(--ease),
-    box-shadow var(--duration-fast) var(--ease);
-}
-
-.youtube-player__open-group:focus-within {
-  border-color: color-mix(in srgb, var(--color-accent) 80%, var(--color-border));
-  box-shadow:
-    0 18px 54px color-mix(in srgb, black 20%, transparent),
-    0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
-}
-
-.youtube-player__open-group--invalid {
-  border-color: color-mix(in srgb, var(--color-error-soft) 82%, var(--color-border));
-}
-
-.youtube-player__input-label {
-  block-size: 1px;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  inline-size: 1px;
-  overflow: hidden;
-  position: absolute;
-  white-space: nowrap;
-}
-
 .youtube-player__open-input-root {
-  background: transparent;
-  border: 0;
   min-inline-size: 0;
-}
-
-:deep(.youtube-player__open-input) {
-  color: var(--color-fg);
-  min-inline-size: 0;
-  padding-inline: var(--space-md) var(--space-sm);
-}
-
-:deep(.youtube-player__open-input:focus-visible) {
-  outline: none;
-}
-
-.youtube-player__open-button {
-  border-radius: var(--radius-sm);
-  min-block-size: 40px;
-  min-inline-size: 5.5rem;
-  white-space: nowrap;
+  padding-inline-end: var(--space-2xs);
 }
 
 .youtube-player__input-error {
@@ -527,17 +460,6 @@ function submitManualVideo(): void {
   :deep(.youtube-player__poster-fade-enter-active),
   :deep(.youtube-player__poster-fade-leave-active) {
     transition: none;
-  }
-}
-
-@media (max-width: 520px) {
-  .youtube-player__open-group {
-    grid-template-columns: 1fr;
-    padding: var(--space-xs);
-  }
-
-  .youtube-player__open-button {
-    inline-size: 100%;
   }
 }
 </style>

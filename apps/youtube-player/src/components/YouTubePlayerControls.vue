@@ -178,7 +178,7 @@ function commitVolumeFromChange(event: Event): void {
       class="youtube-player__button"
       :ariaLabel="playPauseLabel"
       size="sm"
-      variant="surface"
+      variant="subtle"
       :disabled="controlsDisabled"
       @click="emit('toggle-playback')"
     >
@@ -219,7 +219,7 @@ function commitVolumeFromChange(event: Event): void {
       class="youtube-player__button"
       :ariaLabel="muteLabel"
       size="sm"
-      variant="surface"
+      variant="subtle"
       :disabled="controlsDisabled"
       @click="emit('toggle-mute')"
     >
@@ -242,7 +242,7 @@ function commitVolumeFromChange(event: Event): void {
       class="youtube-player__button youtube-player__fullscreen"
       :ariaLabel="fullscreenLabel"
       size="sm"
-      variant="surface"
+      variant="subtle"
       @click="emit('toggle-fullscreen')"
     >
       <Maximize2 aria-hidden="true" />
@@ -319,6 +319,10 @@ function commitVolumeFromChange(event: Event): void {
 
   position: relative;
   z-index: 1;
+}
+
+.youtube-player__volume {
+  --rp-slider-track-length: 72px;
 }
 
 .youtube-player__seek:hover,
