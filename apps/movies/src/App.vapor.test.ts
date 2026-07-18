@@ -4,6 +4,7 @@ import {
   type VaporTestMountOptions,
   type VaporTestWrapper,
 } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, nextTick, onMounted, watchEffect, type Component } from "vue";
@@ -903,7 +904,8 @@ describe("Movies app", () => {
     await nextTick();
 
     expect(setTheme).toHaveBeenCalledWith("dark");
-    expect(wrapper.text()).not.toContain("Watch Movies in dark mode?");
+    expect(queryActiveModalDialog(wrapper.element)).toBeNull();
+    await finishLeavingModals(wrapper.element);
   });
 
   it("does not suggest dark mode when Movies opens in dark mode", async () => {
@@ -2419,7 +2421,7 @@ describe("Movies app", () => {
     await settle();
 
     const moviesApp = wrapper.get(".movies-app").element;
-    const dialog = moviesApp.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog(moviesApp);
     const overlay = moviesApp.querySelector(".movies-toolbar__search-modal-overlay");
     expect(dialog).toBeInstanceOf(HTMLElement);
     expect(overlay).toBeInstanceOf(HTMLElement);
@@ -2448,7 +2450,8 @@ describe("Movies app", () => {
       expect.anything(),
     );
     expect(wrapper.text()).toContain("Search: Fight");
-    expect(moviesApp.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog(moviesApp)).toBeNull();
+    await finishLeavingModals(moviesApp);
 
     const keywordInput = wrapper.get<HTMLInputElement>(
       '.movies-list__search-input-root input[aria-label="Keyword"]',

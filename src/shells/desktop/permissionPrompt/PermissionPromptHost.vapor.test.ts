@@ -21,6 +21,11 @@ import { kernel } from "~/core/kernel";
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import type { AppManifest } from "~/types/app";
 import { KernelInjectionKey } from "~/types/kernel";
+import {
+  ACTIVE_MODAL_DIALOG_SELECTOR,
+  finishLeavingModals,
+  queryActiveModalDialog,
+} from "~/test/ropavModal";
 
 import PermissionPromptHost from "./PermissionPromptHost.vue";
 
@@ -39,6 +44,14 @@ function makeManifest(id: string, name: string, category: AppManifest["category"
     category,
     component: () => Promise.resolve({ default: StubIcon }),
   };
+}
+
+function activeDialogButton(text: string): HTMLButtonElement {
+  const button = Array.from(
+    queryActiveModalDialog()?.querySelectorAll<HTMLButtonElement>("button") ?? [],
+  ).find((candidate) => candidate.textContent?.trim() === text);
+  expect(button).toBeDefined();
+  return button!;
 }
 
 describe("PermissionPromptHost (desktop, M3.5)", () => {
@@ -63,7 +76,8 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     await kernel.init();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await finishLeavingModals();
     activeWrapper?.unmount();
     activeWrapper = null;
     kernel.dispose();
@@ -72,7 +86,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
 
   it("does not render any dialog when no permission is pending", () => {
     mountHost();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog()).toBeNull();
   });
 
   it("renders the dialog when a non-system enqueue fires + shows the app name + permission copy", async () => {
@@ -83,7 +97,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
 
     await flushAndPaint();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     const overlay = document.body.querySelector(".ds-permission-prompt__overlay");
     expect(dialog).not.toBeNull();
     expect(dialog?.classList.contains("ds-permission-prompt__panel--system")).toBe(true);
@@ -94,10 +108,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     expect(dialog?.textContent).toContain("Allow once");
     expect(dialog?.textContent).toContain("Allow and remember");
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    const dontAllow = buttons.find((b) => b.textContent?.trim() === "Don't allow");
-    expect(dontAllow).toBeDefined();
-    dontAllow!.click();
+    activeDialogButton("Don't allow").click();
     await expect(pending).resolves.toBeNull();
   });
 
@@ -108,9 +119,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    const allowOnce = buttons.find((b) => b.textContent?.trim() === "Allow once");
-    allowOnce!.click();
+    activeDialogButton("Allow once").click();
 
     const id = await pending;
     expect(typeof id).toBe("string");
@@ -126,9 +135,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    const allowRemember = buttons.find((b) => b.textContent?.trim() === "Allow and remember");
-    allowRemember!.click();
+    activeDialogButton("Allow and remember").click();
 
     await expect(pending).resolves.toEqual(expect.any(String));
     expect(usePermissionStore().get("rss", "notifications.post")?.granted).toBe(true);
@@ -141,9 +148,7 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    const deny = buttons.find((b) => b.textContent?.trim() === "Don't allow");
-    deny!.click();
+    activeDialogButton("Don't allow").click();
 
     await expect(pending).resolves.toBeNull();
     expect(usePermissionStore().get("rss", "notifications.post")?.granted).toBe(false);
@@ -158,22 +163,20 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     const pendingB = kernel.notifications.enqueue({ title: "b" }, { manifestId: "weather" });
     await flushAndPaint();
 
-    expect(document.body.querySelectorAll('[role="dialog"]')).toHaveLength(1);
-    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("RSS");
+    expect(document.body.querySelectorAll(ACTIVE_MODAL_DIALOG_SELECTOR)).toHaveLength(1);
+    expect(queryActiveModalDialog()?.textContent).toContain("RSS");
 
-    const buttonsA = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttonsA.find((b) => b.textContent?.trim() === "Allow once")!.click();
+    activeDialogButton("Allow once").click();
     await pendingA;
     await flushAndPaint();
 
-    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("Weather");
+    expect(queryActiveModalDialog()?.textContent).toContain("Weather");
 
-    const buttonsB = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttonsB.find((b) => b.textContent?.trim() === "Allow once")!.click();
+    activeDialogButton("Allow once").click();
     await pendingB;
     await flushAndPaint();
 
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog()).toBeNull();
   });
 
   it("shows a 'N more pending' hint in the description while the queue is non-empty", async () => {
@@ -185,15 +188,13 @@ describe("PermissionPromptHost (desktop, M3.5)", () => {
     const pendingB = kernel.notifications.enqueue({ title: "b" }, { manifestId: "b" });
     await flushAndPaint();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     expect(dialog?.textContent).toContain("1 more pending");
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons.find((b) => b.textContent?.trim() === "Don't allow")!.click();
+    activeDialogButton("Don't allow").click();
     await pendingA;
     await flushAndPaint();
-    const buttons2 = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons2.find((b) => b.textContent?.trim() === "Don't allow")!.click();
+    activeDialogButton("Don't allow").click();
     await pendingB;
   });
 });

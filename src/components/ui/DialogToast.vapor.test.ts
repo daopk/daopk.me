@@ -5,6 +5,7 @@ import { Modal } from "ropav/modal";
 import { ToastProvider, useToast, type UseToastReturn } from "ropav/toast";
 
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 import ToastHost from "./ToastHost.vue";
 
@@ -54,9 +55,10 @@ function pointer(element: Element, type: string, clientX = 0): void {
   );
 }
 
-afterEach(() => {
-  for (const wrapper of mounted.splice(0)) wrapper.unmount();
+afterEach(async () => {
   vi.useRealTimers();
+  await finishLeavingModals();
+  for (const wrapper of mounted.splice(0)) wrapper.unmount();
   document.body.innerHTML = "";
   document.body.style.overflow = "";
 });
@@ -123,7 +125,7 @@ describe("Modal", () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
     await settle();
     expect(open.value).toBe(false);
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog()).toBeNull();
     expect(document.body.style.overflow).toBe("");
     expect(wrapper.element.inert).toBe(false);
     expect(document.activeElement).toBe(trigger);

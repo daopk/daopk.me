@@ -1,4 +1,5 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, nextTick } from "vue";
 
@@ -328,8 +329,9 @@ function emitShellChanged(kernel: Kernel, shellId: "desktop" | "mobile"): void {
 }
 
 describe("Finder App.vue", () => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers();
+    await finishLeavingModals();
     document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
@@ -806,7 +808,7 @@ describe("Finder App.vue", () => {
 
     expect(kernel.trash.moveToTrash).not.toHaveBeenCalled();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     expect(dialog).not.toBeNull();
     const deleteButton = Array.from(dialog!.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "Move to Trash",
@@ -821,6 +823,7 @@ describe("Finder App.vue", () => {
     });
     expect(wrapper.findAll(".finder__entry-name").map((node) => node.text())).toEqual(["b.txt"]);
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 

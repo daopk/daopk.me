@@ -7,6 +7,7 @@ import { kernel } from "~/core/kernel";
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import type { AppManifest } from "~/types/app";
 import { KernelInjectionKey } from "~/types/kernel";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 import MobilePermissionPromptHost from "./MobilePermissionPromptHost.vue";
 
@@ -25,6 +26,14 @@ function makeManifest(id: string, name: string, category: AppManifest["category"
     category,
     component: () => Promise.resolve({ default: StubIcon }),
   };
+}
+
+function activeDialogButton(text: string): HTMLButtonElement {
+  const button = Array.from(
+    queryActiveModalDialog()?.querySelectorAll<HTMLButtonElement>("button") ?? [],
+  ).find((candidate) => candidate.textContent?.trim() === text);
+  expect(button).toBeDefined();
+  return button!;
 }
 
 async function flushAndPaint(): Promise<void> {
@@ -55,7 +64,8 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     await kernel.init();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await finishLeavingModals();
     activeWrapper?.unmount();
     activeWrapper = null;
     kernel.dispose();
@@ -64,7 +74,7 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
 
   it("renders nothing when the queue is empty", () => {
     mountHost();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog()).toBeNull();
   });
 
   it("renders the Ropav Modal sheet preset on open", async () => {
@@ -74,15 +84,14 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     const overlay = document.body.querySelector(".ds-permission-prompt__overlay");
     expect(dialog).not.toBeNull();
     expect(dialog?.className).toContain("ds-permission-prompt__panel--sheet");
     expect(dialog?.className).toContain("ds-permission-prompt__panel--system");
     expect(overlay?.className).toContain("ds-permission-prompt__overlay--system");
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons.find((b) => b.textContent?.trim() === "Don't allow")!.click();
+    activeDialogButton("Don't allow").click();
     await expect(pending).resolves.toBeNull();
   });
 
@@ -93,8 +102,7 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons.find((b) => b.textContent?.trim() === "Allow and remember")!.click();
+    activeDialogButton("Allow and remember").click();
 
     await expect(pending).resolves.toEqual(expect.any(String));
     expect(usePermissionStore().get("rss", "notifications.post")?.granted).toBe(true);
@@ -107,8 +115,7 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons.find((b) => b.textContent?.trim() === "Don't allow")!.click();
+    activeDialogButton("Don't allow").click();
 
     await expect(pending).resolves.toBeNull();
     expect(usePermissionStore().get("rss", "notifications.post")?.granted).toBe(false);
@@ -121,8 +128,7 @@ describe("MobilePermissionPromptHost (M3.5)", () => {
     const pending = kernel.notifications.enqueue({ title: "x" }, { manifestId: "rss" });
     await flushAndPaint();
 
-    const buttons = [...document.body.querySelectorAll<HTMLButtonElement>("button")];
-    buttons.find((b) => b.textContent?.trim() === "Allow once")!.click();
+    activeDialogButton("Allow once").click();
 
     await expect(pending).resolves.toEqual(expect.any(String));
     expect(usePermissionStore().get("rss", "notifications.post")).toBeUndefined();

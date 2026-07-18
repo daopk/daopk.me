@@ -5,6 +5,7 @@ import { nextTick } from "vue";
 
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 import AccountSection from "./AccountSection.vue";
 
@@ -49,9 +50,9 @@ function findButtonByText(wrapper: VaporTestWrapper, text: string) {
 }
 
 function findDialogButtonByText(text: string): HTMLButtonElement {
-  const button = [...document.body.querySelectorAll<HTMLButtonElement>("button")].find(
-    (candidate) => candidate.textContent?.trim() === text,
-  );
+  const button = Array.from(
+    queryActiveModalDialog()?.querySelectorAll<HTMLButtonElement>("button") ?? [],
+  ).find((candidate) => candidate.textContent?.trim() === text);
   expect(button).toBeDefined();
   return button!;
 }
@@ -68,7 +69,8 @@ describe("AccountSection", () => {
     setActivePinia(createPinia());
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await finishLeavingModals();
     for (const wrapper of mountedWrappers.splice(0)) {
       wrapper.unmount();
     }
@@ -133,7 +135,7 @@ describe("AccountSection", () => {
     await findButtonByText(wrapper, "Delete Account...").trigger("click");
     await flushAndPaint();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     expect(dialog).not.toBeNull();
     expect(dialog?.textContent).toContain("Delete current account?");
     expect(dialog?.textContent).toContain("Type Alpha to confirm");
@@ -170,6 +172,6 @@ describe("AccountSection", () => {
     await flushAndPaint();
 
     expect(deleteCurrentAccount).not.toHaveBeenCalled();
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
+    expect(queryActiveModalDialog()).toBeNull();
   });
 });

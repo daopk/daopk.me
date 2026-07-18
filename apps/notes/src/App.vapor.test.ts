@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 import { flushPromises, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 const { resizeCallbacks } = vi.hoisted(() => ({
   resizeCallbacks: [] as Array<(entries: Array<{ contentRect: { width: number } }>) => void>,
@@ -243,7 +244,9 @@ describe("Notes App.vue", () => {
     resizeCallbacks.length = 0;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    vi.useRealTimers();
+    await finishLeavingModals();
     document.body.innerHTML = "";
     localStorage.clear();
     vi.restoreAllMocks();
@@ -652,7 +655,7 @@ describe("Notes App.vue", () => {
 
     expect(kernel.trash.moveToTrash).not.toHaveBeenCalled();
 
-    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialog = queryActiveModalDialog();
     expect(dialog).not.toBeNull();
     const deleteButton = Array.from(dialog!.querySelectorAll("button")).find(
       (button) => button.textContent?.trim() === "Move to Trash",
@@ -667,6 +670,7 @@ describe("Notes App.vue", () => {
     });
     expect(wrapper.find<HTMLInputElement>(".notes__title-input").value).toBe("Beta");
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 

@@ -1,4 +1,5 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -201,7 +202,7 @@ function buttonByText(wrapper: MountedEditor, text: string, options: { required?
 }
 
 function dialogButtonByText(text: string): HTMLButtonElement {
-  const dialog = document.body.querySelector('[role="dialog"]');
+  const dialog = queryActiveModalDialog();
   if (dialog === null) {
     throw new Error("Dialog not found");
   }
@@ -230,7 +231,8 @@ async function flushUi(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await finishLeavingModals();
   document.body.innerHTML = "";
 });
 
@@ -314,6 +316,7 @@ describe("Editor App.vue", () => {
       handleId: "editor-handle",
     });
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 
@@ -416,6 +419,7 @@ describe("Editor App.vue", () => {
 
     expect((wrapper.find("textarea").element as HTMLTextAreaElement).value).toBe("B");
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 

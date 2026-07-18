@@ -8,6 +8,7 @@ import {
   type AppChromeController,
   type AppContext,
 } from "@daopk/sdk";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 import App from "./App.vue";
 import type {
@@ -48,8 +49,8 @@ function menuItem(label: string): Element {
 }
 
 function sheetOption(label: string): Element {
-  const item = Array.from(document.body.querySelectorAll('[role="option"]')).find((candidate) =>
-    candidate.textContent?.includes(label),
+  const item = Array.from(queryActiveModalDialog()?.querySelectorAll('[role="option"]') ?? []).find(
+    (candidate) => candidate.textContent?.includes(label),
   );
   expect(item).not.toBeUndefined();
   return item!;
@@ -203,7 +204,8 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await finishLeavingModals();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -377,7 +379,7 @@ describe("PDF Viewer App.vue", () => {
     click(wrapper.get('button[aria-label="Select page 1 / 3"]').element);
     await flushOverlay();
 
-    expect(document.body.querySelector('[role="listbox"]')).toBeInstanceOf(HTMLElement);
+    expect(queryActiveModalDialog()?.querySelector('[role="listbox"]')).toBeInstanceOf(HTMLElement);
     expect(
       Array.from(document.body.querySelectorAll('[role="option"]')).map((item) =>
         item.textContent?.trim(),
@@ -388,8 +390,9 @@ describe("PDF Viewer App.vue", () => {
     await flushOverlay();
 
     expect(viewer.setPage).toHaveBeenCalledWith(2);
-    expect(document.body.querySelector('[role="listbox"]')).toBeNull();
+    expect(queryActiveModalDialog()?.querySelector('[role="listbox"]') ?? null).toBeNull();
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 

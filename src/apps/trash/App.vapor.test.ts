@@ -1,4 +1,5 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { finishLeavingModals } from "~/test/ropavModal";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
@@ -101,7 +102,8 @@ const item: TrashItem = {
 };
 
 describe("Trash App.vue", () => {
-  afterEach(() => {
+  afterEach(async () => {
+    await finishLeavingModals();
     document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
@@ -158,6 +160,7 @@ describe("Trash App.vue", () => {
 
     expect(kernel.trash.remove).toHaveBeenCalledWith("trash-1", { handleId: "trash-handle" });
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 
@@ -181,6 +184,7 @@ describe("Trash App.vue", () => {
     expect(kernel.trash.empty).toHaveBeenCalledWith({ handleId: "trash-handle" });
     expect(wrapper.text()).toContain("No deleted items.");
 
+    await finishLeavingModals();
     wrapper.unmount();
   });
 });
