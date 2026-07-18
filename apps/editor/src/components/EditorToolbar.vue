@@ -43,11 +43,11 @@ const emit = defineEmits<{
           :loading="saving"
           @click="emit('save')"
         >
-          <template #left><Save aria-hidden="true" /></template>
+          <template #left><Save size="1em" aria-hidden="true" /></template>
           Save
         </Button>
         <Button size="sm" :disabled="!dirty || loading || saving" @click="emit('revert')">
-          <template #left><RefreshCw aria-hidden="true" /></template>
+          <template #left><RefreshCw size="1em" aria-hidden="true" /></template>
           Revert
         </Button>
         <IconButton

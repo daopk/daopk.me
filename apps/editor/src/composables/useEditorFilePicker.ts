@@ -41,7 +41,11 @@ export function useEditorFilePicker({ editor, kernel, ctx }: UseEditorFilePicker
         permissionError.value = "Editor needs file access before browsing.";
         return;
       }
-      if (!decision.persisted && decision.reason !== "system-auto-grant") {
+      if (
+        !decision.persisted &&
+        decision.reason !== "system-auto-grant" &&
+        decision.reason !== "first-party-default-grant"
+      ) {
         permissionError.value = "Choose Allow and remember to browse files.";
         return;
       }

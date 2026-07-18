@@ -37,6 +37,7 @@ interface FakeNode {
 interface FakeKernelOptions {
   readPermissionGranted?: boolean;
   readPermissionPersisted?: boolean;
+  readPermissionReason?: "cached" | "first-party-default-grant" | "user";
 }
 
 function stat(path: string, node: FakeNode): VfsStat {
@@ -111,7 +112,7 @@ function makeKernel(seed: Record<string, FakeNode>, options: FakeKernelOptions =
         return {
           granted: options.readPermissionGranted ?? true,
           persisted,
-          reason: persisted ? "cached" : "user",
+          reason: options.readPermissionReason ?? (persisted ? "cached" : "user"),
         };
       }),
       respond: vi.fn(() => true),
@@ -358,6 +359,31 @@ describe("Editor App.vue", () => {
     expect(document.body.textContent).not.toContain("Open File");
     expect(wrapper.text()).toContain("Choose Allow and remember to browse files.");
     expect(kernel.vfs.list).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it("opens the Browse picker for a first-party default grant", async () => {
+    const kernel = makeKernel(
+      {
+        "/home": { kind: "directory" },
+        "/home/note.txt": { kind: "file", text: "note", mimeType: "text/plain" },
+      },
+      {
+        readPermissionPersisted: false,
+        readPermissionReason: "first-party-default-grant",
+      },
+    );
+    const wrapper = mountEditor(kernel);
+
+    await buttonByText(wrapper, "Open").trigger("click");
+    await flushUi();
+
+    expect(document.body.textContent).toContain("Open File");
+    expect(optionByText("note.txt")).toBeDefined();
+    expect(kernel.vfs.list).toHaveBeenCalledWith("/home", {
+      handleId: "editor-handle",
+    });
 
     wrapper.unmount();
   });
