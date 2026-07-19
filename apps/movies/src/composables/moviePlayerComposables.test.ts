@@ -412,7 +412,6 @@ describe("movie player composables", () => {
     expect(viewState.showCenterPlay.value).toBe(true);
     expect(viewState.showNextEpisodeButton.value).toBe(true);
     expect(viewState.controlsStyle.value["--movies-player-loaded"]).toBe("0.5");
-    expect(viewState.controlsStyle.value["--movies-player-played"]).toBe("0.44");
     expect(viewState.controlsStyle.value["--movies-player-preview-left"]).toBe("24px");
     expect(viewState.controlsStyle.value["--movies-player-ad-markers"]).toContain(
       "transparent 25.000%",

@@ -897,13 +897,12 @@ content-c.ts
     expect(wrapper.get(".movies-hls-player__seek").classes()).toContain(
       "rp-slider--thumb-interaction",
     );
-    expect(wrapper.get(".movies-hls-player__seek-loaded").exists()).toBe(true);
-    expect(wrapper.get(".movies-hls-player__seek-played").exists()).toBe(true);
+    expect(
+      wrapper.get(".rp-slider__track-underlay > .movies-hls-player__seek-loaded").exists(),
+    ).toBe(true);
+    expect(wrapper.get(".rp-slider__bar.movies-hls-player__seek-range").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(
       "--movies-player-loaded: 0.5333333333333333",
-    );
-    expect(wrapper.get(".movies-hls-player__controls").attributes("style")).toContain(
-      "--movies-player-played: 0.375",
     );
     expect(wrapper.get(".movies-hls-player__time").text()).toBe("0:45");
     expect(wrapper.get(".movies-hls-player__duration").text()).toBe("2:00");

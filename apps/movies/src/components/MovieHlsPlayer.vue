@@ -317,15 +317,6 @@ function setVolumeFromChange(event: Event): void {
             @pointermove="onSeekPointerMove"
             @pointerup="onSeekPointerUp"
           >
-            <span class="movies-hls-player__seek-track-layer" aria-hidden="true">
-              <span class="movies-hls-player__seek-loaded" />
-              <span class="movies-hls-player__seek-played" />
-            </span>
-            <span
-              v-if="hasPlaybackAdMarkers"
-              class="movies-hls-player__ad-markers"
-              aria-hidden="true"
-            />
             <Slider
               class="movies-hls-player__seek"
               :class-names="{
@@ -345,7 +336,14 @@ function setVolumeFromChange(event: Event): void {
               @keydown="onSeekKeydown"
               @update:model-value="previewSeek"
               @change="commitSeekFromChange"
-            />
+            >
+              <template #track-underlay>
+                <span class="movies-hls-player__seek-loaded" />
+              </template>
+              <template #track-overlay>
+                <span v-if="hasPlaybackAdMarkers" class="movies-hls-player__ad-markers" />
+              </template>
+            </Slider>
             <span
               v-if="seekPointerPreview"
               class="movies-hls-player__seek-preview"
