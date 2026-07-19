@@ -74,9 +74,14 @@ function dispatchContextMenu(target: Element): void {
   target.dispatchEvent(ev);
 }
 
+function activeMenuItem(menu: HTMLElement): HTMLElement | null {
+  const activeId = menu.getAttribute("aria-activedescendant");
+  return activeId === null ? null : document.getElementById(activeId);
+}
+
 async function flushOverlay(): Promise<void> {
   await nextTick();
-  await nextTick();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   await flushPromises();
 }
 
@@ -91,7 +96,10 @@ describe("DesktopContextMenuLayer", () => {
     dispatchContextMenu(wrapper.get(".desktop-context-menu-layer").element);
     await flushOverlay();
 
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"]');
     const items = Array.from(document.body.querySelectorAll('[role="menuitem"]'));
+    expect(document.activeElement).toBe(menu);
+    expect(activeMenuItem(menu!)).toBe(items[0]);
     expect(items.map((node) => node.textContent?.trim())).toEqual([
       "Open Finder",
       "New Terminal Window",
@@ -99,6 +107,13 @@ describe("DesktopContextMenuLayer", () => {
       "Add Widgets...",
       "Toggle Theme",
     ]);
+
+    menu!.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "ArrowDown" }),
+    );
+    await nextTick();
+
+    expect(activeMenuItem(menu!)?.textContent?.trim()).toBe("New Terminal Window");
   });
 
   it("dispatches menu actions through kernel.commands with source='menu'", async () => {
