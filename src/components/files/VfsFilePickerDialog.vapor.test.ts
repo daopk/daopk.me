@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { finishLeavingModals } from "~/test/ropavModal";
 
 import {
   AppContextInjectionKey,
@@ -142,7 +143,8 @@ async function flushPicker(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await finishLeavingModals();
   document.body.innerHTML = "";
 });
 
