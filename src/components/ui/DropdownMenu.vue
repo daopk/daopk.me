@@ -53,6 +53,7 @@ const rootRef = useTemplateRef<{
 }>("rootRef");
 const typeahead = useMenuTypeahead();
 let restoreFocusOnClose = true;
+let isOpen = false;
 
 function closeWithoutFocusRestore(event: Event): void {
   event.preventDefault();
@@ -73,6 +74,18 @@ function onOutsideInteraction(): void {
   restoreFocusOnClose = props.modal;
 }
 
+async function focusMenuContent(): Promise<void> {
+  // In Chromium the portalled content can mount after the primitive's initial
+  // focus attempt. Re-focus once the portal has painted so arrow-key events are
+  // always routed to menu navigation after opening with a pointer.
+  await nextTick();
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  if (!isOpen) return;
+
+  portalRoot.value?.querySelector<HTMLElement>('[role="menu"]')?.focus({ preventScroll: true });
+}
+
 async function restoreTriggerFocus(): Promise<void> {
   await nextTick();
   await nextTick();
@@ -80,9 +93,11 @@ async function restoreTriggerFocus(): Promise<void> {
 }
 
 function onOpenChange(next: boolean): void {
+  isOpen = next;
   emit("update:open", next);
   if (next) {
     restoreFocusOnClose = true;
+    void focusMenuContent();
   } else if (restoreFocusOnClose) {
     void restoreTriggerFocus();
   }
@@ -135,8 +150,10 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-lg);
   color: var(--color-fg);
   font-size: var(--font-size-sm);
+  max-block-size: calc(100dvh - var(--menubar-height) - var(--space-sm));
   min-inline-size: 188px;
   outline: none;
+  overflow-y: auto;
   padding: var(--space-xs);
   z-index: var(--dropdown-menu-z);
 

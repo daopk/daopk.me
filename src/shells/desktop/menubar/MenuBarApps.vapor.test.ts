@@ -38,9 +38,18 @@ function click(element: Element): void {
   );
 }
 
+function key(element: Element, key: string): void {
+  element.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key }));
+}
+
 async function flushOverlay(): Promise<void> {
   await nextTick();
   await nextTick();
+}
+
+function activeMenuItem(menu: HTMLElement): HTMLElement | null {
+  const activeId = menu.getAttribute("aria-activedescendant");
+  return activeId ? document.getElementById(activeId) : null;
 }
 
 function makeKernel(apps: readonly AppManifest[]) {
@@ -132,6 +141,33 @@ describe("MenuBarApps", () => {
       source: "menu",
     });
     expect(document.activeElement).not.toBe(trigger);
+
+    wrapper.unmount();
+  });
+
+  it("moves through apps with ArrowDown and ArrowUp after a pointer open", async () => {
+    const wrapper = mountApps(
+      makeKernel([
+        app("finder", "Finder"),
+        app("terminal", "Terminal"),
+        app("settings", "Settings"),
+      ]),
+    );
+
+    click(wrapper.get(".apps-trigger").element);
+    await flushOverlay();
+
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(document.activeElement).toBe(menu);
+    expect(activeMenuItem(menu)?.textContent?.trim()).toBe("Finder");
+
+    key(menu, "ArrowDown");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent?.trim()).toBe("Terminal");
+
+    key(menu, "ArrowUp");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent?.trim()).toBe("Finder");
 
     wrapper.unmount();
   });
