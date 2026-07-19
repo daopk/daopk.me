@@ -237,6 +237,7 @@ describe("App Store", () => {
     expect(wrapper.text()).toContain("1 update available.");
     expect(wrapper.findAll(".app-store__update")).toHaveLength(1);
     expect(wrapper.find(".app-store__update").text()).toBe("Update");
+    expect(wrapper.find(".app-store__update").classes()).toContain("rp-button--solid");
     expect(wrapper.findAll(".app-store__launch")).toHaveLength(2);
     expect(wrapper.text()).toContain("v1.0.1+7");
   });

@@ -460,6 +460,7 @@ const choiceRadioClassNames = {
 }
 
 .comfort__choice-card {
+  align-items: stretch;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -531,13 +532,15 @@ const choiceRadioClassNames = {
 }
 
 .comfort__type-preview {
+  align-items: center;
   align-self: stretch;
+  display: flex;
   font-size: 22px;
   font-weight: 600;
+  justify-content: center;
   line-height: 1;
   min-block-size: 40px;
   padding: var(--space-sm);
-  text-align: center;
 }
 
 .comfort__card-meta {

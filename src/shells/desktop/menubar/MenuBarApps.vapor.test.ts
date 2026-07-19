@@ -90,6 +90,17 @@ describe("MenuBarApps", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders the icon through the Button left slot", () => {
+    const wrapper = mountApps(makeKernel([]));
+    const trigger = wrapper.get(".apps-trigger");
+
+    expect(trigger.find(".rp-button__left .apps-trigger__icon").exists()).toBe(true);
+    expect(trigger.get(".rp-button__label").text()).toBe("Apps");
+    expect(trigger.find(".rp-button__label .apps-trigger__icon").exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
   it("lists registered apps in kernel order", async () => {
     const wrapper = mountApps(makeKernel([app("finder", "Finder"), app("settings", "Settings")]));
 

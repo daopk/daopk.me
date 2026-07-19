@@ -86,6 +86,15 @@ describe("Clock App", () => {
     expect(tablist.querySelectorAll('[role="tab"]')).toHaveLength(3);
   });
 
+  it("skips interactive tab panels in the sequential focus order", async () => {
+    const wrapper = mountClockApp();
+    await nextTick();
+
+    expect(wrapper.find<HTMLElement>("#clock-panel-now").tabIndex).toBe(0);
+    expect(wrapper.find<HTMLElement>("#clock-panel-timer").tabIndex).toBe(-1);
+    expect(wrapper.find<HTMLElement>("#clock-panel-stopwatch").tabIndex).toBe(-1);
+  });
+
   it("clamps custom timer inputs", async () => {
     const wrapper = mountClockApp();
     await selectTab(wrapper, "Timer");

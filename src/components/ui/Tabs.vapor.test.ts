@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createComponent, defineVaporComponent, nextTick, ref } from "vue";
-import { Tabs, TabsContent, TabsList, TabsTrigger, type TabsValue } from "ropav/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger, type TabsValue } from "~/components/ui";
 
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
@@ -51,7 +51,7 @@ function mountTabs(initialValue: TabsValue = "month") {
           ),
           createComponent(
             TabsContent,
-            { id: "panel-month", value: "month" },
+            { id: "panel-month", value: "month", tabIndex: -1 },
             { default: () => text("Month panel") },
           ),
           createComponent(
@@ -95,6 +95,14 @@ describe("Tabs", () => {
     expect(wrapper.find("#tab-month").getAttribute("aria-controls")).toBe("panel-month");
     expect(wrapper.find("#panel-month").getAttribute("aria-labelledby")).toBe("tab-month");
     expect(wrapper.find("#panel-week").hasAttribute("hidden")).toBe(true);
+  });
+
+  it("allows interactive panels to leave the sequential focus order", async () => {
+    const { wrapper } = mountTabs();
+    await nextTick();
+
+    expect(wrapper.find<HTMLElement>("#panel-month").tabIndex).toBe(-1);
+    expect(wrapper.find<HTMLElement>("#panel-week").tabIndex).toBe(0);
   });
 
   it("round-trips controlled selection and skips disabled tabs with the keyboard", async () => {

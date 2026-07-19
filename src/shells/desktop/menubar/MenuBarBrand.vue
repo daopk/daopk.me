@@ -42,7 +42,6 @@ function dispatchCommand(
       <template #trigger>
         <Button type="button" class="brand" variant="plain" size="xs" aria-label="WebOS menu">
           <span class="brand__wordmark">WebOS</span>
-          <span class="brand__dot" aria-hidden="true" />
         </Button>
       </template>
 
@@ -118,20 +117,5 @@ function dispatchCommand(
 .brand:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-accent-sheen) 75%, transparent);
   outline-offset: 2px;
-}
-
-.brand__dot {
-  background: var(--color-accent);
-  border-radius: 50%;
-  box-shadow: 0 0 4px var(--color-accent);
-  flex-shrink: 0;
-  height: 6px;
-  width: 6px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brand__dot {
-    box-shadow: 0 0 3px var(--color-accent);
-  }
 }
 </style>

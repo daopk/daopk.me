@@ -461,7 +461,7 @@ const choiceRadioClassNames = {
   background: transparent;
   block-size: 36px;
   border: 2px solid transparent;
-  border-radius: 999px;
+  border-radius: calc(var(--rp-radius-sm) + var(--rp-border-width-medium));
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
   cursor: pointer;
   display: flex;

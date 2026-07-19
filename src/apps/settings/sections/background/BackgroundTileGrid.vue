@@ -81,9 +81,12 @@ function selectTile(value: string | number | null): void {
   position: relative;
 }
 
-:deep(.background__radio-indicator),
-:deep(.background__radio-label) {
+:deep(.background__radio-indicator) {
   display: none;
+}
+
+:deep(.background__radio-label) {
+  display: contents;
 }
 
 .background__tile {
@@ -117,7 +120,7 @@ function selectTile(value: string | number | null): void {
 
 .background__tile--active {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent) inset;
+  box-shadow: 0 0 0 1px var(--color-accent);
 }
 
 .background__tile-preview {

@@ -274,6 +274,10 @@ function dispatchWindowCommand(id: string): void {
   transition: box-shadow 160ms var(--ease);
 }
 
+.window:focus {
+  outline: none;
+}
+
 .window--focused {
   box-shadow: var(--window-shadow-focused);
 }

@@ -143,6 +143,7 @@ function durationDatetime(ms: number): string {
         <TabsContent
           :id="panelId('timer')"
           value="timer"
+          :tab-index="-1"
           class="clock-app__panel clock-app__panel--timer"
         >
           <div
@@ -241,6 +242,7 @@ function durationDatetime(ms: number): string {
         <TabsContent
           :id="panelId('stopwatch')"
           value="stopwatch"
+          :tab-index="-1"
           class="clock-app__panel clock-app__panel--stopwatch"
         >
           <div class="clock-app__readout clock-app__readout--stopwatch">
@@ -331,6 +333,10 @@ function durationDatetime(ms: number): string {
 
 .clock-app__tabs {
   padding-inline: var(--space-md);
+}
+
+.clock-app__tabs :deep(.rp-scroll-area__content) {
+  padding: var(--rp-border-width-medium);
 }
 
 .clock-app__body {

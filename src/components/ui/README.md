@@ -1,9 +1,9 @@
 # `ui` layer
 
 `src/runtime/ui.ts` exposes this directory as the stable `@daopk/ui` runtime
-entry. Standard controls are direct re-exports from Ropav; applications should
-use Ropav's props, events, slots and built-in behavior instead of adding a
-daopk compatibility wrapper.
+entry. Standard controls are direct re-exports from Ropav unless a small local
+adapter is required for shell behavior; applications should otherwise use
+Ropav's props, events, slots and built-in behavior.
 
 Direct Ropav exports currently include alerts, aspect ratios, avatars, badges,
 buttons and button links, cards, color swatches, form controls, modal, numeric
@@ -24,6 +24,8 @@ layout that needs semantic tags or mobile safe-area padding.
 The local components in this directory are limited to daopk-specific
 composition:
 
+- `TabsContent` preserves Ropav's registry and rendering while adding a
+  `tabIndex` override for panels that already contain interactive controls.
 - `DropdownMenu` and `ContextMenu` preserve the shell's menu item/submenu API
   while composing `ropav/dropdown-menu` behavior.
 - `HoverCard` composes Ropav hover disclosure and floating positioning for the

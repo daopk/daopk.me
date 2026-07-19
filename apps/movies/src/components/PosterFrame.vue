@@ -22,24 +22,26 @@ withDefaults(defineProps<PosterFrameProps>(), {
 
 <template>
   <AspectRatio class="movies-poster-frame" :ratio="2 / 3">
-    <img
-      v-if="src"
-      class="movies-poster-frame__image"
-      :class="imageClass"
-      :src="src"
-      :alt="alt"
-      :loading="loading"
-      :decoding="decoding"
-    />
-    <span
-      v-else
-      class="movies-poster-frame__image movies-poster-frame__image--empty"
-      :class="[imageClass, emptyClass]"
-      aria-hidden="true"
-    >
-      <slot name="empty" />
+    <span class="movies-poster-frame__content">
+      <img
+        v-if="src"
+        class="movies-poster-frame__image"
+        :class="imageClass"
+        :src="src"
+        :alt="alt"
+        :loading="loading"
+        :decoding="decoding"
+      />
+      <span
+        v-else
+        class="movies-poster-frame__image movies-poster-frame__image--empty"
+        :class="[imageClass, emptyClass]"
+        aria-hidden="true"
+      >
+        <slot name="empty" />
+      </span>
+      <slot />
     </span>
-    <slot />
   </AspectRatio>
 </template>
 
@@ -65,6 +67,12 @@ withDefaults(defineProps<PosterFrameProps>(), {
   inline-size: 100%;
   overflow: hidden;
   position: relative;
+}
+
+.movies-poster-frame__content {
+  block-size: 100%;
+  inline-size: 100%;
+  overflow: hidden;
 }
 
 .movies-poster-frame__image {

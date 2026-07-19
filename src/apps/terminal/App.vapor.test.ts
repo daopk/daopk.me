@@ -90,6 +90,22 @@ describe("Terminal App.vue — smoke (M2a.3)", () => {
     wrapper.unmount();
   });
 
+  it("renders the current directory prompt through the Input left slot", () => {
+    const wrapper = mount(App, {
+      attachTo: document.body,
+      global: {
+        provide: { [KernelInjectionKey as symbol]: makeFakeKernel() },
+      },
+    });
+
+    const prompt = wrapper.find(".terminal__input .rp-input__left .terminal__input-prompt");
+    expect(prompt.exists()).toBe(true);
+    expect(prompt.text()).toBe("/ $");
+    expect(prompt.attributes("aria-hidden")).toBe("true");
+
+    wrapper.unmount();
+  });
+
   it("unknown command renders an error class line", async () => {
     const wrapper = mount(App, {
       attachTo: document.body,

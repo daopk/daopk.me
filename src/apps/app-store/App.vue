@@ -122,6 +122,7 @@ const statusColor = computed(() => {
                 v-if="updateEntryFor(app)"
                 class="app-store__action app-store__update"
                 size="sm"
+                variant="solid"
                 :loading="isUpdating(app.id)"
                 @click="updateApp(app)"
               >

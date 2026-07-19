@@ -1910,10 +1910,16 @@ describe("Movies app", () => {
       .get('button.movies-detail-hero__poster-shell--button[aria-label="Play Fight Club"]')
       .trigger("click");
     await settle();
-    await wrapper.findAll(".movies-watch__sources-list button")[1]!.trigger("click");
+    const sourceButtons = wrapper.findAll(".movies-watch__sources-list button");
+    expect(sourceButtons[0]!.classes()).toContain("rp-button--solid");
+    expect(sourceButtons[1]!.classes()).toContain("rp-button--subtle");
+
+    await sourceButtons[1]!.trigger("click");
     await settle();
 
     expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
+    expect(sourceButtons[0]!.classes()).toContain("rp-button--subtle");
+    expect(sourceButtons[1]!.classes()).toContain("rp-button--solid");
 
     wrapper.unmount();
     window.history.replaceState(null, "", "/movie/551-the-matrix");

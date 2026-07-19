@@ -48,8 +48,10 @@ function visibleApps(): AppManifest[] {
           size="xs"
           aria-label="Applications menu"
         >
-          <Grid2X2 class="apps-trigger__icon" aria-hidden="true" />
-          <span>Apps</span>
+          <template #left>
+            <Grid2X2 class="apps-trigger__icon" aria-hidden="true" />
+          </template>
+          Apps
         </Button>
       </template>
 

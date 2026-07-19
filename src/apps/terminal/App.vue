@@ -111,7 +111,6 @@ const terminalInputAttrs = {
     </ScrollArea>
 
     <form class="terminal__prompt-row" @submit.prevent="onSubmit">
-      <span class="terminal__prompt" aria-hidden="true">{{ cwd }} $</span>
       <Input
         ref="inputRef"
         v-model="input"
@@ -120,7 +119,13 @@ const terminalInputAttrs = {
         type="text"
         ariaLabel="Terminal input"
         @update:model-value="onInputEdit"
-      />
+      >
+        <template #left>
+          <span class="terminal__prompt terminal__input-prompt" aria-hidden="true">
+            {{ cwd }} $
+          </span>
+        </template>
+      </Input>
     </form>
   </AppFrame>
 </template>
@@ -187,18 +192,25 @@ const terminalInputAttrs = {
 
 .terminal__prompt-row {
   align-items: center;
-  border-block-start: 1px solid var(--color-border);
   display: flex;
-  gap: var(--space-xs);
-  padding-block-end: calc(var(--space-sm) + var(--mobile-shell-app-bottom-padding, 0px));
-  padding-block-start: var(--space-sm);
-  padding-inline-end: calc(var(--space-md) + var(--mobile-shell-app-safe-area-right, 0px));
-  padding-inline-start: calc(var(--space-md) + var(--mobile-shell-app-safe-area-left, 0px));
 }
 
 .terminal__input {
+  border-block-end: 0;
+  border-inline: 0;
+  border-radius: 0;
   flex: 1 1 auto;
+  inline-size: 100%;
   min-inline-size: 4ch;
+}
+
+.terminal__input-prompt {
+  max-inline-size: min(45vw, 20ch);
+}
+
+:deep(.terminal__input:focus-within) {
+  border-color: var(--color-border);
+  box-shadow: none;
 }
 
 :deep(.terminal__input-control) {

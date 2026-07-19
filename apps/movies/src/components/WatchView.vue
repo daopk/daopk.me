@@ -438,7 +438,7 @@ defineExpose({
             v-for="source in sourceOptions"
             :key="source.index"
             size="sm"
-            :variant="selectedSourceIndex === source.index ? 'solid' : 'surface'"
+            :variant="selectedSourceIndex === source.index ? 'solid' : 'subtle'"
             :color="selectedSourceIndex === source.index ? 'blue' : 'gray'"
             :aria-pressed="selectedSourceIndex === source.index"
             @click="selectSource(source.index)"

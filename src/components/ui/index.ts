@@ -86,7 +86,7 @@ export { Slider } from "ropav/slider";
 export type { SliderProps } from "ropav/slider";
 export { Switch } from "ropav/switch";
 export type { SwitchProps } from "ropav/switch";
-export { Tabs, TabsContent, TabsList, TabsTrigger } from "ropav/tabs";
+export { Tabs, TabsList, TabsTrigger } from "ropav/tabs";
 export type {
   TabsActivationMode,
   TabsOrientation,
@@ -96,6 +96,7 @@ export type {
   TabsValue,
   TabsVariant,
 } from "ropav/tabs";
+export { default as TabsContent } from "./TabsContent.vue";
 export { Textarea } from "ropav/textarea";
 export type { TextareaProps } from "ropav/textarea";
 export { ToastProvider, ToastViewport } from "ropav/toast";
