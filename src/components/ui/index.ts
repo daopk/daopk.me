@@ -1,15 +1,38 @@
 export { Alert } from "ropav/alert";
 export type { AlertProps, AlertRole } from "ropav/alert";
+export { AspectRatio } from "ropav/aspect-ratio";
+export type { AspectRatioPart, AspectRatioProps } from "ropav/aspect-ratio";
+export { Avatar } from "ropav/avatar";
+export type {
+  AvatarColor,
+  AvatarPart,
+  AvatarProps,
+  AvatarRadius,
+  AvatarSize,
+  AvatarVariant,
+} from "ropav/avatar";
 export { Badge } from "ropav/badge";
 export type { BadgeProps } from "ropav/badge";
 export { Button } from "ropav/button";
 export type { ButtonProps } from "ropav/button";
+export { ButtonLink } from "ropav/button-link";
+export type {
+  ButtonLinkColor,
+  ButtonLinkPart,
+  ButtonLinkProps,
+  ButtonLinkRadius,
+  ButtonLinkSize,
+  ButtonLinkTarget,
+  ButtonLinkVariant,
+} from "ropav/button-link";
 export { ButtonGroup } from "ropav/button-group";
 export type { ButtonGroupOrientation, ButtonGroupPart, ButtonGroupProps } from "ropav/button-group";
 export { Card } from "ropav/card";
 export type { CardProps } from "ropav/card";
 export { Checkbox } from "ropav/checkbox";
 export type { CheckboxProps } from "ropav/checkbox";
+export { ColorSwatch } from "ropav/color-swatch";
+export type { ColorSwatchPart, ColorSwatchProps, ColorSwatchSize } from "ropav/color-swatch";
 export { Field } from "ropav/field";
 export type { FieldControlProps, FieldProps, FieldSlotProps } from "ropav/field";
 export { default as Icon } from "~/icons/Icon.vue";
@@ -18,7 +41,29 @@ export type { IconButtonProps } from "ropav/icon-button";
 export { Input } from "ropav/input";
 export type { InputProps } from "ropav/input";
 export { Modal } from "ropav/modal";
-export type { ModalCloseReason, ModalProps } from "ropav/modal";
+export type {
+  ModalCloseReason,
+  ModalFocusTrapOptions,
+  ModalInitialFocus,
+  ModalPart,
+  ModalPresetSize,
+  ModalProps,
+  ModalRole,
+  ModalSize,
+  ModalSlotProps,
+} from "ropav/modal";
+export { NumberInput } from "ropav/number-input";
+export type {
+  NumberInputControlsPosition,
+  NumberInputPart,
+  NumberInputProps,
+  NumberInputRadius,
+  NumberInputSize,
+  NumberInputTextAlign,
+  NumberInputValue,
+} from "ropav/number-input";
+export { Overlay } from "ropav/overlay";
+export type { OverlayBlur, OverlayPart, OverlayProps, OverlayZIndex } from "ropav/overlay";
 export { Popover } from "ropav/popover";
 export type { PopoverProps } from "ropav/popover";
 export { Progress } from "ropav/progress";

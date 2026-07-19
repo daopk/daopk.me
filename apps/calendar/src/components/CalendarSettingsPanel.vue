@@ -10,7 +10,7 @@ import {
   ScrollArea,
   ToolbarTitle,
 } from "@daopk/kit";
-import { Button, Switch } from "@daopk/ui";
+import { Button, Radio, RadioGroup, Switch } from "@daopk/ui";
 import ArrowLeft from "~icons/lucide/arrow-left";
 import RotateCcw from "~icons/lucide/rotate-ccw";
 
@@ -40,6 +40,15 @@ const weekStartOptions: ReadonlyArray<{ readonly id: CalendarWeekStart; readonly
 
 const weekStartsOn = computed(() => props.settings.weekStartsOn.value);
 const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value);
+
+function selectWeekStart(value: string | number | null): void {
+  if (value === 0 || value === 1) props.settings.setWeekStartsOn(value);
+}
+
+const choiceRadioClassNames = {
+  indicator: "calendar-settings__radio-indicator",
+  label: "calendar-settings__radio-label",
+} as const;
 </script>
 
 <template>
@@ -87,24 +96,23 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
         >
           Week start
         </GroupLabel>
-        <div
+        <RadioGroup
           class="calendar-settings__option-grid calendar-settings__option-grid--compact"
-          role="radiogroup"
-          aria-labelledby="calendar-settings-week-start"
+          :model-value="weekStartsOn"
+          labelledby="calendar-settings-week-start"
+          @update:model-value="selectWeekStart"
         >
-          <button
+          <Radio
             v-for="option in weekStartOptions"
             :key="option.id"
-            type="button"
             class="calendar-settings__choice"
             :class="{ 'calendar-settings__choice--active': option.id === weekStartsOn }"
-            role="radio"
-            :aria-checked="option.id === weekStartsOn"
-            @click="settings.setWeekStartsOn(option.id)"
+            :class-names="choiceRadioClassNames"
+            :value="option.id"
           >
             {{ option.label }}
-          </button>
-        </div>
+          </Radio>
+        </RadioGroup>
       </Panel>
 
       <ActionRow
@@ -168,6 +176,14 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
   min-inline-size: 0;
 }
 
+:deep(.calendar-settings__radio-indicator) {
+  display: none;
+}
+
+:deep(.calendar-settings__radio-label) {
+  display: contents;
+}
+
 .calendar-settings__row-title {
   margin: 0;
 }
@@ -220,11 +236,13 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
   text-align: center;
 
   &:hover,
-  &:focus-visible {
+  &:focus-visible,
+  &:has(input:focus-visible) {
     border-color: var(--color-accent);
   }
 
-  &:focus-visible {
+  &:focus-visible,
+  &:has(input:focus-visible) {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }

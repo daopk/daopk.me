@@ -87,6 +87,7 @@
 .movies-hls-player__shade--top {
   background: linear-gradient(to bottom, rgb(0 0 0 / 60%), transparent);
   block-size: 32%;
+  inset-block-end: auto;
   inset-block-start: 0;
 }
 
@@ -94,6 +95,7 @@
   background: linear-gradient(to top, rgb(0 0 0 / 74%), transparent);
   block-size: 46%;
   inset-block-end: 0;
+  inset-block-start: auto;
 }
 
 .movies-hls-player__center-play {

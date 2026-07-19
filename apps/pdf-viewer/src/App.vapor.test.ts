@@ -49,9 +49,9 @@ function menuItem(label: string): Element {
 }
 
 function sheetOption(label: string): Element {
-  const item = Array.from(queryActiveModalDialog()?.querySelectorAll('[role="option"]') ?? []).find(
-    (candidate) => candidate.textContent?.includes(label),
-  );
+  const item = Array.from(
+    queryActiveModalDialog()?.querySelectorAll(".pdf-viewer__page-sheet-item") ?? [],
+  ).find((candidate) => candidate.textContent?.includes(label));
   expect(item).not.toBeUndefined();
   return item!;
 }
@@ -379,9 +379,11 @@ describe("PDF Viewer App.vue", () => {
     click(wrapper.get('button[aria-label="Select page 1 / 3"]').element);
     await flushOverlay();
 
-    expect(queryActiveModalDialog()?.querySelector('[role="listbox"]')).toBeInstanceOf(HTMLElement);
+    expect(queryActiveModalDialog()?.querySelector('[role="radiogroup"]')).toBeInstanceOf(
+      HTMLElement,
+    );
     expect(
-      Array.from(document.body.querySelectorAll('[role="option"]')).map((item) =>
+      Array.from(document.body.querySelectorAll(".pdf-viewer__page-sheet-item")).map((item) =>
         item.textContent?.trim(),
       ),
     ).toEqual(["Page 1", "Page 2", "Page 3"]);
@@ -390,7 +392,7 @@ describe("PDF Viewer App.vue", () => {
     await flushOverlay();
 
     expect(viewer.setPage).toHaveBeenCalledWith(2);
-    expect(queryActiveModalDialog()?.querySelector('[role="listbox"]') ?? null).toBeNull();
+    expect(queryActiveModalDialog()?.querySelector('[role="radiogroup"]') ?? null).toBeNull();
 
     await finishLeavingModals();
     wrapper.unmount();

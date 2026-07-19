@@ -15,5 +15,6 @@ export const kitGalleryManifest: AppManifest = {
   category: "dev",
   component: async () => import("./App.vue"),
   singleton: true,
+  defaultWindow: { width: 960, height: 720, centered: true },
   keywords: ["kit", "gallery", "components", "design system", "tokens", "dev"],
 };

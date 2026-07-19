@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
 import {
+  Button,
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -39,10 +40,10 @@ function dispatchCommand(
   <span class="brand-menu-host">
     <DropdownMenu>
       <template #trigger>
-        <button type="button" class="brand" aria-label="WebOS menu">
+        <Button type="button" class="brand" variant="plain" size="xs" aria-label="WebOS menu">
           <span class="brand__wordmark">WebOS</span>
           <span class="brand__dot" aria-hidden="true" />
-        </button>
+        </Button>
       </template>
 
       <template #items>
@@ -101,6 +102,7 @@ function dispatchCommand(
   gap: var(--space-sm);
   letter-spacing: 0;
   margin: 0;
+  block-size: calc(var(--menubar-height) - 6px);
   min-block-size: calc(var(--menubar-height) - 6px);
   padding: 0 var(--space-sm);
   transition:

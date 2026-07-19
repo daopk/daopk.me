@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { EmptyState, PreviewHost } from "@daopk/kit";
 import type { AppPreviewInput } from "@daopk/sdk";
-import { Alert } from "@daopk/ui";
+import { Alert, AspectRatio } from "@daopk/ui";
 
 import type { BlogIndexPost } from "../composables/useBlogIndex";
 import type { BlogPostContentBlock, BlogPostStatus } from "../composables/useBlogPost";
@@ -28,7 +28,7 @@ function previewInput(url: string): AppPreviewInput {
 
 <template>
   <div class="blog__post-shell">
-    <div v-if="cover" class="blog__post-cover">
+    <AspectRatio v-if="cover" class="blog__post-cover" :ratio="16 / 9">
       <img
         class="blog__post-cover-image"
         :src="cover.url"
@@ -37,7 +37,7 @@ function previewInput(url: string): AppPreviewInput {
         :height="cover.height"
         decoding="async"
       />
-    </div>
+    </AspectRatio>
     <div
       v-if="contentBlocks.length > 0"
       class="blog__content"

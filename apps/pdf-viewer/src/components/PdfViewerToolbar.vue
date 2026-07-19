@@ -1,13 +1,14 @@
 <script setup vapor lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import { AppToolbar, Separator, ToolbarGroup } from "@daopk/kit";
 import {
+  Button,
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuSeparator,
   IconButton,
-  Input,
+  NumberInput,
 } from "@daopk/ui";
 import ChevronLeft from "~icons/lucide/chevron-left";
 import ChevronRight from "~icons/lucide/chevron-right";
@@ -43,6 +44,12 @@ const emit = defineEmits<{
   zoomIn: [];
   zoomOut: [];
 }>();
+
+const numericPageDraft = computed(() => {
+  if (props.pageDraft.trim().length === 0) return null;
+  const value = Number(props.pageDraft);
+  return Number.isFinite(value) ? value : null;
+});
 
 const controlsEl = ref<HTMLElement | null>(null);
 const {
@@ -92,32 +99,33 @@ const {
           @submit.prevent="emit('submitPage')"
         >
           <label class="pdf-viewer__page-label" for="pdf-viewer-page">Page</label>
-          <Input
+          <NumberInput
             id="pdf-viewer-page"
             class="pdf-viewer__page-input-root"
             :class-names="{ input: 'pdf-viewer__page-input' }"
-            type="number"
-            :model-value="pageDraft"
+            :model-value="numericPageDraft"
+            :min="1"
+            :max="viewer.pageCount.value || undefined"
+            :controls="false"
+            :clamp-on-blur="false"
             :input-attrs="{
               inputmode: 'numeric',
-              min: 1,
-              max: viewer.pageCount.value || undefined,
               onBlur: () => emit('submitPage'),
             }"
             :disabled="!hasDocument || busy"
-            @update:model-value="emit('update:pageDraft', $event)"
+            @update:model-value="emit('update:pageDraft', $event === null ? '' : String($event))"
           />
           <span class="pdf-viewer__page-total">/ {{ viewer.pageCount.value || "-" }}</span>
         </form>
-        <button
-          type="button"
+        <Button
           class="pdf-viewer__page-sheet-trigger"
+          variant="surface"
           :disabled="!hasDocument || busy"
           :aria-label="`Select page ${pageSelectorLabel}`"
           @click="emit('openPageSheet')"
         >
           {{ pageSelectorLabel }}
-        </button>
+        </Button>
         <IconButton
           ariaLabel="Next page"
           :disabled="!viewer.canGoNext.value || busy"

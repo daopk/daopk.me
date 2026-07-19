@@ -128,13 +128,17 @@
 }
 
 .movies-home__continue-media {
-  aspect-ratio: 16 / 9;
   background: color-mix(in srgb, var(--color-fg) 10%, transparent);
   border-radius: 8px;
   box-shadow: var(--shadow-sm);
   display: block;
   overflow: hidden;
   position: relative;
+}
+
+.movies-home__continue-media-content {
+  display: block;
+  overflow: hidden;
 }
 
 .movies-home__continue-image {

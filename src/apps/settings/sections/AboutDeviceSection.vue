@@ -2,7 +2,7 @@
 import { computed } from "vue";
 
 import { Panel, SectionHeader } from "~/components/kit";
-import { Badge, Button } from "~/components/ui";
+import { Badge, Button, ButtonLink } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useSettings } from "~/composables/useSettings";
 import ExternalLinkIcon from "~icons/lucide/external-link";
@@ -161,15 +161,19 @@ function runSoftwareUpdateAction(): void {
         </div>
         <p class="about-device__github-note">{{ t("settings.about.githubNote") }}</p>
       </div>
-      <a
+      <ButtonLink
         class="about-device__github-link"
         href="https://github.com/daopk/daopk.me"
         target="_blank"
         rel="noopener noreferrer"
+        variant="surface"
+        size="sm"
       >
         <span>daopk/daopk.me</span>
-        <ExternalLinkIcon class="about-device__github-link-icon" aria-hidden="true" />
-      </a>
+        <template #right>
+          <ExternalLinkIcon class="about-device__github-link-icon" aria-hidden="true" />
+        </template>
+      </ButtonLink>
     </Panel>
 
     <Panel as="section" class="about-device__update-card" variant="elevated" padding="lg">

@@ -3,6 +3,7 @@ import { computed, inject, ref, watch } from "vue";
 
 import Play from "~icons/lucide/play";
 import { PreviewHost } from "@daopk/kit";
+import { AspectRatio, Overlay } from "@daopk/ui";
 import { KernelInjectionKey, type AppPreviewInput, type AppPreviewSurface } from "@daopk/sdk";
 
 import type { MovieDetail } from "../../moviesApi";
@@ -98,7 +99,7 @@ function showCoverAfterTrailerEnd(): void {
         @playing="revealTrailerAfterPlaybackStarts"
       />
     </div>
-    <div class="movies-detail-hero__shade" />
+    <Overlay class="movies-detail-hero__shade" color="transparent" />
     <div class="movies-detail-hero__content">
       <div class="movies-detail-hero__overview">
         <button
@@ -108,13 +109,17 @@ function showCoverAfterTrailerEnd(): void {
           :aria-label="playButtonLabel"
           @click="$emit('watch')"
         >
-          <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+          <AspectRatio :ratio="2 / 3">
+            <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+          </AspectRatio>
           <span class="movies-detail-hero__play-overlay" aria-hidden="true">
             <Play />
           </span>
         </button>
         <span v-else-if="detail.posterUrl" class="movies-detail-hero__poster-shell">
-          <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+          <AspectRatio :ratio="2 / 3">
+            <img class="movies-detail-hero__poster" :src="detail.posterUrl" :alt="detail.name" />
+          </AspectRatio>
         </span>
         <div class="movies-detail-hero__copy">
           <p class="movies-detail-hero__eyebrow">

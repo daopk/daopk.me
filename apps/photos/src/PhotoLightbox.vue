@@ -1,8 +1,7 @@
 <script setup vapor lang="ts">
 import { computed, ref, watch } from "vue";
-import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
-import { Icon, IconButton } from "@daopk/ui";
+import { IconButton, Modal, type ModalFocusTrapOptions } from "@daopk/ui";
 import ChevronLeft from "~icons/lucide/chevron-left";
 import ChevronRight from "~icons/lucide/chevron-right";
 import CloseIcon from "~icons/lucide/x";
@@ -115,15 +114,16 @@ function onKeydown(event: KeyboardEvent): void {
         </IconButton>
       </div>
 
-      <button
+      <IconButton
         v-if="hasPrevious"
-        type="button"
         class="photos__nav photos__nav--prev"
-        aria-label="Previous photo"
+        ariaLabel="Previous photo"
+        size="lg"
+        variant="surface"
         @click.stop="showPrevious"
       >
-        <Icon :icon="ChevronLeft" :size="30" aria-hidden="true" />
-      </button>
+        <ChevronLeft aria-hidden="true" />
+      </IconButton>
 
       <div ref="stage" class="photos__stage" :class="{ 'photos__stage--zoomed': isZoomed }">
         <img
@@ -136,15 +136,16 @@ function onKeydown(event: KeyboardEvent): void {
         />
       </div>
 
-      <button
+      <IconButton
         v-if="hasNext"
-        type="button"
         class="photos__nav photos__nav--next"
-        aria-label="Next photo"
+        ariaLabel="Next photo"
+        size="lg"
+        variant="surface"
         @click.stop="showNext"
       >
-        <Icon :icon="ChevronRight" :size="30" aria-hidden="true" />
-      </button>
+        <ChevronRight aria-hidden="true" />
+      </IconButton>
     </div>
   </Modal>
 </template>

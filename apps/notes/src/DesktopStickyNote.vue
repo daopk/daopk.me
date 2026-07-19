@@ -1,7 +1,14 @@
 <script setup vapor lang="ts">
 import { computed, inject, onMounted, onUnmounted, ref, toRef } from "vue";
 
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@daopk/ui";
+import {
+  ColorSwatch,
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  Input,
+  Textarea,
+} from "@daopk/ui";
 import { AppContextInjectionKey, NOTES_ROOT, useKernel, useVfs, type VfsPath } from "@daopk/sdk";
 
 import {
@@ -124,6 +131,16 @@ function markUnsaved(): void {
   scheduleAutosave();
 }
 
+function updateTitle(value: string): void {
+  title.value = value;
+  markUnsaved();
+}
+
+function updateBody(value: string): void {
+  body.value = value;
+  markUnsaved();
+}
+
 function scheduleAutosave(): void {
   clearAutosave();
   autosaveTimer = setTimeout(() => {
@@ -235,7 +252,8 @@ function startDrag(event: PointerEvent, onClick?: () => void): void {
 }
 
 function startTitleDrag(event: PointerEvent): void {
-  const titleInput = event.currentTarget as HTMLInputElement;
+  const titleInput = (event.currentTarget as HTMLElement).querySelector("input");
+  if (titleInput === null) return;
   startDrag(event, () => {
     titleInput.focus();
     const cursorPosition = titleInput.value.length;
@@ -284,23 +302,26 @@ function setNoteColor(color: PinnedDesktopNoteColor): void {
           @pointerdown="raise"
         >
           <header class="desktop-sticky-note__header" @pointerdown.stop="startDrag">
-            <input
-              v-model="title"
-              class="desktop-sticky-note__title"
-              aria-label="Note title"
-              spellcheck="true"
-              @input="markUnsaved"
+            <Input
+              class="desktop-sticky-note__title-control"
+              :class-names="{ input: 'desktop-sticky-note__title' }"
+              :model-value="title"
+              ariaLabel="Note title"
+              :input-attrs="{ spellcheck: true }"
+              @update:model-value="updateTitle"
               @pointerdown.stop="startTitleDrag"
             />
             <span class="desktop-sticky-note__status">{{ statusText }}</span>
           </header>
 
-          <textarea
-            v-model="body"
-            class="desktop-sticky-note__body"
-            aria-label="Note body"
-            spellcheck="true"
-            @input="markUnsaved"
+          <Textarea
+            class="desktop-sticky-note__body-control"
+            :class-names="{ input: 'desktop-sticky-note__body' }"
+            :model-value="body"
+            ariaLabel="Note body"
+            resize="none"
+            :input-attrs="{ spellcheck: true }"
+            @update:model-value="updateBody"
             @pointerdown.stop
           />
         </article>
@@ -317,10 +338,16 @@ function setNoteColor(color: PinnedDesktopNoteColor): void {
             <button
               type="button"
               class="desktop-sticky-note__color-dot"
-              :style="{ '--desktop-sticky-note-dot': option.swatch }"
               :aria-label="`Change note color to ${option.label}`"
               :data-selected="noteColor === option.id || undefined"
-            />
+            >
+              <ColorSwatch
+                class="desktop-sticky-note__color-swatch"
+                :color="option.swatch"
+                :size="20"
+                aria-hidden="true"
+              />
+            </button>
           </ContextMenuItem>
         </div>
         <ContextMenuSeparator />

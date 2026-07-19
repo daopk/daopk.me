@@ -7,7 +7,13 @@ import MinimizeIcon from "~icons/lucide/minus";
 import CloseIcon from "~icons/lucide/x";
 
 import AppIcon from "~/components/AppIcon.vue";
-import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
+import {
+  ButtonGroup,
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  IconButton,
+} from "~/components/ui";
 import { APP_OVERLAY_PORTAL_TARGET } from "~/components/ui/portalTarget";
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
@@ -171,34 +177,43 @@ function dispatchWindowCommand(id: string): void {
               aria-hidden="true"
             />
             <span :id="titleId" class="window__title">{{ record.title }}</span>
-            <button
-              type="button"
-              class="window__action"
-              :aria-label="`Minimize ${record.title}`"
-              @click="onMinimize"
-              @pointerdown.stop
-            >
-              <MinimizeIcon class="window__action-icon" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              class="window__action"
-              :aria-label="maximizeLabel"
-              @click="onMaximize"
-              @pointerdown.stop
-            >
-              <RestoreIcon v-if="record.maximized" class="window__action-icon" aria-hidden="true" />
-              <MaximizeIcon v-else class="window__action-icon" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              class="window__action window__action--close"
-              :aria-label="`Close ${record.title}`"
-              @click="onClose"
-              @pointerdown.stop
-            >
-              <CloseIcon class="window__action-icon" aria-hidden="true" />
-            </button>
+            <ButtonGroup class="window__actions">
+              <IconButton
+                class="window__action"
+                :ariaLabel="`Minimize ${record.title}`"
+                size="xs"
+                variant="plain"
+                @click="onMinimize"
+                @pointerdown.stop
+              >
+                <MinimizeIcon class="window__action-icon" aria-hidden="true" />
+              </IconButton>
+              <IconButton
+                class="window__action"
+                :ariaLabel="maximizeLabel"
+                size="xs"
+                variant="plain"
+                @click="onMaximize"
+                @pointerdown.stop
+              >
+                <RestoreIcon
+                  v-if="record.maximized"
+                  class="window__action-icon"
+                  aria-hidden="true"
+                />
+                <MaximizeIcon v-else class="window__action-icon" aria-hidden="true" />
+              </IconButton>
+              <IconButton
+                class="window__action window__action--close"
+                :ariaLabel="`Close ${record.title}`"
+                size="xs"
+                variant="plain"
+                @click="onClose"
+                @pointerdown.stop
+              >
+                <CloseIcon class="window__action-icon" aria-hidden="true" />
+              </IconButton>
+            </ButtonGroup>
           </header>
         </template>
         <template #items>
@@ -324,6 +339,10 @@ function dispatchWindowCommand(id: string): void {
   inline-size: 20px;
   justify-content: center;
   padding: 0;
+}
+
+.window__actions {
+  display: inline-flex;
 }
 
 .window__action:hover {

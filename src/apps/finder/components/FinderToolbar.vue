@@ -6,7 +6,7 @@ import ChevronRight from "~icons/lucide/chevron-right";
 import Grid2X2 from "~icons/lucide/grid-2x2";
 import List from "~icons/lucide/list";
 import RefreshCw from "~icons/lucide/refresh-cw";
-import { IconButton, Radio, RadioGroup } from "@daopk/ui";
+import { Button, IconButton, Radio, RadioGroup } from "@daopk/ui";
 
 import type { FinderBreadcrumb, FinderViewMode } from "../composables/useFinder";
 
@@ -56,14 +56,15 @@ const viewModeRadioClassNames = {
 
     <nav class="finder__breadcrumbs" aria-label="Current folder">
       <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
-        <button
-          type="button"
+        <Button
           class="finder__breadcrumb"
+          variant="plain"
+          size="xs"
           :aria-current="crumb.path === cwd ? 'page' : undefined"
           @click="emit('breadcrumb', crumb.path)"
         >
           {{ crumb.label }}
-        </button>
+        </Button>
         <Icon
           v-if="index < breadcrumbs.length - 1"
           :icon="ChevronRight"

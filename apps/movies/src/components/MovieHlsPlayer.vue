@@ -7,6 +7,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   IconButton,
+  Overlay,
   Slider,
 } from "@daopk/ui";
 import AlertCircle from "~icons/lucide/alert-circle";
@@ -189,8 +190,16 @@ function setVolumeFromChange(event: Event): void {
         </div>
       </Transition>
 
-      <div class="movies-hls-player__shade movies-hls-player__shade--top" aria-hidden="true" />
-      <div class="movies-hls-player__shade movies-hls-player__shade--bottom" aria-hidden="true" />
+      <Overlay
+        class="movies-hls-player__shade movies-hls-player__shade--top"
+        color="transparent"
+        aria-hidden="true"
+      />
+      <Overlay
+        class="movies-hls-player__shade movies-hls-player__shade--bottom"
+        color="transparent"
+        aria-hidden="true"
+      />
 
       <button
         v-if="showCenterPlay"

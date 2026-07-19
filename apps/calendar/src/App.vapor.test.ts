@@ -108,6 +108,17 @@ function textButton(label: string, index = 0): HTMLButtonElement {
   return button;
 }
 
+function radioInput(label: string): HTMLInputElement {
+  const radio = [...document.body.querySelectorAll('label:has(input[type="radio"])')].find(
+    (candidate) => candidate.textContent?.trim() === label,
+  );
+  const input = radio?.querySelector('input[type="radio"]');
+  if (!(input instanceof HTMLInputElement)) {
+    throw new Error(`Radio not found: ${label}`);
+  }
+  return input;
+}
+
 function dayButton(dateKey: string): HTMLButtonElement {
   const button = [...document.body.querySelectorAll("button")].find((candidate) =>
     candidate.getAttribute("aria-label")?.startsWith(dateKey),
@@ -471,7 +482,7 @@ describe("Calendar App.vue", () => {
       handleId: "calendar-handle",
     });
     await flushPromises();
-    textButton("Sunday").click();
+    radioInput("Sunday").click();
     document.body
       .querySelector<HTMLInputElement>('[role="switch"][aria-label="Hide lunar labels"]')
       ?.click();

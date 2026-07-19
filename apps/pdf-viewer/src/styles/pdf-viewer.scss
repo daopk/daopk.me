@@ -139,12 +139,12 @@
 }
 
 .pdf-viewer__page-sheet-item:hover,
-.pdf-viewer__page-sheet-item:focus-visible,
+.pdf-viewer__page-sheet-item:has(input:focus-visible),
 .pdf-viewer__page-sheet-item--active {
   background: var(--color-bg-subtle);
 }
 
-.pdf-viewer__page-sheet-item:focus-visible {
+.pdf-viewer__page-sheet-item:has(input:focus-visible) {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }

@@ -10,9 +10,9 @@ import {
 import { detectVfsFileType, vfsFileTypeInputFromPath } from "~/core/vfs/fileTypes";
 import SearchIcon from "~icons/lucide/search";
 import { computed, ref, useId, watch, type VaporComponent } from "vue";
-import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
 import AppIcon from "~/components/AppIcon.vue";
+import { Input, Modal, ScrollArea, type ModalFocusTrapOptions } from "~/components/ui";
 import type { AppManifest } from "~/types/app";
 import type { CommandManifest } from "~/types/command";
 import type { SearchHit, SearchKind, SearchVfsMetadata } from "~/types/search";
@@ -203,9 +203,8 @@ const activeRowId = computed((): string | null => {
   return rowDomId(activeIndex.value);
 });
 
-function onInput(event: Event): void {
-  const target = event.target as HTMLInputElement;
-  emit("update:query", target.value);
+function onInput(value: string): void {
+  emit("update:query", value);
 }
 
 function moveActive(delta: number): void {
@@ -267,7 +266,7 @@ function onRowHover(index: number): void {
     :base-z-index="SPOTLIGHT_CONTENT_BASE_Z_INDEX"
     :teleport="false"
     :show-close-button="false"
-    initial-focus=".spotlight__input"
+    initial-focus=".spotlight__input-native"
     :focus-trap-options="focusTrapOptions"
     :overlay-props="{ color: 'var(--spotlight-scrim)' }"
     :class-names="modalClassNames"
@@ -282,23 +281,26 @@ function onRowHover(index: number): void {
           :stroke-width="2"
           aria-hidden="true"
         />
-        <input
+        <Input
           :id="inputId"
           class="spotlight__input"
-          type="text"
-          role="combobox"
+          :class-names="{ input: 'spotlight__input-native' }"
+          :model-value="query"
           :placeholder="placeholder ?? 'Search apps and commands'"
-          :value="query"
-          :aria-expanded="rows.length > 0"
-          :aria-controls="rows.length > 0 ? listboxId : undefined"
-          :aria-activedescendant="activeRowId ?? undefined"
-          aria-autocomplete="list"
-          autocomplete="off"
-          spellcheck="false"
-          @input="onInput"
+          :ariaLabel="placeholder ?? 'Search apps and commands'"
+          :input-attrs="{
+            role: 'combobox',
+            'aria-expanded': rows.length > 0,
+            'aria-controls': rows.length > 0 ? listboxId : undefined,
+            'aria-activedescendant': activeRowId ?? undefined,
+            'aria-autocomplete': 'list',
+            autocomplete: 'off',
+            spellcheck: false,
+          }"
+          @update:model-value="onInput"
         />
       </div>
-      <div class="spotlight__results">
+      <ScrollArea class="spotlight__results" scrollbars="y">
         <p v-if="rows.length === 0" class="spotlight__empty">
           {{ isQueryEmpty ? "Start typing to search" : "No results" }}
         </p>
@@ -335,7 +337,7 @@ function onRowHover(index: number): void {
             </li>
           </template>
         </ul>
-      </div>
+      </ScrollArea>
     </div>
   </Modal>
 </template>
@@ -436,8 +438,19 @@ function onRowHover(index: number): void {
 .spotlight__input {
   background: transparent;
   border: 0;
-  color: var(--color-fg);
   flex: 1 1 auto;
+  height: auto;
+  padding: 0;
+}
+
+.spotlight__input:hover,
+.spotlight__input:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.spotlight__input-native {
+  color: var(--color-fg);
   font-family: var(--font-family-base);
   font-size: 17px;
   letter-spacing: -0.01em;
@@ -452,7 +465,6 @@ function onRowHover(index: number): void {
 .spotlight__results {
   flex: 1 1 auto;
   min-block-size: 0;
-  overflow-y: auto;
   padding: var(--space-sm) 0;
 }
 

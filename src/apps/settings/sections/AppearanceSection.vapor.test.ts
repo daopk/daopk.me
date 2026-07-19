@@ -122,6 +122,9 @@ describe("AppearanceSection", () => {
 
     expect(wrapper.findAll(".appearance__theme-card")).toHaveLength(3);
     expect(wrapper.findAll(".appearance__swatch").length).toBeGreaterThanOrEqual(6);
+    expect(wrapper.findAll(".appearance__swatch .rp-color-swatch").length).toBeGreaterThanOrEqual(
+      6,
+    );
 
     wrapper.unmount();
   });

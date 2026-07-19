@@ -96,15 +96,16 @@ const {
       <div class="vfs-picker__shell">
         <nav class="vfs-picker__breadcrumbs" aria-label="Current folder">
           <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
-            <button
-              type="button"
+            <Button
               class="vfs-picker__breadcrumb"
+              variant="plain"
+              size="xs"
               :aria-current="crumb.path === cwd ? 'page' : undefined"
               :disabled="loading || crumb.path === cwd || undefined"
               @click="loadDirectory(crumb.path)"
             >
               {{ crumb.label }}
-            </button>
+            </Button>
             <span
               v-if="index < breadcrumbs.length - 1"
               class="vfs-picker__breadcrumb-separator"

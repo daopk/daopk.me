@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import { AspectRatio, Radio, RadioGroup } from "@daopk/ui";
 
 import {
   fetchMovieSeason,
@@ -36,6 +37,7 @@ const orderedSeasons = computed(() =>
   [...props.seasons].sort((left, right) => left.seasonNumber - right.seasonNumber),
 );
 const selectedSeasonNumber = computed(() => {
+  if (selectedSeason.value === "") return null;
   const value = Number(selectedSeason.value);
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
 });
@@ -45,6 +47,10 @@ const activeSeason = computed(
     orderedSeasons.value.find((season) => season.seasonNumber === selectedSeasonNumber.value) ??
     null,
 );
+const seasonRadioClassNames = {
+  indicator: "movies-detail-seasons__indicator",
+  label: "movies-detail-seasons__label",
+} as const;
 
 watch(
   orderedSeasons,
@@ -54,8 +60,9 @@ watch(
       return;
     }
 
-    const current = Number(selectedSeason.value);
-    const hasCurrent = seasons.some((season) => season.seasonNumber === current);
+    const current = selectedSeasonNumber.value;
+    const hasCurrent =
+      current !== null && seasons.some((season) => season.seasonNumber === current);
     if (hasCurrent) {
       return;
     }
@@ -81,6 +88,11 @@ onUnmounted(() => {
 function selectSeason(seasonNumber: number): void {
   selectedSeason.value = String(seasonNumber);
   void scrollEpisodesIntoView();
+}
+
+function selectSeasonValue(value: string | number | null): void {
+  if (value === null) return;
+  selectSeason(Number(value));
 }
 
 async function loadSeason(seasonNumber: number | null): Promise<void> {
@@ -132,40 +144,45 @@ async function scrollEpisodesIntoView(): Promise<void> {
       </span>
     </div>
 
-    <ul class="movies-detail-seasons">
-      <li v-for="season in orderedSeasons" :key="season.id">
-        <button
-          type="button"
-          class="movies-detail-seasons__button"
-          :class="{
-            'movies-detail-seasons__button--active': season.seasonNumber === selectedSeasonNumber,
-          }"
-          :aria-pressed="season.seasonNumber === selectedSeasonNumber"
-          aria-controls="movies-detail-episodes"
-          @click="selectSeason(season.seasonNumber)"
-        >
+    <RadioGroup
+      class="movies-detail-seasons"
+      :model-value="selectedSeason"
+      :aria-label="t('movies.section.seasons')"
+      @update:model-value="selectSeasonValue"
+    >
+      <Radio
+        v-for="season in orderedSeasons"
+        :key="season.id"
+        class="movies-detail-seasons__button"
+        :class="{
+          'movies-detail-seasons__button--active': season.seasonNumber === selectedSeasonNumber,
+        }"
+        :value="String(season.seasonNumber)"
+        :class-names="seasonRadioClassNames"
+        :input-attrs="{ 'aria-controls': 'movies-detail-episodes' }"
+      >
+        <AspectRatio class="movies-detail-seasons__poster" :ratio="2 / 3">
           <img
             v-if="season.posterUrl"
-            class="movies-detail-seasons__poster"
             :src="season.posterUrl"
             :alt="season.name"
             loading="lazy"
             decoding="async"
           />
-          <span v-else class="movies-detail-seasons__poster" aria-hidden="true" />
-          <span class="movies-detail-seasons__copy">
-            <span class="movies-detail-section__label">{{ seasonLabel(season, t) }}</span>
-            <strong>{{ season.name }}</strong>
-            <span v-if="seasonMetaLabel(season, t)" class="movies-detail-section__muted">
-              {{ seasonMetaLabel(season, t) }}
-            </span>
-            <span v-if="season.overview" class="movies-detail-seasons__overview">
-              {{ season.overview }}
-            </span>
+          <span v-else aria-hidden="true" />
+        </AspectRatio>
+        <span class="movies-detail-seasons__copy">
+          <span class="movies-detail-section__label">{{ seasonLabel(season, t) }}</span>
+          <strong>{{ season.name }}</strong>
+          <span v-if="seasonMetaLabel(season, t)" class="movies-detail-section__muted">
+            {{ seasonMetaLabel(season, t) }}
           </span>
-        </button>
-      </li>
-    </ul>
+          <span v-if="season.overview" class="movies-detail-seasons__overview">
+            {{ season.overview }}
+          </span>
+        </span>
+      </Radio>
+    </RadioGroup>
 
     <div id="movies-detail-episodes" ref="episodesSection" class="movies-detail-episodes">
       <div class="movies-detail-episodes__heading">
@@ -250,8 +267,12 @@ async function scrollEpisodesIntoView(): Promise<void> {
   padding: 0;
 }
 
-.movies-detail-seasons li {
-  min-inline-size: 0;
+:deep(.movies-detail-seasons__indicator) {
+  display: none;
+}
+
+:deep(.movies-detail-seasons__label) {
+  display: contents;
 }
 
 .movies-detail-seasons__button {
@@ -285,14 +306,13 @@ async function scrollEpisodesIntoView(): Promise<void> {
   color: var(--color-accent);
 }
 
-.movies-detail-seasons__button:focus-visible {
+.movies-detail-seasons__button:has(input:focus-visible) {
   border-radius: 8px;
   outline: 2px solid var(--color-accent);
   outline-offset: 4px;
 }
 
 .movies-detail-seasons__poster {
-  aspect-ratio: 2 / 3;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   border-radius: 8px;
   inline-size: 72px;

@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { AspectRatio, Button } from "@daopk/ui";
 import ArrowLeft from "~icons/lucide/arrow-left";
 import Layers2 from "~icons/lucide/layers-2";
 import Play from "~icons/lucide/play";
@@ -178,20 +178,22 @@ async function loadEpisode(): Promise<void> {
           :aria-label="`${t('movies.action.play')} ${episode.name}`"
           @click="watchEpisode"
         >
-          <img
-            v-if="heroImageUrl"
-            class="movies-episode__still"
-            :src="heroImageUrl"
-            :alt="episode.name"
-            loading="eager"
-            decoding="async"
-          />
-          <span v-else class="movies-episode__still" aria-hidden="true" />
+          <AspectRatio :ratio="16 / 9">
+            <img
+              v-if="heroImageUrl"
+              class="movies-episode__still"
+              :src="heroImageUrl"
+              :alt="episode.name"
+              loading="eager"
+              decoding="async"
+            />
+            <span v-else class="movies-episode__still" aria-hidden="true" />
+          </AspectRatio>
           <span class="movies-episode__play-overlay" aria-hidden="true">
             <Play />
           </span>
         </button>
-        <span v-else class="movies-episode__media">
+        <AspectRatio v-else class="movies-episode__media" :ratio="16 / 9">
           <img
             v-if="heroImageUrl"
             class="movies-episode__still"
@@ -201,7 +203,7 @@ async function loadEpisode(): Promise<void> {
             decoding="async"
           />
           <span v-else class="movies-episode__still" aria-hidden="true" />
-        </span>
+        </AspectRatio>
 
         <div class="movies-episode__intro">
           <p class="movies-episode__eyebrow">{{ detail.name }} · {{ seasonLabel(season, t) }}</p>
@@ -288,7 +290,6 @@ async function loadEpisode(): Promise<void> {
 }
 
 .movies-episode__media {
-  aspect-ratio: 16 / 9;
   background: transparent;
   border: 0;
   border-radius: 8px;
@@ -311,7 +312,6 @@ async function loadEpisode(): Promise<void> {
 }
 
 .movies-episode__still {
-  aspect-ratio: 16 / 9;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   block-size: 100%;
   display: block;

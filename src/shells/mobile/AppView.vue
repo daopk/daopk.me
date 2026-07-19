@@ -1,5 +1,4 @@
 <script setup vapor lang="ts">
-import Icon from "~/icons/Icon.vue";
 import ArrowLeft from "~icons/lucide/arrow-left";
 import Layers2 from "~icons/lucide/layers-2";
 import Minimize2 from "~icons/lucide/minimize-2";
@@ -7,6 +6,7 @@ import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "
 
 import { useKernel } from "~/composables/useKernel";
 import { useEdgeSwipe } from "~/composables/useEdgeSwipe";
+import { IconButton } from "~/components/ui";
 
 import AppMount from "~/shells/shared/AppMount.vue";
 
@@ -46,7 +46,6 @@ const emit = defineEmits<{
 
 const kernel = useKernel();
 const surface = ref<HTMLElement | null>(null);
-const backButtonRef = ref<HTMLButtonElement | null>(null);
 const chromeTitle = ref<string | null>(null);
 const chromeBackAction = shallowRef<AppChromeBackAction | null>(null);
 const chromeTitlebar = ref<AppChromeTitlebarVisibility | null>(null);
@@ -152,7 +151,9 @@ function focusBackButton(): void {
     return;
   }
   void nextTick(() => {
-    backButtonRef.value?.focus({ preventScroll: true });
+    surface.value?.querySelector<HTMLButtonElement>(".app-view__back")?.focus({
+      preventScroll: true,
+    });
   });
 }
 
@@ -188,35 +189,34 @@ watch(
     :inert="isCurrent ? undefined : true"
   >
     <header v-if="showTitlebar" class="app-view__chrome">
-      <button
-        ref="backButtonRef"
-        type="button"
+      <IconButton
         class="app-view__back"
-        :aria-label="backAriaLabel"
+        :ariaLabel="backAriaLabel"
+        variant="plain"
         :tabindex="isCurrent ? 0 : -1"
         @click="onBackClick"
       >
-        <Icon :icon="ArrowLeft" :size="20" :stroke-width="2.25" aria-hidden="true" />
-      </button>
+        <ArrowLeft aria-hidden="true" />
+      </IconButton>
       <h1 class="app-view__title">{{ displayTitle }}</h1>
-      <button
-        type="button"
+      <IconButton
         class="app-view__recents"
-        aria-label="Open recent apps"
+        ariaLabel="Open recent apps"
+        variant="plain"
         :tabindex="isCurrent ? 0 : -1"
         @click="onRecentsClick"
       >
-        <Icon :icon="Layers2" :size="20" :stroke-width="2" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
+        <Layers2 aria-hidden="true" />
+      </IconButton>
+      <IconButton
         class="app-view__hide"
-        aria-label="Hide app to home screen"
+        ariaLabel="Hide app to home screen"
+        variant="plain"
         :tabindex="isCurrent ? 0 : -1"
         @click="onHideClick"
       >
-        <Icon :icon="Minimize2" :size="20" :stroke-width="2" aria-hidden="true" />
-      </button>
+        <Minimize2 aria-hidden="true" />
+      </IconButton>
     </header>
     <div class="app-view__body" :style="appContentSafeAreaStyle">
       <AppMount
@@ -304,6 +304,11 @@ watch(
   inline-size: 36px;
   justify-content: center;
   transition: background var(--duration-fast) var(--ease);
+
+  svg {
+    block-size: 20px;
+    inline-size: 20px;
+  }
 
   &:hover {
     background: var(--color-bg-subtle);

@@ -1,7 +1,9 @@
 <script setup vapor lang="ts">
+import { computed } from "vue";
 import CheckIcon from "~icons/lucide/check";
 
 import { GroupLabel, Panel, SectionHeader } from "~/components/kit";
+import { Radio, RadioGroup } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import type { LocaleOption } from "~/composables/useI18n";
 
@@ -29,6 +31,20 @@ function selectOption(option: LocaleOption): void {
     setLocale(option.locale);
   }
 }
+
+const selectedOptionId = computed(
+  () => localeOptions.value.find((option) => isSelected(option))?.id ?? null,
+);
+
+function selectOptionValue(value: string | number | null): void {
+  const option = localeOptions.value.find((entry) => entry.id === value);
+  if (option) selectOption(option);
+}
+
+const choiceRadioClassNames = {
+  indicator: "language__radio-indicator",
+  label: "language__radio-label",
+} as const;
 </script>
 
 <template>
@@ -51,16 +67,19 @@ function selectOption(option: LocaleOption): void {
       <GroupLabel id="settings-language-label" as="h3">
         {{ t("settings.language.group") }}
       </GroupLabel>
-      <div class="language__grid" role="radiogroup" aria-labelledby="settings-language-label">
-        <button
+      <RadioGroup
+        class="language__grid"
+        :model-value="selectedOptionId"
+        labelledby="settings-language-label"
+        @update:model-value="selectOptionValue"
+      >
+        <Radio
           v-for="option in localeOptions"
           :key="option.id"
-          type="button"
           class="language__card"
           :class="{ 'language__card--active': isSelected(option) }"
-          role="radio"
-          :aria-checked="isSelected(option)"
-          @click="selectOption(option)"
+          :class-names="choiceRadioClassNames"
+          :value="option.id"
         >
           <span class="language__meta">
             <span class="language__label">{{ option.label }}</span>
@@ -68,8 +87,8 @@ function selectOption(option: LocaleOption): void {
             <span class="language__description">{{ option.description }}</span>
           </span>
           <CheckIcon v-if="isSelected(option)" class="language__check" aria-hidden="true" />
-        </button>
-      </div>
+        </Radio>
+      </RadioGroup>
     </Panel>
   </article>
 </template>
@@ -95,6 +114,14 @@ function selectOption(option: LocaleOption): void {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+:deep(.language__radio-indicator) {
+  display: none;
+}
+
+:deep(.language__radio-label) {
+  display: contents;
+}
+
 .language__card {
   align-items: flex-start;
   background: var(--color-bg-elevated);
@@ -115,11 +142,13 @@ function selectOption(option: LocaleOption): void {
 }
 
 .language__card:hover,
-.language__card:focus-visible {
+.language__card:focus-visible,
+.language__card:has(input:focus-visible) {
   border-color: var(--color-accent);
 }
 
-.language__card:focus-visible {
+.language__card:focus-visible,
+.language__card:has(input:focus-visible) {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }

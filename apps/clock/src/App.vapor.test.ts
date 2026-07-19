@@ -90,6 +90,9 @@ describe("Clock App", () => {
     const wrapper = mountClockApp();
     await selectTab(wrapper, "Timer");
 
+    expect(wrapper.findAll("#clock-panel-timer .rp-number-input")).toHaveLength(3);
+    expect(wrapper.find('input[aria-label="Timer hours"]').getAttribute("type")).toBe("number");
+
     await wrapper.setValue('input[aria-label="Timer hours"]', "99");
     await wrapper.setValue('input[aria-label="Timer minutes"]', "99");
     await wrapper.setValue('input[aria-label="Timer seconds"]', "99");

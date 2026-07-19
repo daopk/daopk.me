@@ -207,13 +207,15 @@ function pressTab(target: Element, shiftKey = false): void {
 
 describe("Window", () => {
   beforeEach(() => {
-    vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(function () {
-      if (this.hidden || this.closest("[hidden]") !== null) {
-        return [] as unknown as DOMRectList;
-      }
+    vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
+      function (this: HTMLElement) {
+        if (this.hidden || this.closest("[hidden]") !== null) {
+          return [] as unknown as DOMRectList;
+        }
 
-      return [new DOMRect(0, 0, 1, 1)] as unknown as DOMRectList;
-    });
+        return [new DOMRect(0, 0, 1, 1)] as unknown as DOMRectList;
+      },
+    );
   });
 
   afterEach(() => {

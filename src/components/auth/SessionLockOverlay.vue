@@ -1,6 +1,6 @@
 <script setup vapor lang="ts">
 import { computed, onUnmounted, ref } from "vue";
-import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
+import { Modal, type ModalFocusTrapOptions } from "~/components/ui";
 
 import { Button } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";

@@ -232,6 +232,9 @@ describe("AppSwitcher", () => {
     expect(dialog.exists()).toBe(true);
     expect(dialog.attributes("aria-modal")).toBe("true");
     expect(dialog.attributes("aria-label")).toBe("Recent apps");
+    expect(dialog.findAll(".rp-scroll-area")).toHaveLength(1);
+    expect(dialog.find(".app-switcher__header").exists()).toBe(true);
+    expect(dialog.find(".app-switcher__modal-body .app-switcher__header").exists()).toBe(false);
 
     wrapper.unmount();
   });

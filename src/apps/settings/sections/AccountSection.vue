@@ -11,7 +11,7 @@
 import { computed, onBeforeUnmount, ref, useId } from "vue";
 
 import { Panel, SectionHeader } from "~/components/kit";
-import { Alert, Button, Input, Modal } from "~/components/ui";
+import { Alert, Avatar, Button, Input, Modal } from "~/components/ui";
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
 import { useKernel } from "~/composables/useKernel";
 import AlertCircle from "~icons/lucide/alert-circle";
@@ -135,9 +135,9 @@ async function confirmDeleteAccount(): Promise<void> {
       padding="none"
       aria-labelledby="account-current-title"
     >
-      <div class="account__avatar" aria-hidden="true">
+      <Avatar class="account__avatar" size="xl" radius="md" aria-hidden="true">
         <Shield class="account__avatar-icon" />
-      </div>
+      </Avatar>
 
       <div class="account__identity">
         <h3 id="account-current-title" class="account__name">{{ profile.displayName }}</h3>

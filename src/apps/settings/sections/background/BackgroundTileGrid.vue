@@ -1,11 +1,9 @@
 <script setup vapor lang="ts">
-import Icon from "~/icons/Icon.vue";
-import { nextTick, ref, watch } from "vue";
-
 import CheckIcon from "~icons/lucide/check";
 import TrashIcon from "~icons/lucide/trash-2";
 
 import { useSettingsI18n } from "~/apps/settings/i18n/useSettingsI18n";
+import { AspectRatio, IconButton, Radio, RadioGroup } from "~/components/ui";
 import { previewStyleForTile, type BackgroundTile } from "./wallpaperTiles";
 
 const props = defineProps<{
@@ -19,81 +17,36 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useSettingsI18n();
-const tileButtonRefs = ref<(HTMLElement | null)[]>([]);
-const focusedTileIndex = ref<number>(0);
+const radioClassNames = {
+  indicator: "background__radio-indicator",
+  label: "background__radio-label",
+} as const;
 
-watch(
-  () => props.activeId,
-  (id) => {
-    const i = props.tiles.findIndex((t) => t.id === id);
-    if (i >= 0) {
-      focusedTileIndex.value = i;
-    }
-  },
-  { immediate: true },
-);
-
-function setTileRef(el: Element | unknown, index: number): void {
-  tileButtonRefs.value[index] = (el as HTMLElement | null) ?? null;
-}
-
-function onTileKeydown(event: KeyboardEvent, index: number): void {
-  const total = props.tiles.length;
-  if (total === 0) return;
-  let next = -1;
-  switch (event.key) {
-    case "ArrowRight":
-    case "ArrowDown": {
-      next = (index + 1) % total;
-      break;
-    }
-    case "ArrowLeft":
-    case "ArrowUp": {
-      next = (index - 1 + total) % total;
-      break;
-    }
-    case "Home": {
-      next = 0;
-      break;
-    }
-    case "End": {
-      next = total - 1;
-      break;
-    }
-    default: {
-      return;
-    }
-  }
-  event.preventDefault();
-  focusedTileIndex.value = next;
-  const tile = props.tiles[next];
-  if (tile && tile.id !== props.activeId) {
-    emit("select", tile.id);
-  }
-  void nextTick(() => {
-    tileButtonRefs.value[next]?.focus();
-  });
+function selectTile(value: string | number | null): void {
+  if (value === null) return;
+  const id = String(value);
+  if (id !== props.activeId) emit("select", id);
 }
 </script>
 
 <template>
-  <div class="background__grid" role="radiogroup" aria-labelledby="background-wallpaper-label">
-    <div v-for="(tile, i) in tiles" :key="tile.id" class="background__tile-wrapper">
-      <button
-        :ref="(el) => setTileRef(el, i)"
-        type="button"
+  <RadioGroup
+    class="background__grid"
+    :model-value="activeId"
+    aria-labelledby="background-wallpaper-label"
+    @update:model-value="selectTile"
+  >
+    <div v-for="tile in tiles" :key="tile.id" class="background__tile-wrapper">
+      <Radio
         class="background__tile"
         :class="{ 'background__tile--active': tile.id === activeId }"
-        role="radio"
-        :aria-checked="tile.id === activeId"
+        :value="tile.id"
         :aria-label="`${tile.name} — ${tile.description}`"
-        :tabindex="i === focusedTileIndex ? 0 : -1"
-        @click="emit('select', tile.id)"
-        @focus="focusedTileIndex = i"
-        @keydown="onTileKeydown($event, i)"
+        :class-names="radioClassNames"
       >
-        <span
+        <AspectRatio
           class="background__tile-preview"
+          :ratio="16 / 10"
           :style="previewStyleForTile(tile)"
           aria-hidden="true"
         />
@@ -102,18 +55,19 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
           <span class="background__tile-hint">{{ tile.description }}</span>
         </span>
         <CheckIcon v-if="tile.id === activeId" class="background__tile-check" aria-hidden="true" />
-      </button>
-      <button
+      </Radio>
+      <IconButton
         v-if="tile.kind === 'user'"
-        type="button"
         class="background__tile-remove"
-        :aria-label="t('settings.background.deleteWallpaper', { name: tile.name })"
-        @click="(e) => emit('remove', tile.id, e)"
+        size="xs"
+        variant="plain"
+        :ariaLabel="t('settings.background.deleteWallpaper', { name: tile.name })"
+        @click="emit('remove', tile.id, $event)"
       >
-        <Icon :icon="TrashIcon" size="14" aria-hidden="true" />
-      </button>
+        <TrashIcon aria-hidden="true" />
+      </IconButton>
     </div>
-  </div>
+  </RadioGroup>
 </template>
 
 <style scoped lang="scss">
@@ -125,6 +79,11 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
 
 .background__tile-wrapper {
   position: relative;
+}
+
+:deep(.background__radio-indicator),
+:deep(.background__radio-label) {
+  display: none;
 }
 
 .background__tile {
@@ -147,11 +106,11 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
 }
 
 .background__tile:hover,
-.background__tile:focus-visible {
+.background__tile:has(input:focus-visible) {
   border-color: var(--color-accent);
 }
 
-.background__tile:focus-visible {
+.background__tile:has(input:focus-visible) {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
@@ -163,7 +122,6 @@ function onTileKeydown(event: KeyboardEvent, index: number): void {
 
 .background__tile-preview {
   align-items: center;
-  aspect-ratio: 16 / 10;
   background-color: var(--color-bg-subtle);
   background-position: center;
   background-size: cover;

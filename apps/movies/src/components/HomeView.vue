@@ -2,7 +2,15 @@
 import { nextTick } from "vue";
 
 import { ScrollArea } from "@daopk/kit";
-import { Alert, Button, ContextMenu, ContextMenuItem, Radio, RadioGroup } from "@daopk/ui";
+import {
+  Alert,
+  AspectRatio,
+  Button,
+  ContextMenu,
+  ContextMenuItem,
+  Radio,
+  RadioGroup,
+} from "@daopk/ui";
 import ChevronRight from "~icons/lucide/chevron-right";
 import Trash2 from "~icons/lucide/trash-2";
 
@@ -140,25 +148,29 @@ function updateGroupPeriod(group: MoviesRowGroupConfig, value: string | number |
                     :aria-label="continueAriaLabel(item)"
                     @click="openContinueWatchingItem(item)"
                   >
-                    <span class="movies-home__continue-media">
-                      <img
-                        v-if="item.imageUrl"
-                        class="movies-home__continue-image"
-                        :src="item.imageUrl"
-                        alt=""
-                        aria-hidden="true"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                      <span v-else class="movies-home__continue-image" aria-hidden="true" />
-                      <span class="movies-home__continue-badge">{{ continueKindLabel(item) }}</span>
-                      <span class="movies-home__continue-progress" aria-hidden="true">
-                        <span
-                          class="movies-home__continue-progress-value"
-                          :style="{ inlineSize: continueProgressWidth(item) }"
+                    <AspectRatio class="movies-home__continue-media" :ratio="16 / 9">
+                      <span class="movies-home__continue-media-content">
+                        <img
+                          v-if="item.imageUrl"
+                          class="movies-home__continue-image"
+                          :src="item.imageUrl"
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          decoding="async"
                         />
+                        <span v-else class="movies-home__continue-image" aria-hidden="true" />
+                        <span class="movies-home__continue-badge">{{
+                          continueKindLabel(item)
+                        }}</span>
+                        <span class="movies-home__continue-progress" aria-hidden="true">
+                          <span
+                            class="movies-home__continue-progress-value"
+                            :style="{ inlineSize: continueProgressWidth(item) }"
+                          />
+                        </span>
                       </span>
-                    </span>
+                    </AspectRatio>
 
                     <span class="movies-home__continue-body">
                       <span class="movies-home__continue-title">{{ item.title }}</span>

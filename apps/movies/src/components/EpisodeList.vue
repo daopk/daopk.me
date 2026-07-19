@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
 import Play from "~icons/lucide/play";
+import { AspectRatio } from "@daopk/ui";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSeasonEpisode } from "../moviesApi";
@@ -35,24 +36,26 @@ const { t } = useMoviesI18n();
         }"
         @click="$emit('open', episode)"
       >
-        <span class="movies-episode-list__media">
-          <img
-            v-if="episode.stillUrl"
-            class="movies-episode-list__still"
-            :src="episode.stillUrl"
-            :alt="episode.name"
-            loading="lazy"
-            decoding="async"
-          />
-          <span v-else class="movies-episode-list__still" aria-hidden="true" />
-          <span
-            v-if="episode.play !== null"
-            class="movies-episode-list__play-overlay"
-            aria-hidden="true"
-          >
-            <Play />
+        <AspectRatio class="movies-episode-list__media" :ratio="16 / 9">
+          <span class="movies-episode-list__media-content">
+            <img
+              v-if="episode.stillUrl"
+              class="movies-episode-list__still"
+              :src="episode.stillUrl"
+              :alt="episode.name"
+              loading="lazy"
+              decoding="async"
+            />
+            <span v-else class="movies-episode-list__still" aria-hidden="true" />
+            <span
+              v-if="episode.play !== null"
+              class="movies-episode-list__play-overlay"
+              aria-hidden="true"
+            >
+              <Play />
+            </span>
           </span>
-        </span>
+        </AspectRatio>
         <span class="movies-episode-list__copy">
           <span class="movies-episode-list__label-row">
             <span class="movies-episode-list__label">{{ episodeLabel(episode, t) }}</span>
@@ -122,7 +125,6 @@ const { t } = useMoviesI18n();
 }
 
 .movies-episode-list__media {
-  aspect-ratio: 16 / 9;
   border-radius: 8px;
   display: block;
   inline-size: 100%;
@@ -130,8 +132,12 @@ const { t } = useMoviesI18n();
   position: relative;
 }
 
+.movies-episode-list__media-content {
+  display: block;
+  overflow: hidden;
+}
+
 .movies-episode-list__still {
-  aspect-ratio: 16 / 9;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   block-size: 100%;
   display: block;

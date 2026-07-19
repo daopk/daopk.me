@@ -164,48 +164,50 @@ function selectMedia(media: MovieMediaType): void {
       >
         <Home aria-hidden="true" />
       </IconButton>
-      <button
-        type="button"
+      <IconButton
         class="movies-toolbar__history-menu-button"
-        :aria-label="mediaLabel('movie', t)"
+        :ariaLabel="mediaLabel('movie', t)"
+        size="sm"
+        variant="plain"
         :title="mediaLabel('movie', t)"
         @click="selectMedia('movie')"
       >
         <Film class="movies-toolbar__history-menu-icon" aria-hidden="true" />
-      </button>
-      <button
-        type="button"
+      </IconButton>
+      <IconButton
         class="movies-toolbar__history-menu-button"
-        :aria-label="mediaLabel('tv', t)"
+        :ariaLabel="mediaLabel('tv', t)"
+        size="sm"
+        variant="plain"
         :title="mediaLabel('tv', t)"
         @click="selectMedia('tv')"
       >
         <Tv class="movies-toolbar__history-menu-icon" aria-hidden="true" />
-      </button>
+      </IconButton>
     </nav>
 
     <nav class="movies-toolbar__catalog" :aria-label="t('movies.catalog.ariaLabel')">
-      <button
-        type="button"
+      <Button
         class="movies-toolbar__menu-button"
+        variant="plain"
         :aria-label="mediaLabel('movie', t)"
         :title="mediaLabel('movie', t)"
         @click="selectMedia('movie')"
       >
-        <Film class="movies-toolbar__menu-icon" aria-hidden="true" />
+        <template #left><Film class="movies-toolbar__menu-icon" aria-hidden="true" /></template>
         <span>{{ mediaLabel("movie", t) }}</span>
-      </button>
+      </Button>
 
-      <button
-        type="button"
+      <Button
         class="movies-toolbar__menu-button"
+        variant="plain"
         :aria-label="mediaLabel('tv', t)"
         :title="mediaLabel('tv', t)"
         @click="selectMedia('tv')"
       >
-        <Tv class="movies-toolbar__menu-icon" aria-hidden="true" />
+        <template #left><Tv class="movies-toolbar__menu-icon" aria-hidden="true" /></template>
         <span>{{ mediaLabel("tv", t) }}</span>
-      </button>
+      </Button>
     </nav>
 
     <div class="movies-toolbar__actions">

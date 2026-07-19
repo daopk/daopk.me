@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
 import { Spinner } from "@daopk/kit";
+import { Overlay } from "@daopk/ui";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 
@@ -8,6 +9,7 @@ const { t } = useMoviesI18n();
 
 <template>
   <div class="movies-loading-overlay" aria-live="polite">
+    <Overlay class="movies-loading-overlay__backdrop" color="transparent" />
     <div class="movies-loading-overlay__content">
       <Spinner size="lg" :label="t('movies.loading.movies')" />
     </div>
@@ -17,6 +19,15 @@ const { t } = useMoviesI18n();
 <style scoped lang="scss">
 .movies-loading-overlay {
   align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  min-block-size: 100%;
+  position: absolute;
+  z-index: 4;
+}
+
+.movies-loading-overlay__backdrop {
   background:
     radial-gradient(
       ellipse at 22% 18%,
@@ -46,12 +57,6 @@ const { t } = useMoviesI18n();
       var(--color-bg) 52%,
       color-mix(in srgb, var(--color-bg) 88%, var(--color-fg) 12%) 100%
     );
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  min-block-size: 100%;
-  position: absolute;
-  z-index: 4;
 }
 
 .movies-loading-overlay__content {
@@ -59,6 +64,8 @@ const { t } = useMoviesI18n();
   display: grid;
   gap: var(--space-md);
   justify-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .movies-loading-overlay :deep(.ds-kit-spinner) {

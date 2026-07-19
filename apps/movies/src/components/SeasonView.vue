@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { AspectRatio, Button } from "@daopk/ui";
 import ArrowLeft from "~icons/lucide/arrow-left";
 
 import EpisodeList from "./EpisodeList.vue";
@@ -127,7 +127,7 @@ async function loadSeason(): Promise<void> {
 
     <article v-else-if="detail && season" class="movies-season__content">
       <header class="movies-season__hero">
-        <span class="movies-season__poster-shell">
+        <AspectRatio class="movies-season__poster-shell" :ratio="2 / 3">
           <img
             v-if="heroImageUrl"
             class="movies-season__poster"
@@ -137,7 +137,7 @@ async function loadSeason(): Promise<void> {
             decoding="async"
           />
           <span v-else class="movies-season__poster" aria-hidden="true" />
-        </span>
+        </AspectRatio>
 
         <div class="movies-season__intro">
           <p class="movies-season__eyebrow">{{ detail.name }}</p>
@@ -211,7 +211,6 @@ async function loadSeason(): Promise<void> {
 }
 
 .movies-season__poster {
-  aspect-ratio: 2 / 3;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   block-size: 100%;
   display: block;

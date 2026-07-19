@@ -2,7 +2,7 @@
 import { computed, toRef } from "vue";
 
 import ChevronRight from "~icons/lucide/chevron-right";
-import { Button } from "@daopk/ui";
+import { AspectRatio, Button } from "@daopk/ui";
 
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import type { MovieSummary } from "../moviesApi";
@@ -166,7 +166,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
                 :aria-label="heroCardAriaLabel(movie, index)"
                 @click="activateHeroItem(movie, index, $event)"
               >
-                <span class="movies-home__hero-poster-wrap">
+                <AspectRatio class="movies-home__hero-poster-wrap" :ratio="2 / 3">
                   <img
                     v-if="heroPosterUrl(movie)"
                     class="movies-home__hero-poster"
@@ -181,7 +181,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
                     class="movies-home__hero-poster movies-home__hero-poster--empty"
                     aria-hidden="true"
                   />
-                </span>
+                </AspectRatio>
               </button>
             </li>
           </ul>
@@ -213,7 +213,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
               :aria-label="t('movies.home.hero.openTitle', { title: movie.name })"
               @click="openHero(movie)"
             >
-              <span class="movies-home__hero-poster-wrap">
+              <AspectRatio class="movies-home__hero-poster-wrap" :ratio="2 / 3">
                 <img
                   v-if="heroPosterUrl(movie)"
                   class="movies-home__hero-poster"
@@ -228,7 +228,7 @@ function changeHeroByKeydown(event: KeyboardEvent): void {
                   class="movies-home__hero-poster movies-home__hero-poster--empty"
                   aria-hidden="true"
                 />
-              </span>
+              </AspectRatio>
             </button>
           </li>
         </ul>

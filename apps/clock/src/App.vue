@@ -2,7 +2,16 @@
 import { computed, ref } from "vue";
 
 import { AppFrame, ScrollArea } from "@daopk/kit";
-import { Badge, Button, Field, Input, Tabs, TabsContent, TabsList, TabsTrigger } from "@daopk/ui";
+import {
+  Badge,
+  Button,
+  Field,
+  NumberInput,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@daopk/ui";
 import type { TabsValue } from "@daopk/ui";
 import Clock from "~icons/lucide/clock";
 import Flag from "~icons/lucide/flag";
@@ -150,36 +159,48 @@ function durationDatetime(ms: number): string {
 
           <div class="clock-app__inputs" aria-label="Timer duration">
             <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Hours">
-              <Input
+              <NumberInput
                 v-bind="controlProps"
-                type="number"
                 ariaLabel="Timer hours"
-                :input-attrs="{ min: 0, max: 23, step: 1, inputmode: 'numeric' }"
+                :min="0"
+                :max="23"
+                :step="1"
+                :controls="false"
+                :input-attrs="{ inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
-                :model-value="String(timerPartValue('hours'))"
-                @update:model-value="clock.setTimerPart('hours', $event)"
+                :model-value="timerPartValue('hours')"
+                text-align="center"
+                @update:model-value="clock.setTimerPart('hours', $event ?? 0)"
               />
             </Field>
             <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Minutes">
-              <Input
+              <NumberInput
                 v-bind="controlProps"
-                type="number"
                 ariaLabel="Timer minutes"
-                :input-attrs="{ min: 0, max: 59, step: 1, inputmode: 'numeric' }"
+                :min="0"
+                :max="59"
+                :step="1"
+                :controls="false"
+                :input-attrs="{ inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
-                :model-value="String(timerPartValue('minutes'))"
-                @update:model-value="clock.setTimerPart('minutes', $event)"
+                :model-value="timerPartValue('minutes')"
+                text-align="center"
+                @update:model-value="clock.setTimerPart('minutes', $event ?? 0)"
               />
             </Field>
             <Field v-slot="{ controlProps }" class="clock-app__number-field" label="Seconds">
-              <Input
+              <NumberInput
                 v-bind="controlProps"
-                type="number"
                 ariaLabel="Timer seconds"
-                :input-attrs="{ min: 0, max: 59, step: 1, inputmode: 'numeric' }"
+                :min="0"
+                :max="59"
+                :step="1"
+                :controls="false"
+                :input-attrs="{ inputmode: 'numeric' }"
                 :disabled="!clock.timerCanEdit.value"
-                :model-value="String(timerPartValue('seconds'))"
-                @update:model-value="clock.setTimerPart('seconds', $event)"
+                :model-value="timerPartValue('seconds')"
+                text-align="center"
+                @update:model-value="clock.setTimerPart('seconds', $event ?? 0)"
               />
             </Field>
           </div>
@@ -469,11 +490,16 @@ function durationDatetime(ms: number): string {
   }
 
   .clock-app__tabs {
+    display: block;
+    inline-size: 100%;
+    padding: 3px;
+  }
+
+  .clock-app__tabs :deep(.rp-scroll-area__content) {
     display: grid;
     gap: 3px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    inline-size: 100%;
-    padding: 3px;
+    min-inline-size: 100%;
   }
 
   .clock-app__panel {

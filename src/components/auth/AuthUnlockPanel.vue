@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Button } from "~/components/ui";
+import { Button, Radio, RadioGroup, ScrollArea } from "~/components/ui";
 import CloudOff from "~icons/lucide/cloud-off";
 import KeyRound from "~icons/lucide/key-round";
 import Plus from "~icons/lucide/plus";
@@ -24,25 +24,41 @@ const emit = defineEmits<{
   unlock: [];
   "add-account": [];
 }>();
+
+const profileRadioClassNames = {
+  indicator: "auth-gate__profile-indicator",
+  label: "auth-gate__profile-label",
+} as const;
+
+function selectProfile(value: string | number | null): void {
+  if (value === null) return;
+  emit("select-profile", String(value));
+}
 </script>
 
 <template>
   <div class="auth-gate__profiles">
-    <div v-if="showProfileList" class="auth-gate__profile-list" role="list">
-      <button
-        v-for="profile in profiles"
-        :key="profile.id"
-        class="auth-gate__profile"
-        :class="{ 'auth-gate__profile--selected': selectedProfileId === profile.id }"
-        type="button"
-        role="listitem"
+    <ScrollArea v-if="showProfileList" class="auth-gate__profile-list" scrollbars="y">
+      <RadioGroup
+        class="auth-gate__profile-options"
+        :model-value="selectedProfileId"
+        aria-label="Profiles"
         :disabled="busy"
-        @click="emit('select-profile', profile.id)"
+        @update:model-value="selectProfile"
       >
-        <span class="auth-gate__profile-name">{{ profile.displayName }}</span>
-        <span class="auth-gate__profile-meta">{{ profileMeta(profile) }}</span>
-      </button>
-    </div>
+        <Radio
+          v-for="profile in profiles"
+          :key="profile.id"
+          class="auth-gate__profile"
+          :class="{ 'auth-gate__profile--selected': selectedProfileId === profile.id }"
+          :value="profile.id"
+          :class-names="profileRadioClassNames"
+        >
+          <span class="auth-gate__profile-name">{{ profile.displayName }}</span>
+          <span class="auth-gate__profile-meta">{{ profileMeta(profile) }}</span>
+        </Radio>
+      </RadioGroup>
+    </ScrollArea>
 
     <Button
       class="auth-gate__button"
@@ -85,9 +101,21 @@ const emit = defineEmits<{
 }
 
 .auth-gate__profile-list {
+  inline-size: 100%;
+}
+
+.auth-gate__profile-options {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+:deep(.auth-gate__profile-indicator) {
+  display: none;
+}
+
+:deep(.auth-gate__profile-label) {
+  display: contents;
 }
 
 .auth-gate__profile {
@@ -111,6 +139,11 @@ const emit = defineEmits<{
 
 .auth-gate__profile:hover {
   background: color-mix(in srgb, var(--color-bg-elevated) 54%, transparent);
+}
+
+.auth-gate__profile:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .auth-gate__profile--selected {
@@ -152,10 +185,12 @@ const emit = defineEmits<{
   }
 
   .auth-gate__profile-list {
-    gap: var(--space-sm);
     max-block-size: 34dvh;
-    overflow-y: auto;
     padding: 2px;
+  }
+
+  .auth-gate__profile-options {
+    gap: var(--space-sm);
   }
 
   .auth-gate__profile {

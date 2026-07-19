@@ -2,7 +2,7 @@
 import { ref, useId } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
-import { Button } from "~/components/ui";
+import { Button, IconButton, ScrollArea, Tabs, TabsList, TabsTrigger } from "~/components/ui";
 import Check from "~icons/lucide/check";
 import Plus from "~icons/lucide/plus";
 import Search from "~icons/lucide/search";
@@ -40,6 +40,12 @@ useWidgetGalleryFocusTrap({
   initialFocusRef: searchRef,
   onClose: close,
 });
+
+function selectSurface(value: string | number | null): void {
+  if (value === "desktop:wallpaper" || value === "desktop:menubar") {
+    activeSurface.value = value;
+  }
+}
 </script>
 
 <template>
@@ -62,15 +68,16 @@ useWidgetGalleryFocusTrap({
         <h2 :id="headingId">Widgets</h2>
         <p>Drag desktop widgets onto the wallpaper, or add them to desktop surfaces.</p>
       </div>
-      <button
-        type="button"
+      <IconButton
         class="desktop-widget-gallery__close"
-        aria-label="Close"
+        ariaLabel="Close"
+        size="xs"
+        variant="plain"
         @click="close"
         @pointerdown.stop
       >
         <X aria-hidden="true" />
-      </button>
+      </IconButton>
     </div>
 
     <label class="desktop-widget-gallery__search">
@@ -78,67 +85,77 @@ useWidgetGalleryFocusTrap({
       <input ref="searchRef" v-model="query" type="search" placeholder="Search widgets" />
     </label>
 
-    <div class="desktop-widget-gallery__tabs" role="tablist" aria-label="Widget surface">
-      <button
-        v-for="tab in surfaceTabs"
-        :key="tab.id"
-        type="button"
-        role="tab"
-        :aria-selected="activeSurface === tab.id"
-        @click="activeSurface = tab.id"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
+    <Tabs
+      class="desktop-widget-gallery__tabs-root"
+      :model-value="activeSurface"
+      variant="pills"
+      size="xs"
+      ariaLabel="Widget surface"
+      @update:model-value="selectSurface"
+    >
+      <TabsList class="desktop-widget-gallery__tabs">
+        <TabsTrigger v-for="tab in surfaceTabs" :key="tab.id" :value="tab.id">
+          {{ tab.label }}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
 
-    <section class="desktop-widget-gallery__list" aria-live="polite">
-      <p v-if="!hasItems" class="desktop-widget-gallery__empty">No widgets match this view.</p>
-      <article
-        v-for="item in filteredItems"
-        v-else
-        :key="`${activeSurface}::${item.id}`"
-        class="desktop-widget-gallery__item"
-        :data-visible="item.visible || undefined"
-        :data-widget-id="item.id"
-      >
-        <button
-          type="button"
-          class="desktop-widget-gallery__preview"
-          :disabled="item.visible || !item.desktopPlaceable"
-          :aria-label="item.desktopPlaceable ? `Drag ${item.title} to desktop` : item.title"
-          @pointerdown="startDesktopDrag(item, $event)"
+    <ScrollArea
+      class="desktop-widget-gallery__list"
+      scrollbars="y"
+      :viewport-attrs="{ 'aria-live': 'polite' }"
+    >
+      <section class="desktop-widget-gallery__list-content">
+        <p v-if="!hasItems" class="desktop-widget-gallery__empty">No widgets match this view.</p>
+        <article
+          v-for="item in filteredItems"
+          v-else
+          :key="`${activeSurface}::${item.id}`"
+          class="desktop-widget-gallery__item"
+          :data-visible="item.visible || undefined"
+          :data-widget-id="item.id"
         >
-          <AppIcon
-            :icon="item.icon"
-            :fallback="WidgetsIcon"
-            class="desktop-widget-gallery__preview-icon"
-          />
-          <span class="desktop-widget-gallery__preview-size">{{ item.sizeLabel }}</span>
-        </button>
+          <button
+            type="button"
+            class="desktop-widget-gallery__preview"
+            :disabled="item.visible || !item.desktopPlaceable"
+            :aria-label="item.desktopPlaceable ? `Drag ${item.title} to desktop` : item.title"
+            @pointerdown="startDesktopDrag(item, $event)"
+          >
+            <AppIcon
+              :icon="item.icon"
+              :fallback="WidgetsIcon"
+              class="desktop-widget-gallery__preview-icon"
+            />
+            <span class="desktop-widget-gallery__preview-size">{{ item.sizeLabel }}</span>
+          </button>
 
-        <div class="desktop-widget-gallery__item-body">
-          <div class="desktop-widget-gallery__item-title-line">
-            <h3>{{ item.title }}</h3>
-            <span v-if="item.visible" class="desktop-widget-gallery__added">
-              <Check aria-hidden="true" />
-              Added
-            </span>
+          <div class="desktop-widget-gallery__item-body">
+            <div class="desktop-widget-gallery__item-title-line">
+              <h3>{{ item.title }}</h3>
+              <span v-if="item.visible" class="desktop-widget-gallery__added">
+                <Check aria-hidden="true" />
+                Added
+              </span>
+            </div>
+            <p class="desktop-widget-gallery__item-description">{{ item.description }}</p>
+            <p class="desktop-widget-gallery__item-meta">
+              {{ item.provider.label }} · {{ item.surfaceLabel }}
+            </p>
           </div>
-          <p class="desktop-widget-gallery__item-description">{{ item.description }}</p>
-          <p class="desktop-widget-gallery__item-meta">
-            {{ item.provider.label }} · {{ item.surfaceLabel }}
-          </p>
-        </div>
 
-        <div class="desktop-widget-gallery__actions">
-          <Button v-if="item.visible" variant="ghost" size="sm" @click="hide(item)">Remove</Button>
-          <Button v-else variant="solid" color="blue" size="sm" @click="show(item)">
-            <template #left><Plus aria-hidden="true" /></template>
-            Add
-          </Button>
-        </div>
-      </article>
-    </section>
+          <div class="desktop-widget-gallery__actions">
+            <Button v-if="item.visible" variant="ghost" size="sm" @click="hide(item)"
+              >Remove</Button
+            >
+            <Button v-else variant="solid" color="blue" size="sm" @click="show(item)">
+              <template #left><Plus aria-hidden="true" /></template>
+              Add
+            </Button>
+          </div>
+        </article>
+      </section>
+    </ScrollArea>
   </div>
 
   <Teleport to="body">
@@ -223,16 +240,10 @@ useWidgetGalleryFocusTrap({
 }
 
 .desktop-widget-gallery__close {
-  align-items: center;
   background: transparent;
   border: 0;
-  border-radius: var(--radius-sm);
   color: var(--color-fg-muted);
-  cursor: pointer;
-  display: inline-flex;
   flex: 0 0 auto;
-  justify-content: center;
-  padding: 4px;
 
   &:hover,
   &:focus-visible {
@@ -279,20 +290,20 @@ useWidgetGalleryFocusTrap({
   inline-size: 14px;
 }
 
-.desktop-widget-gallery__tabs {
+.desktop-widget-gallery__tabs-root {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  display: grid;
-  gap: 2px;
   padding: 2px;
 }
 
 .desktop-widget-gallery__tabs {
+  display: grid;
+  gap: 2px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.desktop-widget-gallery__tabs button {
+.desktop-widget-gallery__tabs :deep(button) {
   background: transparent;
   border: 0;
   border-radius: var(--radius-sm);
@@ -314,13 +325,15 @@ useWidgetGalleryFocusTrap({
 }
 
 .desktop-widget-gallery__list {
-  display: flex;
   flex: 1 1 auto;
+  min-block-size: 0;
+  padding-inline-end: 2px;
+}
+
+.desktop-widget-gallery__list-content {
+  display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  min-block-size: 0;
-  overflow-y: auto;
-  padding-inline-end: 2px;
 }
 
 .desktop-widget-gallery__empty {

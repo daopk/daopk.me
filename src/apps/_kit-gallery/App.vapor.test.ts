@@ -18,10 +18,17 @@ describe("Kit Gallery", () => {
     expect(wrapper.text()).toContain("Kit Gallery");
     expect(wrapper.text()).toContain("Button (ui)");
     expect(wrapper.text()).toContain("Field + inputs (Ropav)");
+    expect(wrapper.text()).toContain("Facade additions (Ropav)");
     expect(wrapper.text()).toContain("Overlays (ui)");
 
     // Representative primitives from each layer render.
     expect(wrapper.findAll(".rp-button").length).toBeGreaterThan(0);
+    expect(wrapper.find("a.rp-button").exists()).toBe(true);
+    expect(wrapper.find(".rp-aspect-ratio").exists()).toBe(true);
+    expect(wrapper.find(".rp-avatar").exists()).toBe(true);
+    expect(wrapper.find(".rp-color-swatch").exists()).toBe(true);
+    expect(wrapper.find(".rp-number-input").exists()).toBe(true);
+    expect(wrapper.find(".rp-overlay").exists()).toBe(true);
     expect(wrapper.findAll(".gallery__choice")).toHaveLength(3);
     expect(wrapper.find('[role="switch"]').exists()).toBe(true);
     expect(wrapper.find(".ds-kit-data-table").exists()).toBe(true);

@@ -19,10 +19,14 @@ import {
 } from "~/components/kit";
 import {
   Alert,
+  AspectRatio,
+  Avatar,
   Badge,
   Button,
+  ButtonLink,
   Card,
   Checkbox,
+  ColorSwatch,
   ContextMenu,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -38,6 +42,8 @@ import {
   IconButton,
   Input,
   Modal,
+  NumberInput,
+  Overlay,
   Progress,
   Radio,
   RadioGroup,
@@ -73,6 +79,7 @@ const switchValue = ref(true);
 const autoUpdateValue = ref(false);
 const sliderValue = ref(40);
 const textValue = ref("Editable value");
+const numberValue = ref<number | null>(24);
 const textareaValue = ref("Multi-line\ncontent area");
 const selectValue = ref<string | number | null>("md");
 const segmentValue = ref<string | number | null>("grid");
@@ -194,6 +201,46 @@ const choiceRadioClassNames = {
             <Trash2 />
           </IconButton>
           <IconButton ariaLabel="Add" disabled><Plus /></IconButton>
+        </div>
+      </Panel>
+
+      <Panel as="section" class="kit-gallery__section" variant="subtle" padding="lg">
+        <GroupLabel as="h2">Facade additions (Ropav)</GroupLabel>
+        <div class="gallery__row">
+          <Avatar name="Dao PK" color="blue" variant="subtle" ariaLabel="Dao PK account" />
+          <ColorSwatch color="#5b8cff" ariaLabel="Blue accent" />
+          <ColorSwatch color="#ff7a59" ariaLabel="Orange accent" />
+          <ColorSwatch color="transparent" ariaLabel="Transparent color" />
+          <ButtonLink
+            href="https://github.com/daopk/daopk.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="surface"
+          >
+            GitHub
+          </ButtonLink>
+        </div>
+        <div class="gallery__facade-grid">
+          <Field v-slot="{ controlProps }" label="Number input">
+            <NumberInput
+              v-model="numberValue"
+              v-bind="controlProps"
+              :min="0"
+              :max="100"
+              :step="1"
+            />
+          </Field>
+          <AspectRatio class="gallery__aspect" :ratio="16 / 9" aria-label="16 by 9 preview">
+            <div class="gallery__aspect-content">16:9</div>
+          </AspectRatio>
+          <div class="gallery__overlay-demo">
+            <Overlay
+              color="color-mix(in srgb, var(--color-bg) 48%, transparent)"
+              blur="2px"
+              aria-hidden="true"
+            />
+            <span>Overlay</span>
+          </div>
         </div>
       </Panel>
 
@@ -583,6 +630,38 @@ const choiceRadioClassNames = {
   display: grid;
   gap: var(--space-md);
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.gallery__facade-grid {
+  align-items: stretch;
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.gallery__aspect,
+.gallery__overlay-demo {
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.gallery__aspect-content,
+.gallery__overlay-demo {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.gallery__overlay-demo {
+  min-block-size: 96px;
+  position: relative;
+}
+
+.gallery__overlay-demo > span {
+  position: relative;
+  z-index: 2;
 }
 
 .gallery__choice-grid {

@@ -1,4 +1,4 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import { mountVaporTest as mount, type VaporDOMWrapper } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
@@ -11,6 +11,10 @@ function mountSection() {
   return mount(LanguageSection, {
     attachTo: document.body,
   });
+}
+
+function isChecked(card: VaporDOMWrapper): boolean {
+  return card.find<HTMLInputElement>('input[type="radio"]').element.checked;
 }
 
 function mockBrowserLanguages(languages: readonly string[], language = languages[0] ?? ""): void {
@@ -36,9 +40,9 @@ describe("LanguageSection", () => {
     expect(cards[0]?.text()).toContain("Automatic");
     expect(cards[1]?.text()).toContain("English");
     expect(cards[2]?.text()).toContain("Vietnamese");
-    expect(cards[0]?.attributes("aria-checked")).toBe("true");
-    expect(cards[1]?.attributes("aria-checked")).toBe("false");
-    expect(cards[2]?.attributes("aria-checked")).toBe("false");
+    expect(isChecked(cards[0]!)).toBe(true);
+    expect(isChecked(cards[1]!)).toBe(false);
+    expect(isChecked(cards[2]!)).toBe(false);
 
     wrapper.unmount();
   });
@@ -51,7 +55,7 @@ describe("LanguageSection", () => {
 
     expect(wrapper.text()).toContain("Tự động");
     expect(wrapper.text()).toContain("Ngôn ngữ hiển thị");
-    expect(wrapper.findAll(".language__card")[0]?.attributes("aria-checked")).toBe("true");
+    expect(isChecked(wrapper.findAll(".language__card")[0]!)).toBe(true);
 
     wrapper.unmount();
   });
@@ -66,7 +70,7 @@ describe("LanguageSection", () => {
     expect(settings.locale).toBe("vi");
     expect(settings.localeMode).toBe("manual");
     expect(wrapper.text()).toContain("Tiếng Việt");
-    expect(wrapper.findAll(".language__card")[2]?.attributes("aria-checked")).toBe("true");
+    expect(isChecked(wrapper.findAll(".language__card")[2]!)).toBe(true);
 
     wrapper.unmount();
   });
@@ -79,8 +83,8 @@ describe("LanguageSection", () => {
 
     expect(settings.locale).toBe("en");
     expect(settings.localeMode).toBe("manual");
-    expect(wrapper.findAll(".language__card")[0]?.attributes("aria-checked")).toBe("false");
-    expect(wrapper.findAll(".language__card")[1]?.attributes("aria-checked")).toBe("true");
+    expect(isChecked(wrapper.findAll(".language__card")[0]!)).toBe(false);
+    expect(isChecked(wrapper.findAll(".language__card")[1]!)).toBe(true);
 
     wrapper.unmount();
   });
@@ -96,7 +100,18 @@ describe("LanguageSection", () => {
 
     expect(settings.locale).toBe("vi");
     expect(settings.localeMode).toBe("auto");
-    expect(wrapper.findAll(".language__card")[0]?.attributes("aria-checked")).toBe("true");
+    expect(isChecked(wrapper.findAll(".language__card")[0]!)).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it("uses one native radio group for browser keyboard navigation", () => {
+    const wrapper = mountSection();
+    const inputs = wrapper.findAll<HTMLInputElement>('.language__card input[type="radio"]');
+
+    expect(inputs).toHaveLength(3);
+    expect(new Set(inputs.map((input) => input.attributes("name"))).size).toBe(1);
+    expect(inputs.filter((input) => input.element.checked)).toHaveLength(1);
 
     wrapper.unmount();
   });

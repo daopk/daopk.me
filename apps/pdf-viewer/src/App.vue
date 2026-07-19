@@ -59,6 +59,7 @@ const {
       class="pdf-viewer__file-input"
       type="file"
       accept="application/pdf,.pdf"
+      aria-label="Choose PDF file"
       @change="onFileChange"
     />
 

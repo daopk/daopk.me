@@ -5,10 +5,17 @@ entry. Standard controls are direct re-exports from Ropav; applications should
 use Ropav's props, events, slots and built-in behavior instead of adding a
 daopk compatibility wrapper.
 
-Direct Ropav exports currently include alerts, badges, buttons, cards, form
-controls, modal, popover, progress, scroll area, tabs, toast and tooltip.
+Direct Ropav exports currently include alerts, aspect ratios, avatars, badges,
+buttons and button links, cards, color swatches, form controls, modal, numeric
+inputs, overlays, popover, progress, scroll area, tabs, toast and tooltip.
 Importing through `@daopk/ui` keeps first-party apps on the host's single
 Ropav/Vue runtime copy.
+
+The façade includes the media/layout helpers `AspectRatio` and `Overlay`, the
+identity and color primitives `Avatar` and `ColorSwatch`, navigation-aware
+`ButtonLink`, and typed `NumberInput`. Their related public prop/part/value
+types are exported from the same entry; `Modal` likewise exposes its focus
+trap, sizing, slot, and close-reason types.
 
 Use the Ropav `ScrollArea` from this layer for custom scrollbar behavior,
 programmatic scrolling and boundary events. Use `kit/ScrollArea` for app-shell

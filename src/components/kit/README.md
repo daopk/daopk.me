@@ -11,10 +11,10 @@ daopk-specific layout and shell chrome. `kit` never re-exports `ui`.
 
 ## Choosing the layer
 
-| Layer | Owns                                         | Examples                                                                                                               |
-| ----- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `ui`  | Ropav behavior, accessibility, and controls  | `Button`, `Modal`, `Input`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Slider`, `Tabs`, `Tooltip`, `ToastProvider` |
-| `kit` | Product-specific layout and app-shell chrome | `AppFrame`, `AppToolbar`, `Panel`, `SectionHeader`, `ScrollArea`, `EmptyState`, `DataTable`, `ActionRow`               |
+| Layer | Owns                                         | Examples                                                                                                                         |
+| ----- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `ui`  | Ropav behavior, accessibility, and controls  | `Button`, `ButtonLink`, `Modal`, `Input`, `NumberInput`, `RadioGroup`, `Tabs`, `AspectRatio`, `Avatar`, `ColorSwatch`, `Overlay` |
+| `kit` | Product-specific layout and app-shell chrome | `AppFrame`, `AppToolbar`, `Panel`, `SectionHeader`, `ScrollArea`, `EmptyState`, `DataTable`, `ActionRow`                         |
 
 Rules:
 

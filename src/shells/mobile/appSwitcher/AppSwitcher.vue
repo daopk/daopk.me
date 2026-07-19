@@ -1,10 +1,9 @@
 <script setup vapor lang="ts">
-import Icon from "~/icons/Icon.vue";
 import DismissAllIcon from "~icons/lucide/trash-2";
 import CloseIcon from "~icons/lucide/x";
 import { computed, type VaporComponent } from "vue";
-import { Modal, type ModalFocusTrapOptions } from "ropav/modal";
 
+import { IconButton, Modal, type ModalFocusTrapOptions } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 
 import type { NavigationFrame } from "../navigation";
@@ -31,6 +30,7 @@ const modalClassNames = {
   root: "app-switcher",
   overlay: "app-switcher__overlay",
   panel: "app-switcher__panel",
+  header: "app-switcher__header",
   body: "app-switcher__modal-body",
 };
 
@@ -95,26 +95,26 @@ function onDismissAll(): void {
     :class-names="modalClassNames"
     @close="onClose"
   >
-    <header class="app-switcher__header">
-      <button
-        type="button"
+    <template #header>
+      <IconButton
         class="app-switcher__close"
-        aria-label="Close recent apps"
+        ariaLabel="Close recent apps"
+        variant="plain"
         @click="onClose"
       >
-        <Icon :icon="CloseIcon" :size="18" :stroke-width="2" aria-hidden="true" />
-      </button>
+        <CloseIcon aria-hidden="true" />
+      </IconButton>
       <h2 class="app-switcher__title">Recent apps</h2>
-      <button
-        type="button"
+      <IconButton
         class="app-switcher__dismiss-all"
-        aria-label="Close all recent apps"
+        ariaLabel="Close all recent apps"
+        variant="plain"
         :disabled="!canDismissAll"
         @click="onDismissAll"
       >
-        <Icon :icon="DismissAllIcon" :size="18" :stroke-width="2" aria-hidden="true" />
-      </button>
-    </header>
+        <DismissAllIcon aria-hidden="true" />
+      </IconButton>
+    </template>
     <div class="app-switcher__body">
       <p v-if="cards.length === 0" class="app-switcher__empty">No running apps</p>
       <ul v-else class="app-switcher__list">
@@ -192,6 +192,11 @@ function onDismissAll(): void {
   justify-content: center;
   transition: background var(--duration-fast) var(--ease);
 
+  svg {
+    block-size: 18px;
+    inline-size: 18px;
+  }
+
   &:hover:not(:disabled) {
     background: var(--color-bg-subtle);
   }
@@ -232,9 +237,6 @@ function onDismissAll(): void {
 }
 
 .app-switcher__body {
-  flex: 1 1 auto;
-  min-block-size: 0;
-  overflow-y: auto;
   padding-block-end: calc(
     var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-bottom, 0px)
   );

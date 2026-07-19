@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { Modal } from "@daopk/ui";
+import { Modal, Radio, RadioGroup } from "@daopk/ui";
 
 defineProps<{
   readonly currentPage: number;
@@ -11,6 +11,16 @@ const emit = defineEmits<{
   "update:open": [open: boolean];
   selectPage: [page: number];
 }>();
+
+const pageRadioClassNames = {
+  indicator: "pdf-viewer__page-sheet-indicator",
+  label: "pdf-viewer__page-sheet-label",
+} as const;
+
+function selectPage(value: string | number | null): void {
+  if (value === null) return;
+  emit("selectPage", Number(value));
+}
 </script>
 
 <template>
@@ -24,19 +34,37 @@ const emit = defineEmits<{
     }"
     @update:open="emit('update:open', $event)"
   >
-    <div class="pdf-viewer__page-sheet-list" role="listbox" aria-label="PDF pages">
-      <button
+    <RadioGroup
+      class="pdf-viewer__page-sheet-list"
+      :model-value="currentPage"
+      aria-label="PDF pages"
+      @update:model-value="selectPage"
+    >
+      <Radio
         v-for="page in pageOptions"
         :key="page"
-        type="button"
         class="pdf-viewer__page-sheet-item"
         :class="{ 'pdf-viewer__page-sheet-item--active': page === currentPage }"
-        role="option"
-        :aria-selected="page === currentPage"
-        @click="emit('selectPage', page)"
+        :value="page"
+        :class-names="pageRadioClassNames"
       >
         <span>Page {{ page }}</span>
-      </button>
-    </div>
+      </Radio>
+    </RadioGroup>
   </Modal>
 </template>
+
+<style scoped>
+:deep(.pdf-viewer__page-sheet-indicator) {
+  display: none;
+}
+
+:deep(.pdf-viewer__page-sheet-label) {
+  display: contents;
+}
+
+.pdf-viewer__page-sheet-item:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+</style>

@@ -1,4 +1,6 @@
 <script setup vapor lang="ts">
+import { AspectRatio } from "@daopk/ui";
+
 interface PosterFrameProps {
   alt?: string;
   decoding?: "async" | "auto" | "sync";
@@ -19,7 +21,7 @@ withDefaults(defineProps<PosterFrameProps>(), {
 </script>
 
 <template>
-  <span class="movies-poster-frame">
+  <AspectRatio class="movies-poster-frame" :ratio="2 / 3">
     <img
       v-if="src"
       class="movies-poster-frame__image"
@@ -38,14 +40,13 @@ withDefaults(defineProps<PosterFrameProps>(), {
       <slot name="empty" />
     </span>
     <slot />
-  </span>
+  </AspectRatio>
 </template>
 
 <style scoped lang="scss">
 .movies-poster-frame {
   --movie-card-edge-base: var(--movies-card-edge-base, var(--movies-surface-bg, var(--color-bg)));
 
-  aspect-ratio: 2 / 3;
   background: color-mix(in srgb, var(--color-fg) 10%, transparent);
   border-color: color-mix(in srgb, white 34%, var(--movie-card-edge-base))
     color-mix(in srgb, black 14%, var(--movie-card-edge-base))

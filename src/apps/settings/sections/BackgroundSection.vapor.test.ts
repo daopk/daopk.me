@@ -411,16 +411,16 @@ describe("BackgroundSection (M2b.6)", () => {
 
   // --- Polish A — A11y / keyboard model -----------------------------------
 
-  it("ArrowRight on a focused tile auto-activates the tile (polish A)", async () => {
+  it("uses native grouped radios for wallpaper keyboard navigation (polish A)", async () => {
     const fake = makeFakeKernel("__none__");
     const wrapper = mountSection(fake);
 
-    const tiles = wrapper.findAll<HTMLButtonElement>(".background__tile");
-    const first = tiles[0];
+    const inputs = wrapper.findAll<HTMLInputElement>('.background__tile input[type="radio"]');
+    const first = inputs[0];
     expect(first).toBeDefined();
-    expect(first?.attributes("tabindex")).toBe("0");
+    expect(new Set(inputs.map((input) => input.attributes("name"))).size).toBe(1);
 
-    await first?.trigger("keydown", { key: "ArrowRight" });
+    await first?.setChecked();
 
     expect(fake.setSpy).toHaveBeenCalledTimes(1);
     expect(fake.setSpy.mock.calls[0]?.[0]).toBe("desktopWallpaperActiveId");
@@ -428,26 +428,17 @@ describe("BackgroundSection (M2b.6)", () => {
     wrapper.unmount();
   });
 
-  it("Home/End jump to first/last tile (polish A)", async () => {
+  it("keeps exactly one wallpaper radio selected", async () => {
     const fake = makeFakeKernel("__none__");
     const wrapper = mountSection(fake);
 
-    const tiles = wrapper.findAll<HTMLButtonElement>(".background__tile");
-    const lastIndex = tiles.length - 1;
+    const inputs = wrapper.findAll<HTMLInputElement>('.background__tile input[type="radio"]');
+    const last = inputs.at(-1)!;
 
-    await tiles[0]?.trigger("keydown", { key: "End" });
+    await last.setChecked();
     expect(fake.setSpy).toHaveBeenLastCalledWith("desktopWallpaperActiveId", expect.any(String));
-
-    fake.setSpy.mockClear();
-    await tiles[lastIndex]?.trigger("keydown", { key: "Home" });
-    if (lastIndex === 0) {
-      expect(fake.setSpy).not.toHaveBeenCalled();
-    } else {
-      expect(fake.setSpy).toHaveBeenLastCalledWith(
-        "desktopWallpaperActiveId",
-        builtinWallpapers[0]!.id,
-      );
-    }
+    expect(inputs.filter((input) => input.element.checked)).toHaveLength(1);
+    expect(last.element.checked).toBe(true);
 
     wrapper.unmount();
   });

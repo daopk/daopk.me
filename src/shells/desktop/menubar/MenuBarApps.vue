@@ -2,7 +2,7 @@
 import { onUnmounted, shallowRef } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
-import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel } from "~/components/ui";
+import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuLabel } from "~/components/ui";
 import Grid2X2 from "~icons/lucide/grid-2x2";
 import { useKernel } from "~/composables/useKernel";
 import type { AppManifest } from "~/types/app";
@@ -41,10 +41,16 @@ function visibleApps(): AppManifest[] {
   <span class="apps-menu-host">
     <DropdownMenu>
       <template #trigger>
-        <button type="button" class="apps-trigger" aria-label="Applications menu">
+        <Button
+          type="button"
+          class="apps-trigger"
+          variant="plain"
+          size="xs"
+          aria-label="Applications menu"
+        >
           <Grid2X2 class="apps-trigger__icon" aria-hidden="true" />
           <span>Apps</span>
-        </button>
+        </Button>
       </template>
 
       <template #items="{ closeWithoutFocusRestore }">
@@ -82,6 +88,7 @@ function visibleApps(): AppManifest[] {
   gap: var(--space-xs);
   letter-spacing: 0;
   margin: 0;
+  block-size: calc(var(--menubar-height) - 6px);
   min-block-size: calc(var(--menubar-height) - 6px);
   padding: 0 var(--space-sm);
   transition: background-color var(--duration-fast) var(--ease);

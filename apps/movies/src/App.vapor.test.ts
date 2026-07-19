@@ -2946,16 +2946,59 @@ describe("Movies app", () => {
       .findAll(".movies-detail-seasons__button")
       .find((button) => button.text().includes("Season 2"));
     expect(seasonTwoButton).toBeDefined();
-    expect(seasonTwoButton!.attributes("aria-pressed")).toBe("false");
+    expect(seasonTwoButton!.find<HTMLInputElement>('input[type="radio"]').element.checked).toBe(
+      false,
+    );
 
     await seasonTwoButton!.trigger("click");
     await settle();
 
     expect(fetchMovieSeason).toHaveBeenLastCalledWith(1399, 2, expect.anything());
     expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
-    expect(seasonTwoButton!.attributes("aria-pressed")).toBe("true");
+    expect(seasonTwoButton!.find<HTMLInputElement>('input[type="radio"]').element.checked).toBe(
+      true,
+    );
     expect(wrapper.text()).toContain("Second Premiere");
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
+  });
+
+  it("selects the first regular season when a TV title also has specials", async () => {
+    window.history.replaceState(null, "", "/tv/1399-planet-cinema");
+    const baseDetail = tvDetail();
+    vi.mocked(fetchMovieDetail).mockResolvedValue(
+      tvDetail({
+        seasons: [
+          {
+            airDate: "2023-01-01",
+            episodeCount: 3,
+            id: "season-0",
+            name: "Specials",
+            overview: "Bonus episodes.",
+            posterUrl: "",
+            seasonNumber: 0,
+            year: 2023,
+          },
+          ...baseDetail.seasons,
+        ],
+      }),
+    );
+
+    const wrapper = mountMovies();
+    await settle();
+
+    const seasonButtons = wrapper.findAll(".movies-detail-seasons__button");
+    const specialsButton = seasonButtons.find((button) => button.text().includes("Specials"));
+    const seasonOneButton = seasonButtons.find((button) => button.text().includes("Season 1"));
+
+    expect(specialsButton).toBeDefined();
+    expect(seasonOneButton).toBeDefined();
+    expect(specialsButton!.find<HTMLInputElement>('input[type="radio"]').element.checked).toBe(
+      false,
+    );
+    expect(seasonOneButton!.find<HTMLInputElement>('input[type="radio"]').element.checked).toBe(
+      true,
+    );
+    expect(fetchMovieSeason).toHaveBeenCalledWith(1399, 1, expect.anything());
   });
 
   it("canonicalizes localized direct TV routes", async () => {

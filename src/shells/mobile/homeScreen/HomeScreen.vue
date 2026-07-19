@@ -1,8 +1,8 @@
 <script setup vapor lang="ts">
-import Icon from "~/icons/Icon.vue";
 import Layers2 from "~icons/lucide/layers-2";
 import { computed, ref } from "vue";
 
+import { IconButton } from "~/components/ui";
 import HomeIconPage from "./HomeIconPage.vue";
 import HomePager from "./HomePager.vue";
 import HomePageIndicator from "./HomePageIndicator.vue";
@@ -91,18 +91,19 @@ defineExpose({ scrollEl });
       @seek="onSeek"
     />
 
-    <button
+    <IconButton
       v-if="recentsAvailable"
-      type="button"
       class="home-screen__recents-fab"
       :class="{ 'home-screen__recents-fab--hidden': recentsFabHidden }"
-      aria-label="Open recent apps"
+      ariaLabel="Open recent apps"
+      size="lg"
+      variant="surface"
       :aria-hidden="recentsFabHidden ? 'true' : undefined"
       :tabindex="recentsFabHidden ? -1 : 0"
       @click="onRecents"
     >
-      <Icon :icon="Layers2" :size="20" :stroke-width="2" aria-hidden="true" />
-    </button>
+      <Layers2 aria-hidden="true" />
+    </IconButton>
   </main>
 </template>
 

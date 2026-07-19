@@ -1,9 +1,9 @@
 <script setup vapor lang="ts">
-import Icon from "~/icons/Icon.vue";
 import DismissIcon from "~icons/lucide/x";
 import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
+import { Button, IconButton } from "~/components/ui";
 
 const props = defineProps<{
   frameId: string;
@@ -37,9 +37,10 @@ function onDismiss(): void {
     :data-handle-id="handleId"
     :data-manifest-id="manifestId"
   >
-    <button
-      type="button"
+    <Button
       class="app-switcher-card__select"
+      :class-names="{ label: 'app-switcher-card__select-content' }"
+      variant="plain"
       :aria-label="selectLabel"
       @click="onSelect"
     >
@@ -47,15 +48,16 @@ function onDismiss(): void {
         <AppIcon :icon="icon" :size="20" :stroke-width="1.75" />
       </span>
       <span class="app-switcher-card__name">{{ name }}</span>
-    </button>
-    <button
-      type="button"
+    </Button>
+    <IconButton
       class="app-switcher-card__dismiss"
-      :aria-label="dismissLabel"
+      :ariaLabel="dismissLabel"
+      size="sm"
+      variant="plain"
       @click="onDismiss"
     >
-      <Icon :icon="DismissIcon" :size="18" :stroke-width="2" aria-hidden="true" />
-    </button>
+      <DismissIcon aria-hidden="true" />
+    </IconButton>
   </div>
 </template>
 
@@ -92,10 +94,9 @@ function onDismiss(): void {
   border-radius: var(--radius-md);
   color: inherit;
   cursor: pointer;
-  display: grid;
   font: inherit;
-  gap: var(--space-md);
-  grid-template-columns: auto minmax(0, 1fr);
+  block-size: auto;
+  inline-size: 100%;
   min-inline-size: 0;
   padding: 0;
   text-align: start;
@@ -104,6 +105,13 @@ function onDismiss(): void {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
+}
+
+:deep(.app-switcher-card__select-content) {
+  display: grid;
+  gap: var(--space-md);
+  grid-template-columns: auto minmax(0, 1fr);
+  inline-size: 100%;
 }
 
 .app-switcher-card__icon {
@@ -141,6 +149,11 @@ function onDismiss(): void {
   transition:
     background var(--duration-fast) var(--ease),
     color var(--duration-fast) var(--ease);
+
+  svg {
+    block-size: 18px;
+    inline-size: 18px;
+  }
 
   &:hover {
     background: var(--color-bg-subtle);

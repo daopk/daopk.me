@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
-import { Button } from "@daopk/ui";
+import { AspectRatio, Button } from "@daopk/ui";
 import ArrowLeft from "~icons/lucide/arrow-left";
 
 import MovieCard from "./MovieCard.vue";
@@ -83,15 +83,16 @@ async function loadPerson(): Promise<void> {
 
     <article v-else-if="person" class="movies-person__content">
       <header class="movies-person__header">
-        <img
-          v-if="person.profileUrl"
-          class="movies-person__profile"
-          :src="person.profileUrl"
-          :alt="person.name"
-          loading="eager"
-          decoding="async"
-        />
-        <span v-else class="movies-person__profile" aria-hidden="true" />
+        <AspectRatio class="movies-person__profile" :ratio="2 / 3">
+          <img
+            v-if="person.profileUrl"
+            :src="person.profileUrl"
+            :alt="person.name"
+            loading="eager"
+            decoding="async"
+          />
+          <span v-else aria-hidden="true" />
+        </AspectRatio>
 
         <div class="movies-person__intro">
           <p v-if="person.knownForDepartment" class="movies-person__eyebrow">
@@ -172,12 +173,10 @@ async function loadPerson(): Promise<void> {
 }
 
 .movies-person__profile {
-  aspect-ratio: 2 / 3;
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   border-radius: 8px;
   box-shadow: var(--shadow-md);
   inline-size: 100%;
-  object-fit: cover;
 }
 
 .movies-person__intro {

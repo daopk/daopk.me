@@ -9,7 +9,7 @@ import {
   ToolbarTitle,
   useAppChrome,
 } from "@daopk/kit";
-import { Alert, Button, IconButton } from "@daopk/ui";
+import { Alert, AspectRatio, Button, IconButton } from "@daopk/ui";
 import RefreshCw from "~icons/lucide/refresh-cw";
 
 import { PHOTO_THUMB_WIDTH, PHOTO_THUMB_WIDTH_2X, photoThumbUrl } from "./photosContentConfig";
@@ -97,17 +97,19 @@ function closeLightbox(): void {
             :aria-label="`View ${photoLabel(photo.key)}`"
             @click="openLightbox(index)"
           >
-            <img
-              class="photos__image"
-              :src="photoThumbUrl(photo.key, PHOTO_THUMB_WIDTH)"
-              :srcset="`${photoThumbUrl(photo.key, PHOTO_THUMB_WIDTH)} 1x, ${photoThumbUrl(
-                photo.key,
-                PHOTO_THUMB_WIDTH_2X,
-              )} 2x`"
-              :alt="photoLabel(photo.key)"
-              loading="lazy"
-              decoding="async"
-            />
+            <AspectRatio :ratio="1">
+              <img
+                class="photos__image"
+                :src="photoThumbUrl(photo.key, PHOTO_THUMB_WIDTH)"
+                :srcset="`${photoThumbUrl(photo.key, PHOTO_THUMB_WIDTH)} 1x, ${photoThumbUrl(
+                  photo.key,
+                  PHOTO_THUMB_WIDTH_2X,
+                )} 2x`"
+                :alt="photoLabel(photo.key)"
+                loading="lazy"
+                decoding="async"
+              />
+            </AspectRatio>
           </button>
         </li>
       </ul>
@@ -171,7 +173,6 @@ function closeLightbox(): void {
 }
 
 .photos__thumb {
-  aspect-ratio: 1 / 1;
   background: var(--color-bg-subtle);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);

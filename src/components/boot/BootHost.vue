@@ -1,6 +1,7 @@
 <script setup vapor lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { nextTick, watch } from "vue";
 
+import { Button, Overlay, Progress } from "~/components/ui";
 import type { BootStatus } from "~/types/kernel";
 
 interface Props {
@@ -15,8 +16,6 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   retry: [];
 }>();
-
-const retryRef = ref<HTMLButtonElement | null>(null);
 
 const pct = (): number => Math.round(Math.min(1, Math.max(0, props.progressFraction)) * 100);
 
@@ -38,7 +37,7 @@ watch(
     }
 
     await nextTick();
-    retryRef.value?.focus();
+    document.querySelector<HTMLButtonElement>(".boot-host__retry")?.focus();
   },
 );
 
@@ -57,7 +56,11 @@ function onRetryClick(): void {
     aria-busy="true"
     aria-live="polite"
   >
-    <div class="boot-host__backdrop" />
+    <Overlay
+      class="boot-host__backdrop"
+      color="color-mix(in srgb, var(--color-bg) 55%, black)"
+      blur="2px"
+    />
 
     <div class="boot-host__content">
       <p class="boot-host__wordmark">WebOS</p>
@@ -66,24 +69,32 @@ function onRetryClick(): void {
         <p class="boot-host__error">
           {{ props.errorMessage || "Boot failed. Check console for details." }}
         </p>
-        <button ref="retryRef" class="boot-host__retry" type="button" @click="onRetryClick">
+        <Button class="boot-host__retry" variant="solid" type="button" @click="onRetryClick">
           Retry
-        </button>
+        </Button>
       </template>
 
       <template v-else>
         <p class="boot-host__phase">{{ props.phaseLabel || "Initializing…" }}</p>
 
-        <div v-if="showProgressChrome()" class="boot-host__rail" aria-hidden="true">
-          <div class="boot-host__rail-sheen" />
-
-          <div
-            class="boot-host__fill"
+        <div v-if="showProgressChrome()" class="boot-host__progress-wrap">
+          <Progress
+            class="boot-host__progress"
             :class="{
-              'boot-host__fill--reduced-motion': prefersReducedMotion() || isCancelledIdle(),
+              'boot-host__progress--reduced': prefersReducedMotion() || isCancelledIdle(),
             }"
-            :style="{ inlineSize: `${pct()}%` }"
+            :value="pct()"
+            :min="0"
+            :max="100"
+            size="xs"
+            radius="full"
+            ariaLabel="Boot progress"
+            :class-names="{
+              track: 'boot-host__rail',
+              indicator: 'boot-host__fill',
+            }"
           />
+          <div class="boot-host__rail-sheen" />
         </div>
       </template>
     </div>
@@ -115,10 +126,6 @@ function onRetryClick(): void {
 }
 
 .boot-host__backdrop {
-  backdrop-filter: blur(2px);
-  background-color: color-mix(in srgb, var(--color-bg) 55%, black);
-  inset: 0;
-  position: absolute;
   z-index: 0;
 }
 
@@ -155,17 +162,12 @@ function onRetryClick(): void {
 }
 
 .boot-host__retry {
-  appearance: none;
   background-color: var(--color-accent);
-  border: 1px solid color-mix(in srgb, var(--color-fg) 30%, transparent);
-  border-radius: var(--radius-md);
+  border-color: color-mix(in srgb, var(--color-fg) 30%, transparent);
   color: var(--color-fg);
-  cursor: pointer;
-  font: inherit;
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.08em;
-  padding: 0.65rem 1.35rem;
   text-transform: uppercase;
 }
 
@@ -174,7 +176,15 @@ function onRetryClick(): void {
   outline-offset: 3px;
 }
 
-.boot-host__rail {
+.boot-host__progress-wrap {
+  position: relative;
+}
+
+.boot-host__progress {
+  display: block;
+}
+
+:deep(.boot-host__rail) {
   background: color-mix(in srgb, var(--color-fg) 12%, transparent);
   block-size: 2px;
   border-radius: 999px;
@@ -199,9 +209,10 @@ function onRetryClick(): void {
   mix-blend-mode: screen;
   pointer-events: none;
   position: absolute;
+  z-index: 1;
 }
 
-.boot-host__fill {
+:deep(.boot-host__fill) {
   background: linear-gradient(
     90deg,
     var(--color-accent),
@@ -210,13 +221,12 @@ function onRetryClick(): void {
   );
   block-size: 100%;
   box-shadow: var(--shadow-accent-sm), var(--shadow-accent-lg);
-  transform-origin: left center;
   transition:
-    inline-size var(--duration-base) var(--ease),
+    width var(--duration-base) var(--ease),
     opacity var(--duration-base) var(--ease);
 }
 
-.boot-host__fill--reduced-motion {
+.boot-host__progress--reduced :deep(.boot-host__fill) {
   transition: none;
 }
 
@@ -225,7 +235,7 @@ function onRetryClick(): void {
     transform: translateY(0);
   }
 
-  .boot-host__fill {
+  :deep(.boot-host__fill) {
     transition: none;
   }
 }
