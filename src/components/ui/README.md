@@ -6,8 +6,13 @@ use Ropav's props, events, slots and built-in behavior instead of adding a
 daopk compatibility wrapper.
 
 Direct Ropav exports currently include alerts, badges, buttons, cards, form
-controls, modal, popover, progress, tabs, toast and tooltip. Importing through
-`@daopk/ui` keeps first-party apps on the host's single Ropav/Vue runtime copy.
+controls, modal, popover, progress, scroll area, tabs, toast and tooltip.
+Importing through `@daopk/ui` keeps first-party apps on the host's single
+Ropav/Vue runtime copy.
+
+Use the Ropav `ScrollArea` from this layer for custom scrollbar behavior,
+programmatic scrolling and boundary events. Use `kit/ScrollArea` for app-shell
+layout that needs semantic tags or mobile safe-area padding.
 
 The local components in this directory are limited to daopk-specific
 composition:

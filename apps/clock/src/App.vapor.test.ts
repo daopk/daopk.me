@@ -79,7 +79,7 @@ describe("Clock App", () => {
 
   it("keeps tab navigation in the topbar without duplicating the app title", () => {
     const wrapper = mountClockApp();
-    const tablist = wrapper.find(".clock-app__topbar > [role='tablist']");
+    const tablist = wrapper.find(".clock-app__topbar [role='tablist']");
 
     expect(wrapper.exists(".clock-app__header")).toBe(false);
     expect(tablist.getAttribute("aria-label")).toBe("Clock sections");

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { nextTick } from "vue";
 import { Button } from "ropav/button";
 import { Card } from "ropav/card";
+import { ScrollArea } from "ropav/scroll-area";
 
 import { assertVaporComponents, mountVaporRoot, type VaporMount } from "~/test/mountVapor";
 
@@ -25,7 +26,7 @@ afterEach(() => {
 });
 
 it("keeps the direct Ropav layout exports compiled in Vapor mode", () => {
-  assertVaporComponents({ Button, Card });
+  assertVaporComponents({ Button, Card, ScrollArea });
 });
 
 describe("Button", () => {
@@ -102,5 +103,31 @@ describe("Card", () => {
     expect(wrapper.find(".rp-card__description").textContent).toBe("12 GB available");
     expect(wrapper.find(".consumer-body").textContent).toBe("Card body");
     expect(wrapper.find(".rp-card__footer").textContent).toBe("Card footer");
+  });
+});
+
+describe("ScrollArea", () => {
+  it("renders an accessible axis-specific viewport through the public Styles API", () => {
+    const wrapper = mount(ScrollArea, {
+      props: {
+        ariaLabel: "Recent activity",
+        classNames: { root: "consumer-scroll-area", viewport: "consumer-scroll-viewport" },
+        scrollbars: "y",
+        type: "always",
+      },
+      slots: { default: () => text("Scrollable content") },
+    });
+
+    const root = wrapper.find<HTMLElement>(".rp-scroll-area");
+    const viewport = wrapper.find<HTMLElement>(".rp-scroll-area__viewport");
+
+    expect(root.classList).toContain("consumer-scroll-area");
+    expect(root.dataset.scrollbars).toBe("y");
+    expect(viewport.classList).toContain("consumer-scroll-viewport");
+    expect(viewport.getAttribute("role")).toBe("region");
+    expect(viewport.getAttribute("aria-label")).toBe("Recent activity");
+    expect(viewport.tabIndex).toBe(0);
+    expect(wrapper.find(".rp-scroll-area__content").textContent).toBe("Scrollable content");
+    expect(wrapper.findAll('[role="scrollbar"]')).toHaveLength(1);
   });
 });

@@ -10,8 +10,8 @@ catalogs:
       specifier: ^6.0.8
       version: 6.0.8
     ropav:
-      specifier: ^0.1.2
-      version: 0.1.2
+      specifier: ^0.1.4
+      version: 0.1.4
     vite:
       specifier: ^8.1.5
       version: 8.1.5
@@ -73,7 +73,7 @@ importers:
         version: 11.1.2
       ropav:
         specifier: 'catalog:'
-        version: 0.1.2(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.1(typescript@6.0.3))
+        version: 0.1.4(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.1(typescript@6.0.3))
       shiki:
         specifier: ^4.3.0
         version: 4.3.0
@@ -3531,8 +3531,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  ropav@0.1.2:
-    resolution: {integrity: sha512-MZ69HzVBFDcDOBeafeJFIbwo+wAvAoff5sv5v/0twAEke7GgSY/d2qZS/UwAvdHV059xwOnvjLVNrQ0ZP3mjAw==}
+  ropav@0.1.4:
+    resolution: {integrity: sha512-gXQ8Nh7YWqnp2MM7IT65Iy5NzLRy35j+nzvCwjWsRDxLi8qPWJi+MqY7+MtJ+YTB0HbfG5U14hyVHknjOvlrcQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.0.0}
     peerDependencies:
       '@vue/compiler-vapor': 3.6.0-rc.1
@@ -7464,7 +7464,7 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.62.2
       fsevents: 2.3.3
 
-  ropav@0.1.2(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.1(typescript@6.0.3)):
+  ropav@0.1.4(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.1(typescript@6.0.3)):
     dependencies:
       '@floating-ui/dom': 1.8.0
       focus-trap: 8.2.2

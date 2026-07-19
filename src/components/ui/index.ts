@@ -25,6 +25,16 @@ export { Progress } from "ropav/progress";
 export type { ProgressProps } from "ropav/progress";
 export { Radio, RadioGroup } from "ropav/radio";
 export type { RadioGroupProps, RadioProps } from "ropav/radio";
+export { ScrollArea } from "ropav/scroll-area";
+export type {
+  ScrollAreaOrientation,
+  ScrollAreaPart,
+  ScrollAreaPosition,
+  ScrollAreaProps,
+  ScrollAreaScrollbars,
+  ScrollAreaSlotProps,
+  ScrollAreaType,
+} from "ropav/scroll-area";
 export { Select } from "ropav/select";
 export type { SelectOption, SelectProps } from "ropav/select";
 export { Slider } from "ropav/slider";
