@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { ref } from "vue";
+import { ref, useId } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { Button } from "~/components/ui";
@@ -10,8 +10,11 @@ import X from "~icons/lucide/x";
 import { SettingsWidgetsIcon as WidgetsIcon } from "~/icons/fluentColor";
 
 import { useDesktopWidgetGallery } from "./useDesktopWidgetGallery";
+import { useWidgetGalleryFocusTrap } from "./useWidgetGalleryFocusTrap";
 
 const panelRef = ref<HTMLElement | null>(null);
+const searchRef = ref<HTMLInputElement | null>(null);
+const headingId = useId();
 
 const {
   open,
@@ -30,23 +33,33 @@ const {
   show,
   hide,
 } = useDesktopWidgetGallery({ panelRef });
+
+useWidgetGalleryFocusTrap({
+  open,
+  panelRef,
+  initialFocusRef: searchRef,
+  onClose: close,
+});
 </script>
 
 <template>
-  <aside
+  <div
     v-if="open"
     ref="panelRef"
     class="desktop-widget-gallery"
     :class="{ 'desktop-widget-gallery--dragging': panelDragging }"
     :style="panelStyle"
-    aria-label="Widget gallery"
+    role="dialog"
+    aria-modal="false"
+    :aria-labelledby="headingId"
+    tabindex="-1"
   >
-    <header class="desktop-widget-gallery__header" @pointerdown="startPanelDrag">
+    <div class="desktop-widget-gallery__header" @pointerdown="startPanelDrag">
       <span class="desktop-widget-gallery__header-icon" aria-hidden="true">
         <WidgetsIcon />
       </span>
       <div class="desktop-widget-gallery__heading">
-        <h2>Widgets</h2>
+        <h2 :id="headingId">Widgets</h2>
         <p>Drag desktop widgets onto the wallpaper, or add them to desktop surfaces.</p>
       </div>
       <button
@@ -58,11 +71,11 @@ const {
       >
         <X aria-hidden="true" />
       </button>
-    </header>
+    </div>
 
     <label class="desktop-widget-gallery__search">
       <Search class="desktop-widget-gallery__search-icon" aria-hidden="true" />
-      <input v-model="query" type="search" placeholder="Search widgets" />
+      <input ref="searchRef" v-model="query" type="search" placeholder="Search widgets" />
     </label>
 
     <div class="desktop-widget-gallery__tabs" role="tablist" aria-label="Widget surface">
@@ -126,7 +139,7 @@ const {
         </div>
       </article>
     </section>
-  </aside>
+  </div>
 
   <Teleport to="body">
     <div

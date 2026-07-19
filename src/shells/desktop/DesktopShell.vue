@@ -23,7 +23,7 @@ useDesktopBrowserZoomGuard(shellRef);
     <Wallpaper shell-id="desktop" />
     <MenuBar />
     <Dock />
-    <main class="desktop-stage" aria-label="Desktop workspace">
+    <main class="desktop-stage" aria-label="Desktop workspace" tabindex="-1">
       <DesktopContextMenuLayer />
       <DesktopWidgetLayer />
       <DesktopRenderLayer />

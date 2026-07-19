@@ -61,11 +61,23 @@ function pointerEvent(
   return event;
 }
 
+function pressTab(target: Element, shiftKey = false): void {
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "Tab",
+      shiftKey,
+    }),
+  );
+}
+
 function addDesktopStage(
   size: { width: number; height: number } = { width: 1920, height: 1052 },
 ): HTMLElement {
   const stage = document.createElement("main");
   stage.className = "desktop-stage";
+  stage.tabIndex = -1;
   Object.defineProperty(stage, "getBoundingClientRect", {
     value: () => ({
       left: 0,
@@ -107,6 +119,9 @@ describe("DesktopWidgetGallery", () => {
   beforeEach(async () => {
     setActivePinia(createPinia());
     localStorage.clear();
+    vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
+      () => [new DOMRect(0, 0, 1, 1)] as unknown as DOMRectList,
+    );
     await kernel.init();
   });
 
@@ -114,6 +129,81 @@ describe("DesktopWidgetGallery", () => {
     kernel.dispose();
     document.body.innerHTML = "";
     localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("traps focus, closes on Escape, and returns focus to the opener", async () => {
+    registerAppWidget();
+    const opener = document.createElement("button");
+    opener.textContent = "Open widgets";
+    document.body.appendChild(opener);
+    opener.focus();
+
+    const wrapper = mountGallery();
+    openGallery();
+    await nextTick();
+
+    const panel = wrapper.get<HTMLElement>(".desktop-widget-gallery");
+    const search = wrapper.get<HTMLInputElement>('input[type="search"]').element;
+    const closeButton = wrapper.get<HTMLButtonElement>(
+      '.desktop-widget-gallery__close[aria-label="Close"]',
+    ).element;
+    const addButton = wrapper
+      .get('[data-widget-id="calendar-gallery:lunar"]')
+      .findAll<HTMLButtonElement>("button")
+      .find((button) => button.text() === "Add")?.element;
+
+    expect(addButton).toBeDefined();
+    expect(panel.attributes("role")).toBe("dialog");
+    expect(panel.attributes("aria-modal")).toBe("false");
+    await vi.waitFor(() => expect(document.activeElement).toBe(search));
+
+    addButton!.focus();
+    pressTab(addButton!);
+    expect(document.activeElement).toBe(closeButton);
+
+    closeButton.focus();
+    pressTab(closeButton, true);
+    expect(document.activeElement).toBe(addButton);
+
+    search.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      }),
+    );
+    await nextTick();
+
+    expect(wrapper.find(".desktop-widget-gallery").exists()).toBe(false);
+    await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+
+    wrapper.unmount();
+  });
+
+  it("returns focus to the desktop when its context-menu opener is removed", async () => {
+    const stage = addDesktopStage();
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+
+    const wrapper = mountGallery();
+    openGallery();
+    await nextTick();
+    opener.remove();
+
+    wrapper.get<HTMLInputElement>('input[type="search"]').element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      }),
+    );
+    await nextTick();
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(stage));
+
+    wrapper.unmount();
   });
 
   it("opens from the widget gallery event and shows desktop widgets without source filters", async () => {

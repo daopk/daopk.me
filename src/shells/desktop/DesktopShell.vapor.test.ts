@@ -35,6 +35,7 @@ describe("DesktopShell template structure (M3.7 follow-up)", () => {
 
     const stage = wrapper.find("main.desktop-stage");
     expect(stage.exists()).toBe(true);
+    expect(stage.attributes("tabindex")).toBe("-1");
 
     const widgetLayer = stage.find('[data-shell-child="widget-layer"]');
     expect(widgetLayer.exists()).toBe(true);
