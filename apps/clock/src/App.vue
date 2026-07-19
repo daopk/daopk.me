@@ -120,7 +120,7 @@ function durationDatetime(ms: number): string {
         </TabsList>
       </div>
 
-      <ScrollArea as="main" class="clock-app__body">
+      <ScrollArea as="div" class="clock-app__body">
         <TabsContent
           :id="panelId('now')"
           value="now"

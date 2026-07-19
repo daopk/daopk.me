@@ -114,8 +114,9 @@ describe("MenuBarApps", () => {
   it("launches the selected app with menu source", async () => {
     const kernel = makeKernel([app("finder", "Finder"), app("settings", "Settings")]);
     const wrapper = mountApps(kernel);
+    const trigger = wrapper.get<HTMLButtonElement>(".apps-trigger").element;
 
-    click(wrapper.get(".apps-trigger").element);
+    click(trigger);
     await flushOverlay();
 
     const settingsItem = Array.from(document.body.querySelectorAll('[role="menuitem"]')).find(
@@ -130,6 +131,7 @@ describe("MenuBarApps", () => {
       manifestId: "settings",
       source: "menu",
     });
+    expect(document.activeElement).not.toBe(trigger);
 
     wrapper.unmount();
   });

@@ -1,5 +1,5 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createComponent,
   defineVaporComponent,
@@ -49,12 +49,16 @@ const FocusableApp = defineVaporComponent(() => {
   const root = document.createElement("div");
   const first = document.createElement("button");
   const last = document.createElement("button");
+  const hidden = document.createElement("button");
 
   first.dataset.appFocusFirst = "";
   first.textContent = "First app action";
   last.dataset.appFocusLast = "";
   last.textContent = "Last app action";
-  root.append(first, last);
+  hidden.dataset.appFocusHidden = "";
+  hidden.hidden = true;
+  hidden.textContent = "Hidden app action";
+  root.append(first, last, hidden);
 
   return root;
 });
@@ -202,6 +206,16 @@ function pressTab(target: Element, shiftKey = false): void {
 }
 
 describe("Window", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(function () {
+      if (this.hidden || this.closest("[hidden]") !== null) {
+        return [] as unknown as DOMRectList;
+      }
+
+      return [new DOMRect(0, 0, 1, 1)] as unknown as DOMRectList;
+    });
+  });
+
   afterEach(() => {
     document.querySelectorAll("[data-window-focus-outside]").forEach((node) => node.remove());
     vi.restoreAllMocks();

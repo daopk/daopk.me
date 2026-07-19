@@ -92,7 +92,11 @@ export function useWindowFocusScope(options: UseWindowFocusScopeOptions): Window
       isWithinFocusScope(document.activeElement) ? false : (options.windowRef.value ?? false),
     onPostUnpause: restoreWindowFocusAfterNestedTrap,
     returnFocusOnDeactivate: false,
-    tabbableOptions: { displayCheck: "none" },
+    // Window contents can keep inactive tab panels mounted with `display: none`.
+    // Visibility-aware discovery keeps the trap's boundaries aligned with the
+    // browser's native Tab order instead of treating controls in hidden panels
+    // as reachable destinations.
+    tabbableOptions: { displayCheck: "full" },
   });
 
   function activate(): void {

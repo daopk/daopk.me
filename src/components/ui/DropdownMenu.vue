@@ -12,12 +12,13 @@ export { default as DropdownMenuSubTrigger } from "./MenuSubTrigger.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef } from "vue";
 import {
   DropdownMenuContent as RopavDropdownMenuContent,
   DropdownMenuPortal as RopavDropdownMenuPortal,
   DropdownMenuRoot as RopavDropdownMenuRoot,
   DropdownMenuTrigger as RopavDropdownMenuTrigger,
+  type DropdownMenuCloseOptions,
   type DropdownMenuPlacement,
 } from "ropav/dropdown-menu";
 
@@ -47,8 +48,17 @@ const placement = computed<DropdownMenuPlacement>(() =>
 );
 const portalRoot = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLElement | null>(null);
+const rootRef = useTemplateRef<{
+  close: (options?: DropdownMenuCloseOptions & { returnFocus?: boolean }) => void;
+}>("rootRef");
 const typeahead = useMenuTypeahead();
 let restoreFocusOnClose = true;
+
+function closeWithoutFocusRestore(event: Event): void {
+  event.preventDefault();
+  restoreFocusOnClose = false;
+  rootRef.value?.close({ returnFocus: false });
+}
 
 function setTrigger(element: HTMLElement | null): void {
   trigger.value = element;
@@ -86,6 +96,7 @@ onBeforeUnmount(() => {
 
 <template>
   <RopavDropdownMenuRoot
+    ref="rootRef"
     :base-z-index="DROPDOWN_MENU_BASE_Z_INDEX"
     :modal="modal"
     @update:open="onOpenChange"
@@ -104,7 +115,7 @@ onBeforeUnmount(() => {
           @keydown="onContentKeydown"
           @pointer-down-outside="onOutsideInteraction"
         >
-          <slot name="items" />
+          <slot name="items" :close-without-focus-restore="closeWithoutFocusRestore" />
         </RopavDropdownMenuContent>
       </div>
     </RopavDropdownMenuPortal>

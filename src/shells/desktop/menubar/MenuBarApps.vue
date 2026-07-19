@@ -23,7 +23,12 @@ onUnmounted(() => {
   stopUnregistered();
 });
 
-function launchApp(manifestId: string): void {
+function launchApp(
+  manifestId: string,
+  closeWithoutFocusRestore: (event: Event) => void,
+  event: Event,
+): void {
+  closeWithoutFocusRestore(event);
   kernel.events.emit("app.launch.requested", { manifestId, source: "menu" });
 }
 
@@ -42,13 +47,13 @@ function visibleApps(): AppManifest[] {
         </button>
       </template>
 
-      <template #items>
+      <template #items="{ closeWithoutFocusRestore }">
         <DropdownMenuLabel class="ds-dropdown-menu__label">Applications</DropdownMenuLabel>
         <DropdownMenuItem
           v-for="app in apps"
           :key="app.id"
           :text-value="app.name"
-          @select="launchApp(app.id)"
+          @select="launchApp(app.id, closeWithoutFocusRestore, $event)"
         >
           <AppIcon :icon="app.icon" class="apps-menu__icon" aria-hidden="true" />
           <span>{{ app.name }}</span>
