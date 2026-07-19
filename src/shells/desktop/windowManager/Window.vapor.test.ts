@@ -1,7 +1,18 @@
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
-import { describe, expect, it, afterEach, vi } from "vitest";
-import { defineVaporComponent, inject, nextTick, onMounted, type Component } from "vue";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import {
+  createComponent,
+  defineVaporComponent,
+  inject,
+  insert,
+  nextTick,
+  onMounted,
+  ref,
+  type Component,
+} from "vue";
+import { Modal } from "ropav/modal";
 
+import { APP_OVERLAY_PORTAL_ID } from "~/components/ui/portalTarget";
 import { AppChromeInjectionKey, type AppChromeController, type AppManifest } from "~/types/app";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
@@ -34,6 +45,68 @@ const StubIcon = defineVaporComponent(() =>
   document.createElementNS("http://www.w3.org/2000/svg", "svg"),
 );
 const StubApp = defineVaporComponent(() => document.createElement("div"));
+const FocusableApp = defineVaporComponent(() => {
+  const root = document.createElement("div");
+  const first = document.createElement("button");
+  const last = document.createElement("button");
+
+  first.dataset.appFocusFirst = "";
+  first.textContent = "First app action";
+  last.dataset.appFocusLast = "";
+  last.textContent = "Last app action";
+  root.append(first, last);
+
+  return root;
+});
+const ModalApp = defineVaporComponent(() => {
+  const open = ref(true);
+  const root = document.createElement("div");
+  const first = document.createElement("button");
+  const last = document.createElement("button");
+
+  first.dataset.appFocusFirst = "";
+  first.textContent = "First app action";
+  last.dataset.appFocusLast = "";
+  last.textContent = "Last app action";
+  root.append(first, last);
+  insert(
+    createComponent(
+      Modal,
+      {
+        open: () => open.value,
+        title: "Window-owned dialog",
+        focusTrapOptions: { tabbableOptions: { displayCheck: "none" } },
+      },
+      {
+        default: () => {
+          const close = document.createElement("button");
+          close.dataset.closeWindowModal = "";
+          close.textContent = "Close dialog";
+          close.addEventListener("click", () => (open.value = false));
+          return close;
+        },
+      },
+    ),
+    root,
+  );
+
+  return root;
+});
+
+function ensureAppOverlayPortal(): HTMLElement {
+  const existing = document.getElementById(APP_OVERLAY_PORTAL_ID);
+
+  if (existing !== null) {
+    return existing;
+  }
+
+  const portal = document.createElement("div");
+  portal.id = APP_OVERLAY_PORTAL_ID;
+  portal.dataset.windowTestOverlayPortal = "";
+  document.body.appendChild(portal);
+
+  return portal;
+}
 
 function asEsm(component: Component): { default: Component } {
   return Object.assign(Object.create(null) as { default: Component }, {
@@ -56,6 +129,8 @@ function mountWindow(
   record: WindowRecord = makeRecord(),
   manifests: readonly AppManifest[] = [manifest({ id: "notes", name: "Notes" })],
 ) {
+  ensureAppOverlayPortal();
+
   const dispatch = vi.fn(async () => undefined);
   const kernel = {
     apps: {
@@ -115,9 +190,25 @@ async function flushOverlay(): Promise<void> {
   await nextTick();
 }
 
-describe("Window context menu", () => {
+function pressTab(target: Element, shiftKey = false): void {
+  target.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      bubbles: true,
+      cancelable: true,
+      key: "Tab",
+      shiftKey,
+    }),
+  );
+}
+
+describe("Window", () => {
   afterEach(() => {
+    document.querySelectorAll("[data-window-focus-outside]").forEach((node) => node.remove());
     vi.restoreAllMocks();
+  });
+
+  afterAll(() => {
+    document.querySelector("[data-window-test-overlay-portal]")?.remove();
   });
 
   it("renders the app icon before the window title", () => {
@@ -130,6 +221,136 @@ describe("Window context menu", () => {
     expect(icon.element.compareDocumentPosition(title.element)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+    expect(wrapper.get(".window").attributes("role")).toBe("dialog");
+    expect(wrapper.get(".window").attributes("aria-modal")).toBe("false");
+    expect(wrapper.get(".window").attributes("tabindex")).toBe("-1");
+  });
+
+  it("cycles Tab and Shift+Tab inside the focused window", async () => {
+    const { wrapper } = mountWindow(makeRecord(), [
+      manifest({
+        id: "notes",
+        name: "Notes",
+        component: () => Promise.resolve(asEsm(FocusableApp)),
+      }),
+    ]);
+
+    await flushPromises();
+
+    const windowElement = wrapper.get<HTMLElement>(".window").element;
+    const first = wrapper.get<HTMLButtonElement>(
+      '.window__action[aria-label="Minimize Notes"]',
+    ).element;
+    const last = wrapper.get<HTMLButtonElement>("[data-app-focus-last]").element;
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(windowElement));
+
+    last.focus();
+    pressTab(last);
+    expect(document.activeElement).toBe(first);
+
+    first.focus();
+    pressTab(first, true);
+    expect(document.activeElement).toBe(last);
+  });
+
+  it("yields focus to shell controls and reactivates when focus returns", async () => {
+    const outside = document.createElement("button");
+    outside.dataset.windowFocusOutside = "";
+    outside.textContent = "Dock item";
+    document.body.appendChild(outside);
+
+    const { wrapper } = mountWindow(makeRecord(), [
+      manifest({
+        id: "notes",
+        name: "Notes",
+        component: () => Promise.resolve(asEsm(FocusableApp)),
+      }),
+    ]);
+
+    await flushPromises();
+
+    const windowElement = wrapper.get<HTMLElement>(".window").element;
+    const first = wrapper.get<HTMLButtonElement>(
+      '.window__action[aria-label="Minimize Notes"]',
+    ).element;
+    const last = wrapper.get<HTMLButtonElement>("[data-app-focus-last]").element;
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(windowElement));
+
+    outside.focus();
+    expect(document.activeElement).toBe(outside);
+
+    await wrapper.setProps({ record: makeRecord({ z: 102 }) });
+    await vi.waitFor(() => expect(document.activeElement).toBe(windowElement));
+
+    outside.focus();
+    expect(document.activeElement).toBe(outside);
+
+    windowElement.focus();
+    expect(document.activeElement).toBe(windowElement);
+
+    last.focus();
+    pressTab(last);
+    expect(document.activeElement).toBe(first);
+  });
+
+  it("requests window-manager focus without stealing focus from the selected control", async () => {
+    const { wrapper } = mountWindow(makeRecord({ focused: false }), [
+      manifest({
+        id: "notes",
+        name: "Notes",
+        component: () => Promise.resolve(asEsm(FocusableApp)),
+      }),
+    ]);
+
+    await flushPromises();
+
+    const selected = wrapper.get<HTMLButtonElement>("[data-app-focus-first]").element;
+    selected.focus();
+
+    expect(wrapper.emitted("focus:window")).toEqual([["window-1"]]);
+    expect(document.activeElement).toBe(selected);
+  });
+
+  it("keeps an app modal in the window overlay and resumes the window trap after close", async () => {
+    const outside = document.createElement("button");
+    outside.dataset.windowFocusOutside = "";
+    outside.textContent = "Menu bar action";
+    document.body.appendChild(outside);
+
+    const { wrapper } = mountWindow(makeRecord(), [
+      manifest({
+        id: "notes",
+        name: "Notes",
+        component: () => Promise.resolve(asEsm(ModalApp)),
+      }),
+    ]);
+
+    await flushPromises();
+    await flushOverlay();
+
+    const windowElement = wrapper.get<HTMLElement>(".window").element;
+    const overlay = document.querySelector<HTMLElement>('[data-window-overlay="window-1"]')!;
+    const dialog = overlay.querySelector<HTMLElement>('[role="dialog"]')!;
+
+    expect(dialog.textContent).toContain("Window-owned dialog");
+    await vi.waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    outside.focus();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    overlay.querySelector<HTMLButtonElement>("[data-close-window-modal]")!.click();
+    await flushOverlay();
+    await vi.waitFor(() => expect(windowElement.contains(document.activeElement)).toBe(true));
+
+    const first = wrapper.get<HTMLButtonElement>(
+      '.window__action[aria-label="Minimize Notes"]',
+    ).element;
+    const last = wrapper.get<HTMLButtonElement>("[data-app-focus-last]").element;
+    last.focus();
+    pressTab(last);
+    expect(document.activeElement).toBe(first);
   });
 
   it("passes desktop app chrome through AppMount and emits title updates", async () => {
@@ -177,12 +398,14 @@ describe("Window context menu", () => {
     dispatchContextMenu(wrapper.get(".window__titlebar").element);
     await flushOverlay();
 
-    const items = Array.from(document.body.querySelectorAll('[role="menuitem"]')) as HTMLElement[];
+    const overlay = document.querySelector<HTMLElement>('[data-window-overlay="window-1"]')!;
+    const items = Array.from(overlay.querySelectorAll<HTMLElement>('[role="menuitem"]'));
     expect(items.map((node) => node.textContent?.trim())).toEqual([
       "Minimize",
       "Maximize",
       "Close",
     ]);
+    expect(overlay.contains(document.activeElement)).toBe(true);
 
     items[0]!.click();
     await flushOverlay();

@@ -1,5 +1,6 @@
 <script setup vapor lang="ts">
-import { computed, ref, useId } from "vue";
+import { computed, useId, useTemplateRef } from "vue";
+import { TeleportProvider } from "ropav/teleport-provider";
 import MaximizeIcon from "~icons/lucide/maximize-2";
 import RestoreIcon from "~icons/lucide/minimize-2";
 import MinimizeIcon from "~icons/lucide/minus";
@@ -7,15 +8,14 @@ import CloseIcon from "~icons/lucide/x";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "~/components/ui";
+import { APP_OVERLAY_PORTAL_TARGET } from "~/components/ui/portalTarget";
 import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import type { AppChromeContentSize, AppChromeController } from "~/types/app";
 import AppMount from "~/shells/shared/AppMount.vue";
-import { TITLEBAR_HEIGHT, type SnapEdge, type WindowRecord } from "./useWindowManager";
-import { clampWindowPosition } from "./windowGeometry";
-import { useWindowDrag } from "./useWindowDrag";
-import { useWindowResize, type ResizeDirection } from "./useWindowResize";
-import { SNAP_ENTER, SNAP_EXIT } from "./snapConfig";
+import { type SnapEdge, type WindowRecord } from "./useWindowManager";
+import { useWindowFocusScope } from "./useWindowFocusScope";
+import { useWindowFrameInteractions } from "./useWindowFrameInteractions";
 
 const props = defineProps<{
   record: WindowRecord;
@@ -38,9 +38,8 @@ const emit = defineEmits<{
 
 const titleId = useId();
 const kernel = useKernel();
-const dragging = ref(false);
-const resizing = ref(false);
-const snapIntent = ref<SnapEdge | null>(null);
+const windowRef = useTemplateRef<HTMLElement>("windowRef");
+const overlayRef = useTemplateRef<HTMLElement>("overlayRef");
 const manifest = computed(() =>
   kernel.apps.list().find((entry) => entry.id === props.record.manifestId),
 );
@@ -48,159 +47,23 @@ const showSettingsAction = computed(() =>
   manifest.value === undefined ? false : hasAppSettings(manifest.value),
 );
 
-function clampPosition(x: number, y: number): { x: number; y: number } {
-  return clampWindowPosition(x, y, {
-    stageWidth: props.stageBounds.width,
-    stageHeight: props.stageBounds.height,
-    windowWidth: props.record.width,
-    titlebarHeight: TITLEBAR_HEIGHT,
-  });
-}
-
-function clampResize(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): { x: number; y: number; width: number; height: number } {
-  const { width: stageW, height: stageH } = props.stageBounds;
-
-  if (stageW <= 0 || stageH <= 0) {
-    return { x, y, width, height };
-  }
-
-  const cx = Math.max(0, x);
-  const cy = Math.max(0, y);
-  const adjW = width + (x - cx);
-  const adjH = height + (y - cy);
-
-  const cw = Math.min(adjW, stageW - cx);
-  const ch = Math.min(adjH, stageH - cy);
-
-  return { x: cx, y: cy, width: cw, height: ch };
-}
-
-function setSnapIntent(next: SnapEdge | null): void {
-  if (snapIntent.value === next) {
-    return;
-  }
-
-  snapIntent.value = next;
-  emit("snap-intent:window", props.record.id, next);
-}
-
-function nextSnapIntent(stageX: number, stageY: number, width: number): SnapEdge | null {
-  if (stageY <= SNAP_ENTER) {
-    return "max";
-  }
-
-  if (stageX <= SNAP_ENTER) {
-    return "left";
-  }
-
-  if (stageX >= width - SNAP_ENTER) {
-    return "right";
-  }
-
-  const current = snapIntent.value;
-
-  if (current === "max" && stageY <= SNAP_EXIT) {
-    return "max";
-  }
-
-  if (current === "left" && stageX <= SNAP_EXIT) {
-    return "left";
-  }
-
-  if (current === "right" && stageX >= width - SNAP_EXIT) {
-    return "right";
-  }
-
-  return null;
-}
-
-function updateSnapIntent(clientX: number, clientY: number): void {
-  if (props.record.maximized) {
-    setSnapIntent(null);
-
-    return;
-  }
-
-  const { width } = props.stageBounds;
-
-  // Bail until the ResizeObserver populates stageBounds — without a known
-  if (width <= 0) {
-    setSnapIntent(null);
-
-    return;
-  }
-
-  const offsetX = props.stageOffset?.x ?? 0;
-  const offsetY = props.stageOffset?.y ?? 0;
-  const stageX = clientX - offsetX;
-  const stageY = clientY - offsetY;
-
-  setSnapIntent(nextSnapIntent(stageX, stageY, width));
-}
-
-const drag = useWindowDrag({
-  getPosition: () => ({ x: props.record.x, y: props.record.y }),
-  onMove: (x, y, pointerX, pointerY) => {
-    const clamped = clampPosition(x, y);
-    emit("move:window", props.record.id, clamped.x, clamped.y);
-    updateSnapIntent(pointerX, pointerY);
-  },
-  onStart: () => {
-    dragging.value = true;
-    setSnapIntent(null);
-    emit("focus:window", props.record.id);
-  },
-  onEnd: () => {
-    dragging.value = false;
-
-    const pending = snapIntent.value;
-
-    setSnapIntent(null);
-
-    if (pending !== null) {
-      emit("snap:window", props.record.id, pending);
-    }
-  },
+const { activate: activateWindowFocusScope } = useWindowFocusScope({
+  windowRef,
+  overlayRef,
+  getRecord: () => props.record,
+  onFocusRequest: (id) => emit("focus:window", id),
 });
 
-const RESIZE_DIRECTIONS: ResizeDirection[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
-
-function buildResizeHandlers(): Record<ResizeDirection, (event: PointerEvent) => void> {
-  const sharedOptions = {
-    getBounds: () => ({
-      x: props.record.x,
-      y: props.record.y,
-      width: props.record.width,
-      height: props.record.height,
-    }),
-    onResize: (x: number, y: number, width: number, height: number) => {
-      const clamped = clampResize(x, y, width, height);
-      emit("resize:window", props.record.id, clamped.x, clamped.y, clamped.width, clamped.height);
-    },
-    onStart: () => {
-      resizing.value = true;
-      emit("focus:window", props.record.id);
-    },
-    onEnd: () => {
-      resizing.value = false;
-    },
-  };
-
-  const handlers = {} as Record<ResizeDirection, (event: PointerEvent) => void>;
-
-  for (const direction of RESIZE_DIRECTIONS) {
-    handlers[direction] = useWindowResize({ ...sharedOptions, direction }).onPointerDown;
-  }
-
-  return handlers;
-}
-
-const resizeHandlers = buildResizeHandlers();
+const { dragging, resizing, drag, resizeDirections, resizeHandlers } = useWindowFrameInteractions({
+  getRecord: () => props.record,
+  getStageBounds: () => props.stageBounds,
+  getStageOffset: () => props.stageOffset,
+  onFocus: activateWindowFocusScope,
+  onMove: (id, x, y) => emit("move:window", id, x, y),
+  onResize: (id, x, y, width, height) => emit("resize:window", id, x, y, width, height),
+  onSnap: (id, edge) => emit("snap:window", id, edge),
+  onSnapIntent: (id, edge) => emit("snap-intent:window", id, edge),
+});
 
 const style = computed<Record<string, string>>(() => ({
   left: `${props.record.x.toString()}px`,
@@ -243,9 +106,7 @@ const appChrome: AppChromeController = {
 };
 
 function onPointerDownAnywhere(): void {
-  if (!props.record.focused) {
-    emit("focus:window", props.record.id);
-  }
+  activateWindowFocusScope();
 }
 
 function onMaximize(event: MouseEvent): void {
@@ -272,7 +133,11 @@ function dispatchWindowCommand(id: string): void {
 </script>
 
 <template>
+  <Teleport :to="APP_OVERLAY_PORTAL_TARGET">
+    <div ref="overlayRef" class="window__overlays" :data-window-overlay="record.id" />
+  </Teleport>
   <section
+    ref="windowRef"
     class="window"
     :class="{
       'window--focused': record.focused,
@@ -287,91 +152,94 @@ function dispatchWindowCommand(id: string): void {
     role="dialog"
     aria-modal="false"
     :aria-labelledby="titleId"
+    tabindex="-1"
     @pointerdown="onPointerDownAnywhere"
   >
-    <ContextMenu>
-      <template #trigger>
-        <header
-          class="window__titlebar"
-          :class="{ 'window__titlebar--locked': record.maximized }"
-          @pointerdown="record.maximized ? null : drag.onPointerDown($event)"
-          @dblclick="onMaximize"
-        >
-          <AppIcon
-            v-if="manifest"
-            :icon="manifest.icon"
-            class="window__title-icon"
-            aria-hidden="true"
-          />
-          <span :id="titleId" class="window__title">{{ record.title }}</span>
-          <button
-            type="button"
-            class="window__action"
-            :aria-label="`Minimize ${record.title}`"
-            @click="onMinimize"
-            @pointerdown.stop
+    <TeleportProvider :teleport-to="overlayRef">
+      <ContextMenu>
+        <template #trigger>
+          <header
+            class="window__titlebar"
+            :class="{ 'window__titlebar--locked': record.maximized }"
+            @pointerdown="record.maximized ? null : drag.onPointerDown($event)"
+            @dblclick="onMaximize"
           >
-            <MinimizeIcon class="window__action-icon" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            class="window__action"
-            :aria-label="maximizeLabel"
-            @click="onMaximize"
-            @pointerdown.stop
+            <AppIcon
+              v-if="manifest"
+              :icon="manifest.icon"
+              class="window__title-icon"
+              aria-hidden="true"
+            />
+            <span :id="titleId" class="window__title">{{ record.title }}</span>
+            <button
+              type="button"
+              class="window__action"
+              :aria-label="`Minimize ${record.title}`"
+              @click="onMinimize"
+              @pointerdown.stop
+            >
+              <MinimizeIcon class="window__action-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="window__action"
+              :aria-label="maximizeLabel"
+              @click="onMaximize"
+              @pointerdown.stop
+            >
+              <RestoreIcon v-if="record.maximized" class="window__action-icon" aria-hidden="true" />
+              <MaximizeIcon v-else class="window__action-icon" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              class="window__action window__action--close"
+              :aria-label="`Close ${record.title}`"
+              @click="onClose"
+              @pointerdown.stop
+            >
+              <CloseIcon class="window__action-icon" aria-hidden="true" />
+            </button>
+          </header>
+        </template>
+        <template #items>
+          <ContextMenuItem @select="dispatchWindowCommand('desktop:window.minimize')">
+            Minimize
+          </ContextMenuItem>
+          <ContextMenuItem @select="dispatchWindowCommand('desktop:window.toggleMaximize')">
+            {{ record.maximized ? "Restore" : "Maximize" }}
+          </ContextMenuItem>
+          <ContextMenuItem
+            v-if="showSettingsAction"
+            @select="dispatchWindowCommand('desktop:window.openSettings')"
           >
-            <RestoreIcon v-if="record.maximized" class="window__action-icon" aria-hidden="true" />
-            <MaximizeIcon v-else class="window__action-icon" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            class="window__action window__action--close"
-            :aria-label="`Close ${record.title}`"
-            @click="onClose"
-            @pointerdown.stop
-          >
-            <CloseIcon class="window__action-icon" aria-hidden="true" />
-          </button>
-        </header>
+            Settings
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem @select="dispatchWindowCommand('desktop:window.close')">
+            Close
+          </ContextMenuItem>
+        </template>
+      </ContextMenu>
+      <div class="window__body">
+        <AppMount
+          :key="`${record.handleId}:${record.argsRevision}`"
+          :manifest-id="record.manifestId"
+          :handle-id="record.handleId"
+          :focused="record.focused"
+          :args="record.args"
+          :chrome="appChrome"
+        />
+      </div>
+      <template v-if="!record.maximized">
+        <span
+          v-for="direction in resizeDirections"
+          :key="direction"
+          :class="['window__handle', `window__handle--${direction}`]"
+          :data-direction="direction"
+          @pointerdown="resizeHandlers[direction]($event)"
+        />
       </template>
-      <template #items>
-        <ContextMenuItem @select="dispatchWindowCommand('desktop:window.minimize')">
-          Minimize
-        </ContextMenuItem>
-        <ContextMenuItem @select="dispatchWindowCommand('desktop:window.toggleMaximize')">
-          {{ record.maximized ? "Restore" : "Maximize" }}
-        </ContextMenuItem>
-        <ContextMenuItem
-          v-if="showSettingsAction"
-          @select="dispatchWindowCommand('desktop:window.openSettings')"
-        >
-          Settings
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem @select="dispatchWindowCommand('desktop:window.close')">
-          Close
-        </ContextMenuItem>
-      </template>
-    </ContextMenu>
-    <div class="window__body">
-      <AppMount
-        :key="`${record.handleId}:${record.argsRevision}`"
-        :manifest-id="record.manifestId"
-        :handle-id="record.handleId"
-        :focused="record.focused"
-        :args="record.args"
-        :chrome="appChrome"
-      />
-    </div>
-    <template v-if="!record.maximized">
-      <span
-        v-for="direction in RESIZE_DIRECTIONS"
-        :key="direction"
-        :class="['window__handle', `window__handle--${direction}`]"
-        :data-direction="direction"
-        @pointerdown="resizeHandlers[direction]($event)"
-      />
-    </template>
+    </TeleportProvider>
   </section>
 </template>
 
@@ -393,6 +261,10 @@ function dispatchWindowCommand(id: string): void {
 
 .window--focused {
   box-shadow: var(--window-shadow-focused);
+}
+
+.window__overlays {
+  display: contents;
 }
 
 .window--dragging .window__titlebar {
