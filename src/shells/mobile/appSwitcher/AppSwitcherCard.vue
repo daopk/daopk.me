@@ -97,6 +97,7 @@ function onDismiss(): void {
   font: inherit;
   block-size: auto;
   inline-size: 100%;
+  justify-content: flex-start;
   min-inline-size: 0;
   padding: 0;
   text-align: start;
@@ -108,6 +109,7 @@ function onDismiss(): void {
 }
 
 :deep(.app-switcher-card__select-content) {
+  align-items: center;
   display: grid;
   gap: var(--space-md);
   grid-template-columns: auto minmax(0, 1fr);

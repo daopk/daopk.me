@@ -137,10 +137,13 @@ function onDismissAll(): void {
 <style lang="scss">
 .app-switcher {
   block-size: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   inline-size: 100%;
   inset: 0;
+  overflow: hidden;
+  padding: 0;
   position: absolute;
   z-index: var(--app-switcher-z);
 }
@@ -148,9 +151,13 @@ function onDismissAll(): void {
 .app-switcher__panel {
   background: var(--color-bg);
   block-size: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   inline-size: 100%;
+  max-block-size: none;
 }
 
 .app-switcher__modal-body {
@@ -169,6 +176,7 @@ function onDismissAll(): void {
   display: flex;
   flex: 0 0 auto;
   gap: var(--space-md);
+  padding-block-end: 0;
   padding-block-start: var(--mobile-shell-safe-area-top, 0px);
   padding-inline-end: calc(
     var(--app-switcher-padding-inline) + var(--mobile-shell-safe-area-right, 0px)
