@@ -8,12 +8,12 @@ allowBuilds:
   workerd: false
 catalog:
   "@vitejs/plugin-vue": ^6.0.8
-  ropav: ^0.1.5
+  ropav: ^0.1.6
   vite: ^8.1.5
   vue: 3.6.0-rc.1
   vue-tsc: ^3.3.7
 minimumReleaseAgeExclude:
-  - ropav@0.1.5
+  - ropav@0.1.5 || 0.1.6
   - "@vue/compiler-core@3.6.0-rc.1"
   - "@vue/compiler-dom@3.6.0-rc.1"
   - "@vue/compiler-sfc@3.6.0-rc.1"

@@ -23,9 +23,9 @@
     "test:coverage": "vitest run --coverage --pool=forks --maxWorkers=4"
   },
   "dependencies": {
-    "@shikijs/langs": "^4.3.0",
-    "@shikijs/rehype": "^4.3.0",
-    "@shikijs/themes": "^4.3.0",
+    "@shikijs/langs": "^4.3.1",
+    "@shikijs/rehype": "^4.3.1",
+    "@shikijs/themes": "^4.3.1",
     "@vue/devtools-api": "^8.1.5",
     "@vueuse/core": "^14.3.0",
     "comlink": "^4.4.2",
@@ -39,7 +39,7 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "ropav": "catalog:",
-    "shiki": "^4.3.0",
+    "shiki": "^4.3.1",
     "unified": "^11.0.5",
     "vue": "catalog:"
   },
@@ -64,7 +64,7 @@
     "@vue/tsconfig": "^0.9.1",
     "axe-core": "^4.12.1",
     "fake-indexeddb": "^6.2.5",
-    "happy-dom": "^20.10.6",
+    "happy-dom": "^20.11.0",
     "oxfmt": "^0.59.0",
     "oxlint": "^1.74.0",
     "sass-embedded": "^1.100.0",
@@ -76,6 +76,6 @@
     "vue-tsc": "catalog:",
     "workbox-build": "^7.4.1",
     "workbox-window": "^7.4.1",
-    "wrangler": "^4.106.0"
+    "wrangler": "^4.112.0"
   }
 }
