@@ -19,6 +19,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "./index";
+import { useMenuLifecycle } from "./useMenuLifecycle";
 
 const mounted: VaporMount[] = [];
 
@@ -90,6 +91,42 @@ function activeMenuItem(menu: HTMLElement): HTMLElement | null {
   return activeId ? document.getElementById(activeId) : null;
 }
 
+function controlAnimationFrames() {
+  const callbacks: FrameRequestCallback[] = [];
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  });
+
+  return {
+    pending: () => callbacks.length,
+    flushNext: () => {
+      callbacks.shift()?.(0);
+    },
+  };
+}
+
+function mountMenuLifecycleHarness() {
+  let lifecycle!: ReturnType<typeof useMenuLifecycle>;
+  const Host = defineVaporComponent(() => {
+    lifecycle = useMenuLifecycle({
+      isModal: () => false,
+      onOpenChange: () => {},
+    });
+    return document.createElement("div");
+  });
+  const wrapper = mount(Host);
+  const trigger = document.createElement("button");
+  const portalRoot = document.createElement("div");
+  const menu = document.createElement("div");
+  menu.setAttribute("role", "menu");
+  portalRoot.appendChild(menu);
+  lifecycle.setTrigger(trigger);
+  lifecycle.portalRoot.value = portalRoot;
+
+  return { lifecycle, menu, trigger, wrapper };
+}
+
 afterEach(() => {
   for (const wrapper of mounted.splice(0)) wrapper.unmount();
   document
@@ -115,6 +152,65 @@ it("keeps menu primitives compiled in Vapor mode", () => {
     DropdownMenuSub,
     DropdownMenuSubContent,
     DropdownMenuSubTrigger,
+  });
+});
+
+describe("useMenuLifecycle", () => {
+  it("does not focus menu content after closing before the delayed frame", async () => {
+    const frames = controlAnimationFrames();
+    const { lifecycle, menu } = mountMenuLifecycleHarness();
+    const focus = vi.spyOn(menu, "focus");
+
+    lifecycle.onOpenChange(true);
+    await nextTick();
+    expect(frames.pending()).toBe(1);
+
+    lifecycle.suppressFocusRestore();
+    lifecycle.onOpenChange(false);
+    frames.flushNext();
+    await settle();
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("does not focus menu content after unmounting before the delayed frame", async () => {
+    const frames = controlAnimationFrames();
+    const { lifecycle, menu, wrapper } = mountMenuLifecycleHarness();
+    const focus = vi.spyOn(menu, "focus");
+
+    lifecycle.onOpenChange(true);
+    await nextTick();
+    expect(frames.pending()).toBe(1);
+
+    wrapper.unmount();
+    frames.flushNext();
+    await settle();
+
+    expect(focus).not.toHaveBeenCalled();
+  });
+
+  it("does not restore trigger focus after closing and immediately reopening", async () => {
+    const frames = controlAnimationFrames();
+    const { lifecycle, menu, trigger } = mountMenuLifecycleHarness();
+    const focusMenu = vi.spyOn(menu, "focus");
+    const focusTrigger = vi.spyOn(trigger, "focus");
+
+    lifecycle.onOpenChange(true);
+    await nextTick();
+    lifecycle.onOpenChange(false);
+    lifecycle.onOpenChange(true);
+    await settle();
+
+    expect(frames.pending()).toBe(2);
+    frames.flushNext();
+    await settle();
+    expect(focusMenu).not.toHaveBeenCalled();
+
+    frames.flushNext();
+    await settle();
+
+    expect(focusMenu).toHaveBeenCalledOnce();
+    expect(focusTrigger).not.toHaveBeenCalled();
   });
 });
 
