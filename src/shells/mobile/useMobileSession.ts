@@ -2,19 +2,17 @@ import { computed, nextTick, ref, watch, type ComputedRef, type DeepReadonly } f
 
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell } from "~/core/apps/shellSupport";
-import { debugWarn } from "~/core/debug";
 import {
   appBrowserTitle,
   appFallbackBrowserPath,
   DEFAULT_BROWSER_TITLE,
   HOME_BROWSER_PATH,
 } from "~/core/routing/appBrowserPaths";
-import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
-import { documentPathFor } from "~/shells/shared/documentOpenRouting";
 import {
-  normalizeShellOpenRequestPath,
-  preferredManifestFrame,
+  handleShellOpenRequest,
+  type ShellOpenRequest,
+  type ShellOpenRequestAdapter,
 } from "~/shells/shared/shellOpenRequests";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import type { AppManifest } from "~/types/app";
@@ -215,113 +213,51 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
     );
   }
 
-  async function openEditor(path: string): Promise<void> {
-    const unsupported = unsupportedManifestFor("editor");
-    if (unsupported) {
-      recentsRequested.value = false;
-      clearLaunching("editor");
-      notifyUnsupported(unsupported);
-      return;
-    }
-
-    const normalizedPath = normalizeOpenRequestPath("editor.open.requested", path);
-    if (normalizedPath === null) {
-      return;
-    }
-
-    const matchingFrame = topmostFrameForManifest(
-      "editor",
-      (frame) => documentPathFor(frame) === normalizedPath,
-    );
-    if (matchingFrame !== null) {
-      navigation.focusFrame(matchingFrame.frameId);
-      return;
-    }
-
-    const emptyFrame = topmostFrameForManifest("editor", (frame) => frame.documentPath === null);
-    if (emptyFrame !== null) {
-      navigation.focusFrame(emptyFrame.frameId);
-      await nextTick();
-      kernel.events.emit("editor.window.open.requested", {
-        handleId: emptyFrame.handleId,
-        path: normalizedPath,
-      });
-      commitLaunched("editor");
-      return;
-    }
-
-    await spawnNew("editor", { path: normalizedPath });
-  }
-
-  async function openBlogPost(path: string, slug: string): Promise<void> {
-    const unsupported = unsupportedManifestFor("blog");
-    if (unsupported) {
-      recentsRequested.value = false;
-      clearLaunching("blog");
-      notifyUnsupported(unsupported);
-      return;
-    }
-
-    const normalizedPath = normalizeOpenRequestPath("blog.post.open.requested", path);
-    if (normalizedPath === null || !isBlogPostSlug(slug)) {
-      if (!isBlogPostSlug(slug)) {
-        debugWarn("[mobile-session]", "blog.post.open.requested invalid slug", slug);
+  const mobileOpenRequestAdapter: ShellOpenRequestAdapter<DeepReadonly<NavigationFrame>> = {
+    findPreferred(manifestId, predicate) {
+      const candidates = navigation.stack.filter(
+        (frame) => frame.manifestId === manifestId && predicate(frame),
+      );
+      if (candidates.length === 0) {
+        return null;
       }
-      return;
-    }
 
-    const matchingFrame = topmostFrameForManifest(
-      "blog",
-      (frame) => documentPathFor(frame) === normalizedPath,
-    );
-    if (matchingFrame !== null) {
-      navigation.focusFrame(matchingFrame.frameId);
-      return;
-    }
+      return (
+        candidates.find((frame) => frame.frameId === navigation.foreground.value) ??
+        candidates.at(-1)!
+      );
+    },
+    async apply(action) {
+      switch (action.type) {
+        case "focus":
+          navigation.focusFrame(action.target.frameId);
+          return;
+        case "reuse-editor":
+          navigation.focusFrame(action.target.frameId);
+          await nextTick();
+          kernel.events.emit("editor.window.open.requested", {
+            handleId: action.target.handleId,
+            path: action.path,
+          });
+          commitLaunched("editor");
+          return;
+        case "spawn":
+          await spawnNew(action.manifestId, action.args);
+          return;
+      }
+    },
+  };
 
-    await spawnNew("blog", { path: normalizedPath, slug });
-  }
-
-  async function openPdfViewer(path: string): Promise<void> {
-    const unsupported = unsupportedManifestFor("pdf-viewer");
+  async function open(request: ShellOpenRequest): Promise<void> {
+    const unsupported = unsupportedManifestFor(request.manifestId);
     if (unsupported) {
       recentsRequested.value = false;
-      clearLaunching("pdf-viewer");
+      clearLaunching(request.manifestId);
       notifyUnsupported(unsupported);
       return;
     }
 
-    const normalizedPath = normalizeOpenRequestPath("pdf-viewer.open.requested", path);
-    if (normalizedPath === null) {
-      return;
-    }
-
-    const matchingFrame = topmostFrameForManifest(
-      "pdf-viewer",
-      (frame) => documentPathFor(frame) === normalizedPath,
-    );
-    if (matchingFrame !== null) {
-      navigation.focusFrame(matchingFrame.frameId);
-      return;
-    }
-
-    await spawnNew("pdf-viewer", { path: normalizedPath });
-  }
-
-  function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-    return normalizeShellOpenRequestPath("[mobile-session]", eventName, path);
-  }
-
-  function topmostFrameForManifest(
-    manifestId: string,
-    predicate: (frame: DeepReadonly<NavigationFrame>) => boolean,
-  ): DeepReadonly<NavigationFrame> | null {
-    return preferredManifestFrame(
-      navigation.stack,
-      navigation.foreground.value,
-      manifestId,
-      predicate,
-    );
+    await handleShellOpenRequest(request, mobileOpenRequestAdapter);
   }
 
   function closeRecentsWhenEmpty(): void {
@@ -370,14 +306,8 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
       spawnNew: (manifestId, args) => {
         void spawnNew(manifestId, args);
       },
-      openEditor: (path) => {
-        void openEditor(path);
-      },
-      openBlogPost: (path, slug) => {
-        void openBlogPost(path, slug);
-      },
-      openPdfViewer: (path) => {
-        void openPdfViewer(path);
+      open: (request) => {
+        void open(request);
       },
       setDocumentPath: (handleId, manifestId, path) => {
         navigation.setDocumentPath(handleId, manifestId, path);

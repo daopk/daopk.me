@@ -2,6 +2,7 @@ import { onBeforeUnmount } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { normalizeAppBrowserPath } from "~/core/routing/appBrowserPaths";
+import type { ShellOpenRequest } from "~/shells/shared/shellOpenRequests";
 
 type LaunchPayload = KernelEventPayloads["app.launch.requested"];
 type SpawnPayload = KernelEventPayloads["app.spawn.new"];
@@ -15,9 +16,7 @@ type SpawnPayload = KernelEventPayloads["app.spawn.new"];
 export interface ShellAppEventBridge {
   launch(manifestId: string, args: LaunchPayload["args"], source: LaunchPayload["source"]): void;
   spawnNew(manifestId: string, args: SpawnPayload["args"]): void;
-  openEditor(path: string): void;
-  openBlogPost(path: string, slug: string): void;
-  openPdfViewer(path: string): void;
+  open(request: ShellOpenRequest): void;
   setDocumentPath(handleId: string, manifestId: string, path: string | null): void;
   setBrowserPath(handleId: string, manifestId: string, path: string | null): void;
   removeByHandleId(handleId: string): void;
@@ -40,13 +39,13 @@ export function useShellAppEventBridge(
       bridge.spawnNew(payload.manifestId, payload.args);
     }),
     kernel.events.on("editor.open.requested", (payload) => {
-      bridge.openEditor(payload.path);
+      bridge.open({ manifestId: "editor", path: payload.path });
     }),
     kernel.events.on("blog.post.open.requested", (payload) => {
-      bridge.openBlogPost(payload.path, payload.slug);
+      bridge.open({ manifestId: "blog", path: payload.path, slug: payload.slug });
     }),
     kernel.events.on("pdf-viewer.open.requested", (payload) => {
-      bridge.openPdfViewer(payload.path);
+      bridge.open({ manifestId: "pdf-viewer", path: payload.path });
     }),
     kernel.events.on("app.document.changed", (payload) => {
       bridge.setDocumentPath(payload.handleId, payload.manifestId, payload.path);

@@ -6,7 +6,6 @@ import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { debugWarn } from "~/core/debug";
 import { AppLaunchError } from "~/core/kernel/errors";
-import { isBlogPostSlug } from "~/core/routing/blogPaths";
 import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
 import {
   appBrowserTitle,
@@ -15,10 +14,9 @@ import {
   HOME_BROWSER_PATH,
 } from "~/core/routing/appBrowserPaths";
 import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
-import { documentPathFor } from "~/shells/shared/documentOpenRouting";
 import {
-  normalizeShellOpenRequestPath,
-  topmostManifestRecord,
+  handleShellOpenRequest,
+  type ShellOpenRequestAdapter,
 } from "~/shells/shared/shellOpenRequests";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
@@ -96,6 +94,52 @@ watch(
   },
 );
 
+type DesktopWindowRecord = (typeof windowManager.windows)[number];
+
+const desktopOpenRequestAdapter: ShellOpenRequestAdapter<DesktopWindowRecord> = {
+  findPreferred(manifestId, predicate) {
+    let topmost: DesktopWindowRecord | null = null;
+
+    for (const record of windowManager.windows) {
+      if (record.manifestId !== manifestId || !predicate(record)) {
+        continue;
+      }
+      if (topmost === null || record.z > topmost.z) {
+        topmost = record;
+      }
+    }
+
+    return topmost;
+  },
+  async apply(action) {
+    switch (action.type) {
+      case "focus": {
+        const wasMinimized = action.target.minimized;
+        windowManager.focus(action.target.id);
+        if (action.manifestId === "editor" && wasMinimized) {
+          await nextTick();
+          kernel.events.emit("editor.window.open.requested", {
+            handleId: action.target.handleId,
+            path: action.path,
+          });
+        }
+        return;
+      }
+      case "reuse-editor":
+        windowManager.focus(action.target.id);
+        await nextTick();
+        kernel.events.emit("editor.window.open.requested", {
+          handleId: action.target.handleId,
+          path: action.path,
+        });
+        return;
+      case "spawn":
+        await openNewWindow(action.manifestId, action.args);
+        return;
+    }
+  },
+};
+
 useShellAppEventBridge({
   launch: (manifestId, args, source) => {
     void onLaunchRequested(manifestId, args, source);
@@ -103,14 +147,8 @@ useShellAppEventBridge({
   spawnNew: (manifestId, args) => {
     void onSpawnNewRequested(manifestId, args);
   },
-  openEditor: (path) => {
-    void onEditorOpenRequested(path);
-  },
-  openBlogPost: (path, slug) => {
-    void onBlogPostOpenRequested(path, slug);
-  },
-  openPdfViewer: (path) => {
-    void onPdfViewerOpenRequested(path);
+  open: (request) => {
+    void handleShellOpenRequest(request, desktopOpenRequestAdapter);
   },
   setDocumentPath: (handleId, manifestId, path) => {
     windowManager.setDocumentPath(handleId, manifestId, path);
@@ -122,8 +160,6 @@ useShellAppEventBridge({
     windowManager.removeByHandleId(handleId);
   },
 });
-
-type DesktopWindowRecord = (typeof windowManager.windows)[number];
 
 const focusedBrowserPath = computed(() => {
   const focusedWindow = windowManager.windows.find((record) => record.focused && !record.minimized);
@@ -378,106 +414,6 @@ async function onLaunchRequested(
   if (shouldMaximizeLaunch(manifest.id, source)) {
     windowManager.snapTo(windowId, "max", maximizeStageSize());
   }
-}
-
-async function onEditorOpenRequested(path: string): Promise<void> {
-  const normalizedPath = normalizeEditorOpenPath(path);
-  if (normalizedPath === null) {
-    return;
-  }
-
-  const matchingRecord = topmostEditorWindow(
-    (record) => documentPathFor(record) === normalizedPath,
-  );
-  if (matchingRecord !== null) {
-    const wasMinimized = matchingRecord.minimized;
-    windowManager.focus(matchingRecord.id);
-    if (wasMinimized) {
-      await nextTick();
-      kernel.events.emit("editor.window.open.requested", {
-        handleId: matchingRecord.handleId,
-        path: normalizedPath,
-      });
-    }
-    return;
-  }
-
-  const emptyRecord = topmostEditorWindow((record) => record.documentPath === null);
-  if (emptyRecord !== null) {
-    windowManager.focus(emptyRecord.id);
-    await nextTick();
-    kernel.events.emit("editor.window.open.requested", {
-      handleId: emptyRecord.handleId,
-      path: normalizedPath,
-    });
-    return;
-  }
-
-  await openNewEditorWindow(normalizedPath);
-}
-
-async function onBlogPostOpenRequested(path: string, slug: string): Promise<void> {
-  const normalizedPath = normalizeOpenRequestPath("blog.post.open.requested", path);
-  if (normalizedPath === null || !isBlogPostSlug(slug)) {
-    if (!isBlogPostSlug(slug)) {
-      debugWarn("[window-host]", "blog.post.open.requested invalid slug", slug);
-    }
-    return;
-  }
-
-  const matchingRecord = topmostWindowForManifest(
-    "blog",
-    (record) => documentPathFor(record) === normalizedPath,
-  );
-  if (matchingRecord !== null) {
-    windowManager.focus(matchingRecord.id);
-    return;
-  }
-
-  await openNewWindow("blog", { path: normalizedPath, slug });
-}
-
-async function onPdfViewerOpenRequested(path: string): Promise<void> {
-  const normalizedPath = normalizeOpenRequestPath("pdf-viewer.open.requested", path);
-  if (normalizedPath === null) {
-    return;
-  }
-
-  const matchingRecord = topmostWindowForManifest(
-    "pdf-viewer",
-    (record) => documentPathFor(record) === normalizedPath,
-  );
-  if (matchingRecord !== null) {
-    windowManager.focus(matchingRecord.id);
-    return;
-  }
-
-  await openNewWindow("pdf-viewer", { path: normalizedPath });
-}
-
-function normalizeEditorOpenPath(path: string): string | null {
-  return normalizeOpenRequestPath("editor.open.requested", path);
-}
-
-function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  return normalizeShellOpenRequestPath("[window-host]", eventName, path);
-}
-
-function topmostEditorWindow(
-  predicate: (record: DesktopWindowRecord) => boolean,
-): DesktopWindowRecord | null {
-  return topmostWindowForManifest("editor", predicate);
-}
-
-function topmostWindowForManifest(
-  manifestId: string,
-  predicate: (record: DesktopWindowRecord) => boolean,
-): DesktopWindowRecord | null {
-  return topmostManifestRecord(windowManager.windows, manifestId, predicate);
-}
-
-async function openNewEditorWindow(path: string): Promise<void> {
-  await openNewWindow("editor", { path });
 }
 
 async function openNewWindow(
