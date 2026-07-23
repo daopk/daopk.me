@@ -1,577 +1,70 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed } from "vue";
 
 import { useToast } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
-import { hasAppSettings } from "~/core/apps/appSettings";
-import { debugWarn } from "~/core/debug";
-import { AppLaunchError } from "~/core/kernel/errors";
-import { emitAppResume, resolveAppResume } from "~/core/routing/appResume";
-import {
-  appBrowserTitle,
-  appFallbackBrowserPath,
-  DEFAULT_BROWSER_TITLE,
-  HOME_BROWSER_PATH,
-} from "~/core/routing/appBrowserPaths";
-import { youtubePlayerVideoIdFromArgs } from "~/core/routing/appUrlIntents";
-import {
-  handleShellOpenRequest,
-  type ShellOpenRequestAdapter,
-} from "~/shells/shared/shellOpenRequests";
-import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
-import type { AppChromeContentSize, AppHandle, AppManifest } from "~/types/app";
-import type { CommandContext } from "~/types/command";
 
 import SnapPreview from "./SnapPreview.vue";
 import Window from "./Window.vue";
-import { TITLEBAR_HEIGHT, useWindowManager, type SnapEdge } from "./useWindowManager";
 import { useDesktopWindowStage } from "./useDesktopWindowStage";
-
-type AppLaunchSource = KernelEventPayloads["app.launch.requested"]["source"];
+import { useDesktopWindowSession } from "./useDesktopWindowSession";
 
 const kernel = useKernel();
 const toast = useToast();
-const windowManager = useWindowManager({
-  killProcess: (handleId: string): void => {
-    kernel.processes.kill(handleId);
+const stage = useDesktopWindowStage();
+const session = useDesktopWindowSession({
+  kernel,
+  stage,
+  notifyLaunchFailed: (manifest) => {
+    toast.error({
+      title: "Couldn't open app",
+      description: `${manifest.name} failed to start. Please try again.`,
+    });
   },
-});
-
-function notifyLaunchFailed(manifest: AppManifest): void {
-  toast.error({
-    title: "Couldn't open app",
-    description: `${manifest.name} failed to start. Please try again.`,
-  });
-}
-
-const {
-  centeredInitialPosition,
-  maximizeStageSize,
-  measuredStageSize,
-  stageBounds,
-  stageForSnap,
-  stageOffset,
-} = useDesktopWindowStage();
-
-function defaultWindowSize(manifest: AppManifest): { width: number; height: number } | undefined {
-  return manifest.defaultWindow?.width !== undefined && manifest.defaultWindow.height !== undefined
-    ? { width: manifest.defaultWindow.width, height: manifest.defaultWindow.height }
-    : undefined;
-}
-
-function defaultWindowMinSize(
-  manifest: AppManifest,
-): { width?: number; height?: number } | undefined {
-  const { minWidth, minHeight } = manifest.defaultWindow ?? {};
-  return minWidth === undefined && minHeight === undefined
-    ? undefined
-    : { width: minWidth, height: minHeight };
-}
-
-const activeSnap = ref<{ id: string; edge: SnapEdge } | null>(null);
-
-function onSnapIntent(id: string, edge: SnapEdge | null): void {
-  if (edge === null) {
-    if (activeSnap.value?.id === id) {
-      activeSnap.value = null;
-    }
-
-    return;
-  }
-
-  activeSnap.value = { id, edge };
-}
-
-const snapPreviewStage = computed(() =>
-  activeSnap.value?.edge === "max" ? maximizeStageSize() : stageBounds,
-);
-
-watch(
-  () => [stageBounds.width, stageBounds.height] as const,
-  () => {
-    windowManager.rebindToStage(maximizeStageSize());
-  },
-);
-
-type DesktopWindowRecord = (typeof windowManager.windows)[number];
-
-const desktopOpenRequestAdapter: ShellOpenRequestAdapter<DesktopWindowRecord> = {
-  findPreferred(manifestId, predicate) {
-    let topmost: DesktopWindowRecord | null = null;
-
-    for (const record of windowManager.windows) {
-      if (record.manifestId !== manifestId || !predicate(record)) {
-        continue;
-      }
-      if (topmost === null || record.z > topmost.z) {
-        topmost = record;
-      }
-    }
-
-    return topmost;
-  },
-  async apply(action) {
-    switch (action.type) {
-      case "focus": {
-        const wasMinimized = action.target.minimized;
-        windowManager.focus(action.target.id);
-        if (action.manifestId === "editor" && wasMinimized) {
-          await nextTick();
-          kernel.events.emit("editor.window.open.requested", {
-            handleId: action.target.handleId,
-            path: action.path,
-          });
-        }
-        return;
-      }
-      case "reuse-editor":
-        windowManager.focus(action.target.id);
-        await nextTick();
-        kernel.events.emit("editor.window.open.requested", {
-          handleId: action.target.handleId,
-          path: action.path,
-        });
-        return;
-      case "spawn":
-        await openNewWindow(action.manifestId, action.args);
-        return;
-    }
-  },
-};
-
-useShellAppEventBridge({
-  launch: (manifestId, args, source) => {
-    void onLaunchRequested(manifestId, args, source);
-  },
-  spawnNew: (manifestId, args) => {
-    void onSpawnNewRequested(manifestId, args);
-  },
-  open: (request) => {
-    void handleShellOpenRequest(request, desktopOpenRequestAdapter);
-  },
-  setDocumentPath: (handleId, manifestId, path) => {
-    windowManager.setDocumentPath(handleId, manifestId, path);
-  },
-  setBrowserPath: (handleId, manifestId, path) => {
-    windowManager.setBrowserPath(handleId, manifestId, path);
-  },
-  removeByHandleId: (handleId) => {
-    windowManager.removeByHandleId(handleId);
-  },
-});
-
-const focusedBrowserPath = computed(() => {
-  const focusedWindow = windowManager.windows.find((record) => record.focused && !record.minimized);
-  if (focusedWindow === undefined) {
-    return HOME_BROWSER_PATH;
-  }
-
-  return focusedWindow.browserPath ?? appFallbackBrowserPath(focusedWindow.manifestId);
-});
-
-function focusedWindowAppName(record: DesktopWindowRecord): string {
-  const manifestName = kernel.apps.list().find((entry) => entry.id === record.manifestId)?.name;
-  const recordTitle = record.title.trim();
-  if (recordTitle.length > 0) {
-    return recordTitle;
-  }
-
-  const fallbackName = manifestName?.trim() ?? "";
-  return fallbackName.length > 0 ? fallbackName : record.manifestId;
-}
-
-const focusedBrowserTitle = computed(() => {
-  const focusedWindow = windowManager.windows.find((record) => record.focused && !record.minimized);
-  if (focusedWindow === undefined) {
-    return DEFAULT_BROWSER_TITLE;
-  }
-
-  return appBrowserTitle(focusedWindowAppName(focusedWindow));
-});
-
-useShellBrowserChromeSync(focusedBrowserPath, focusedBrowserTitle);
-
-function shouldMaximizeLaunch(manifestId: string, source: AppLaunchSource): boolean {
-  return manifestId === "blog" && source === "deeplink";
-}
-
-function focusedWindowForManifest(manifestId: string): DesktopWindowRecord | undefined {
-  return windowManager.windows.find((record) => record.manifestId === manifestId && record.focused);
-}
-
-function maximizeFocusedLaunchWindow(manifestId: string, source: AppLaunchSource): void {
-  if (!shouldMaximizeLaunch(manifestId, source)) {
-    return;
-  }
-
-  const record = focusedWindowForManifest(manifestId);
-  if (record === undefined) {
-    return;
-  }
-
-  windowManager.snapTo(record.id, "max", maximizeStageSize());
-}
-
-function windowIdFromPayload(ctx: CommandContext, commandId: string): string | null {
-  const value = ctx.payload.windowId;
-  if (typeof value !== "string" || value.length === 0) {
-    debugWarn("[window-host]", commandId, "missing string payload", "windowId");
-    return null;
-  }
-
-  if (!windowManager.windows.some((record) => record.id === value)) {
-    debugWarn("[window-host]", commandId, "unknown window", value);
-    return null;
-  }
-
-  return value;
-}
-
-const disposeWindowCommands = [
-  kernel.commands.register({
-    id: "desktop:window.minimize",
-    title: "Minimize Window",
-    scope: "shell",
-    run(ctx) {
-      const id = windowIdFromPayload(ctx, "desktop:window.minimize");
-      if (id === null) return;
-      windowManager.minimize(id);
-    },
-  }),
-  kernel.commands.register({
-    id: "desktop:window.toggleMaximize",
-    title: "Maximize or Restore Window",
-    scope: "shell",
-    run(ctx) {
-      const id = windowIdFromPayload(ctx, "desktop:window.toggleMaximize");
-      if (id === null) return;
-      windowManager.toggleMaximize(id, maximizeStageSize());
-    },
-  }),
-  kernel.commands.register({
-    id: "desktop:window.close",
-    title: "Close Window",
-    scope: "shell",
-    run(ctx) {
-      const id = windowIdFromPayload(ctx, "desktop:window.close");
-      if (id === null) return;
-      windowManager.close(id);
-    },
-  }),
-  kernel.commands.register({
-    id: "desktop:window.openSettings",
-    title: "Open App Settings",
-    scope: "shell",
-    run(ctx) {
-      const id = windowIdFromPayload(ctx, "desktop:window.openSettings");
-      if (id === null) return;
-
-      const record = windowManager.windows.find((entry) => entry.id === id);
-      if (record === undefined) {
-        debugWarn("[window-host]", "desktop:window.openSettings", "unknown window", id);
-        return;
-      }
-
-      const manifest = kernel.apps.list().find((entry) => entry.id === record.manifestId);
-      if (manifest === undefined || !hasAppSettings(manifest)) {
-        debugWarn(
-          "[window-host]",
-          "desktop:window.openSettings",
-          "manifest has no settings",
-          record.manifestId,
-        );
-        return;
-      }
-
-      windowManager.focus(id);
-      kernel.events.emit("app.settings.requested", {
-        manifestId: record.manifestId,
-        handleId: record.handleId,
-      });
-    },
-  }),
-];
-
-function focusedHandleIdForManifest(manifestId: string): string | undefined {
-  return focusedWindowForManifest(manifestId)?.handleId;
-}
-
-function manifestHasSettings(manifestId: string): boolean {
-  const manifest = kernel.apps.list().find((entry) => entry.id === manifestId);
-  return manifest !== undefined && hasAppSettings(manifest);
-}
-
-function refreshArgsSnapshotForResume(
-  manifestId: string,
-  args: Readonly<Record<string, unknown>> | undefined,
-): void {
-  if (manifestId !== "youtube-player" || args === undefined) {
-    return;
-  }
-
-  const focusedWindow = windowManager.windows.find(
-    (record) => record.manifestId === manifestId && record.focused,
-  );
-  if (focusedWindow === undefined) {
-    return;
-  }
-
-  const currentVideoId = youtubePlayerVideoIdFromArgs(focusedWindow.args);
-  const nextVideoId = youtubePlayerVideoIdFromArgs(args);
-  if (currentVideoId !== null && currentVideoId === nextVideoId) {
-    return;
-  }
-
-  windowManager.setArgs(focusedWindow.id, args);
-}
-
-async function replayAppResume(
-  manifestId: string,
-  args: Readonly<Record<string, unknown>> | undefined,
-  source: AppLaunchSource,
-): Promise<boolean> {
-  const emission = resolveAppResume({
-    manifestId,
-    ...(args === undefined ? {} : { args }),
-    source,
-    resolveHandleId: focusedHandleIdForManifest,
-    manifestHasSettings,
-  });
-  if (emission === null) {
-    return false;
-  }
-
-  refreshArgsSnapshotForResume(manifestId, args);
-  await nextTick();
-  emitAppResume(kernel.events, emission);
-  return true;
-}
-
-async function onLaunchRequested(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-  source: AppLaunchSource = "api",
-): Promise<void> {
-  const manifest = kernel.apps.list().find((m) => m.id === manifestId);
-
-  if (!manifest) {
-    debugWarn("[window-host] launch requested for unknown manifest", manifestId);
+  notifyUnavailable: (manifestId) => {
     toast.error({ title: "App unavailable", description: `"${manifestId}" isn't installed.` });
-
-    return;
-  }
-
-  // is intentionally NOT rewritten — that would violate AppContext.args
-  if (windowManager.restoreAllForManifest(manifest.id)) {
-    maximizeFocusedLaunchWindow(manifest.id, source);
-    const replayed = await replayAppResume(manifest.id, args, source);
-    if (!replayed && args !== undefined) {
-      debugWarn("[window-host]", "restore — dropping launch args", manifest.id, args);
-    }
-    return;
-  }
-
-  if (windowManager.focusTopOfManifest(manifest.id)) {
-    maximizeFocusedLaunchWindow(manifest.id, source);
-    const replayed = await replayAppResume(manifest.id, args, source);
-    if (!replayed && args !== undefined) {
-      debugWarn("[window-host]", "focus — dropping launch args", manifest.id, args);
-    }
-    return;
-  }
-
-  let handle: AppHandle;
-
-  try {
-    handle = await kernel.apps.launch(manifest.id, args);
-  } catch (error) {
-    if (error instanceof AppLaunchError) {
-      debugWarn("[window-host] launch failed", error.code, error.manifestId);
-      notifyLaunchFailed(manifest);
-
-      return;
-    }
-
-    throw error;
-  }
-
-  const defaultSize = defaultWindowSize(manifest);
-  const minSize = defaultWindowMinSize(manifest);
-  const initialPosition = centeredInitialPosition(source, defaultSize);
-
-  const windowId = windowManager.open({
-    manifestId: manifest.id,
-    handleId: handle.id,
-    title: manifest.name,
-    singleton: manifest.singleton === true,
-    size: defaultSize,
-    minSize,
-    ...(initialPosition === undefined ? {} : { initial: initialPosition }),
-    ...(args === undefined ? {} : { args }),
-  });
-
-  if (shouldMaximizeLaunch(manifest.id, source)) {
-    windowManager.snapTo(windowId, "max", maximizeStageSize());
-  }
-}
-
-async function openNewWindow(
-  manifestId: string,
-  args: Readonly<Record<string, unknown>>,
-): Promise<void> {
-  const manifest = kernel.apps.list().find((m) => m.id === manifestId);
-
-  if (!manifest) {
-    debugWarn("[window-host] document open requested but manifest is missing", manifestId);
-    return;
-  }
-
-  let handle: AppHandle;
-  try {
-    handle = await kernel.apps.launch(manifest.id, args);
-  } catch (error) {
-    if (error instanceof AppLaunchError) {
-      debugWarn("[window-host] document open launch failed", error.code, error.manifestId);
-      return;
-    }
-    throw error;
-  }
-
-  const defaultSize = defaultWindowSize(manifest);
-  const minSize = defaultWindowMinSize(manifest);
-
-  windowManager.open({
-    manifestId: manifest.id,
-    handleId: handle.id,
-    title: manifest.name,
-    singleton: manifest.singleton === true,
-    size: defaultSize,
-    minSize,
-    args,
-  });
-}
-
-function onResize(id: string, x: number, y: number, width: number, height: number): void {
-  windowManager.setBounds(id, x, y, width, height);
-}
-
-function normalizedContentDimension(value: number): number | null {
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
-}
-
-function onContentSize(id: string, size: AppChromeContentSize | null): void {
-  if (size === null) {
-    return;
-  }
-
-  const record = windowManager.windows.find((entry) => entry.id === id);
-  if (record === undefined || record.maximized || record.snap !== undefined) {
-    return;
-  }
-
-  const contentWidth = normalizedContentDimension(size.width);
-  const contentHeight = normalizedContentDimension(size.height);
-  if (contentWidth === null || contentHeight === null) {
-    return;
-  }
-
-  const stage = measuredStageSize();
-  const requestedWidth = Math.max(contentWidth, record.minWidth);
-  const requestedHeight = Math.max(contentHeight + TITLEBAR_HEIGHT, record.minHeight);
-  const width = stage.width > 0 ? Math.min(requestedWidth, stage.width) : requestedWidth;
-  const height = stage.height > 0 ? Math.min(requestedHeight, stage.height) : requestedHeight;
-  let x = record.x;
-  let y = record.y;
-
-  if (stage.width > 0) {
-    x = Math.min(Math.max(x, 0), Math.max(stage.width - width, 0));
-  }
-  if (stage.height > 0) {
-    y = Math.min(Math.max(y, 0), Math.max(stage.height - height, 0));
-  }
-
-  windowManager.setBounds(id, x, y, width, height);
-}
-
-function onMaximize(id: string): void {
-  windowManager.toggleMaximize(id, maximizeStageSize());
-}
-
-function onSnap(id: string, edge: SnapEdge): void {
-  windowManager.snapTo(id, edge, stageForSnap(edge));
-}
-
-function onMinimize(id: string): void {
-  windowManager.minimize(id);
-}
-
-async function onSpawnNewRequested(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-): Promise<void> {
-  const manifest = kernel.apps.list().find((m) => m.id === manifestId);
-
-  if (!manifest) {
-    debugWarn("[window-host] spawn.new requested for unknown manifest", manifestId);
-    toast.error({ title: "App unavailable", description: `"${manifestId}" isn't installed.` });
-    return;
-  }
-
-  let handle: AppHandle;
-  try {
-    handle = await kernel.apps.launch(manifest.id, args);
-  } catch (error) {
-    if (error instanceof AppLaunchError) {
-      debugWarn("[window-host] spawn.new failed", error.code, error.manifestId);
-      notifyLaunchFailed(manifest);
-      return;
-    }
-    throw error;
-  }
-
-  const defaultSize = defaultWindowSize(manifest);
-  const minSize = defaultWindowMinSize(manifest);
-
-  windowManager.open({
-    manifestId: manifest.id,
-    handleId: handle.id,
-    title: manifest.name,
-    singleton: manifest.singleton === true,
-    size: defaultSize,
-    minSize,
-    ...(args === undefined ? {} : { args }),
-  });
-}
-
-onBeforeUnmount(() => {
-  for (const dispose of disposeWindowCommands) {
-    dispose();
-  }
+  },
 });
+
+const browserPath = computed(() => session.state.value.browserPath);
+const browserTitle = computed(() => session.state.value.browserTitle);
+
+useShellBrowserChromeSync(browserPath, browserTitle);
 </script>
 
 <template>
   <div ref="hostRef" class="window-host">
     <Transition name="snap-preview">
-      <SnapPreview v-if="activeSnap" :edge="activeSnap.edge" :stage="snapPreviewStage" />
+      <SnapPreview
+        v-if="session.state.value.snapPreview"
+        :edge="session.state.value.snapPreview.edge"
+        :stage="session.state.value.snapPreview.stage"
+      />
     </Transition>
-    <template v-for="record in windowManager.windows" :key="record.id">
+    <template v-for="record in session.state.value.windows" :key="record.id">
       <Window
         v-if="!record.minimized"
         :record="record"
-        :stage-bounds="stageBounds"
-        :stage-offset="stageOffset"
-        @focus:window="windowManager.focus"
-        @close:window="windowManager.close"
-        @move:window="windowManager.move"
-        @resize:window="onResize"
-        @maximize:window="onMaximize"
-        @minimize:window="onMinimize"
-        @snap:window="onSnap"
-        @snap-intent:window="onSnapIntent"
-        @title:window="windowManager.setTitle"
-        @content-size:window="onContentSize"
+        :stage-bounds="stage.stageBounds"
+        :stage-offset="stage.stageOffset.value"
+        @focus:window="(windowId) => session.send({ type: 'focus-window', windowId })"
+        @close:window="(windowId) => session.send({ type: 'close-window', windowId })"
+        @move:window="(windowId, x, y) => session.send({ type: 'move-window', windowId, x, y })"
+        @resize:window="
+          (windowId, x, y, width, height) =>
+            session.send({ type: 'resize-window', windowId, x, y, width, height })
+        "
+        @maximize:window="(windowId) => session.send({ type: 'toggle-maximize', windowId })"
+        @minimize:window="(windowId) => session.send({ type: 'minimize-window', windowId })"
+        @snap:window="(windowId, edge) => session.send({ type: 'snap-window', windowId, edge })"
+        @snap-intent:window="
+          (windowId, edge) => session.send({ type: 'preview-snap', windowId, edge })
+        "
+        @title:window="(windowId, title) => session.send({ type: 'set-title', windowId, title })"
+        @content-size:window="
+          (windowId, size) => session.send({ type: 'report-content-size', windowId, size })
+        "
       />
     </template>
   </div>

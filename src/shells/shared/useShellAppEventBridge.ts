@@ -1,4 +1,4 @@
-import { onBeforeUnmount } from "vue";
+import { onScopeDispose } from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { normalizeAppBrowserPath } from "~/core/routing/appBrowserPaths";
@@ -8,10 +8,10 @@ type LaunchPayload = KernelEventPayloads["app.launch.requested"];
 type SpawnPayload = KernelEventPayloads["app.spawn.new"];
 
 /**
- * Shell-agnostic adapter the bridge drives. Desktop maps these onto its
- * `useWindowManager` surface and mobile onto its session interface; the kernel
- * wiring (which events, in what order, with what cleanup) lives in one place so
- * the two shells can never drift apart.
+ * Shell-agnostic adapter the bridge drives. Desktop and mobile map these onto
+ * their session implementations; the kernel wiring (which events, in what
+ * order, with what cleanup) lives in one place so the two shells can never
+ * drift apart.
  */
 export interface ShellAppEventBridge {
   launch(manifestId: string, args: LaunchPayload["args"], source: LaunchPayload["source"]): void;
@@ -62,7 +62,7 @@ export function useShellAppEventBridge(
     }),
   ];
 
-  onBeforeUnmount(() => {
+  onScopeDispose(() => {
     for (const dispose of disposers) {
       dispose();
     }
