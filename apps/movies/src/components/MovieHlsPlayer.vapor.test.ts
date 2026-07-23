@@ -984,6 +984,46 @@ content-c.ts
     expect(video.muted).toBe(false);
   });
 
+  it("handles playback, volume, mute, and fallback fullscreen keyboard shortcuts", async () => {
+    Object.defineProperty(HTMLElement.prototype, "requestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(HTMLElement.prototype, "webkitRequestFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(HTMLVideoElement.prototype, "webkitEnterFullscreen", {
+      configurable: true,
+      value: undefined,
+    });
+
+    const wrapper = mountPlayer();
+    await settle();
+    const stage = wrapper.get(".movies-hls-player__stage");
+    const video = wrapper.get("video").element as HTMLVideoElement;
+
+    await stage.trigger("keydown", { key: "k" });
+    await settle();
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+
+    await stage.trigger("keydown", { key: "ArrowDown" });
+    await settle();
+    expect(video.volume).toBe(0.9);
+
+    await stage.trigger("keydown", { key: "m" });
+    await settle();
+    expect(video.muted).toBe(true);
+
+    await stage.trigger("keydown", { key: "f" });
+    await settle();
+    expect(stage.classes()).toContain("movies-hls-player__stage--fullscreen");
+
+    await stage.trigger("keydown", { key: "Escape" });
+    await settle();
+    expect(stage.classes()).not.toContain("movies-hls-player__stage--fullscreen");
+  });
+
   it("toggles picture-in-picture from the control row when supported", async () => {
     let pictureInPictureElement: Element | null = null;
     let playerVideo: HTMLVideoElement | null = null;

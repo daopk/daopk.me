@@ -1,24 +1,28 @@
-import { computed, ref, toRef, useTemplateRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, useTemplateRef, watch } from "vue";
 
 import type { MoviesTranslate } from "../i18n/useMoviesI18n";
 import type { MoviePlayInfo } from "../moviesApi";
-import { useMovieHlsSource, type MoviePlaybackErrorKey } from "./useMovieHlsSource";
+import { moviePlayerAdMarkerTrackBackground } from "../utils/moviePlayerAdMarkers";
+import { formatMoviePlayerTime } from "../utils/moviePlayerTime";
+import { clampNumber } from "../utils/number";
+import {
+  movieQualityLabel,
+  useMovieHlsSource,
+  type MoviePlaybackErrorKey,
+} from "./useMovieHlsSource";
 import { useMoviePictureInPicture } from "./useMoviePictureInPicture";
 import { useMoviePlaybackProgress } from "./useMoviePlaybackProgress";
 import {
   MOVIE_PLAYBACK_SPEED_OPTIONS as PLAYBACK_SPEED_OPTIONS,
   moviePlaybackSpeedLabel as speedLabel,
+  normalizedMoviePlaybackSpeed as normalizedPlaybackSpeed,
   useMoviePlaybackState,
 } from "./useMoviePlaybackState";
 import { useMoviePlayerControls } from "./useMoviePlayerControls";
 import { useMoviePlayerFullscreen } from "./useMoviePlayerFullscreen";
-import { useMoviePlayerKeyboardShortcuts } from "./useMoviePlayerKeyboardShortcuts";
-import { useMoviePlayerLifecycle } from "./useMoviePlayerLifecycle";
 import { useMoviePlayerMediaEvents } from "./useMoviePlayerMediaEvents";
 import { useMoviePlayerMediaState } from "./useMoviePlayerMediaState";
 import { useMoviePlayerSeek } from "./useMoviePlayerSeek";
-import { useMoviePlayerSurface } from "./useMoviePlayerSurface";
-import { useMoviePlayerViewState } from "./useMoviePlayerViewState";
 
 export interface MovieHlsPlayerProps {
   autoplay?: boolean;
@@ -50,6 +54,8 @@ interface UseMovieHlsPlayerControllerOptions {
 
 const SEEK_PREVIEW_THUMB_SIZE_PX = 16;
 const KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS = 1200;
+const SURFACE_CLICK_DELAY_MS = 220;
+const VOLUME_STEP = 0.1;
 
 export function useMovieHlsPlayerController({
   emitPlaybackSpeed,
@@ -234,86 +240,323 @@ export function useMovieHlsPlayerController({
     showControls,
     videoElement,
   });
-  const {
-    controlsStyle,
-    displayTime,
-    formatTime,
-    fullscreenLabel,
-    hasPlaybackAdMarkers,
-    hasQualityMenu,
-    hasSettingsMenu,
-    muteLabel,
-    nextEpisodeButtonLabel,
-    pictureInPictureLabel,
-    posterVisible,
-    seekMax,
-    seekPointerPreviewText,
-    seekValueText,
-    showCenterPlay,
-    showNextEpisodeButton,
-    showSpinner,
-    sourceStatusText,
-  } = useMoviePlayerViewState({
-    bufferedEnd,
-    currentLevel,
-    currentTime,
-    duration,
-    fullscreen,
-    hasDuration,
-    hlsLevels,
-    mutedOrSilent,
-    pictureInPicture,
-    playbackAdMarkers,
-    playbackError,
-    playbackSpeed,
-    playing,
-    props,
-    qualityFallbackLabel,
-    qualityOptions,
-    seeking,
-    seekPointerPreview,
-    seekPosition,
-    selectedQualityLevel,
-    seekPreviewThumbSizePx: SEEK_PREVIEW_THUMB_SIZE_PX,
-    t,
-    waiting,
+  const hasQualityMenu = computed(() => qualityOptions.value.length > 0);
+  const hasSettingsMenu = computed(() => true);
+  const selectedQualityLabel = computed(() => {
+    if (!hasQualityMenu.value) {
+      return "";
+    }
+
+    if (selectedQualityLevel.value === -1) {
+      return currentLevel.value >= 0
+        ? t("movies.player.autoQuality", {
+            quality: movieQualityLabel(
+              hlsLevels.value[currentLevel.value],
+              currentLevel.value,
+              qualityFallbackLabel,
+            ),
+          })
+        : t("movies.player.auto");
+    }
+
+    return (
+      qualityOptions.value.find((option) => option.value === selectedQualityLevel.value)?.label ??
+      t("movies.player.auto")
+    );
   });
-  const {
-    clearSurfaceClickTimer,
-    onCenterPlayClick,
-    onCenterPlayDoubleClick,
-    onControlsFocusOut,
-    onPlayerSurfaceClick,
-    onPlayerSurfaceDoubleClick,
-    playerControlsContain,
-  } = useMoviePlayerSurface({
-    backControlsRoot,
-    controlsFocused,
-    controlsRoot,
-    scheduleAutoHideControls,
-    showControls,
-    toggleFullscreen,
-    togglePlayback,
-    topbarControlsRoot,
+  const selectedPlaybackSpeedStatus = computed(() =>
+    playbackSpeed.value === 1 ? "" : speedLabel(playbackSpeed.value),
+  );
+  const sourceStatusText = computed(() => {
+    const parts = [selectedQualityLabel.value, selectedPlaybackSpeedStatus.value].filter(
+      (part) => part.length > 0,
+    );
+    return parts.join(" - ");
   });
-  const { handleAppKeydown, onSeekKeydown, onStageKeydown, onStageKeydownCapture } =
-    useMoviePlayerKeyboardShortcuts({
-      cancelSeekPreview,
-      controlsHidden,
-      exitFallbackFullscreen,
-      fallbackFullscreen,
-      keyboardSeekDeltaSeconds,
-      onSeekKeydownBase,
-      playerControlsContain,
-      playing,
-      seekBy,
-      setVolume,
-      suppressControlsRevealForKeyboardSeek,
-      toggleFullscreen,
-      toggleMute,
-      togglePlayback,
-      volume,
+  const loadedFraction = computed(() =>
+    hasDuration.value ? clampNumber(bufferedEnd.value / duration.value, 0, 1) : 0,
+  );
+  const seekMax = computed(() => Math.max(1, Math.round(duration.value)));
+  const displayTime = computed(() => (seeking.value ? seekPosition.value : currentTime.value));
+  const seekValueText = computed(() =>
+    hasDuration.value
+      ? t("movies.player.seekValue", {
+          duration: formatMoviePlayerTime(duration.value),
+          time: formatMoviePlayerTime(seekPosition.value),
+        })
+      : formatMoviePlayerTime(seekPosition.value),
+  );
+  const muteLabel = computed(() =>
+    mutedOrSilent.value ? t("movies.player.unmute") : t("movies.player.mute"),
+  );
+  const fullscreenLabel = computed(() =>
+    fullscreen.value ? t("movies.player.fullscreen.exit") : t("movies.player.fullscreen.enter"),
+  );
+  const pictureInPictureLabel = computed(() =>
+    pictureInPicture.value
+      ? t("movies.player.pictureInPicture.exit")
+      : t("movies.player.pictureInPicture.enter"),
+  );
+  const nextEpisodeButtonLabel = computed(() => props.nextEpisodeLabel.trim());
+  const showNextEpisodeButton = computed(() => nextEpisodeButtonLabel.value.length > 0);
+  const posterVisible = computed(
+    () => !playing.value && currentTime.value === 0 && props.posterUrl.length > 0,
+  );
+  const showCenterPlay = computed(() => !playing.value && playbackError.value.length === 0);
+  const showSpinner = computed(() => waiting.value && playbackError.value.length === 0);
+  const hasPlaybackAdMarkers = computed(
+    () => hasDuration.value && playbackAdMarkers.value.length > 0,
+  );
+  const adMarkersBackground = computed(() =>
+    hasDuration.value
+      ? moviePlayerAdMarkerTrackBackground(playbackAdMarkers.value, duration.value)
+      : "none",
+  );
+  const controlsStyle = computed<Record<string, string>>(() => ({
+    "--movies-player-ad-markers": adMarkersBackground.value,
+    "--movies-player-loaded": String(loadedFraction.value),
+    "--movies-player-preview-left": `${
+      seekPointerPreview.value?.leftPx ?? SEEK_PREVIEW_THUMB_SIZE_PX / 2
+    }px`,
+    "--movies-player-slider-thumb-size": `${SEEK_PREVIEW_THUMB_SIZE_PX}px`,
+  }));
+  const seekPointerPreviewText = computed(() =>
+    seekPointerPreview.value === null
+      ? ""
+      : formatMoviePlayerTime(seekPointerPreview.value.seconds),
+  );
+
+  let surfaceClickTimer: number | undefined;
+
+  function clearSurfaceClickTimer(): void {
+    if (surfaceClickTimer === undefined || typeof window === "undefined") {
+      return;
+    }
+
+    window.clearTimeout(surfaceClickTimer);
+    surfaceClickTimer = undefined;
+  }
+
+  function queueSurfacePlaybackToggle(): void {
+    clearSurfaceClickTimer();
+
+    if (typeof window === "undefined") {
+      togglePlayback();
+      return;
+    }
+
+    surfaceClickTimer = window.setTimeout(() => {
+      surfaceClickTimer = undefined;
+      togglePlayback();
+    }, SURFACE_CLICK_DELAY_MS);
+  }
+
+  function isPrimaryClick(event: MouseEvent): boolean {
+    return (
+      event.button === 0 && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey
+    );
+  }
+
+  function isSettingsMenuTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof Node)) {
+      return false;
+    }
+
+    const element = target instanceof Element ? target : target.parentElement;
+    return (element?.closest(".movies-hls-player__settings-menu") ?? null) !== null;
+  }
+
+  function playerControlsContain(target: EventTarget | null): boolean {
+    return (
+      target instanceof Node &&
+      (controlsRoot.value?.contains(target) === true ||
+        topbarControlsRoot.value?.contains(target) === true ||
+        backControlsRoot.value?.contains(target) === true ||
+        isSettingsMenuTarget(target))
+    );
+  }
+
+  function playerEventPathContainsControls(event: MouseEvent): boolean {
+    return event.composedPath().some((target) => playerControlsContain(target));
+  }
+
+  function isSurfaceClickTarget(event: MouseEvent): boolean {
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return false;
+    }
+
+    return !playerControlsContain(target) && !playerEventPathContainsControls(event);
+  }
+
+  function onPlayerSurfaceClick(event: MouseEvent): void {
+    if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event)) {
+      return;
+    }
+
+    if (event.detail > 1) {
+      clearSurfaceClickTimer();
+      return;
+    }
+
+    queueSurfacePlaybackToggle();
+  }
+
+  function onPlayerSurfaceDoubleClick(event: MouseEvent): void {
+    if (event.defaultPrevented || !isPrimaryClick(event) || !isSurfaceClickTarget(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    clearSurfaceClickTimer();
+    showControls({ force: true });
+    void toggleFullscreen();
+  }
+
+  function onCenterPlayClick(event: MouseEvent): void {
+    event.stopPropagation();
+    if (event.defaultPrevented || !isPrimaryClick(event)) {
+      return;
+    }
+
+    if (event.detail > 1) {
+      clearSurfaceClickTimer();
+      return;
+    }
+
+    queueSurfacePlaybackToggle();
+  }
+
+  function onCenterPlayDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    clearSurfaceClickTimer();
+    showControls({ force: true });
+    void toggleFullscreen();
+  }
+
+  function onControlsFocusOut(event: FocusEvent): void {
+    if (!playerControlsContain(event.relatedTarget)) {
+      controlsFocused.value = false;
+      scheduleAutoHideControls();
+    }
+  }
+
+  function shouldPreserveHiddenControls(): boolean {
+    return controlsHidden.value && playing.value;
+  }
+
+  function preserveHiddenControlsForKeyboardSeek(): boolean {
+    const preserveHiddenControls = shouldPreserveHiddenControls();
+    if (preserveHiddenControls) {
+      suppressControlsRevealForKeyboardSeek();
+    }
+    return preserveHiddenControls;
+  }
+
+  function shouldBeginSeekPreviewForKey(key: string): boolean {
+    return (
+      key === "ArrowLeft" ||
+      key === "ArrowRight" ||
+      key === "ArrowUp" ||
+      key === "ArrowDown" ||
+      key === "Home" ||
+      key === "End" ||
+      key === "PageUp" ||
+      key === "PageDown"
+    );
+  }
+
+  function onSeekKeydown(event: KeyboardEvent): void {
+    onSeekKeydownBase(event, {
+      preserveHiddenControls: shouldBeginSeekPreviewForKey(event.key)
+        ? preserveHiddenControlsForKeyboardSeek()
+        : false,
     });
+  }
+
+  function onStageKeydownCapture(event: KeyboardEvent): void {
+    const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
+    if (
+      event.defaultPrevented ||
+      seekDeltaSeconds === null ||
+      isTypingTarget(event.target) ||
+      !preserveHiddenControlsForKeyboardSeek()
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    seekBy(seekDeltaSeconds, { preserveHiddenControls: true });
+  }
+
+  function handleKeyboardShortcut(event: KeyboardEvent): void {
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (event.key === " " || event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      togglePlayback();
+      return;
+    }
+
+    const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
+    if (seekDeltaSeconds !== null) {
+      event.preventDefault();
+      seekBy(seekDeltaSeconds, {
+        preserveHiddenControls: preserveHiddenControlsForKeyboardSeek(),
+      });
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setVolume(volume.value + VOLUME_STEP);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setVolume(volume.value - VOLUME_STEP);
+      return;
+    }
+
+    if (event.key.toLowerCase() === "m") {
+      event.preventDefault();
+      toggleMute();
+      return;
+    }
+
+    if (event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      void toggleFullscreen();
+      return;
+    }
+
+    if (event.key === "Escape") {
+      if (fallbackFullscreen.value) {
+        event.preventDefault();
+        exitFallbackFullscreen();
+        return;
+      }
+
+      cancelSeekPreview();
+    }
+  }
+
+  function handleAppKeydown(event: KeyboardEvent): void {
+    if (!isTypingTarget(event.target) && !playerControlsContain(event.target)) {
+      handleKeyboardShortcut(event);
+    }
+  }
+
+  function onStageKeydown(event: KeyboardEvent): void {
+    if (!isTypingTarget(event.target)) {
+      handleKeyboardShortcut(event);
+    }
+  }
   const {
     onLoadedMetadata,
     onProgress,
@@ -344,24 +587,74 @@ export function useMovieHlsPlayerController({
     waiting,
   });
 
-  useMoviePlayerLifecycle({
-    activeSource,
-    applyPlaybackSpeed,
-    attachSource,
-    clearHideControlsTimer,
-    clearSurfaceClickTimer,
-    currentTime,
-    destroyHls,
-    disposePlaybackProgress,
-    metadataLoaded,
-    persistPlaybackProgress,
-    playVideo,
-    playbackSpeed,
-    playing,
-    props,
-    syncFullscreenState,
-    syncPictureInPictureState,
-    videoElement,
+  let previousSourcesRef: MoviePlayInfo["sources"] | null = null;
+
+  onMounted(() => {
+    syncFullscreenState();
+    syncPictureInPictureState();
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener("webkitfullscreenchange", syncFullscreenState);
+    videoElement.value?.addEventListener("webkitbeginfullscreen", syncFullscreenState);
+    videoElement.value?.addEventListener("webkitendfullscreen", syncFullscreenState);
+    videoElement.value?.addEventListener("enterpictureinpicture", syncPictureInPictureState);
+    videoElement.value?.addEventListener("leavepictureinpicture", syncPictureInPictureState);
+    videoElement.value?.addEventListener(
+      "webkitpresentationmodechanged",
+      syncPictureInPictureState,
+    );
+    previousSourcesRef = props.play.sources;
+    void attachSource({ autoplay: props.autoplay });
+  });
+
+  watch(
+    () => activeSource.value?.m3u8Url ?? "",
+    () => {
+      const sources = props.play.sources;
+      const isSourceSwitch = previousSourcesRef !== null && previousSourcesRef === sources;
+      previousSourcesRef = sources;
+      void attachSource({ autoplay: isSourceSwitch || props.autoplay });
+    },
+  );
+
+  watch(
+    () => props.autoplay,
+    (autoplay) => {
+      if (autoplay && metadataLoaded.value && !playing.value && currentTime.value === 0) {
+        void playVideo();
+      }
+    },
+  );
+
+  watch(
+    () => props.playbackSpeed,
+    (nextSpeed) => {
+      const speed = normalizedPlaybackSpeed(nextSpeed);
+      if (playbackSpeed.value === speed) {
+        applyPlaybackSpeed(videoElement.value);
+        return;
+      }
+
+      playbackSpeed.value = speed;
+      applyPlaybackSpeed(videoElement.value);
+    },
+  );
+
+  onBeforeUnmount(() => {
+    persistPlaybackProgress({ force: true });
+    clearHideControlsTimer();
+    clearSurfaceClickTimer();
+    destroyHls();
+    disposePlaybackProgress();
+    document.removeEventListener("fullscreenchange", syncFullscreenState);
+    document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
+    videoElement.value?.removeEventListener("webkitbeginfullscreen", syncFullscreenState);
+    videoElement.value?.removeEventListener("webkitendfullscreen", syncFullscreenState);
+    videoElement.value?.removeEventListener("enterpictureinpicture", syncPictureInPictureState);
+    videoElement.value?.removeEventListener("leavepictureinpicture", syncPictureInPictureState);
+    videoElement.value?.removeEventListener(
+      "webkitpresentationmodechanged",
+      syncPictureInPictureState,
+    );
   });
 
   function resetPlaybackState(): void {
@@ -459,7 +752,7 @@ export function useMovieHlsPlayerController({
     controlsStyle,
     displayTime,
     duration,
-    formatTime,
+    formatTime: formatMoviePlayerTime,
     fullscreen,
     fullscreenLabel,
     handleAppKeydown,
@@ -524,4 +817,13 @@ export function useMovieHlsPlayerController({
     togglePictureInPicture,
     volumeSliderValue,
   };
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }
