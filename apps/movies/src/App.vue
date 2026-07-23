@@ -18,7 +18,7 @@ import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 import { useMoviesThemeSuggestion } from "./composables/useMoviesThemeSuggestion";
 import { useMoviesI18n } from "./i18n/useMoviesI18n";
 import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
-import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
+import type { MoviesSourceSelectionSession } from "./moviesSourceSelection";
 
 interface WatchViewInstance {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
@@ -29,7 +29,7 @@ interface AppFrameRef {
 }
 
 interface WatchEpisodeRequest {
-  readonly sourcePreference: MoviesSourcePreferenceSnapshot | null;
+  readonly sourceSelectionSession: MoviesSourceSelectionSession;
   readonly target: MovieEpisodeTarget;
 }
 
@@ -107,7 +107,7 @@ function openWatchEpisode(request: WatchEpisodeRequest): void {
   openEpisodeWatch(request.target, {
     autoplay: true,
     replace: true,
-    sourcePreference: request.sourcePreference,
+    sourceSelectionSession: request.sourceSelectionSession,
   });
 }
 
@@ -204,7 +204,7 @@ onUnmounted(() => {
       v-else-if="view.name === 'watch'"
       ref="watchViewRef"
       :autoplay="view.autoplay === true"
-      :source-preference="view.sourcePreference ?? null"
+      :source-selection-session="view.sourceSelectionSession"
       :target="view.target"
       @scroll="updateToolbarSolid"
       @back="goBack"

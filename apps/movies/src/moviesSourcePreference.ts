@@ -36,52 +36,6 @@ export function moviesSourcePreferenceSnapshot(
   };
 }
 
-export function resolveMoviesPreferredSourceIndex(
-  preference: MoviesSourcePreferenceSnapshot | null | undefined,
-  sources: readonly MoviePlaySource[],
-): number {
-  if (preference === null || preference === undefined || sources.length === 0) {
-    return 0;
-  }
-
-  const slugServerMatch = sourceIndexBy(
-    sources,
-    (source) =>
-      preference.slug.length > 0 &&
-      source.slug === preference.slug &&
-      source.serverName === preference.serverName,
-  );
-  if (slugServerMatch !== null) {
-    return slugServerMatch;
-  }
-
-  const serverNameMatch = sourceIndexBy(
-    sources,
-    (source) =>
-      preference.serverName.length > 0 &&
-      preference.name.length > 0 &&
-      source.serverName === preference.serverName &&
-      source.name === preference.name,
-  );
-  if (serverNameMatch !== null) {
-    return serverNameMatch;
-  }
-
-  const serverOnlyMatch = sourceIndexBy(
-    sources,
-    (source) => preference.serverName.length > 0 && source.serverName === preference.serverName,
-  );
-  if (serverOnlyMatch !== null) {
-    return serverOnlyMatch;
-  }
-
-  const slugMatch = sourceIndexBy(
-    sources,
-    (source) => preference.slug.length > 0 && source.slug === preference.slug,
-  );
-  return slugMatch ?? 0;
-}
-
 export function createMoviesSourcePreferenceStore(
   options: CreateMoviesSourcePreferenceStoreOptions = {},
 ): {
@@ -167,14 +121,6 @@ function normalizedString(value: unknown): string {
 
 function normalizedTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function sourceIndexBy(
-  sources: readonly MoviePlaySource[],
-  predicate: (source: MoviePlaySource) => boolean,
-): number | null {
-  const index = sources.findIndex(predicate);
-  return index === -1 ? null : index;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

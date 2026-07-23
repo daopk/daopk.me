@@ -6,7 +6,10 @@ import {
   type MovieSummary,
   type MoviesListQuery,
 } from "./moviesApi";
-import type { MoviesSourcePreferenceSnapshot } from "./moviesSourcePreference";
+import {
+  createMoviesSourceSelectionSession,
+  type MoviesSourceSelectionSession,
+} from "./moviesSourceSelection";
 import { movieSlugFromText } from "./utils/movieSlug";
 
 export type MoviesView =
@@ -43,7 +46,7 @@ export type MoviesView =
   | {
       readonly autoplay?: boolean;
       readonly name: "watch";
-      readonly sourcePreference?: MoviesSourcePreferenceSnapshot;
+      readonly sourceSelectionSession: MoviesSourceSelectionSession;
       readonly target: MoviesWatchTarget;
     };
 
@@ -128,15 +131,13 @@ export function movieWatchViewFromSummary(
   movie: MovieSummary,
   options: {
     readonly autoplay?: boolean;
-    readonly sourcePreference?: MoviesSourcePreferenceSnapshot | null;
+    readonly sourceSelectionSession?: MoviesSourceSelectionSession;
   } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
-    ...(options.sourcePreference === undefined || options.sourcePreference === null
-      ? {}
-      : { sourcePreference: options.sourcePreference }),
     name: "watch",
+    sourceSelectionSession: options.sourceSelectionSession ?? createMoviesSourceSelectionSession(),
     target: {
       kind: "movie",
       slug: movie.slug,
@@ -150,15 +151,13 @@ export function movieEpisodeWatchViewFromTarget(
   request: MovieEpisodeTarget,
   options: {
     readonly autoplay?: boolean;
-    readonly sourcePreference?: MoviesSourcePreferenceSnapshot | null;
+    readonly sourceSelectionSession?: MoviesSourceSelectionSession;
   } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
-    ...(options.sourcePreference === undefined || options.sourcePreference === null
-      ? {}
-      : { sourcePreference: options.sourcePreference }),
     name: "watch",
+    sourceSelectionSession: options.sourceSelectionSession ?? createMoviesSourceSelectionSession(),
     target: {
       episodeNumber: request.episodeNumber,
       kind: "episode",

@@ -28,18 +28,11 @@ import {
   type MovieSummary,
   type MovieSeasonEpisode,
 } from "../moviesApi";
+import { episodePlaybackProgressKey, moviePlaybackProgressKey } from "../moviesPlaybackProgress";
 import {
-  createMoviesPlaybackProgressStore,
-  episodePlaybackProgressKey,
-  moviePlaybackProgressKey,
-  resolveMoviesPlaybackProgressSourceIndex,
-} from "../moviesPlaybackProgress";
-import {
-  createMoviesSourcePreferenceStore,
-  moviesSourcePreferenceSnapshot,
-  resolveMoviesPreferredSourceIndex,
-  type MoviesSourcePreferenceSnapshot,
-} from "../moviesSourcePreference";
+  createMoviesSourceSelection,
+  type MoviesSourceSelectionSession,
+} from "../moviesSourceSelection";
 import type { MoviesWatchTarget } from "../moviesRoutes";
 
 type LoadState = "loading" | "ready" | "error";
@@ -49,17 +42,16 @@ interface MovieHlsPlayerInstance {
 
 interface WatchViewProps {
   autoplay?: boolean;
-  sourcePreference?: MoviesSourcePreferenceSnapshot | null;
+  sourceSelectionSession: MoviesSourceSelectionSession;
   target: MoviesWatchTarget;
 }
 
 const props = withDefaults(defineProps<WatchViewProps>(), {
   autoplay: false,
-  sourcePreference: null,
 });
 
 interface WatchEpisodeRequest {
-  readonly sourcePreference: MoviesSourcePreferenceSnapshot | null;
+  readonly sourceSelectionSession: MoviesSourceSelectionSession;
   readonly target: MovieEpisodeTarget;
 }
 
@@ -81,8 +73,7 @@ const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
-const playbackProgressStore = createMoviesPlaybackProgressStore();
-const sourcePreferenceStore = createMoviesSourcePreferenceStore();
+const sourceSelection = createMoviesSourceSelection(props.sourceSelectionSession);
 const watchTarget = computed<MoviesWatchTarget | null>(() => props.target ?? null);
 
 const play = computed<MoviePlayInfo | null>(() => {
@@ -223,7 +214,7 @@ const nextEpisodeLabel = computed(() => {
 });
 
 watch(
-  () => [watchTarget.value, props.sourcePreference, locale.value] as const,
+  () => [watchTarget.value, locale.value] as const,
   () => {
     void loadTarget();
   },
@@ -249,8 +240,7 @@ onUnmounted(() => {
   abortController?.abort();
   viewportObserver?.disconnect();
   viewportObserver = null;
-  playbackProgressStore.dispose();
-  sourcePreferenceStore.dispose();
+  sourceSelection.dispose();
 });
 
 // Publish the watch viewport height so the player can fit the visible area,
@@ -292,7 +282,7 @@ async function loadTarget(): Promise<void> {
         { signal: controller.signal },
       );
     }
-    restoreSavedSourceIndex(props.sourcePreference ?? null);
+    restoreSavedSourceIndex();
     state.value = "ready";
   } catch {
     if (controller.signal.aborted) {
@@ -302,45 +292,33 @@ async function loadTarget(): Promise<void> {
   }
 }
 
-function restoreSavedSourceIndex(
-  sourcePreferenceOverride: MoviesSourcePreferenceSnapshot | null = null,
-): void {
+function restoreSavedSourceIndex(): void {
   const currentPlay = play.value;
   if (currentPlay === null) {
     selectedSourceIndex.value = 0;
     return;
   }
 
-  const progress = playbackProgressStore.get(progressKey.value);
-  selectedSourceIndex.value =
-    sourcePreferenceOverride !== null
-      ? resolveMoviesPreferredSourceIndex(sourcePreferenceOverride, currentPlay.sources)
-      : progress?.source === undefined
-        ? resolveMoviesPreferredSourceIndex(sourcePreferenceStore.get(), currentPlay.sources)
-        : resolveMoviesPlaybackProgressSourceIndex(progress, currentPlay.sources);
+  selectedSourceIndex.value = sourceSelection.restore(progressKey.value, currentPlay.sources);
 }
 
 function selectSource(index: number): void {
-  selectedSourceIndex.value = index;
-  saveSelectedSourcePreference();
+  selectedSourceIndex.value = sourceSelection.select(play.value?.sources ?? [], index);
 }
 
-function saveSelectedSourcePreference(): MoviesSourcePreferenceSnapshot | null {
-  const source = play.value?.sources[selectedSourceIndex.value];
-  if (source === undefined) {
-    return null;
-  }
-
-  const preference = moviesSourcePreferenceSnapshot(source, selectedSourceIndex.value);
-  sourcePreferenceStore.save(preference);
-  return preference;
+function preserveSelectedSource(): void {
+  selectedSourceIndex.value = sourceSelection.select(
+    play.value?.sources ?? [],
+    selectedSourceIndex.value,
+  );
 }
 
 function watchNextEpisode(): void {
   const target = nextEpisodeTarget.value;
   if (target !== null) {
+    preserveSelectedSource();
     emit("watch-episode", {
-      sourcePreference: saveSelectedSourcePreference(),
+      sourceSelectionSession: sourceSelection.session,
       target,
     });
   }
@@ -353,8 +331,9 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
     return;
   }
 
+  preserveSelectedSource();
   emit("watch-episode", {
-    sourcePreference: saveSelectedSourcePreference(),
+    sourceSelectionSession: sourceSelection.session,
     target: {
       episodeNumber: episode.episodeNumber,
       seasonNumber: episode.seasonNumber,

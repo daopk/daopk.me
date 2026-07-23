@@ -3143,7 +3143,7 @@ describe("Movies app", () => {
     expect(episodeInfo.text()).toContain("Pilot overview.");
   });
 
-  it("plays the next episode from the player when a playable next episode exists", async () => {
+  it("plays the next episode and preserves its carried source across back navigation", async () => {
     window.history.replaceState(null, "", "/tv/1399-planet-cinema/season/1/episode/1");
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
     const season = seasonDetail();
@@ -3238,6 +3238,18 @@ describe("Movies app", () => {
     expect(wrapper.get(".movies-hls-player").attributes("data-playback-speed")).toBe("1.5");
     expect(wrapper.get(".movies-hls-player").attributes("data-title")).toBe("The Edit");
     expect(wrapper.find(".movies-hls-player__next-episode-button").exists()).toBe(false);
+
+    await wrapper.get(".movies-watch__series-link").trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema");
+    expect(wrapper.find(".movies-detail").exists()).toBe(true);
+
+    await wrapper.get('.movies-toolbar__history button[aria-label="Back"]').trigger("click");
+    await settle();
+
+    expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
+    expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
   });
 
   it("ignores unsupported detail routes", async () => {

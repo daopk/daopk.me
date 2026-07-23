@@ -8,7 +8,6 @@ import {
   moviesPlaybackProgressRecords,
   moviesPlaybackProgressTargetFromKey,
   MOVIES_PLAYBACK_PROGRESS_KV_KEY,
-  resolveMoviesPlaybackProgressSourceIndex,
   type MoviesPlaybackProgressState,
 } from "./moviesPlaybackProgress";
 import type { MoviePlaySource } from "./moviesApi";
@@ -174,102 +173,6 @@ describe("moviesPlaybackProgress", () => {
     });
 
     store.dispose();
-  });
-
-  it("resolves saved source snapshots against the current source list", () => {
-    const savedSource = playSource({
-      m3u8Url: "https://stream.example.test/fight-club/old.m3u8",
-      serverName: "Server 2",
-      slug: "backup",
-    });
-    const progress = {
-      currentTime: 30,
-      duration: 120,
-      source: moviesPlaybackProgressSourceSnapshot(savedSource, 0),
-      updatedAt: 2_000,
-    };
-
-    expect(
-      resolveMoviesPlaybackProgressSourceIndex(progress, [
-        playSource({ m3u8Url: "https://stream.example.test/fight-club/main.m3u8" }),
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/new.m3u8",
-          serverName: "Server 2",
-          slug: "backup",
-        }),
-      ]),
-    ).toBe(1);
-
-    expect(
-      resolveMoviesPlaybackProgressSourceIndex(progress, [
-        playSource({ slug: "main" }),
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/old.m3u8",
-          slug: "renamed",
-        }),
-      ]),
-    ).toBe(1);
-
-    expect(
-      resolveMoviesPlaybackProgressSourceIndex(progress, [
-        playSource({ slug: "main" }),
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/new-backup.m3u8",
-          serverName: "Server 3",
-          slug: "backup",
-        }),
-      ]),
-    ).toBe(1);
-  });
-
-  it("resolves saved source snapshots by server before slug-only matches", () => {
-    const savedSource = playSource({
-      m3u8Url: "https://stream.example.test/fight-club/old-backup.m3u8",
-      name: "Backup",
-      serverName: "Server 2",
-      slug: "shared",
-    });
-    const progress = {
-      currentTime: 30,
-      duration: 120,
-      source: moviesPlaybackProgressSourceSnapshot(savedSource, 1),
-      updatedAt: 2_000,
-    };
-
-    expect(
-      resolveMoviesPlaybackProgressSourceIndex(progress, [
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/new-main.m3u8",
-          name: "Full",
-          serverName: "Server 1",
-          slug: "shared",
-        }),
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/new-backup.m3u8",
-          name: "Alternate",
-          serverName: "Server 2",
-          slug: "alternate",
-        }),
-      ]),
-    ).toBe(1);
-  });
-
-  it("falls back to the first source when saved source is unavailable", () => {
-    const progress = {
-      currentTime: 30,
-      duration: 120,
-      source: moviesPlaybackProgressSourceSnapshot(
-        playSource({
-          m3u8Url: "https://stream.example.test/fight-club/missing.m3u8",
-          slug: "missing",
-        }),
-        1,
-      ),
-      updatedAt: 2_000,
-    };
-
-    expect(resolveMoviesPlaybackProgressSourceIndex(progress, [playSource()])).toBe(0);
-    expect(resolveMoviesPlaybackProgressSourceIndex(null, [playSource()])).toBe(0);
   });
 
   it("rejects invalid, stale, and near-end progress entries", () => {

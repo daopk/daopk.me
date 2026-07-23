@@ -12,6 +12,7 @@ import {
   moviesPathForView,
   moviesViewFromDeepLink,
 } from "./moviesRoutes";
+import { createMoviesSourceSelectionSession } from "./moviesSourceSelection";
 
 describe("moviesRoutes", () => {
   it("parses canonical detail, person, and episode paths", () => {
@@ -177,6 +178,7 @@ describe("moviesRoutes", () => {
       moviesPathForView({
         autoplay: true,
         name: "watch",
+        sourceSelectionSession: createMoviesSourceSelectionSession(),
         target: { kind: "movie", slug: "fight-club", tmdbId: 550 },
       }),
     ).toBe("/movie/550-fight-club");
@@ -199,7 +201,15 @@ describe("moviesRoutes", () => {
     ).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 
-  it("keeps transient source preference on watch views without changing the public path", () => {
+  it("keeps a transient source-selection session without changing the public path", () => {
+    const sourceSelectionSession = createMoviesSourceSelectionSession();
+    sourceSelectionSession.preference = {
+      filename: "backup.m3u8",
+      index: 1,
+      name: "Backup",
+      serverName: "Server 2",
+      slug: "backup",
+    };
     const view = movieEpisodeWatchViewFromTarget(
       {
         episodeNumber: 2,
@@ -207,23 +217,14 @@ describe("moviesRoutes", () => {
         slug: "planet-cinema",
         tmdbId: 1399,
       },
-      {
-        sourcePreference: {
-          filename: "backup.m3u8",
-          index: 1,
-          name: "Backup",
-          serverName: "Server 2",
-          slug: "backup",
-        },
-      },
+      { sourceSelectionSession },
     );
 
-    expect(view).toEqual(
-      expect.objectContaining({
-        name: "watch",
-        sourcePreference: expect.objectContaining({ serverName: "Server 2" }),
-      }),
-    );
+    expect(view.name).toBe("watch");
+    if (view.name !== "watch") {
+      throw new Error("expected a watch view");
+    }
+    expect(view.sourceSelectionSession).toBe(sourceSelectionSession);
     expect(moviesPathForView(view)).toBe("/tv/1399-planet-cinema/season/1/episode/2");
   });
 

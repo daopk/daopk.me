@@ -143,58 +143,6 @@ export function moviesPlaybackProgressSourceSnapshot(
   };
 }
 
-export function resolveMoviesPlaybackProgressSourceIndex(
-  progress: MoviesPlaybackProgressEntry | null | undefined,
-  sources: readonly MoviePlaySource[],
-): number {
-  const savedSource = progress?.source;
-  if (savedSource === undefined || sources.length === 0) {
-    return 0;
-  }
-
-  const m3u8Match = sourceIndexBy(sources, (source) => source.m3u8Url === savedSource.m3u8Url);
-  if (m3u8Match !== null) {
-    return m3u8Match;
-  }
-
-  const slugServerMatch = sourceIndexBy(
-    sources,
-    (source) =>
-      savedSource.slug.length > 0 &&
-      source.slug === savedSource.slug &&
-      source.serverName === savedSource.serverName,
-  );
-  if (slugServerMatch !== null) {
-    return slugServerMatch;
-  }
-
-  const serverNameMatch = sourceIndexBy(
-    sources,
-    (source) =>
-      savedSource.serverName.length > 0 &&
-      savedSource.name.length > 0 &&
-      source.serverName === savedSource.serverName &&
-      source.name === savedSource.name,
-  );
-  if (serverNameMatch !== null) {
-    return serverNameMatch;
-  }
-
-  const serverOnlyMatch = sourceIndexBy(
-    sources,
-    (source) => savedSource.serverName.length > 0 && source.serverName === savedSource.serverName,
-  );
-  if (serverOnlyMatch !== null) {
-    return serverOnlyMatch;
-  }
-
-  const slugMatch = sourceIndexBy(
-    sources,
-    (source) => savedSource.slug.length > 0 && source.slug === savedSource.slug,
-  );
-  return slugMatch ?? 0;
-}
-
 export function createMoviesPlaybackProgressStore(
   options: CreateMoviesPlaybackProgressStoreOptions = {},
 ): {
@@ -382,14 +330,6 @@ function coerceProgressSourceSnapshot(
   };
 
   return source.m3u8Url.length === 0 && source.slug.length === 0 ? null : source;
-}
-
-function sourceIndexBy(
-  sources: readonly MoviePlaySource[],
-  predicate: (source: MoviePlaySource) => boolean,
-): number | null {
-  const index = sources.findIndex(predicate);
-  return index === -1 ? null : index;
 }
 
 function positiveSafeInteger(value: string | undefined): number | null {
