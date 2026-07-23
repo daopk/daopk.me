@@ -4,7 +4,6 @@ export { default as ContextMenuSeparator } from "./MenuSeparator.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { nextTick, onBeforeUnmount, ref } from "vue";
 import {
   DropdownMenuContent as RopavDropdownMenuContent,
   DropdownMenuContextTrigger as RopavDropdownMenuContextTrigger,
@@ -13,7 +12,7 @@ import {
 } from "ropav/dropdown-menu";
 
 import MenuPrimitiveSlot from "./MenuPrimitiveSlot.vue";
-import { useMenuTypeahead } from "./useMenuTypeahead";
+import { useMenuLifecycle } from "./useMenuLifecycle";
 
 interface ContextMenuProps {
   modal?: boolean;
@@ -27,57 +26,9 @@ const props = withDefaults(defineProps<ContextMenuProps>(), {
 
 const emit = defineEmits<{ "update:open": [next: boolean] }>();
 const CONTEXT_MENU_BASE_Z_INDEX = 1700;
-const portalRoot = ref<HTMLElement | null>(null);
-const trigger = ref<HTMLElement | null>(null);
-const typeahead = useMenuTypeahead();
-let restoreFocusOnClose = true;
-let isOpen = false;
-
-function setTrigger(element: HTMLElement | null): void {
-  trigger.value = element;
-}
-
-function onContentKeydown(event: KeyboardEvent): void {
-  if (event.key === "Tab") restoreFocusOnClose = false;
-  typeahead.onKeydown(event);
-}
-
-function onOutsideInteraction(): void {
-  restoreFocusOnClose = props.modal;
-}
-
-async function focusMenuContent(): Promise<void> {
-  // The context-menu primitive can register its first active item before the
-  // portalled content element is ready to receive focus in Chromium. Focus the
-  // menu after the portal settles so arrow keys are routed to menu navigation.
-  await nextTick();
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-  if (!isOpen) return;
-
-  portalRoot.value?.querySelector<HTMLElement>('[role="menu"]')?.focus({ preventScroll: true });
-}
-
-async function restoreTriggerFocus(): Promise<void> {
-  await nextTick();
-  await nextTick();
-  trigger.value?.focus({ preventScroll: true });
-}
-
-function onOpenChange(next: boolean): void {
-  isOpen = next;
-  emit("update:open", next);
-  if (next) {
-    restoreFocusOnClose = true;
-    void focusMenuContent();
-  } else if (restoreFocusOnClose) {
-    void restoreTriggerFocus();
-  }
-}
-
-onBeforeUnmount(() => {
-  const root = portalRoot.value;
-  queueMicrotask(() => root?.remove());
+const menu = useMenuLifecycle({
+  isModal: () => props.modal,
+  onOpenChange: (next) => emit("update:open", next),
 });
 </script>
 
@@ -85,11 +36,11 @@ onBeforeUnmount(() => {
   <RopavDropdownMenuRoot
     :base-z-index="CONTEXT_MENU_BASE_Z_INDEX"
     :modal="modal"
-    @update:open="onOpenChange"
+    @update:open="menu.onOpenChange"
   >
     <RopavDropdownMenuContextTrigger
       :as="MenuPrimitiveSlot"
-      :element-callback="setTrigger"
+      :element-callback="menu.setTrigger"
       :long-press-delay="600"
       :long-press-tolerance="10"
       :omit-attributes="['aria-controls', 'aria-expanded']"
@@ -98,15 +49,15 @@ onBeforeUnmount(() => {
       <slot name="trigger" />
     </RopavDropdownMenuContextTrigger>
     <RopavDropdownMenuPortal :to="portalTo">
-      <div ref="portalRoot" class="ds-menu-portal">
+      <div :ref="menu.portalRoot" class="ds-menu-portal">
         <RopavDropdownMenuContent
           class="ds-context-menu"
           :offset="2"
           placement="bottom-start"
           strategy="fixed"
-          @focus-outside="onOutsideInteraction"
-          @keydown="onContentKeydown"
-          @pointer-down-outside="onOutsideInteraction"
+          @focus-outside="menu.onOutsideInteraction"
+          @keydown="menu.onContentKeydown"
+          @pointer-down-outside="menu.onOutsideInteraction"
         >
           <slot name="items" />
         </RopavDropdownMenuContent>

@@ -610,6 +610,33 @@ describe("ContextMenu", () => {
     expect(document.body.querySelector('[role="menu"]')).toBeNull();
   });
 
+  it("supports typeahead and removes portalled content on unmount", async () => {
+    const wrapper = mount(ContextMenu, {
+      slots: {
+        trigger: () => element("button", "Target"),
+        items: () => [
+          renderComponent(
+            ContextMenuItem,
+            { textValue: "Alpha" },
+            { default: () => text("Alpha") },
+          ),
+          renderComponent(ContextMenuItem, { textValue: "Zulu" }, { default: () => text("Zulu") }),
+        ],
+      },
+    });
+    contextmenu(wrapper.find("button"));
+    await settle();
+
+    const menu = document.body.querySelector<HTMLElement>('[role="menu"]')!;
+    key(menu, "z");
+    await nextTick();
+    expect(activeMenuItem(menu)?.textContent).toBe("Zulu");
+
+    wrapper.unmount();
+    await settle();
+    expect(document.body.querySelector(".ds-context-menu")).toBeNull();
+  });
+
   it("has no serious accessibility violations while open", async () => {
     const wrapper = mount(ContextMenu, {
       slots: {

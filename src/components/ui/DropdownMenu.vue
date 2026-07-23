@@ -12,7 +12,7 @@ export { default as DropdownMenuSubTrigger } from "./MenuSubTrigger.vue";
 </script>
 
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef } from "vue";
+import { computed, useTemplateRef } from "vue";
 import {
   DropdownMenuContent as RopavDropdownMenuContent,
   DropdownMenuPortal as RopavDropdownMenuPortal,
@@ -23,7 +23,7 @@ import {
 } from "ropav/dropdown-menu";
 
 import MenuPrimitiveSlot from "./MenuPrimitiveSlot.vue";
-import { useMenuTypeahead } from "./useMenuTypeahead";
+import { useMenuLifecycle } from "./useMenuLifecycle";
 
 interface DropdownMenuProps {
   align?: "start" | "center" | "end";
@@ -46,67 +46,19 @@ const DROPDOWN_MENU_BASE_Z_INDEX = 1200;
 const placement = computed<DropdownMenuPlacement>(() =>
   props.align === "center" ? "bottom" : `bottom-${props.align}`,
 );
-const portalRoot = ref<HTMLElement | null>(null);
-const trigger = ref<HTMLElement | null>(null);
 const rootRef = useTemplateRef<{
   close: (options?: DropdownMenuCloseOptions & { returnFocus?: boolean }) => void;
 }>("rootRef");
-const typeahead = useMenuTypeahead();
-let restoreFocusOnClose = true;
-let isOpen = false;
+const menu = useMenuLifecycle({
+  isModal: () => props.modal,
+  onOpenChange: (next) => emit("update:open", next),
+});
 
 function closeWithoutFocusRestore(event: Event): void {
   event.preventDefault();
-  restoreFocusOnClose = false;
+  menu.suppressFocusRestore();
   rootRef.value?.close({ returnFocus: false });
 }
-
-function setTrigger(element: HTMLElement | null): void {
-  trigger.value = element;
-}
-
-function onContentKeydown(event: KeyboardEvent): void {
-  if (event.key === "Tab") restoreFocusOnClose = false;
-  typeahead.onKeydown(event);
-}
-
-function onOutsideInteraction(): void {
-  restoreFocusOnClose = props.modal;
-}
-
-async function focusMenuContent(): Promise<void> {
-  // In Chromium the portalled content can mount after the primitive's initial
-  // focus attempt. Re-focus once the portal has painted so arrow-key events are
-  // always routed to menu navigation after opening with a pointer.
-  await nextTick();
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-  if (!isOpen) return;
-
-  portalRoot.value?.querySelector<HTMLElement>('[role="menu"]')?.focus({ preventScroll: true });
-}
-
-async function restoreTriggerFocus(): Promise<void> {
-  await nextTick();
-  await nextTick();
-  trigger.value?.focus({ preventScroll: true });
-}
-
-function onOpenChange(next: boolean): void {
-  isOpen = next;
-  emit("update:open", next);
-  if (next) {
-    restoreFocusOnClose = true;
-    void focusMenuContent();
-  } else if (restoreFocusOnClose) {
-    void restoreTriggerFocus();
-  }
-}
-
-onBeforeUnmount(() => {
-  const root = portalRoot.value;
-  queueMicrotask(() => root?.remove());
-});
 </script>
 
 <template>
@@ -114,21 +66,21 @@ onBeforeUnmount(() => {
     ref="rootRef"
     :base-z-index="DROPDOWN_MENU_BASE_Z_INDEX"
     :modal="modal"
-    @update:open="onOpenChange"
+    @update:open="menu.onOpenChange"
   >
-    <RopavDropdownMenuTrigger :as="MenuPrimitiveSlot" :element-callback="setTrigger">
+    <RopavDropdownMenuTrigger :as="MenuPrimitiveSlot" :element-callback="menu.setTrigger">
       <slot name="trigger" />
     </RopavDropdownMenuTrigger>
     <RopavDropdownMenuPortal :to="portalTo">
-      <div ref="portalRoot" class="ds-menu-portal">
+      <div :ref="menu.portalRoot" class="ds-menu-portal">
         <RopavDropdownMenuContent
           :class="['ds-dropdown-menu', contentClass]"
           :offset="sideOffset"
           :placement="placement"
           strategy="fixed"
-          @focus-outside="onOutsideInteraction"
-          @keydown="onContentKeydown"
-          @pointer-down-outside="onOutsideInteraction"
+          @focus-outside="menu.onOutsideInteraction"
+          @keydown="menu.onContentKeydown"
+          @pointer-down-outside="menu.onOutsideInteraction"
         >
           <slot name="items" :close-without-focus-restore="closeWithoutFocusRestore" />
         </RopavDropdownMenuContent>
