@@ -6,7 +6,7 @@ import { computed, type VaporComponent } from "vue";
 import { IconButton, Modal, type ModalFocusTrapOptions } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 
-import type { NavigationFrame } from "../navigation";
+import type { NavigationFrame } from "../useMobileSession";
 import AppSwitcherCard from "./AppSwitcherCard.vue";
 
 const props = defineProps<{

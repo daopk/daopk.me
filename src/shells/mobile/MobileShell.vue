@@ -1,94 +1,52 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
 import { useToast } from "~/components/ui";
-import HomeScreen from "./homeScreen/HomeScreen.vue";
-import AppView from "./AppView.vue";
-import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
-import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromptHost.vue";
-import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
-import { hasAppSettings } from "~/core/apps/appSettings";
-import { appSupportsShell, appUnsupportedShellMessage } from "~/core/apps/shellSupport";
-import { debugWarn } from "~/core/debug";
-import {
-  appBrowserTitle,
-  appFallbackBrowserPath,
-  DEFAULT_BROWSER_TITLE,
-  HOME_BROWSER_PATH,
-} from "~/core/routing/appBrowserPaths";
-import { isBlogPostSlug } from "~/core/routing/blogPaths";
-import { emitAppResume, resolveAppResume, type AppResumeSource } from "~/core/routing/appResume";
-import { documentPathFor } from "~/shells/shared/documentOpenRouting";
-import {
-  normalizeShellOpenRequestPath,
-  preferredManifestFrame,
-} from "~/shells/shared/shellOpenRequests";
-import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
+import { appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
-import { useMobileNavigation } from "./useMobileNavigation";
-import { useAppViewTitle } from "./useAppViewTitle";
-import { useMobileLaunchState } from "./useMobileLaunchState";
 import type { AppManifest } from "~/types/app";
 
+import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
+import AppView from "./AppView.vue";
+import HomeScreen from "./homeScreen/HomeScreen.vue";
+import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromptHost.vue";
+import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
+import { useAppViewTitle } from "./useAppViewTitle";
+import { useMobileSession } from "./useMobileSession";
+
 const kernel = useKernel();
-const nav = useMobileNavigation();
 const toast = useToast();
 const { titleFor } = useAppViewTitle();
 const homeLabelContrastStyle = useWallpaperLabelContrast("mobile");
 
-useShellAppEventBridge({
-  launch: (manifestId, args, source) => {
-    onLaunch(manifestId, args, source);
+const session = useMobileSession({
+  kernel,
+  titleFor,
+  notifyUnsupported(manifest: AppManifest): void {
+    toast.warning({
+      title: "Not available on mobile",
+      description: appUnsupportedShellMessage(manifest, "mobile"),
+    });
   },
-  spawnNew: (manifestId, args) => {
-    onSpawnNew(manifestId, args);
-  },
-  openEditor: (path) => {
-    void onEditorOpenRequested(path);
-  },
-  openBlogPost: (path, slug) => {
-    void onBlogPostOpenRequested(path, slug);
-  },
-  openPdfViewer: (path) => {
-    void onPdfViewerOpenRequested(path);
-  },
-  setDocumentPath: (handleId, manifestId, path) => {
-    nav.setDocumentPath(handleId, manifestId, path);
-  },
-  setBrowserPath: (handleId, manifestId, path) => {
-    nav.setBrowserPath(handleId, manifestId, path);
-  },
-  removeByHandleId: (handleId) => {
-    nav.removeByHandleId(handleId);
+  restoreHomeFocus(manifestId: string): void {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(manifestId) : manifestId;
+    document
+      .querySelector<HTMLButtonElement>(`.home-icon[data-manifest-id="${safeId}"]`)
+      ?.focus({ preventScroll: true });
   },
 });
+const mobile = session.state;
 
-const showSwitcher = ref(false);
-
-const switcherActive = computed(() => showSwitcher.value && nav.depth.value > 0);
-
-const isHome = computed(() => nav.foreground.value === null);
-
-const activeBrowserPath = computed(() => {
-  const frame = nav.currentFrame.value;
-  if (frame === null) {
-    return HOME_BROWSER_PATH;
-  }
-
-  return frame.browserPath ?? appFallbackBrowserPath(frame.manifestId);
-});
-
-const activeBrowserTitle = computed(() => {
-  const frame = nav.currentFrame.value;
-  if (frame === null) {
-    return DEFAULT_BROWSER_TITLE;
-  }
-
-  return appBrowserTitle(frame.title ?? titleFor(frame.manifestId));
-});
+useShellBrowserChromeSync(
+  computed(() => mobile.value.browserPath),
+  computed(() => mobile.value.browserTitle),
+);
 
 interface HomeScreenInstance {
   readonly scrollEl: HTMLElement | null;
@@ -128,310 +86,37 @@ onBeforeUnmount(() => {
   window.removeEventListener("touchstart", setTouchMode);
 });
 
-function openSwitcher(): void {
-  showSwitcher.value = true;
+function onLaunch(manifestId: string): void {
+  session.send({ type: "launch-app", manifestId });
 }
 
-function closeSwitcher(): void {
-  showSwitcher.value = false;
+function goHome(): void {
+  session.send({ type: "go-home" });
 }
 
-watch(
-  () => nav.depth.value,
-  (depth) => {
-    // auto-close so we don't leave a chrome-only dialog floating over
-    if (depth === 0 && showSwitcher.value) {
-      showSwitcher.value = false;
-    }
-  },
-);
-
-useShellBrowserChromeSync(activeBrowserPath, activeBrowserTitle);
-
-const {
-  addLaunching,
-  clearLaunching,
-  commitLaunched,
-  lastLaunchedManifestId,
-  launchingManifestIds,
-} = useMobileLaunchState();
-
-function manifestFor(manifestId: string): AppManifest | null {
-  return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
+function openRecents(): void {
+  session.send({ type: "open-recents" });
 }
 
-function manifestHasSettings(manifestId: string): boolean {
-  const manifest = manifestFor(manifestId);
-  return manifest !== null && hasAppSettings(manifest);
-}
-
-function unsupportedManifestFor(manifestId: string): AppManifest | null {
-  const manifest = manifestFor(manifestId);
-
-  if (!manifest || appSupportsShell(manifest, "mobile")) {
-    return null;
-  }
-
-  return manifest;
-}
-
-function notifyUnsupportedManifest(manifest: AppManifest): void {
-  toast.warning({
-    title: "Not available on mobile",
-    description: appUnsupportedShellMessage(manifest, "mobile"),
-  });
-}
-
-function onLaunch(
-  manifestId: string,
-  args?: Readonly<Record<string, unknown>>,
-  source: AppResumeSource = "api",
-): void {
-  const unsupported = unsupportedManifestFor(manifestId);
-
-  if (unsupported) {
-    showSwitcher.value = false;
-    clearLaunching(manifestId);
-    notifyUnsupportedManifest(unsupported);
-    return;
-  }
-
-  const willResume = nav.stack.some((frame) => frame.manifestId === manifestId);
-
-  if (!willResume) {
-    addLaunching(manifestId);
-  }
-
-  void nav.launch(manifestId, args).then(
-    () => {
-      if (!willResume) {
-        clearLaunching(manifestId);
-      }
-      if (willResume) {
-        const emission = resolveAppResume({
-          manifestId,
-          ...(args === undefined ? {} : { args }),
-          source,
-          resolveHandleId: (id) => nav.stack.find((entry) => entry.manifestId === id)?.handleId,
-          manifestHasSettings,
-        });
-        if (emission !== null) {
-          emitAppResume(kernel.events, emission);
-        }
-      }
-      commitLaunched(manifestId);
-    },
-    () => {
-      clearLaunching(manifestId);
-    },
-  );
-}
-
-function onSpawnNew(manifestId: string, args?: Readonly<Record<string, unknown>>): void {
-  const unsupported = unsupportedManifestFor(manifestId);
-
-  if (unsupported) {
-    showSwitcher.value = false;
-    clearLaunching(manifestId);
-    notifyUnsupportedManifest(unsupported);
-    return;
-  }
-  addLaunching(manifestId);
-  void nav.spawnNew(manifestId, args).then(
-    () => {
-      clearLaunching(manifestId);
-      commitLaunched(manifestId);
-    },
-    () => {
-      clearLaunching(manifestId);
-    },
-  );
-}
-
-async function onEditorOpenRequested(path: string): Promise<void> {
-  const unsupported = unsupportedManifestFor("editor");
-
-  if (unsupported) {
-    showSwitcher.value = false;
-    clearLaunching("editor");
-    notifyUnsupportedManifest(unsupported);
-    return;
-  }
-
-  const normalizedPath = normalizeEditorOpenPath(path);
-  if (normalizedPath === null) {
-    return;
-  }
-
-  const matchingFrame = topmostEditorFrame((frame) => documentPathFor(frame) === normalizedPath);
-  if (matchingFrame !== null) {
-    nav.focusFrame(matchingFrame.frameId);
-    return;
-  }
-
-  const emptyFrame = topmostEditorFrame((frame) => frame.documentPath === null);
-  if (emptyFrame !== null) {
-    nav.focusFrame(emptyFrame.frameId);
-    await nextTick();
-    kernel.events.emit("editor.window.open.requested", {
-      handleId: emptyFrame.handleId,
-      path: normalizedPath,
-    });
-    commitLaunched("editor");
-    return;
-  }
-
-  addLaunching("editor");
-  try {
-    await nav.spawnNew("editor", { path: normalizedPath });
-    commitLaunched("editor");
-  } finally {
-    clearLaunching("editor");
-  }
-}
-
-async function onBlogPostOpenRequested(path: string, slug: string): Promise<void> {
-  const unsupported = unsupportedManifestFor("blog");
-
-  if (unsupported) {
-    showSwitcher.value = false;
-    clearLaunching("blog");
-    notifyUnsupportedManifest(unsupported);
-    return;
-  }
-
-  const normalizedPath = normalizeOpenRequestPath("blog.post.open.requested", path);
-  if (normalizedPath === null || !isBlogPostSlug(slug)) {
-    if (!isBlogPostSlug(slug)) {
-      debugWarn("[mobile-shell]", "blog.post.open.requested invalid slug", slug);
-    }
-    return;
-  }
-
-  const matchingFrame = topmostFrameForManifest(
-    "blog",
-    (frame) => documentPathFor(frame) === normalizedPath,
-  );
-  if (matchingFrame !== null) {
-    nav.focusFrame(matchingFrame.frameId);
-    return;
-  }
-
-  addLaunching("blog");
-  try {
-    await nav.spawnNew("blog", { path: normalizedPath, slug });
-    commitLaunched("blog");
-  } finally {
-    clearLaunching("blog");
-  }
-}
-
-async function onPdfViewerOpenRequested(path: string): Promise<void> {
-  const unsupported = unsupportedManifestFor("pdf-viewer");
-
-  if (unsupported) {
-    showSwitcher.value = false;
-    clearLaunching("pdf-viewer");
-    notifyUnsupportedManifest(unsupported);
-    return;
-  }
-
-  const normalizedPath = normalizeOpenRequestPath("pdf-viewer.open.requested", path);
-  if (normalizedPath === null) {
-    return;
-  }
-
-  const matchingFrame = topmostFrameForManifest(
-    "pdf-viewer",
-    (frame) => documentPathFor(frame) === normalizedPath,
-  );
-  if (matchingFrame !== null) {
-    nav.focusFrame(matchingFrame.frameId);
-    return;
-  }
-
-  addLaunching("pdf-viewer");
-  try {
-    await nav.spawnNew("pdf-viewer", { path: normalizedPath });
-    commitLaunched("pdf-viewer");
-  } finally {
-    clearLaunching("pdf-viewer");
-  }
-}
-
-function normalizeEditorOpenPath(path: string): string | null {
-  return normalizeOpenRequestPath("editor.open.requested", path);
-}
-
-function normalizeOpenRequestPath(eventName: string, path: string): string | null {
-  return normalizeShellOpenRequestPath("[mobile-shell]", eventName, path);
-}
-
-function topmostEditorFrame(
-  predicate: (frame: (typeof nav.stack)[number]) => boolean,
-): (typeof nav.stack)[number] | null {
-  return topmostFrameForManifest("editor", predicate);
-}
-
-function topmostFrameForManifest(
-  manifestId: string,
-  predicate: (frame: (typeof nav.stack)[number]) => boolean,
-): (typeof nav.stack)[number] | null {
-  return preferredManifestFrame(nav.stack, nav.foreground.value, manifestId, predicate);
-}
-
-function onBack(): void {
-  nav.goHome();
-}
-
-function onHide(): void {
-  nav.goHome();
-}
-
-function onClose(frameId: string): void {
-  nav.dismiss(frameId);
-}
-
-function onFrameTitle(handleId: string, manifestId: string, title: string | null): void {
-  nav.setTitle(handleId, manifestId, title);
+function closeRecents(): void {
+  session.send({ type: "close-recents" });
 }
 
 function onSelect(frameId: string): void {
-  nav.focusFrame(frameId);
-  closeSwitcher();
+  session.send({ type: "select-recent", frameId });
 }
 
-/**
- * AppSwitcher card dismiss. The switcher stays open after each
- * dismiss so the user can clean up several apps in a row; the
- * `depth → 0` watcher above auto-closes the dialog when the last frame
- * leaves so we don't strand a chrome-only overlay above an empty
- * HomeScreen.
- */
 function onDismiss(frameId: string): void {
-  nav.dismiss(frameId);
+  session.send({ type: "dismiss", frameId });
 }
 
 function onDismissAll(): void {
-  nav.dismissAll();
+  session.send({ type: "dismiss-all" });
 }
 
-watch(
-  () => nav.foreground.value,
-  async (next, prev) => {
-    if (prev !== null && next === null && lastLaunchedManifestId.value !== null) {
-      await nextTick();
-      const id = lastLaunchedManifestId.value;
-      if (typeof document !== "undefined" && id) {
-        const safeId = typeof CSS !== "undefined" && CSS.escape ? CSS.escape(id) : id;
-        const icon = document.querySelector<HTMLButtonElement>(
-          `.home-icon[data-manifest-id="${safeId}"]`,
-        );
-        icon?.focus({ preventScroll: true });
-      }
-    }
-  },
-);
+function onFrameTitle(handleId: string, manifestId: string, title: string | null): void {
+  session.send({ type: "set-title", handleId, manifestId, title });
+}
 </script>
 
 <template>
@@ -440,39 +125,39 @@ watch(
     <div class="mobile-shell__body">
       <HomeScreen
         ref="homeRef"
-        :aria-hidden="!isHome"
-        :inert="!isHome"
-        :recents-available="isHome && nav.depth.value > 0"
-        :launching-manifest-ids="launchingManifestIds"
+        :aria-hidden="!mobile.homeVisible"
+        :inert="!mobile.homeVisible"
+        :recents-available="mobile.recentsAvailable"
+        :launching-manifest-ids="mobile.launchingManifestIds"
         @launch="onLaunch"
-        @recents="openSwitcher"
+        @recents="openRecents"
       />
       <div class="mobile-shell__stack">
         <AppView
-          v-for="frame in nav.stack"
+          v-for="frame in mobile.frames"
           :key="frame.frameId"
           :frame="frame"
           :title="titleFor(frame.manifestId)"
-          :is-current="frame.frameId === nav.foreground.value && !switcherActive"
-          :is-foreground-frame="frame.frameId === nav.foreground.value"
-          @back="onBack"
-          @close="onClose(frame.frameId)"
-          @hide="onHide"
-          @recents="openSwitcher"
+          :is-current="frame.frameId === mobile.foregroundFrameId && !mobile.recentsVisible"
+          :is-foreground-frame="frame.frameId === mobile.foregroundFrameId"
+          @back="goHome"
+          @close="onDismiss(frame.frameId)"
+          @hide="goHome"
+          @recents="openRecents"
           @title:frame="onFrameTitle"
         />
       </div>
       <Transition name="app-switcher">
         <AppSwitcher
-          v-if="switcherActive"
-          :frames="nav.stack"
-          @close="closeSwitcher"
+          v-if="mobile.recentsVisible"
+          :frames="mobile.frames"
+          @close="closeRecents"
           @select="onSelect"
           @dismiss="onDismiss"
           @dismiss-all="onDismissAll"
         />
       </Transition>
-      <MobileSpotlightHost v-if="isHome" :scroll-container="homeScrollEl" />
+      <MobileSpotlightHost v-if="mobile.homeVisible" :scroll-container="homeScrollEl" />
     </div>
     <MobilePermissionPromptHost />
   </div>

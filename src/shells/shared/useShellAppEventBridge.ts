@@ -8,7 +8,7 @@ type SpawnPayload = KernelEventPayloads["app.spawn.new"];
 
 /**
  * Shell-agnostic adapter the bridge drives. Desktop maps these onto its
- * `useWindowManager` surface and mobile onto `useMobileNavigation`; the kernel
+ * `useWindowManager` surface and mobile onto its session interface; the kernel
  * wiring (which events, in what order, with what cleanup) lives in one place so
  * the two shells can never drift apart.
  */
@@ -28,9 +28,10 @@ export interface ShellAppEventBridge {
  * subscriptions down on unmount. `app.url.changed` paths are normalized here so
  * both shells receive an already-canonical browser path.
  */
-export function useShellAppEventBridge(bridge: ShellAppEventBridge): void {
-  const kernel = useKernel();
-
+export function useShellAppEventBridge(
+  bridge: ShellAppEventBridge,
+  kernel: Pick<ReturnType<typeof useKernel>, "events"> = useKernel(),
+): void {
   const disposers = [
     kernel.events.on("app.launch.requested", (payload) => {
       bridge.launch(payload.manifestId, payload.args, payload.source);

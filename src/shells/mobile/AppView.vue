@@ -15,7 +15,7 @@ import {
   type AppChromeBackAction,
   type AppChromeTitlebarVisibility,
 } from "~/types/app";
-import type { NavigationFrame } from "./navigation";
+import type { NavigationFrame } from "./useMobileSession";
 
 const props = withDefaults(
   defineProps<{
