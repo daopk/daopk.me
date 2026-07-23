@@ -17,7 +17,6 @@ import type { Kernel } from "~/types/kernel";
 import { useSettingsStore } from "~/core/storage/SettingsStore";
 
 import MobileShell from "./MobileShell.vue";
-import { __resetNavigationForTest } from "./navigation";
 
 const StubIcon = defineVaporComponent(() =>
   document.createElementNS("http://www.w3.org/2000/svg", "svg"),
@@ -162,7 +161,6 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
     localStorage.clear();
     setActivePinia(createPinia());
     useSettingsStore().hydrate();
-    __resetNavigationForTest();
     window.history.replaceState(null, "", "/");
     document.title = "WebOS";
     toastStore = createToastStore({ max: 5, duration: 5000 });
@@ -175,7 +173,6 @@ describe("MobileShell (v2 — back-as-suspend)", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    __resetNavigationForTest();
     try {
       useSettingsStore().dispose();
     } catch {}

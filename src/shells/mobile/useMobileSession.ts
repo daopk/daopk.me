@@ -1,7 +1,18 @@
-import { computed, nextTick, ref, watch, type ComputedRef, type DeepReadonly } from "vue";
+import {
+  computed,
+  nextTick,
+  onScopeDispose,
+  reactive,
+  readonly,
+  ref,
+  watch,
+  type ComputedRef,
+  type DeepReadonly,
+} from "vue";
 
 import { hasAppSettings } from "~/core/apps/appSettings";
 import { appSupportsShell } from "~/core/apps/shellSupport";
+import { debugWarn } from "~/core/debug";
 import {
   appBrowserTitle,
   appFallbackBrowserPath,
@@ -14,13 +25,31 @@ import {
   type ShellOpenRequest,
   type ShellOpenRequestAdapter,
 } from "~/shells/shared/shellOpenRequests";
+import {
+  setSurfaceBrowserPath,
+  setSurfaceDocumentPath,
+  type AppSurfaceRecord,
+} from "~/shells/shared/appSurface";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
-import { navigation, type NavigationFrame } from "./navigation";
+import {
+  mobileSessionOwnsHandle,
+  registerMobileSessionHandleClaim,
+  registerMobileSessionHandleOwner,
+  waitForMobileSessionHandleClaims,
+} from "./mobileSessionHandleOwnership";
 
-export type { NavigationFrame } from "./navigation";
+export interface NavigationFrame extends AppSurfaceRecord {
+  readonly frameId: string;
+  readonly handleId: string;
+  readonly manifestId: string;
+  readonly args?: Readonly<Record<string, unknown>>;
+  documentPath?: string | null;
+  browserPath?: string | null;
+  title?: string | null;
+}
 
 export interface MobileSessionState {
   readonly frames: DeepReadonly<NavigationFrame[]>;
@@ -72,31 +101,228 @@ export interface MobileSessionAdapters {
  */
 export function useMobileSession(adapters: MobileSessionAdapters): MobileSession {
   const { kernel, notifyUnsupported, restoreHomeFocus, titleFor } = adapters;
-  navigation.init(kernel);
 
+  const frames = reactive<NavigationFrame[]>([]);
+  const publishedFrames = readonly(frames) as DeepReadonly<NavigationFrame[]>;
+  const unregisterHandleOwner = registerMobileSessionHandleOwner(kernel, (handleId) =>
+    frames.some((frame) => frame.handleId === handleId),
+  );
+  const foregroundFrameId = ref<string | null>(null);
   const recentsRequested = ref(false);
   const lastLaunchedManifestId = ref<string | null>(null);
   const launchingManifestIds = ref<ReadonlySet<string>>(new Set<string>());
+  const releasePendingHandleClaims = new Set<() => void>();
+  let launchChain: Promise<unknown> = Promise.resolve();
+  let disposed = false;
+
+  function manifestFor(manifestId: string): AppManifest | null {
+    return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
+  }
+
+  function beginHandleClaim(manifestId: string): () => void {
+    const unregister = registerMobileSessionHandleClaim(kernel, manifestId);
+    let pending = true;
+    const release = (): void => {
+      if (!pending) {
+        return;
+      }
+      pending = false;
+      releasePendingHandleClaims.delete(release);
+      unregister();
+    };
+    releasePendingHandleClaims.add(release);
+    return release;
+  }
+
+  function killHandleIfUnowned(
+    handleId: string,
+    reason: "user" | "shell",
+    operation: string,
+  ): void {
+    if (mobileSessionOwnsHandle(kernel, handleId)) {
+      return;
+    }
+    try {
+      kernel.processes.kill(handleId, reason);
+    } catch (error) {
+      debugWarn("[mobile-session]", `${operation}: kill threw`, error);
+    }
+  }
+
+  function createFrameId(): string {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `frame-${frames.length}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  async function doSpawn(
+    manifestId: string,
+    args?: Readonly<Record<string, unknown>>,
+  ): Promise<NavigationFrame> {
+    if (disposed) {
+      throw new Error(`Mobile session disposed before launching "${manifestId}"`);
+    }
+
+    const handle = await kernel.apps.launch(manifestId, args);
+
+    if (disposed) {
+      // A replacement may have synchronously claimed this singleton launch but
+      // not published its frame yet. Let every live claim settle before reaping.
+      if (manifestFor(manifestId)?.singleton === true) {
+        await waitForMobileSessionHandleClaims(kernel, manifestId);
+      }
+      killHandleIfUnowned(handle.id, "shell", "late launch teardown");
+      throw new Error(`Mobile session disposed while launching "${manifestId}"`);
+    }
+
+    const existingByHandle = frames.find((frame) => frame.handleId === handle.id);
+    if (existingByHandle !== undefined) {
+      if (args !== undefined) {
+        debugWarn("[mobile-session]", "existingByHandle — dropping spawn args", manifestId, args);
+      }
+      foregroundFrameId.value = existingByHandle.frameId;
+      return existingByHandle;
+    }
+
+    const newFrame: NavigationFrame = {
+      frameId: createFrameId(),
+      handleId: handle.id,
+      manifestId,
+      ...(args === undefined ? {} : { args: Object.freeze({ ...args }) }),
+    };
+    frames.push(newFrame);
+    foregroundFrameId.value = newFrame.frameId;
+    return newFrame;
+  }
+
+  async function launchFrame(
+    manifestId: string,
+    args?: Readonly<Record<string, unknown>>,
+  ): Promise<NavigationFrame> {
+    const releaseHandleClaim = beginHandleClaim(manifestId);
+    const previous = launchChain.catch(() => undefined);
+    const next = previous.then(async (): Promise<NavigationFrame> => {
+      const existingByManifest = frames.find((frame) => frame.manifestId === manifestId);
+      if (existingByManifest !== undefined) {
+        if (args !== undefined) {
+          debugWarn("[mobile-session]", "resume — dropping launch args", manifestId, args);
+        }
+        foregroundFrameId.value = existingByManifest.frameId;
+        return existingByManifest;
+      }
+
+      return doSpawn(manifestId, args);
+    });
+
+    const tracked = next.finally(releaseHandleClaim);
+    launchChain = tracked.catch(() => undefined);
+    return tracked;
+  }
+
+  async function spawnFrame(
+    manifestId: string,
+    args?: Readonly<Record<string, unknown>>,
+  ): Promise<NavigationFrame> {
+    const releaseHandleClaim = beginHandleClaim(manifestId);
+    const previous = launchChain.catch(() => undefined);
+    const next = previous.then(() => doSpawn(manifestId, args));
+    const tracked = next.finally(releaseHandleClaim);
+    launchChain = tracked.catch(() => undefined);
+    return tracked;
+  }
+
+  function goHome(): void {
+    foregroundFrameId.value = null;
+  }
+
+  function focusFrame(frameId: string): void {
+    if (foregroundFrameId.value === frameId || !frames.some((frame) => frame.frameId === frameId)) {
+      return;
+    }
+    foregroundFrameId.value = frameId;
+  }
+
+  function dismiss(frameId: string): void {
+    const index = frames.findIndex((frame) => frame.frameId === frameId);
+    if (index === -1) {
+      return;
+    }
+
+    const [removed] = frames.splice(index, 1);
+    if (foregroundFrameId.value === frameId) {
+      foregroundFrameId.value = frames.at(-1)?.frameId ?? null;
+    }
+
+    killHandleIfUnowned(removed.handleId, "user", "dismiss");
+  }
+
+  function dismissAll(): void {
+    if (frames.length === 0) {
+      return;
+    }
+
+    const removed = frames.splice(0, frames.length);
+    foregroundFrameId.value = null;
+
+    const killedHandles = new Set<string>();
+    for (const frame of removed) {
+      if (killedHandles.has(frame.handleId)) {
+        continue;
+      }
+      killedHandles.add(frame.handleId);
+
+      killHandleIfUnowned(frame.handleId, "user", "dismissAll");
+    }
+  }
+
+  function removeByHandleId(handleId: string): boolean {
+    let removedForeground = false;
+    let removed = false;
+    for (let index = frames.length - 1; index >= 0; index -= 1) {
+      const frame = frames[index];
+      if (frame?.handleId !== handleId) {
+        continue;
+      }
+
+      removed = true;
+      removedForeground ||= foregroundFrameId.value === frame.frameId;
+      frames.splice(index, 1);
+    }
+
+    if (removedForeground) {
+      foregroundFrameId.value = frames.at(-1)?.frameId ?? null;
+    }
+    return removed;
+  }
+
+  function setTitle(handleId: string, manifestId: string, title: string | null): boolean {
+    const frame = frames.find(
+      (entry) => entry.handleId === handleId && entry.manifestId === manifestId,
+    );
+    if (frame === undefined) {
+      return false;
+    }
+    frame.title = title;
+    return true;
+  }
 
   const currentFrame = computed<NavigationFrame | null>(() => {
-    const foregroundFrameId = navigation.foreground.value;
-    if (foregroundFrameId === null) {
+    if (foregroundFrameId.value === null) {
       return null;
     }
-    return navigation.stack.find((frame) => frame.frameId === foregroundFrameId) ?? null;
+    return frames.find((frame) => frame.frameId === foregroundFrameId.value) ?? null;
   });
 
   const state = computed<MobileSessionState>(() => {
-    const frames = navigation.stack;
-    const foregroundFrameId = navigation.foreground.value;
     const frame = currentFrame.value;
     const frameCount = frames.length;
 
     return {
-      frames,
-      foregroundFrameId,
-      homeVisible: foregroundFrameId === null,
-      recentsAvailable: foregroundFrameId === null && frameCount > 0,
+      frames: publishedFrames,
+      foregroundFrameId: foregroundFrameId.value,
+      homeVisible: foregroundFrameId.value === null,
+      recentsAvailable: foregroundFrameId.value === null && frameCount > 0,
       recentsVisible: recentsRequested.value && frameCount > 0,
       launchingManifestIds: launchingManifestIds.value,
       browserPath:
@@ -129,10 +355,6 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
     lastLaunchedManifestId.value = manifestId;
   }
 
-  function manifestFor(manifestId: string): AppManifest | null {
-    return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
-  }
-
   function manifestHasSettings(manifestId: string): boolean {
     const manifest = manifestFor(manifestId);
     return manifest !== null && hasAppSettings(manifest);
@@ -160,12 +382,12 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
       return;
     }
 
-    const willResume = navigation.stack.some((frame) => frame.manifestId === manifestId);
+    const willResume = frames.some((frame) => frame.manifestId === manifestId);
     if (!willResume) {
       addLaunching(manifestId);
     }
 
-    void navigation.launch(manifestId, args).then(
+    void launchFrame(manifestId, args).then(
       () => {
         if (!willResume) {
           clearLaunching(manifestId);
@@ -175,8 +397,7 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
             manifestId,
             ...(args === undefined ? {} : { args }),
             source,
-            resolveHandleId: (id) =>
-              navigation.stack.find((entry) => entry.manifestId === id)?.handleId,
+            resolveHandleId: (id) => frames.find((entry) => entry.manifestId === id)?.handleId,
             manifestHasSettings,
           });
           if (emission !== null) {
@@ -202,7 +423,7 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
     }
 
     addLaunching(manifestId);
-    return navigation.spawnNew(manifestId, args).then(
+    return spawnFrame(manifestId, args).then(
       () => {
         clearLaunching(manifestId);
         commitLaunched(manifestId);
@@ -215,7 +436,7 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
 
   const mobileOpenRequestAdapter: ShellOpenRequestAdapter<DeepReadonly<NavigationFrame>> = {
     findPreferred(manifestId, predicate) {
-      const candidates = navigation.stack.filter(
+      const candidates = publishedFrames.filter(
         (frame) => frame.manifestId === manifestId && predicate(frame),
       );
       if (candidates.length === 0) {
@@ -223,17 +444,16 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
       }
 
       return (
-        candidates.find((frame) => frame.frameId === navigation.foreground.value) ??
-        candidates.at(-1)!
+        candidates.find((frame) => frame.frameId === foregroundFrameId.value) ?? candidates.at(-1)!
       );
     },
     async apply(action) {
       switch (action.type) {
         case "focus":
-          navigation.focusFrame(action.target.frameId);
+          focusFrame(action.target.frameId);
           return;
         case "reuse-editor":
-          navigation.focusFrame(action.target.frameId);
+          focusFrame(action.target.frameId);
           await nextTick();
           kernel.events.emit("editor.window.open.requested", {
             handleId: action.target.handleId,
@@ -261,7 +481,7 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
   }
 
   function closeRecentsWhenEmpty(): void {
-    if (navigation.stack.length === 0) {
+    if (frames.length === 0) {
       recentsRequested.value = false;
     }
   }
@@ -272,10 +492,10 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
         launch(intent.manifestId, intent.args, intent.source);
         return;
       case "go-home":
-        navigation.goHome();
+        goHome();
         return;
       case "open-recents":
-        if (navigation.stack.length > 0) {
+        if (frames.length > 0) {
           recentsRequested.value = true;
         }
         return;
@@ -283,19 +503,19 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
         recentsRequested.value = false;
         return;
       case "select-recent":
-        navigation.focusFrame(intent.frameId);
+        focusFrame(intent.frameId);
         recentsRequested.value = false;
         return;
       case "dismiss":
-        navigation.dismiss(intent.frameId);
+        dismiss(intent.frameId);
         closeRecentsWhenEmpty();
         return;
       case "dismiss-all":
-        navigation.dismissAll();
+        dismissAll();
         recentsRequested.value = false;
         return;
       case "set-title":
-        navigation.setTitle(intent.handleId, intent.manifestId, intent.title);
+        setTitle(intent.handleId, intent.manifestId, intent.title);
         return;
     }
   }
@@ -310,29 +530,64 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
         void open(request);
       },
       setDocumentPath: (handleId, manifestId, path) => {
-        navigation.setDocumentPath(handleId, manifestId, path);
+        setSurfaceDocumentPath(frames, handleId, manifestId, path);
       },
       setBrowserPath: (handleId, manifestId, path) => {
-        navigation.setBrowserPath(handleId, manifestId, path);
+        setSurfaceBrowserPath(frames, handleId, manifestId, path);
       },
       removeByHandleId: (handleId) => {
-        navigation.removeByHandleId(handleId);
+        removeByHandleId(handleId);
         closeRecentsWhenEmpty();
       },
     },
     kernel,
   );
 
-  watch(
-    () => navigation.foreground.value,
-    async (next, previous) => {
-      if (previous === null || next !== null || lastLaunchedManifestId.value === null) {
-        return;
+  watch(foregroundFrameId, async (next, previous) => {
+    if (previous === null || next !== null || lastLaunchedManifestId.value === null) {
+      return;
+    }
+    await nextTick();
+    restoreHomeFocus(lastLaunchedManifestId.value);
+  });
+
+  const stopProcessSync = watch(foregroundFrameId, (next, previous) => {
+    if (next === previous) {
+      return;
+    }
+
+    const previousHandle =
+      previous === null
+        ? null
+        : (frames.find((frame) => frame.frameId === previous)?.handleId ?? null);
+    const nextHandle =
+      next === null ? null : (frames.find((frame) => frame.frameId === next)?.handleId ?? null);
+
+    if (previousHandle !== null && previousHandle !== nextHandle) {
+      kernel.processes.suspend(previousHandle);
+    }
+    if (nextHandle !== null && nextHandle !== previousHandle) {
+      kernel.processes.resume(nextHandle);
+    }
+  });
+
+  onScopeDispose(() => {
+    disposed = true;
+    stopProcessSync();
+    for (const release of releasePendingHandleClaims) {
+      release();
+    }
+
+    while (frames.length > 0) {
+      const frame = frames.pop();
+      if (frame === undefined) {
+        continue;
       }
-      await nextTick();
-      restoreHomeFocus(lastLaunchedManifestId.value);
-    },
-  );
+      killHandleIfUnowned(frame.handleId, "shell", "dispose");
+    }
+    unregisterHandleOwner();
+    foregroundFrameId.value = null;
+  });
 
   return { state, send };
 }
