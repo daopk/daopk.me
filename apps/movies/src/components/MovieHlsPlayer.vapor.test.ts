@@ -6,13 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 
 import MovieHlsPlayer from "./MovieHlsPlayer.vue";
-import type { MoviePlayInfo } from "../moviesApi";
+import type { MoviePlayInfo, MoviePlaySource } from "../moviesApi";
 import {
-  moviePlaybackProgressKey,
-  MOVIES_PLAYBACK_PROGRESS_KV_KEY,
-  type MoviesPlaybackProgressEntry,
-  type MoviesPlaybackProgressState,
-} from "../moviesPlaybackProgress";
+  createMoviesWatchContinuity,
+  type MoviesWatchContinuity,
+  type MoviesWatchTarget,
+} from "../moviesWatchContinuity";
 
 const fullscreenDescriptors = {
   documentExitFullscreen: Object.getOwnPropertyDescriptor(document, "exitFullscreen"),
@@ -154,37 +153,35 @@ function playInfo(overrides: Partial<MoviePlayInfo> = {}): MoviePlayInfo {
   };
 }
 
-const PLAYER_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
-const MOVIE_PROGRESS_KEY = moviePlaybackProgressKey(550);
+const MOVIE_TARGET: MoviesWatchTarget = {
+  kind: "movie",
+  slug: "fight-club",
+  tmdbId: 550,
+};
+const mountedContinuities: MoviesWatchContinuity[] = [];
 
 function persistPlayerProgress(
-  key: string,
-  entry: MoviesPlaybackProgressEntry = {
+  target: MoviesWatchTarget,
+  entry: {
+    readonly currentTime: number;
+    readonly duration: number;
+    readonly source?: MoviePlaySource;
+    readonly sourceIndex?: number;
+  } = {
     currentTime: 42,
     duration: 120,
-    updatedAt: Date.now(),
   },
 ): void {
-  const state: MoviesPlaybackProgressState = {
-    entries: {
-      [key]: entry,
-    },
-  };
-  localStorage.setItem(
-    PLAYER_PROGRESS_STORAGE_KEY,
-    JSON.stringify({
-      __v: 1,
-      data: state,
-    }),
-  );
+  const continuity = createMoviesWatchContinuity();
+  continuity.saveProgress(target, entry);
+  continuity.dispose();
 }
 
-function readPlayerProgress(): MoviesPlaybackProgressState {
-  const raw = localStorage.getItem(PLAYER_PROGRESS_STORAGE_KEY);
-  if (raw === null) {
-    return { entries: {} };
-  }
-  return (JSON.parse(raw) as { data: MoviesPlaybackProgressState }).data;
+function readPlayerProgress(target: MoviesWatchTarget = MOVIE_TARGET) {
+  const continuity = createMoviesWatchContinuity();
+  const progress = continuity.progressFor(target);
+  continuity.dispose();
+  return progress;
 }
 
 async function settle(): Promise<void> {
@@ -365,12 +362,16 @@ function setMediaSupport(options: { nativeHls: boolean; hlsJs: boolean }): void 
 }
 
 function mountPlayer(props: Partial<InstanceType<typeof MovieHlsPlayer>["$props"]> = {}) {
+  const watchContinuity = props.watchContinuity ?? createMoviesWatchContinuity();
+  mountedContinuities.push(watchContinuity);
   return mount(MovieHlsPlayer, {
     attachTo: document.body,
     props: {
       play: playInfo(),
       posterUrl: "https://image.tmdb.org/t/p/w1280/backdrop.jpg",
+      target: MOVIE_TARGET,
       title: "Fight Club",
+      watchContinuity,
       ...props,
     },
   });
@@ -496,6 +497,9 @@ describe("MovieHlsPlayer", () => {
   });
 
   afterEach(() => {
+    for (const continuity of mountedContinuities.splice(0)) {
+      continuity.dispose();
+    }
     document.body.innerHTML = "";
     localStorage.clear();
     vi.useRealTimers();
@@ -664,9 +668,9 @@ content-c.ts
   });
 
   it("seeks to saved progress after metadata loads", async () => {
-    persistPlayerProgress(MOVIE_PROGRESS_KEY);
+    persistPlayerProgress(MOVIE_TARGET);
 
-    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
@@ -678,14 +682,14 @@ content-c.ts
   });
 
   it("saves playback progress from time updates", async () => {
-    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
     setMediaMetrics(video, { currentTime: 30, duration: 120 });
     await settle();
 
-    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+    expect(readPlayerProgress()).toMatchObject({
       currentTime: 30,
       duration: 120,
     });
@@ -700,9 +704,9 @@ content-c.ts
       serverName: "Server 2",
       slug: "alt",
     };
+    const sources = [playInfo().sources[0]!, alternateSource];
     const wrapper = mountPlayer({
-      play: playInfo({ sources: [playInfo().sources[0]!, alternateSource] }),
-      progressKey: MOVIE_PROGRESS_KEY,
+      play: playInfo({ sources }),
       sourceIndex: 1,
     });
     await settle();
@@ -711,22 +715,13 @@ content-c.ts
     setMediaMetrics(video, { currentTime: 30, duration: 120 });
     await settle();
 
-    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
-      currentTime: 30,
-      duration: 120,
-      source: {
-        filename: "fight-club-alt.m3u8",
-        index: 1,
-        m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
-        name: "Alt",
-        serverName: "Server 2",
-        slug: "alt",
-      },
-    });
+    const continuity = createMoviesWatchContinuity();
+    expect(continuity.restoreSource(MOVIE_TARGET, sources)).toBe(1);
+    continuity.dispose();
   });
 
   it("saves progress immediately after seek and pause", async () => {
-    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
@@ -736,7 +731,7 @@ content-c.ts
     await commitSlider(sliderInputs(wrapper)[0]!, 45);
     await settle();
 
-    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+    expect(readPlayerProgress()).toMatchObject({
       currentTime: 45,
       duration: 120,
     });
@@ -745,20 +740,19 @@ content-c.ts
     video.dispatchEvent(new Event("pause"));
     await settle();
 
-    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toMatchObject({
+    expect(readPlayerProgress()).toMatchObject({
       currentTime: 61,
       duration: 120,
     });
   });
 
   it("clears saved progress when playback ends", async () => {
-    persistPlayerProgress(MOVIE_PROGRESS_KEY, {
+    persistPlayerProgress(MOVIE_TARGET, {
       currentTime: 30,
       duration: 120,
-      updatedAt: Date.now(),
     });
 
-    const wrapper = mountPlayer({ progressKey: MOVIE_PROGRESS_KEY });
+    const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
@@ -769,18 +763,18 @@ content-c.ts
     video.dispatchEvent(new Event("ended"));
     await settle();
 
-    expect(readPlayerProgress().entries[MOVIE_PROGRESS_KEY]).toBeUndefined();
+    expect(readPlayerProgress()).toBeNull();
   });
 
-  it("does not persist playback progress without a progress key", async () => {
+  it("does not persist non-resumable playback progress", async () => {
     const wrapper = mountPlayer();
     await settle();
 
     const video = wrapper.get("video").element as HTMLVideoElement;
-    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    setMediaMetrics(video, { currentTime: 2, duration: 120 });
     await settle();
 
-    expect(localStorage.getItem(PLAYER_PROGRESS_STORAGE_KEY)).toBeNull();
+    expect(readPlayerProgress()).toBeNull();
   });
 
   it("destroys the previous hls.js instance when switching sources", async () => {
@@ -810,6 +804,80 @@ content-c.ts
     expect(hlsMock.instances[1]!.loadSource).toHaveBeenCalledWith(
       "https://stream.example.test/fight-club/alt.m3u8",
     );
+  });
+
+  it("restores a switched source after a same-target play refresh and immediate teardown", async () => {
+    const sources = [
+      playInfo().sources[0]!,
+      {
+        embedUrl: "https://player.example.test/player/?url=fight-club-alt",
+        filename: "fight-club-alt.m3u8",
+        m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
+        name: "Alt",
+        serverName: "Server 2",
+        slug: "alt",
+      },
+    ];
+    const refreshedSources = sources.map((source) => ({ ...source }));
+    const firstContinuity = createMoviesWatchContinuity();
+    const wrapper = mountPlayer({
+      play: playInfo({ sources }),
+      watchContinuity: firstContinuity,
+    });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    firstContinuity.selectSource(MOVIE_TARGET, sources, 1);
+    await wrapper.setProps({
+      play: playInfo({ sources: refreshedSources }),
+      sourceIndex: 1,
+    });
+    await settle();
+    wrapper.unmount();
+    firstContinuity.dispose();
+
+    const nextContinuity = createMoviesWatchContinuity();
+    const restoredSourceIndex = nextContinuity.restoreSource(MOVIE_TARGET, refreshedSources);
+    mountPlayer({
+      play: playInfo({ sources: refreshedSources }),
+      sourceIndex: restoredSourceIndex,
+      watchContinuity: nextContinuity,
+    });
+    await settle();
+
+    expect(restoredSourceIndex).toBe(1);
+    expect(hlsMock.instances.at(-1)!.loadSource).toHaveBeenCalledWith(
+      "https://stream.example.test/fight-club/alt.m3u8",
+    );
+  });
+
+  it("persists the outgoing target before attaching a new target", async () => {
+    const nextTarget: MoviesWatchTarget = {
+      kind: "movie",
+      slug: "the-matrix",
+      tmdbId: 603,
+    };
+    const watchContinuity = createMoviesWatchContinuity();
+    watchContinuity.saveProgress(nextTarget, { currentTime: 60, duration: 120 });
+    const wrapper = mountPlayer({ watchContinuity });
+    await settle();
+
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    await wrapper.setProps({
+      play: playInfo({ slug: "the-matrix" }),
+      target: nextTarget,
+      title: "The Matrix",
+    });
+    await settle();
+
+    expect(watchContinuity.progressFor(MOVIE_TARGET)?.currentTime).toBe(30);
+    expect(watchContinuity.progressFor(nextTarget)?.currentTime).toBe(60);
   });
 
   it("shows an error when HLS is unsupported", async () => {

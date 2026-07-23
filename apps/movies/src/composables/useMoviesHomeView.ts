@@ -15,11 +15,10 @@ import {
   type MoviesRowGroupConfig,
 } from "../moviesApi";
 import {
-  createMoviesPlaybackProgressStore,
-  moviesPlaybackProgressRecords,
-  type MoviesPlaybackProgressEntry,
-  type MoviesPlaybackProgressRecord,
-} from "../moviesPlaybackProgress";
+  type MoviesContinueWatchingRecord,
+  type MoviesWatchContinuity,
+  type MoviesWatchProgress,
+} from "../moviesWatchContinuity";
 
 type LoadState = "loading" | "ready" | "error";
 type PeriodGroupId = Extract<MoviesRowGroupConfig["id"], "trending">;
@@ -37,7 +36,7 @@ interface ContinueWatchingEpisodeTarget {
 interface ContinueWatchingItem {
   readonly id: string;
   readonly imageUrl: string;
-  readonly progress: MoviesPlaybackProgressEntry;
+  readonly progress: MoviesWatchProgress;
   readonly progressPercent: number;
   readonly subtitle: string;
   readonly target: ContinueWatchingMovieTarget | ContinueWatchingEpisodeTarget;
@@ -48,6 +47,7 @@ interface UseMoviesHomeViewOptions {
   readonly closeTrailerPreviewNow: () => void;
   readonly openContinueEpisode: (request: MovieEpisodeTarget) => void;
   readonly openContinueMovie: (movie: MovieSummary) => void;
+  readonly watchContinuity: MoviesWatchContinuity;
 }
 
 export interface UseMoviesHomeViewBindings {
@@ -75,6 +75,7 @@ export function useMoviesHomeView({
   closeTrailerPreviewNow,
   openContinueEpisode,
   openContinueMovie,
+  watchContinuity,
 }: UseMoviesHomeViewOptions): UseMoviesHomeViewBindings {
   const { locale, t } = useMoviesI18n();
   const continueWatchingItems = ref<readonly ContinueWatchingItem[]>([]);
@@ -87,8 +88,6 @@ export function useMoviesHomeView({
 
   let abortController: AbortController | null = null;
   let continueAbortController: AbortController | null = null;
-  const playbackProgressStore = createMoviesPlaybackProgressStore();
-
   const hasFeatured = computed(() => featured.value.length > 0);
   const hasContinueWatching = computed(() => continueWatchingItems.value.length > 0);
   const hasHomeContent = hasFeatured;
@@ -106,7 +105,6 @@ export function useMoviesHomeView({
   onUnmounted(() => {
     abortController?.abort();
     continueAbortController?.abort();
-    playbackProgressStore.dispose();
   });
 
   async function loadHome(): Promise<void> {
@@ -151,9 +149,7 @@ export function useMoviesHomeView({
     const controller = new AbortController();
     continueAbortController = controller;
 
-    const records = uniqueContinueWatchingRecords(
-      moviesPlaybackProgressRecords(playbackProgressStore.snapshot()),
-    );
+    const records = uniqueContinueWatchingRecords(watchContinuity.continueWatching());
     if (records.length === 0) {
       continueWatchingItems.value = [];
       return;
@@ -179,10 +175,10 @@ export function useMoviesHomeView({
   }
 
   function uniqueContinueWatchingRecords(
-    records: readonly MoviesPlaybackProgressRecord[],
-  ): readonly MoviesPlaybackProgressRecord[] {
+    records: readonly MoviesContinueWatchingRecord[],
+  ): readonly MoviesContinueWatchingRecord[] {
     const seen = new Set<string>();
-    const uniqueRecords: MoviesPlaybackProgressRecord[] = [];
+    const uniqueRecords: MoviesContinueWatchingRecord[] = [];
 
     for (const record of records) {
       const groupKey = continueWatchingRecordGroupKey(record);
@@ -201,13 +197,13 @@ export function useMoviesHomeView({
   }
 
   async function hydrateContinueWatchingRecord(
-    record: MoviesPlaybackProgressRecord,
+    record: MoviesContinueWatchingRecord,
     signal: AbortSignal,
   ): Promise<ContinueWatchingItem | null> {
     if (record.target.kind === "movie") {
       const movie = await fetchMovieDetail("movie", record.target.tmdbId, { signal });
       return {
-        id: record.key,
+        id: `movie-${record.target.tmdbId}`,
         imageUrl: movie.backdropUrl || movie.thumbUrl || movie.posterUrl,
         progress: record.progress,
         progressPercent: continueProgressPercent(record.progress),
@@ -231,7 +227,7 @@ export function useMoviesHomeView({
     };
 
     return {
-      id: record.key,
+      id: `tv-${record.target.tmdbId}-s${record.target.seasonNumber}-e${record.target.episodeNumber}`,
       imageUrl:
         episodeDetail.episode.stillUrl ||
         episodeDetail.series.backdropUrl ||
@@ -255,7 +251,7 @@ export function useMoviesHomeView({
     return [`S${target.seasonNumber} E${target.episodeNumber}`, name].filter(Boolean).join(" · ");
   }
 
-  function continueProgressPercent(progress: MoviesPlaybackProgressEntry): number {
+  function continueProgressPercent(progress: MoviesWatchProgress): number {
     if (!Number.isFinite(progress.currentTime) || !Number.isFinite(progress.duration)) {
       return 0;
     }
@@ -267,7 +263,7 @@ export function useMoviesHomeView({
     return `${item.progressPercent}%`;
   }
 
-  function continueWatchingRecordGroupKey(record: MoviesPlaybackProgressRecord): string {
+  function continueWatchingRecordGroupKey(record: MoviesContinueWatchingRecord): string {
     return record.target.kind === "movie"
       ? `movie:${record.target.tmdbId}`
       : `tv:${record.target.tmdbId}`;
@@ -309,13 +305,18 @@ export function useMoviesHomeView({
 
   function removeContinueWatchingItem(item: ContinueWatchingItem): void {
     const groupKey = continueWatchingItemGroupKey(item);
-    const records = moviesPlaybackProgressRecords(playbackProgressStore.snapshot());
-
-    for (const record of records) {
-      if (continueWatchingRecordGroupKey(record) === groupKey) {
-        playbackProgressStore.clear(record.key);
-      }
-    }
+    const target =
+      item.target.kind === "movie"
+        ? {
+            kind: "movie" as const,
+            slug: item.target.movie.slug,
+            tmdbId: item.target.movie.tmdbId,
+          }
+        : {
+            ...item.target.episode,
+            kind: "episode" as const,
+          };
+    watchContinuity.removeFromContinueWatching(target);
 
     continueWatchingItems.value = continueWatchingItems.value.filter(
       (current) => continueWatchingItemGroupKey(current) !== groupKey,

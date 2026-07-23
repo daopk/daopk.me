@@ -7,14 +7,14 @@ import { AspectRatio, Overlay } from "@daopk/ui";
 import { KernelInjectionKey, type AppPreviewInput, type AppPreviewSurface } from "@daopk/sdk";
 
 import type { MovieDetail } from "../../moviesApi";
-import type { MoviesPlaybackProgressEntry } from "../../moviesPlaybackProgress";
+import type { MoviesWatchProgress } from "../../moviesWatchContinuity";
 import { mediaLabel } from "../../i18n/labels";
 import { useMoviesI18n } from "../../i18n/useMoviesI18n";
 import { detailMetaLabel } from "./detailFormatters";
 
 interface DetailHeroProps {
   detail: MovieDetail;
-  resumeProgress?: MoviesPlaybackProgressEntry | null;
+  resumeProgress?: MoviesWatchProgress | null;
   trailerKey?: string | null;
 }
 

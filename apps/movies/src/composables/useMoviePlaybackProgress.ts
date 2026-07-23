@@ -1,11 +1,7 @@
 import type { ComputedRef, Ref } from "vue";
 
-import {
-  createMoviesPlaybackProgressStore,
-  isResumableMoviePlaybackTime,
-  moviesPlaybackProgressSourceSnapshot,
-} from "../moviesPlaybackProgress";
 import type { MoviePlayInfo } from "../moviesApi";
+import type { MoviesWatchContinuity, MoviesWatchTarget } from "../moviesWatchContinuity";
 
 const PROGRESS_PERSIST_INTERVAL_MS = 5000;
 
@@ -15,17 +11,17 @@ interface UseMoviePlaybackProgressOptions {
   readonly hasDuration: ComputedRef<boolean>;
   readonly metadataLoaded: Ref<boolean>;
   readonly play: Readonly<Ref<MoviePlayInfo>>;
-  readonly progressKey: Readonly<Ref<string>>;
   readonly seekPosition: Ref<number>;
   readonly sourceIndex: Readonly<Ref<number>>;
   readonly syncMediaState: () => void;
+  readonly target: Readonly<Ref<MoviesWatchTarget>>;
   readonly videoElement: Readonly<Ref<HTMLVideoElement | null>>;
+  readonly watchContinuity: MoviesWatchContinuity;
 }
 
 export interface UseMoviePlaybackProgressBindings {
   applySavedPlaybackProgress(): void;
   clearPlaybackProgress(): void;
-  disposePlaybackProgress(): void;
   persistPlaybackProgress(options?: { readonly force?: boolean }): void;
   resetPlaybackProgressState(): void;
 }
@@ -36,33 +32,32 @@ export function useMoviePlaybackProgress({
   hasDuration,
   metadataLoaded,
   play,
-  progressKey,
   seekPosition,
   sourceIndex,
   syncMediaState,
+  target,
   videoElement,
+  watchContinuity,
 }: UseMoviePlaybackProgressOptions): UseMoviePlaybackProgressBindings {
-  const playbackProgressStore = createMoviesPlaybackProgressStore();
-
   let lastProgressPersistedAtMs = 0;
   let resumeProgressApplied = false;
+  let progressPlay = play.value;
+  let progressSourceIndex = sourceIndex.value;
+  let progressTarget = target.value;
 
-  function selectedSourceIndex(): number {
-    const sources = play.value.sources;
+  function selectedSourceIndex(sourcePlay = progressPlay, index = progressSourceIndex): number {
+    const sources = sourcePlay.sources;
     if (sources.length === 0) {
       return 0;
     }
-    const index = sourceIndex.value;
     return Number.isInteger(index) && index >= 0 && index < sources.length ? index : 0;
   }
 
-  function activeSource(): MoviePlayInfo["sources"][number] | null {
-    return play.value.sources[selectedSourceIndex()] ?? play.value.sources[0] ?? null;
-  }
-
-  function normalizedProgressKey(): string | null {
-    const key = progressKey.value.trim();
-    return key.length === 0 ? null : key;
+  function activeSource(
+    sourcePlay = progressPlay,
+    index = selectedSourceIndex(sourcePlay),
+  ): MoviePlayInfo["sources"][number] | null {
+    return sourcePlay.sources[index] ?? sourcePlay.sources[0] ?? null;
   }
 
   function applySavedPlaybackProgress(): void {
@@ -72,19 +67,15 @@ export function useMoviePlaybackProgress({
 
     resumeProgressApplied = true;
 
-    const key = normalizedProgressKey();
     const video = videoElement.value;
-    if (key === null || video === null || !hasDuration.value) {
+    if (video === null || !hasDuration.value) {
       return;
     }
 
-    const progress = playbackProgressStore.get(key);
+    const progress = watchContinuity.progressFor(progressTarget, {
+      duration: duration.value,
+    });
     if (progress === null) {
-      return;
-    }
-
-    if (!isResumableMoviePlaybackTime(progress.currentTime, duration.value)) {
-      playbackProgressStore.clear(key);
       return;
     }
 
@@ -94,9 +85,8 @@ export function useMoviePlaybackProgress({
   }
 
   function persistPlaybackProgress(options: { readonly force?: boolean } = {}): void {
-    const key = normalizedProgressKey();
     const video = videoElement.value;
-    if (key === null || video === null || !metadataLoaded.value) {
+    if (video === null || !metadataLoaded.value) {
       return;
     }
 
@@ -106,39 +96,52 @@ export function useMoviePlaybackProgress({
     }
 
     syncMediaState();
-    const source = activeSource();
-    playbackProgressStore.save(key, {
+    const currentTarget = target.value;
+    const persistsCurrentTarget = sameWatchTarget(progressTarget, currentTarget);
+    const persistedPlay = persistsCurrentTarget ? play.value : progressPlay;
+    const persistedSourceIndex = selectedSourceIndex(
+      persistedPlay,
+      persistsCurrentTarget ? sourceIndex.value : progressSourceIndex,
+    );
+    const source = activeSource(persistedPlay, persistedSourceIndex);
+    watchContinuity.saveProgress(progressTarget, {
       currentTime: currentTime.value,
       duration: duration.value,
-      source:
-        source === null
-          ? null
-          : moviesPlaybackProgressSourceSnapshot(source, selectedSourceIndex()),
+      source,
+      sourceIndex: persistedSourceIndex,
     });
     lastProgressPersistedAtMs = now;
   }
 
   function clearPlaybackProgress(): void {
-    const key = normalizedProgressKey();
-    if (key !== null) {
-      playbackProgressStore.clear(key);
-    }
+    watchContinuity.complete(progressTarget);
   }
 
   function resetPlaybackProgressState(): void {
     lastProgressPersistedAtMs = 0;
     resumeProgressApplied = false;
-  }
-
-  function disposePlaybackProgress(): void {
-    playbackProgressStore.dispose();
+    progressPlay = play.value;
+    progressSourceIndex = sourceIndex.value;
+    progressTarget = target.value;
   }
 
   return {
     applySavedPlaybackProgress,
     clearPlaybackProgress,
-    disposePlaybackProgress,
     persistPlaybackProgress,
     resetPlaybackProgressState,
   };
+}
+
+function sameWatchTarget(left: MoviesWatchTarget, right: MoviesWatchTarget): boolean {
+  if (left.kind !== right.kind || left.tmdbId !== right.tmdbId) {
+    return false;
+  }
+
+  return (
+    left.kind === "movie" ||
+    (right.kind === "episode" &&
+      left.seasonNumber === right.seasonNumber &&
+      left.episodeNumber === right.episodeNumber)
+  );
 }

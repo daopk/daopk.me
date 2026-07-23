@@ -6,11 +6,10 @@ import {
   type MovieSummary,
   type MoviesListQuery,
 } from "./moviesApi";
-import {
-  createMoviesSourceSelectionSession,
-  type MoviesSourceSelectionSession,
-} from "./moviesSourceSelection";
+import type { MoviesWatchTarget } from "./moviesWatchContinuity";
 import { movieSlugFromText } from "./utils/movieSlug";
+
+export type { MoviesWatchTarget } from "./moviesWatchContinuity";
 
 export type MoviesView =
   | { readonly name: "home" }
@@ -46,24 +45,7 @@ export type MoviesView =
   | {
       readonly autoplay?: boolean;
       readonly name: "watch";
-      readonly sourceSelectionSession: MoviesSourceSelectionSession;
       readonly target: MoviesWatchTarget;
-    };
-
-export type MoviesWatchTarget =
-  | {
-      readonly kind: "movie";
-      readonly slug: string;
-      readonly title?: string;
-      readonly tmdbId: number;
-    }
-  | {
-      readonly episodeNumber: number;
-      readonly kind: "episode";
-      readonly seasonNumber: number;
-      readonly slug: string;
-      readonly title?: string;
-      readonly tmdbId: number;
     };
 
 export type MoviesDeepLink =
@@ -131,13 +113,11 @@ export function movieWatchViewFromSummary(
   movie: MovieSummary,
   options: {
     readonly autoplay?: boolean;
-    readonly sourceSelectionSession?: MoviesSourceSelectionSession;
   } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
     name: "watch",
-    sourceSelectionSession: options.sourceSelectionSession ?? createMoviesSourceSelectionSession(),
     target: {
       kind: "movie",
       slug: movie.slug,
@@ -151,13 +131,11 @@ export function movieEpisodeWatchViewFromTarget(
   request: MovieEpisodeTarget,
   options: {
     readonly autoplay?: boolean;
-    readonly sourceSelectionSession?: MoviesSourceSelectionSession;
   } = {},
 ): MoviesView {
   return {
     ...(options.autoplay === true ? { autoplay: true } : {}),
     name: "watch",
-    sourceSelectionSession: options.sourceSelectionSession ?? createMoviesSourceSelectionSession(),
     target: {
       episodeNumber: request.episodeNumber,
       kind: "episode",

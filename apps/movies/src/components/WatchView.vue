@@ -28,12 +28,7 @@ import {
   type MovieSummary,
   type MovieSeasonEpisode,
 } from "../moviesApi";
-import { episodePlaybackProgressKey, moviePlaybackProgressKey } from "../moviesPlaybackProgress";
-import {
-  createMoviesSourceSelection,
-  type MoviesSourceSelectionSession,
-} from "../moviesSourceSelection";
-import type { MoviesWatchTarget } from "../moviesRoutes";
+import { type MoviesWatchContinuity, type MoviesWatchTarget } from "../moviesWatchContinuity";
 
 type LoadState = "loading" | "ready" | "error";
 interface MovieHlsPlayerInstance {
@@ -42,8 +37,8 @@ interface MovieHlsPlayerInstance {
 
 interface WatchViewProps {
   autoplay?: boolean;
-  sourceSelectionSession: MoviesSourceSelectionSession;
   target: MoviesWatchTarget;
+  watchContinuity: MoviesWatchContinuity;
 }
 
 const props = withDefaults(defineProps<WatchViewProps>(), {
@@ -51,7 +46,6 @@ const props = withDefaults(defineProps<WatchViewProps>(), {
 });
 
 interface WatchEpisodeRequest {
-  readonly sourceSelectionSession: MoviesSourceSelectionSession;
   readonly target: MovieEpisodeTarget;
 }
 
@@ -73,7 +67,6 @@ const { locale, t } = useMoviesI18n();
 let abortController: AbortController | null = null;
 let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
-const sourceSelection = createMoviesSourceSelection(props.sourceSelectionSession);
 const watchTarget = computed<MoviesWatchTarget | null>(() => props.target ?? null);
 
 const play = computed<MoviePlayInfo | null>(() => {
@@ -127,16 +120,6 @@ const posterUrl = computed(() => {
     : currentEpisodeDetail.episode.stillUrl ||
         currentEpisodeDetail.series.backdropUrl ||
         currentEpisodeDetail.series.posterUrl;
-});
-const progressKey = computed(() => {
-  const target = watchTarget.value;
-  if (target === null) {
-    return "";
-  }
-
-  return target.kind === "movie"
-    ? moviePlaybackProgressKey(target.tmdbId)
-    : episodePlaybackProgressKey(target.tmdbId, target.seasonNumber, target.episodeNumber);
 });
 const episodeInfo = computed(() => {
   const target = watchTarget.value;
@@ -240,7 +223,6 @@ onUnmounted(() => {
   abortController?.abort();
   viewportObserver?.disconnect();
   viewportObserver = null;
-  sourceSelection.dispose();
 });
 
 // Publish the watch viewport height so the player can fit the visible area,
@@ -294,23 +276,33 @@ async function loadTarget(): Promise<void> {
 
 function restoreSavedSourceIndex(): void {
   const currentPlay = play.value;
-  if (currentPlay === null) {
+  const target = watchTarget.value;
+  if (currentPlay === null || target === null) {
     selectedSourceIndex.value = 0;
     return;
   }
 
-  selectedSourceIndex.value = sourceSelection.restore(progressKey.value, currentPlay.sources);
+  selectedSourceIndex.value = props.watchContinuity.restoreSource(target, currentPlay.sources);
 }
 
 function selectSource(index: number): void {
-  selectedSourceIndex.value = sourceSelection.select(play.value?.sources ?? [], index);
+  const target = watchTarget.value;
+  selectedSourceIndex.value =
+    target === null
+      ? 0
+      : props.watchContinuity.selectSource(target, play.value?.sources ?? [], index);
 }
 
 function preserveSelectedSource(): void {
-  selectedSourceIndex.value = sourceSelection.select(
-    play.value?.sources ?? [],
-    selectedSourceIndex.value,
-  );
+  const target = watchTarget.value;
+  selectedSourceIndex.value =
+    target === null
+      ? 0
+      : props.watchContinuity.selectSource(
+          target,
+          play.value?.sources ?? [],
+          selectedSourceIndex.value,
+        );
 }
 
 function watchNextEpisode(): void {
@@ -318,7 +310,6 @@ function watchNextEpisode(): void {
   if (target !== null) {
     preserveSelectedSource();
     emit("watch-episode", {
-      sourceSelectionSession: sourceSelection.session,
       target,
     });
   }
@@ -333,7 +324,6 @@ function watchSeasonEpisode(episode: MovieSeasonEpisode): void {
 
   preserveSelectedSource();
   emit("watch-episode", {
-    sourceSelectionSession: sourceSelection.session,
     target: {
       episodeNumber: episode.episodeNumber,
       seasonNumber: episode.seasonNumber,
@@ -398,10 +388,11 @@ defineExpose({
         :play="play"
         v-model:playback-speed="playbackSpeed"
         :poster-url="posterUrl"
-        :progress-key="progressKey"
         show-back-button
         :source-index="selectedSourceIndex"
+        :target="target"
         :title="title"
+        :watch-continuity="watchContinuity"
         @back="$emit('back')"
         @next-episode="watchNextEpisode"
       />

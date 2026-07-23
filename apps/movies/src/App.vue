@@ -18,7 +18,7 @@ import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 import { useMoviesThemeSuggestion } from "./composables/useMoviesThemeSuggestion";
 import { useMoviesI18n } from "./i18n/useMoviesI18n";
 import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
-import type { MoviesSourceSelectionSession } from "./moviesSourceSelection";
+import { createMoviesWatchContinuity } from "./moviesWatchContinuity";
 
 interface WatchViewInstance {
   readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
@@ -29,7 +29,6 @@ interface AppFrameRef {
 }
 
 interface WatchEpisodeRequest {
-  readonly sourceSelectionSession: MoviesSourceSelectionSession;
   readonly target: MovieEpisodeTarget;
 }
 
@@ -39,6 +38,7 @@ const { t } = useMoviesI18n();
 const rootRef = useTemplateRef<AppFrameRef>("rootRef");
 const rootElement = computed(() => rootRef.value?.element ?? null);
 const watchViewRef = ref<WatchViewInstance | null>(null);
+const watchContinuity = createMoviesWatchContinuity();
 const {
   activeSearch,
   canGoBack,
@@ -107,7 +107,6 @@ function openWatchEpisode(request: WatchEpisodeRequest): void {
   openEpisodeWatch(request.target, {
     autoplay: true,
     replace: true,
-    sourceSelectionSession: request.sourceSelectionSession,
   });
 }
 
@@ -118,6 +117,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  watchContinuity.dispose();
   if (typeof window !== "undefined") {
     window.removeEventListener("keydown", onMoviesKeydown, { capture: true });
   }
@@ -153,6 +153,7 @@ onUnmounted(() => {
 
     <HomeView
       v-if="view.name === 'home'"
+      :watch-continuity="watchContinuity"
       @scroll="updateToolbarSolid"
       @open-continue-movie="openMovieWatch($event, { autoplay: true })"
       @open-continue-episode="openEpisodeWatch($event, { autoplay: true })"
@@ -170,6 +171,7 @@ onUnmounted(() => {
       v-else-if="view.name === 'detail'"
       :media-type="view.mediaType"
       :tmdb-id="view.tmdbId"
+      :watch-continuity="watchContinuity"
       @scroll="updateToolbarSolid"
       @back="goBack"
       @open-detail="openDetail"
@@ -204,8 +206,8 @@ onUnmounted(() => {
       v-else-if="view.name === 'watch'"
       ref="watchViewRef"
       :autoplay="view.autoplay === true"
-      :source-selection-session="view.sourceSelectionSession"
       :target="view.target"
+      :watch-continuity="watchContinuity"
       @scroll="updateToolbarSolid"
       @back="goBack"
       @open-detail="openDetail"

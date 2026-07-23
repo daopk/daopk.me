@@ -30,19 +30,7 @@ import type {
   MovieSummary,
   MoviesListResult,
 } from "./moviesApi";
-import {
-  episodePlaybackProgressKey,
-  moviePlaybackProgressKey,
-  moviesPlaybackProgressSourceSnapshot,
-  MOVIES_PLAYBACK_PROGRESS_KV_KEY,
-  type MoviesPlaybackProgressEntry,
-  type MoviesPlaybackProgressState,
-} from "./moviesPlaybackProgress";
-import {
-  MOVIES_SOURCE_PREFERENCE_KV_KEY,
-  moviesSourcePreferenceSnapshot,
-  type MoviesSourcePreferenceState,
-} from "./moviesSourcePreference";
+import { createMoviesWatchContinuity, type MoviesWatchTarget } from "./moviesWatchContinuity";
 
 let defaultMoviesKernel: Kernel;
 
@@ -97,11 +85,15 @@ vi.mock("./components/MovieHlsPlayer.vue", async () => {
         const video = document.createElement("video");
 
         watchEffect(() => {
+          const target = props.target as MoviesWatchTarget | undefined;
           root.dataset.autoplay = props.autoplay ? "true" : "false";
           root.dataset.nextEpisodeLabel = String(props.nextEpisodeLabel ?? "");
           root.dataset.playbackSpeed = String(props.playbackSpeed ?? 1);
-          root.dataset.progressKey = String(props.progressKey ?? "");
           root.dataset.sourceIndex = String(props.sourceIndex ?? 0);
+          root.dataset.targetKind = target?.kind ?? "";
+          root.dataset.targetTmdbId = String(target?.tmdbId ?? "");
+          root.dataset.targetEpisode =
+            target?.kind === "episode" ? String(target.episodeNumber) : "";
           root.dataset.title = String(props.title ?? "");
           back.remove();
           next.remove();
@@ -127,10 +119,11 @@ vi.mock("./components/MovieHlsPlayer.vue", async () => {
           "play",
           "playbackSpeed",
           "posterUrl",
-          "progressKey",
           "showBackButton",
           "sourceIndex",
+          "target",
           "title",
+          "watchContinuity",
         ],
         emits: ["back", "next-episode", "update:playbackSpeed"],
       },
@@ -228,56 +221,79 @@ function trailerResult(
   };
 }
 
-const APP_PROGRESS_STORAGE_KEY = `movies:${MOVIES_PLAYBACK_PROGRESS_KV_KEY}`;
-const APP_SOURCE_PREFERENCE_STORAGE_KEY = `movies:${MOVIES_SOURCE_PREFERENCE_KV_KEY}`;
 const TRAILER_PREVIEW_TEST_BEFORE_OPEN_DELAY_MS = 900;
 const TRAILER_PREVIEW_TEST_OPEN_DELAY_MS = 1_100;
 
+function movieWatchTarget(tmdbId = 550): MoviesWatchTarget {
+  return {
+    kind: "movie",
+    slug: tmdbId === 550 ? "fight-club" : `movie-${tmdbId}`,
+    tmdbId,
+  };
+}
+
+function episodeWatchTarget(
+  tmdbId: number,
+  seasonNumber: number,
+  episodeNumber: number,
+): MoviesWatchTarget {
+  return {
+    episodeNumber,
+    kind: "episode",
+    seasonNumber,
+    slug: tmdbId === 1399 ? "planet-cinema" : `tv-${tmdbId}`,
+    tmdbId,
+  };
+}
+
+interface AppProgressSeed {
+  readonly currentTime: number;
+  readonly duration: number;
+  readonly source?: MoviePlaySource;
+  readonly sourceIndex?: number;
+  readonly updatedAt?: number;
+}
+
 function persistAppProgress(
-  key: string,
-  entry: MoviesPlaybackProgressEntry = {
+  target: MoviesWatchTarget,
+  entry: AppProgressSeed = {
     currentTime: 42,
     duration: 120,
-    updatedAt: Date.now(),
   },
 ): void {
-  persistAppProgressEntries({ [key]: entry });
+  persistAppProgressEntries([{ progress: entry, target }]);
 }
 
-function persistAppProgressEntries(entries: Record<string, MoviesPlaybackProgressEntry>): void {
-  const state: MoviesPlaybackProgressState = {
-    entries,
-  };
-  localStorage.setItem(
-    APP_PROGRESS_STORAGE_KEY,
-    JSON.stringify({
-      __v: 1,
-      data: state,
-    }),
-  );
-}
-
-function readAppProgressState(): MoviesPlaybackProgressState {
-  const raw = localStorage.getItem(APP_PROGRESS_STORAGE_KEY);
-  if (raw === null) {
-    return { entries: {} };
+function persistAppProgressEntries(
+  entries: readonly {
+    readonly progress: AppProgressSeed;
+    readonly target: MoviesWatchTarget;
+  }[],
+): void {
+  let now = Date.now();
+  const continuity = createMoviesWatchContinuity({ now: () => now });
+  for (const entry of entries) {
+    now = entry.progress.updatedAt ?? Date.now();
+    continuity.saveProgress(entry.target, entry.progress);
   }
+  continuity.dispose();
+}
 
-  return (JSON.parse(raw) as { data: MoviesPlaybackProgressState }).data;
+function readAppProgressTargets(): readonly MoviesWatchTarget[] {
+  const continuity = createMoviesWatchContinuity();
+  const targets = continuity.continueWatching().map((record) => record.target);
+  continuity.dispose();
+  return targets;
 }
 
 function persistAppSourcePreference(source: MoviePlaySource, index: number): void {
-  const state: MoviesSourcePreferenceState = {
-    source: moviesSourcePreferenceSnapshot(source, index),
-    updatedAt: Date.now(),
-  };
-  localStorage.setItem(
-    APP_SOURCE_PREFERENCE_STORAGE_KEY,
-    JSON.stringify({
-      __v: 1,
-      data: state,
-    }),
+  const continuity = createMoviesWatchContinuity();
+  continuity.selectSource(
+    movieWatchTarget(),
+    Array.from({ length: index + 1 }, () => source),
+    index,
   );
+  continuity.dispose();
 }
 
 function detail(overrides: Partial<MovieDetail> = {}): MovieDetail {
@@ -1660,23 +1676,32 @@ describe("Movies app", () => {
 
   it("renders Continue Watching with one card per movie or TV series newest first", async () => {
     const now = Date.now();
-    persistAppProgressEntries({
-      [moviePlaybackProgressKey(550)]: {
-        currentTime: 30,
-        duration: 120,
-        updatedAt: now - 1_000,
+    persistAppProgressEntries([
+      {
+        progress: {
+          currentTime: 30,
+          duration: 120,
+          updatedAt: now - 1_000,
+        },
+        target: movieWatchTarget(550),
       },
-      [episodePlaybackProgressKey(1399, 1, 2)]: {
-        currentTime: 60,
-        duration: 120,
-        updatedAt: now,
+      {
+        progress: {
+          currentTime: 60,
+          duration: 120,
+          updatedAt: now,
+        },
+        target: episodeWatchTarget(1399, 1, 2),
       },
-      [episodePlaybackProgressKey(1399, 1, 1)]: {
-        currentTime: 42,
-        duration: 120,
-        updatedAt: now - 500,
+      {
+        progress: {
+          currentTime: 42,
+          duration: 120,
+          updatedAt: now - 500,
+        },
+        target: episodeWatchTarget(1399, 1, 1),
       },
-    });
+    ]);
 
     const wrapper = mountMovies();
     await settle();
@@ -1703,26 +1728,35 @@ describe("Movies app", () => {
 
   it("removes a Continue Watching item from its context menu", async () => {
     const now = Date.now();
-    const movieKey = moviePlaybackProgressKey(550);
-    const latestEpisodeKey = episodePlaybackProgressKey(1399, 1, 2);
-    const olderEpisodeKey = episodePlaybackProgressKey(1399, 1, 1);
-    persistAppProgressEntries({
-      [movieKey]: {
-        currentTime: 30,
-        duration: 120,
-        updatedAt: now - 1_000,
+    const movieTarget = movieWatchTarget(550);
+    const latestEpisodeTarget = episodeWatchTarget(1399, 1, 2);
+    const olderEpisodeTarget = episodeWatchTarget(1399, 1, 1);
+    persistAppProgressEntries([
+      {
+        progress: {
+          currentTime: 30,
+          duration: 120,
+          updatedAt: now - 1_000,
+        },
+        target: movieTarget,
       },
-      [latestEpisodeKey]: {
-        currentTime: 60,
-        duration: 120,
-        updatedAt: now,
+      {
+        progress: {
+          currentTime: 60,
+          duration: 120,
+          updatedAt: now,
+        },
+        target: latestEpisodeTarget,
       },
-      [olderEpisodeKey]: {
-        currentTime: 42,
-        duration: 120,
-        updatedAt: now - 500,
+      {
+        progress: {
+          currentTime: 42,
+          duration: 120,
+          updatedAt: now - 500,
+        },
+        target: olderEpisodeTarget,
       },
-    });
+    ]);
 
     const wrapper = mountMovies({ attachTo: document.body });
     await settle();
@@ -1746,15 +1780,13 @@ describe("Movies app", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0]!.text()).toContain("Fight Club");
 
-    const entries = readAppProgressState().entries;
-    expect(entries[movieKey]).toBeDefined();
-    expect(entries[latestEpisodeKey]).toBeUndefined();
-    expect(entries[olderEpisodeKey]).toBeUndefined();
+    const targets = readAppProgressTargets();
+    expect(targets).toMatchObject([{ kind: "movie", tmdbId: 550 }]);
   });
 
   it("opens a Continue Watching movie directly into autoplay playback", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
-    persistAppProgress(moviePlaybackProgressKey(550));
+    persistAppProgress(movieWatchTarget(550));
 
     const wrapper = mountMovies();
     await settle();
@@ -1770,7 +1802,8 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("movie");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("550");
     expect(wrapper.find(".movies-watch__sources").exists()).toBe(false);
     expect(wrapper.find(".movies-watch__episode-info").exists()).toBe(false);
     const movieInfo = wrapper.get(".movies-detail-content");
@@ -1799,18 +1832,11 @@ describe("Movies app", () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(
       detail({ play: playInfo({ sources: [playInfo().sources[0]!, alternateSource] }) }),
     );
-    persistAppProgress(moviePlaybackProgressKey(550), {
+    persistAppProgress(movieWatchTarget(550), {
       currentTime: 42,
       duration: 120,
-      source: {
-        filename: "fight-club-alt.m3u8",
-        index: 1,
-        m3u8Url: "https://stream.example.test/fight-club/alt.m3u8",
-        name: "Alt",
-        serverName: "Server 2",
-        slug: "alt",
-      },
-      updatedAt: Date.now(),
+      source: alternateSource,
+      sourceIndex: 1,
     });
 
     const wrapper = mountMovies();
@@ -1829,18 +1855,18 @@ describe("Movies app", () => {
 
   it("falls back to the first source when the saved Continue Watching source is unavailable", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
-    persistAppProgress(moviePlaybackProgressKey(550), {
+    persistAppProgress(movieWatchTarget(550), {
       currentTime: 42,
       duration: 120,
       source: {
+        embedUrl: "https://player.example.test/player/?url=fight-club-missing",
         filename: "fight-club-missing.m3u8",
-        index: 1,
         m3u8Url: "https://stream.example.test/fight-club/missing.m3u8",
         name: "Missing",
         serverName: "Server 9",
         slug: "missing",
       },
-      updatedAt: Date.now(),
+      sourceIndex: 1,
     });
 
     const wrapper = mountMovies();
@@ -1954,18 +1980,11 @@ describe("Movies app", () => {
       detail({ play: playInfo({ sources: [primarySource, backupSource] }) }),
     );
     persistAppSourcePreference(backupSource, 1);
-    persistAppProgress(moviePlaybackProgressKey(550), {
+    persistAppProgress(movieWatchTarget(550), {
       currentTime: 42,
       duration: 120,
-      source: {
-        filename: primarySource.filename,
-        index: 0,
-        m3u8Url: primarySource.m3u8Url,
-        name: primarySource.name,
-        serverName: primarySource.serverName,
-        slug: primarySource.slug,
-      },
-      updatedAt: Date.now(),
+      source: primarySource,
+      sourceIndex: 0,
     });
     window.history.replaceState(null, "", "/movie/550-fight-club");
 
@@ -2028,7 +2047,7 @@ describe("Movies app", () => {
       episodeDetail({ episode, season: { ...season, episodes: [episode, season.episodes[1]!] } }),
     );
     vi.mocked(fetchMovieDetail).mockResolvedValue(tvDetail());
-    persistAppProgress(episodePlaybackProgressKey(1399, 1, 1));
+    persistAppProgress(episodeWatchTarget(1399, 1, 1));
 
     const wrapper = mountMovies();
     await settle();
@@ -2044,9 +2063,9 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
-      episodePlaybackProgressKey(1399, 1, 1),
-    );
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("episode");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("1399");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-episode")).toBe("1");
     const episodeInfo = wrapper.get(".movies-watch__episode-info");
     expect(episodeInfo.text()).toContain("Planet Cinema");
     expect(episodeInfo.text()).toContain("Season 1");
@@ -2072,7 +2091,7 @@ describe("Movies app", () => {
   });
 
   it("hides Continue Watching when progress hydration fails", async () => {
-    persistAppProgress(moviePlaybackProgressKey(550));
+    persistAppProgress(movieWatchTarget(550));
     vi.mocked(fetchMovieDetail).mockRejectedValueOnce(new Error("No title"));
 
     const wrapper = mountMovies();
@@ -2703,7 +2722,8 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player__back-button").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("movie");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("550");
     expect(wrapper.find("video").exists()).toBe(true);
 
     await wrapper.get(".movies-hls-player__back-button").trigger("click");
@@ -2749,7 +2769,7 @@ describe("Movies app", () => {
 
   it("opens movie detail thumbnail with saved progress", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
-    persistAppProgress(moviePlaybackProgressKey(550));
+    persistAppProgress(movieWatchTarget(550));
 
     const wrapper = mountMovies();
     await settle();
@@ -2769,7 +2789,8 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe("movie:550");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("movie");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("550");
   });
 
   it("keeps Home and mobile catalog icons in the toolbar history cluster", async () => {
@@ -3131,9 +3152,9 @@ describe("Movies app", () => {
     expect(wrapper.find(".movies-watch").exists()).toBe(true);
     expect(wrapper.find(".movies-hls-player").exists()).toBe(true);
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
-      episodePlaybackProgressKey(1399, 1, 1),
-    );
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("episode");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("1399");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-episode")).toBe("1");
     expect(wrapper.find("video").exists()).toBe(true);
     const episodeInfo = wrapper.get(".movies-watch__episode-info");
     expect(episodeInfo.text()).toContain("Planet Cinema");
@@ -3196,20 +3217,28 @@ describe("Movies app", () => {
         season: playableSeason,
       }),
     );
-    persistAppProgressEntries({
-      [episodePlaybackProgressKey(1399, 1, 1)]: {
-        currentTime: 42,
-        duration: 120,
-        source: moviesPlaybackProgressSourceSnapshot(firstBackupSource, 1),
-        updatedAt: Date.now(),
+    persistAppProgressEntries([
+      {
+        progress: {
+          currentTime: 42,
+          duration: 120,
+          source: firstBackupSource,
+          sourceIndex: 1,
+          updatedAt: Date.now(),
+        },
+        target: episodeWatchTarget(1399, 1, 1),
       },
-      [episodePlaybackProgressKey(1399, 1, 2)]: {
-        currentTime: 42,
-        duration: 120,
-        source: moviesPlaybackProgressSourceSnapshot(secondPrimarySource, 0),
-        updatedAt: Date.now(),
+      {
+        progress: {
+          currentTime: 42,
+          duration: 120,
+          source: secondPrimarySource,
+          sourceIndex: 0,
+          updatedAt: Date.now(),
+        },
+        target: episodeWatchTarget(1399, 1, 2),
       },
-    });
+    ]);
 
     const wrapper = mountMovies();
     await settle();
@@ -3231,9 +3260,9 @@ describe("Movies app", () => {
 
     expect(window.location.pathname).toBe("/tv/1399-planet-cinema/season/1/episode/2");
     expect(wrapper.get(".movies-hls-player").attributes("data-autoplay")).toBe("true");
-    expect(wrapper.get(".movies-hls-player").attributes("data-progress-key")).toBe(
-      episodePlaybackProgressKey(1399, 1, 2),
-    );
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-kind")).toBe("episode");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-tmdb-id")).toBe("1399");
+    expect(wrapper.get(".movies-hls-player").attributes("data-target-episode")).toBe("2");
     expect(wrapper.get(".movies-hls-player").attributes("data-source-index")).toBe("1");
     expect(wrapper.get(".movies-hls-player").attributes("data-playback-speed")).toBe("1.5");
     expect(wrapper.get(".movies-hls-player").attributes("data-title")).toBe("The Edit");

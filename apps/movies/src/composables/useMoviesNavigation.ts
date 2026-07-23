@@ -9,7 +9,6 @@ import {
   type MovieSummary,
   type MoviesListQuery,
 } from "../moviesApi";
-import type { MoviesSourceSelectionSession } from "../moviesSourceSelection";
 import { localizedListTitleForQuery, moviesText } from "../i18n/labels";
 import { useMoviesI18n, type MoviesTranslate } from "../i18n/useMoviesI18n";
 import {
@@ -41,7 +40,6 @@ interface MoviesReplaceOptions {
 
 interface MoviesWatchOptions extends MoviesReplaceOptions {
   readonly autoplay?: boolean;
-  readonly sourceSelectionSession?: MoviesSourceSelectionSession;
 }
 
 export interface UseMoviesNavigationBindings {
@@ -190,7 +188,6 @@ export function useMoviesNavigation({
     navigate(
       movieWatchViewFromSummary(movie, {
         autoplay: options.autoplay,
-        sourceSelectionSession: options.sourceSelectionSession,
       }),
       options,
     );
@@ -200,7 +197,6 @@ export function useMoviesNavigation({
     navigate(
       movieEpisodeWatchViewFromTarget(request, {
         autoplay: options.autoplay,
-        sourceSelectionSession: options.sourceSelectionSession,
       }),
       options,
     );

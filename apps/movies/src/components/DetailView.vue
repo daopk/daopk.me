@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { onUnmounted, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
@@ -19,17 +19,14 @@ import {
   type MovieSeasonEpisode,
   type MovieSummary,
 } from "../moviesApi";
-import {
-  createMoviesPlaybackProgressStore,
-  moviePlaybackProgressKey,
-  type MoviesPlaybackProgressEntry,
-} from "../moviesPlaybackProgress";
+import type { MoviesWatchContinuity, MoviesWatchProgress } from "../moviesWatchContinuity";
 
 type LoadState = "loading" | "ready" | "error";
 
 interface DetailViewProps {
   mediaType: MovieMediaType;
   tmdbId: number;
+  watchContinuity: MoviesWatchContinuity;
 }
 
 const props = defineProps<DetailViewProps>();
@@ -44,13 +41,10 @@ const emit = defineEmits<{
 
 const detail = ref<MovieDetail | null>(null);
 const state = ref<LoadState>("loading");
-const resumeProgress = ref<MoviesPlaybackProgressEntry | null>(null);
+const resumeProgress = ref<MoviesWatchProgress | null>(null);
 const trailerKey = ref<string | null>(null);
 const { locale, t } = useMoviesI18n();
-const playbackProgressStore = createMoviesPlaybackProgressStore();
 let abortController: AbortController | null = null;
-
-const progressKey = computed(() => moviePlaybackProgressKey(props.tmdbId));
 
 watch(
   () => [props.mediaType, props.tmdbId, locale.value] as const,
@@ -62,7 +56,6 @@ watch(
 
 onUnmounted(() => {
   abortController?.abort();
-  playbackProgressStore.dispose();
 });
 
 async function loadDetail(): Promise<void> {
@@ -115,7 +108,11 @@ function refreshResumeProgress(): void {
   const currentDetail = detail.value;
   resumeProgress.value =
     currentDetail?.mediaType === "movie" && currentDetail.play !== null
-      ? playbackProgressStore.get(progressKey.value)
+      ? props.watchContinuity.progressFor({
+          kind: "movie",
+          slug: currentDetail.slug,
+          tmdbId: currentDetail.tmdbId,
+        })
       : null;
 }
 

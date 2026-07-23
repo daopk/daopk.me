@@ -28,6 +28,13 @@ import {
   type MovieSummary,
   type MoviesListQuery,
 } from "../moviesApi";
+import type { MoviesWatchContinuity } from "../moviesWatchContinuity";
+
+interface HomeViewProps {
+  watchContinuity: MoviesWatchContinuity;
+}
+
+const props = defineProps<HomeViewProps>();
 
 const emit = defineEmits<{
   "open-continue-episode": [request: MovieEpisodeTarget];
@@ -71,6 +78,7 @@ const {
   closeTrailerPreviewNow,
   openContinueEpisode,
   openContinueMovie,
+  watchContinuity: props.watchContinuity,
 });
 
 async function closeTrailerPreviewBeforeNavigation(): Promise<void> {

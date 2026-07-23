@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref, toRef, useTemplateRef, watch
 
 import type { MoviesTranslate } from "../i18n/useMoviesI18n";
 import type { MoviePlayInfo } from "../moviesApi";
+import type { MoviesWatchContinuity, MoviesWatchTarget } from "../moviesWatchContinuity";
 import { moviePlayerAdMarkerTrackBackground } from "../utils/moviePlayerAdMarkers";
 import { formatMoviePlayerTime } from "../utils/moviePlayerTime";
 import { clampNumber } from "../utils/number";
@@ -30,10 +31,11 @@ export interface MovieHlsPlayerProps {
   play: MoviePlayInfo;
   playbackSpeed?: number;
   posterUrl?: string;
-  progressKey?: string;
   showBackButton?: boolean;
   sourceIndex?: number;
+  target: MoviesWatchTarget;
   title: string;
+  watchContinuity: MoviesWatchContinuity;
 }
 
 export interface MovieHlsPlayerControllerProps extends MovieHlsPlayerProps {
@@ -41,7 +43,6 @@ export interface MovieHlsPlayerControllerProps extends MovieHlsPlayerProps {
   nextEpisodeLabel: string;
   playbackSpeed: number;
   posterUrl: string;
-  progressKey: string;
   showBackButton: boolean;
   sourceIndex: number;
 }
@@ -134,7 +135,6 @@ export function useMovieHlsPlayerController({
   const {
     applySavedPlaybackProgress,
     clearPlaybackProgress,
-    disposePlaybackProgress,
     persistPlaybackProgress,
     resetPlaybackProgressState,
   } = useMoviePlaybackProgress({
@@ -143,11 +143,12 @@ export function useMovieHlsPlayerController({
     hasDuration,
     metadataLoaded,
     play: toRef(props, "play"),
-    progressKey: toRef(props, "progressKey"),
     seekPosition,
     sourceIndex: toRef(props, "sourceIndex"),
     syncMediaState,
+    target: toRef(props, "target"),
     videoElement,
+    watchContinuity: props.watchContinuity,
   });
   const {
     fallbackFullscreen,
@@ -644,7 +645,6 @@ export function useMovieHlsPlayerController({
     clearHideControlsTimer();
     clearSurfaceClickTimer();
     destroyHls();
-    disposePlaybackProgress();
     document.removeEventListener("fullscreenchange", syncFullscreenState);
     document.removeEventListener("webkitfullscreenchange", syncFullscreenState);
     videoElement.value?.removeEventListener("webkitbeginfullscreen", syncFullscreenState);

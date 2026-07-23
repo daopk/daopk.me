@@ -34,7 +34,6 @@ const props = withDefaults(defineProps<MovieHlsPlayerProps>(), {
   nextEpisodeLabel: "",
   playbackSpeed: 1,
   posterUrl: "",
-  progressKey: "",
   showBackButton: false,
   sourceIndex: 0,
 });
