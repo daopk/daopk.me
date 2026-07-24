@@ -4,10 +4,13 @@
  */
 
 import { defineStore } from "pinia";
-import { computed, ref, watch, type WatchStopHandle } from "vue";
+import { computed, ref } from "vue";
 
 import { SETTINGS_KV_PRIMARY_KEY } from "~/core/storage/constants";
-import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import {
+  createPersistedState,
+  type PersistedStateOrigin,
+} from "~/core/storage/createPersistedState";
 import { DEFAULT_LOCALE, DEFAULT_LOCALE_MODE, isLocaleMode, isSupportedLocale } from "~/core/i18n";
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import { subscribeSystemPreference } from "~/core/theme/systemPreference";
@@ -196,11 +199,7 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
 
   const prefersSystemDark = ref(false);
 
-  let persistStop: WatchStopHandle | undefined;
-
   let disposeOsScheme: undefined | (() => void);
-
-  let disposeUnload: undefined | (() => void);
 
   const bootCount = ref(DEFAULT_SETTINGS.bootCount);
 
@@ -254,60 +253,55 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     };
   }
 
-  const persistence = createKvBackedStore<SettingsState>({
+  const persistence = createPersistedState<SettingsState>({
     primaryKey: SETTINGS_KV_PRIMARY_KEY,
     version: 1,
     debounceMs: 250,
     snapshot: stateSnapshot,
-    onRemoteChange: () => {
-      handleRemoteKvNotification();
+    resolve: (candidate, origin) => {
+      if (candidate === null && origin === "remote") {
+        return undefined;
+      }
+      return { value: coerceSettings(candidate) };
+    },
+    apply: applyKvPayload,
+    onRemoteReconciled: () => {
+      hooksRef.value?.onStorageSynced?.();
     },
   });
 
-  function applyKvPayload(next: SettingsState): void {
+  function applyKvPayload(next: SettingsState, origin: PersistedStateOrigin): void {
     const previous = stateSnapshot();
 
     if (snapshotsEqual(previous, next)) {
       return;
     }
 
-    persistence.runSuppressedUntilNextTick(() => {
-      bootCount.value = next.bootCount;
+    bootCount.value = next.bootCount;
 
-      locale.value = next.locale;
+    locale.value = next.locale;
 
-      localeMode.value = next.localeMode;
+    localeMode.value = next.localeMode;
 
-      theme.value = next.theme;
+    theme.value = next.theme;
 
-      shellOverride.value = next.shellOverride;
+    shellOverride.value = next.shellOverride;
 
-      reduceMotion.value = next.reduceMotion;
+    reduceMotion.value = next.reduceMotion;
 
-      dockAutoHide.value = next.dockAutoHide;
+    dockAutoHide.value = next.dockAutoHide;
 
-      dockPinnedAppIds.value = [...next.dockPinnedAppIds];
+    dockPinnedAppIds.value = [...next.dockPinnedAppIds];
 
-      telemetryEnabled.value = next.telemetryEnabled;
+    telemetryEnabled.value = next.telemetryEnabled;
 
-      desktopWallpaperActiveId.value = next.desktopWallpaperActiveId;
+    desktopWallpaperActiveId.value = next.desktopWallpaperActiveId;
 
-      mobileWallpaperActiveId.value = next.mobileWallpaperActiveId;
-    });
+    mobileWallpaperActiveId.value = next.mobileWallpaperActiveId;
 
-    emitKeyDiff(previous, next, hooksRef.value?.onSettingsChanged);
-  }
-
-  function handleRemoteKvNotification(): void {
-    hooksRef.value?.onStorageSynced?.();
-
-    const raw = persistence.read();
-
-    if (!raw) {
-      return;
+    if (origin === "remote") {
+      emitKeyDiff(previous, next, hooksRef.value?.onSettingsChanged);
     }
-
-    applyKvPayload(coerceSettings(raw));
   }
 
   const effectiveTheme = computed<ResolvedTheme>(() =>
@@ -322,8 +316,6 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     bootCount.value += 1;
 
     hooksRef.value?.onSettingsChanged?.("bootCount");
-
-    persistence.schedule();
   }
 
   function setTheme(pref: SettingsState["theme"]): void {
@@ -334,8 +326,6 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     theme.value = pref;
 
     hooksRef.value?.onSettingsChanged?.("theme");
-
-    persistence.schedule();
   }
 
   function setLocale(value: SettingsState["locale"]): void {
@@ -348,8 +338,6 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     locale.value = next;
 
     hooksRef.value?.onSettingsChanged?.("locale");
-
-    persistence.schedule();
   }
 
   function setLocaleMode(value: SettingsState["localeMode"]): void {
@@ -362,16 +350,12 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     localeMode.value = next;
 
     hooksRef.value?.onSettingsChanged?.("localeMode");
-
-    persistence.schedule();
   }
 
   function setShellOverride(value: SettingsState["shellOverride"]): void {
     shellOverride.value = value;
 
     hooksRef.value?.onSettingsChanged?.("shellOverride");
-
-    persistence.schedule();
   }
 
   function setDesktopWallpaperActiveId(value: SettingsState["desktopWallpaperActiveId"]): void {
@@ -387,8 +371,6 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     desktopWallpaperActiveId.value = next;
 
     hooksRef.value?.onSettingsChanged?.("desktopWallpaperActiveId");
-
-    persistence.schedule();
   }
 
   function setMobileWallpaperActiveId(value: SettingsState["mobileWallpaperActiveId"]): void {
@@ -404,16 +386,12 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     mobileWallpaperActiveId.value = next;
 
     hooksRef.value?.onSettingsChanged?.("mobileWallpaperActiveId");
-
-    persistence.schedule();
   }
 
   function resetReduceMotion(): void {
     reduceMotion.value = "auto";
 
     hooksRef.value?.onSettingsChanged?.("reduceMotion");
-
-    persistence.schedule();
   }
 
   function setDockAutoHide(value: SettingsState["dockAutoHide"]): void {
@@ -424,8 +402,6 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     dockAutoHide.value = value;
 
     hooksRef.value?.onSettingsChanged?.("dockAutoHide");
-
-    persistence.schedule();
   }
 
   function setDockPinnedAppIds(value: SettingsState["dockPinnedAppIds"]): void {
@@ -438,34 +414,30 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     dockPinnedAppIds.value = next;
 
     hooksRef.value?.onSettingsChanged?.("dockPinnedAppIds");
-
-    persistence.schedule();
   }
 
   function reset(): void {
-    persistence.runSuppressed(() => {
-      bootCount.value = DEFAULT_SETTINGS.bootCount;
+    bootCount.value = DEFAULT_SETTINGS.bootCount;
 
-      locale.value = DEFAULT_SETTINGS.locale;
+    locale.value = DEFAULT_SETTINGS.locale;
 
-      localeMode.value = DEFAULT_SETTINGS.localeMode;
+    localeMode.value = DEFAULT_SETTINGS.localeMode;
 
-      theme.value = DEFAULT_SETTINGS.theme;
+    theme.value = DEFAULT_SETTINGS.theme;
 
-      shellOverride.value = DEFAULT_SETTINGS.shellOverride;
+    shellOverride.value = DEFAULT_SETTINGS.shellOverride;
 
-      reduceMotion.value = DEFAULT_SETTINGS.reduceMotion;
+    reduceMotion.value = DEFAULT_SETTINGS.reduceMotion;
 
-      dockAutoHide.value = DEFAULT_SETTINGS.dockAutoHide;
+    dockAutoHide.value = DEFAULT_SETTINGS.dockAutoHide;
 
-      dockPinnedAppIds.value = [...DEFAULT_SETTINGS.dockPinnedAppIds];
+    dockPinnedAppIds.value = [...DEFAULT_SETTINGS.dockPinnedAppIds];
 
-      telemetryEnabled.value = DEFAULT_SETTINGS.telemetryEnabled;
+    telemetryEnabled.value = DEFAULT_SETTINGS.telemetryEnabled;
 
-      desktopWallpaperActiveId.value = DEFAULT_SETTINGS.desktopWallpaperActiveId;
+    desktopWallpaperActiveId.value = DEFAULT_SETTINGS.desktopWallpaperActiveId;
 
-      mobileWallpaperActiveId.value = DEFAULT_SETTINGS.mobileWallpaperActiveId;
-    });
+    mobileWallpaperActiveId.value = DEFAULT_SETTINGS.mobileWallpaperActiveId;
 
     hooksRef.value?.onSettingsChanged?.("bootCount");
 
@@ -488,131 +460,30 @@ export const useSettingsStore = defineStore("kernel-settings", () => {
     hooksRef.value?.onSettingsChanged?.("desktopWallpaperActiveId");
 
     hooksRef.value?.onSettingsChanged?.("mobileWallpaperActiveId");
-
-    persistence.schedule();
   }
 
   function hydrate(initialHooks?: SettingsHydrateHooks): void {
     hooksRef.value = initialHooks;
 
-    persistence.flush();
-
-    persistStop?.();
-
-    persistStop = undefined;
-
     disposeOsScheme?.();
 
     disposeOsScheme = undefined;
 
-    disposeUnload?.();
-
-    disposeUnload = undefined;
-
-    persistence.start(initialHooks?.storageNamespace ?? activeProfileKvNamespace("settings"));
-
-    const persisted = persistence.read();
-
-    const loaded = persisted !== null ? coerceSettings(persisted) : coerceSettings(undefined);
-
-    persistence.runSuppressed(() => {
-      bootCount.value = loaded.bootCount;
-
-      locale.value = loaded.locale;
-
-      localeMode.value = loaded.localeMode;
-
-      theme.value = loaded.theme;
-
-      shellOverride.value = loaded.shellOverride;
-
-      reduceMotion.value = loaded.reduceMotion;
-
-      dockAutoHide.value = loaded.dockAutoHide;
-
-      dockPinnedAppIds.value = [...loaded.dockPinnedAppIds];
-
-      telemetryEnabled.value = loaded.telemetryEnabled;
-
-      desktopWallpaperActiveId.value = loaded.desktopWallpaperActiveId;
-
-      mobileWallpaperActiveId.value = loaded.mobileWallpaperActiveId;
-    });
+    persistence.hydrate(initialHooks?.storageNamespace ?? activeProfileKvNamespace("settings"));
 
     disposeOsScheme = subscribeSystemPreference((resolved) => {
       prefersSystemDark.value = resolved === "dark";
     });
-
-    const onPageHide = (): void => {
-      flush();
-    };
-
-    const onVisibilityChange = (): void => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-        flush();
-      }
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("pagehide", onPageHide);
-
-      document.addEventListener("visibilitychange", onVisibilityChange);
-
-      disposeUnload = (): void => {
-        window.removeEventListener("pagehide", onPageHide);
-
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-      };
-    }
-
-    persistStop = watch(
-      [
-        bootCount,
-        locale,
-        localeMode,
-        theme,
-        shellOverride,
-        reduceMotion,
-        dockAutoHide,
-        dockPinnedAppIds,
-        telemetryEnabled,
-        desktopWallpaperActiveId,
-
-        mobileWallpaperActiveId,
-      ],
-
-      (): void => {
-        if (!persistence.kv.value || persistence.isSuppressed) {
-          return;
-        }
-
-        persistence.schedule();
-      },
-
-      {
-        flush: "post",
-      },
-    );
   }
 
   /** Kernel/HMR teardown — WHY: unregister listeners deterministically so reload doesn't leak storage handlers. */
 
   function dispose(): void {
-    persistence.flush();
-
-    persistStop?.();
-
-    persistStop = undefined;
-
     persistence.dispose();
 
     disposeOsScheme?.();
 
     disposeOsScheme = undefined;
-
-    disposeUnload?.();
-
-    disposeUnload = undefined;
 
     hooksRef.value = undefined;
   }

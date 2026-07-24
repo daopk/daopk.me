@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, type Ref } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
-import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import { createPersistedState } from "~/core/storage/createPersistedState";
 import { WIDGETS_KV_NAMESPACE, WIDGETS_KV_PRIMARY_KEY } from "~/core/storage/constants";
 import { WIDGET_GRID_GAP_UNITS, WIDGET_SIZE_GRID_UNITS } from "~/core/widgets/sizing";
 import type { WidgetShellScope, WidgetSize } from "~/types/widget";
@@ -42,8 +42,6 @@ function emptyEnabledState(): WidgetScopedEnabledState {
 function emptyState(): WidgetPlacementState {
   return { placements: {}, enabled: emptyEnabledState() };
 }
-
-const DEFAULT_STATE: WidgetPlacementState = emptyState();
 
 const CLOCK_WIDGET_ID_ALIASES = {
   placements: {
@@ -291,32 +289,29 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
     };
   }
 
-  const persistence = createKvBackedStore<WidgetPlacementState>({
+  const persistence = createPersistedState<WidgetPlacementState>({
     primaryKey: WIDGETS_KV_PRIMARY_KEY,
     version: 1,
     snapshot,
-    onRemoteChange: () => {
-      handleRemoteKvNotification();
+    resolve: (candidate) => {
+      if (candidate === null) {
+        return { value: emptyState() };
+      }
+      const loaded = coerceAndMigrateState(candidate);
+      return {
+        value: loaded.state,
+        rewrite: loaded.migrated,
+      };
     },
+    apply: applyState,
   });
 
   function applyState(next: WidgetPlacementState): void {
-    persistence.runSuppressed(() => {
-      placements.value = { ...next.placements };
-      enabled.value = {
-        desktop: { ...next.enabled.desktop },
-        mobile: { ...next.enabled.mobile },
-      };
-    });
-  }
-
-  function handleRemoteKvNotification(): void {
-    const raw = persistence.read();
-    if (raw === null) {
-      applyState(emptyState());
-      return;
-    }
-    applyState(coerceAndMigrateState(raw).state);
+    placements.value = { ...next.placements };
+    enabled.value = {
+      desktop: { ...next.enabled.desktop },
+      mobile: { ...next.enabled.mobile },
+    };
   }
 
   function get(id: string): WidgetPlacement | undefined {
@@ -331,7 +326,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
    * remote-change listener in other tabs.
    */
   function set(id: string, next: WidgetPlacement): void {
-    if (!persistence.kv.value) return;
+    if (!persistence.isHydrated) return;
 
     const sanitized: WidgetPlacement = {
       gridX: Math.max(0, Math.floor(next.gridX)),
@@ -348,16 +343,14 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
     }
 
     placements.value = { ...placements.value, [id]: sanitized };
-    persistence.commit();
   }
 
   function remove(id: string): void {
-    if (!persistence.kv.value) return;
+    if (!persistence.isHydrated) return;
     if (placements.value[id] === undefined) return;
     const next = { ...placements.value };
     delete next[id];
     placements.value = next;
-    persistence.commit();
   }
 
   function list(): Readonly<Record<string, WidgetPlacement>> {
@@ -374,7 +367,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
     value: boolean,
     defaultVisible = true,
   ): void {
-    if (!persistence.kv.value) return;
+    if (!persistence.isHydrated) return;
 
     const scopeMap = enabled.value[scope];
     const current = scopeMap[id]; // undefined | true | false
@@ -390,7 +383,6 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
       nextScopeMap = { ...scopeMap, [id]: value };
     }
     enabled.value = { ...enabled.value, [scope]: nextScopeMap };
-    persistence.commit();
   }
 
   function listEnabled(scope: WidgetShellScope): Readonly<Record<string, boolean>> {
@@ -398,18 +390,9 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
   }
 
   function hydrate(options?: WidgetPlacementHydrateOptions): void {
-    persistence.start(options?.storageNamespace ?? activeProfileKvNamespace(WIDGETS_KV_NAMESPACE));
-
-    const persisted = persistence.read();
-    const loaded =
-      persisted !== null
-        ? coerceAndMigrateState(persisted)
-        : { state: DEFAULT_STATE, migrated: false };
-
-    applyState(loaded.state);
-    if (loaded.migrated) {
-      persistence.commit();
-    }
+    persistence.hydrate(
+      options?.storageNamespace ?? activeProfileKvNamespace(WIDGETS_KV_NAMESPACE),
+    );
   }
 
   function dispose(): void {
@@ -417,7 +400,7 @@ export const useWidgetPlacementStore = defineStore("kernel-widget-placements", (
   }
 
   function isHydrated(): boolean {
-    return persistence.kv.value !== undefined;
+    return persistence.isHydrated;
   }
 
   return {

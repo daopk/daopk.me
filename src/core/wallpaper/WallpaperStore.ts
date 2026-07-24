@@ -3,7 +3,7 @@ import { ref, shallowRef, type Ref } from "vue";
 
 import { debugWarn } from "~/core/debug";
 import { activeProfileIdbName, activeProfileKvNamespace } from "~/core/profile/storageScope";
-import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import { createPersistedState } from "~/core/storage/createPersistedState";
 import { IndexedDBStore } from "~/core/storage/IndexedDBStore";
 import {
   WALLPAPER_BLOB_CAP_BYTES,
@@ -71,30 +71,22 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
 
   const index: Ref<readonly UserWallpaperMeta[]> = ref([]);
 
-  const persistence = createKvBackedStore<WallpapersState>({
+  const persistence = createPersistedState<WallpapersState>({
     primaryKey: WALLPAPERS_KV_PRIMARY_KEY,
     version: 1,
     snapshot: () => ({ index: [...index.value] }),
-    onRemoteChange: () => {
-      handleRemoteKvNotification();
+    resolve: (candidate) => ({
+      value: candidate === null ? { ...DEFAULT_STATE } : coerceState(candidate),
+    }),
+    apply: applyState,
+    onRemoteReconciled: () => {
+      hooksRef.value?.onStorageSynced?.();
+      hooksRef.value?.onIndexChanged?.();
     },
   });
 
   function applyState(next: WallpapersState): void {
-    persistence.runSuppressed(() => {
-      index.value = [...next.index];
-    });
-    hooksRef.value?.onIndexChanged?.();
-  }
-
-  function handleRemoteKvNotification(): void {
-    hooksRef.value?.onStorageSynced?.();
-    const raw = persistence.read();
-    if (raw === null) {
-      applyState({ ...DEFAULT_STATE });
-      return;
-    }
-    applyState(coerceState(raw));
+    index.value = [...next.index];
   }
 
   async function upload(file: File): Promise<WallpaperUploadResult> {
@@ -150,7 +142,6 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
     };
 
     index.value = [...index.value, meta];
-    persistence.commit();
     hooksRef.value?.onIndexChanged?.();
 
     return { ok: true, meta };
@@ -168,7 +159,6 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
     const before = index.value.length;
     index.value = index.value.filter((entry) => entry.id !== id);
     if (index.value.length !== before) {
-      persistence.commit();
       hooksRef.value?.onIndexChanged?.();
     }
   }
@@ -202,16 +192,11 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
       }
     }
     index.value = [];
-    persistence.commit();
     hooksRef.value?.onIndexChanged?.();
   }
 
   function hydrate(initialHooks?: WallpaperStoreHydrateHooks): void {
     hooksRef.value = initialHooks;
-
-    persistence.start(
-      initialHooks?.storageNamespace ?? activeProfileKvNamespace(WALLPAPERS_KV_NAMESPACE),
-    );
 
     idbRef.value?.close();
     idbRef.value = new IndexedDBStore<Blob>(
@@ -220,12 +205,9 @@ export const useWallpaperStore = defineStore("kernel-wallpapers", () => {
       WALLPAPERS_IDB_VERSION,
     );
 
-    const persisted = persistence.read();
-    const loaded = persisted !== null ? coerceState(persisted) : { ...DEFAULT_STATE };
-
-    persistence.runSuppressed(() => {
-      index.value = [...loaded.index];
-    });
+    persistence.hydrate(
+      initialHooks?.storageNamespace ?? activeProfileKvNamespace(WALLPAPERS_KV_NAMESPACE),
+    );
   }
 
   function dispose(): void {

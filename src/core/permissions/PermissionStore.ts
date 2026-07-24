@@ -3,7 +3,7 @@ import { ref, type Ref } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import { PERMISSIONS_KV_NAMESPACE, PERMISSIONS_KV_PRIMARY_KEY } from "~/core/storage/constants";
-import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import { createPersistedState } from "~/core/storage/createPersistedState";
 import type { AppPermission } from "~/types/app";
 import type {
   PermissionLedgerEntry,
@@ -66,28 +66,18 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
     return { decisions: cloned };
   }
 
-  const persistence = createKvBackedStore<PermissionPersistedState>({
+  const persistence = createPersistedState<PermissionPersistedState>({
     primaryKey: PERMISSIONS_KV_PRIMARY_KEY,
     version: 1,
     snapshot,
-    onRemoteChange: () => {
-      handleRemoteKvNotification();
-    },
+    resolve: (candidate) => ({
+      value: candidate === null ? { ...DEFAULT_STATE } : coerceState(candidate),
+    }),
+    apply: applyState,
   });
 
   function applyState(next: PermissionPersistedState): void {
-    persistence.runSuppressed(() => {
-      decisions.value = { ...next.decisions };
-    });
-  }
-
-  function handleRemoteKvNotification(): void {
-    const raw = persistence.read();
-    if (raw === null) {
-      applyState({ decisions: {} });
-      return;
-    }
-    applyState(coerceState(raw));
+    decisions.value = { ...next.decisions };
   }
 
   function get(
@@ -103,7 +93,7 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
     granted: boolean,
     now: number = Date.now(),
   ): void {
-    if (!persistence.kv.value) return;
+    if (!persistence.isHydrated) return;
     const existing = decisions.value[manifestId]?.[permission];
     if (existing !== undefined && existing.granted === granted) {
       return;
@@ -116,11 +106,10 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
       ...decisions.value,
       [manifestId]: nextInner,
     };
-    persistence.commit();
   }
 
   function remove(manifestId: string, permission: AppPermission): boolean {
-    if (!persistence.kv.value) return false;
+    if (!persistence.isHydrated) return false;
     const inner = decisions.value[manifestId];
     if (inner === undefined || inner[permission] === undefined) {
       return false;
@@ -134,7 +123,6 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
       nextOuter[manifestId] = nextInner;
     }
     decisions.value = nextOuter;
-    persistence.commit();
     return true;
   }
 
@@ -156,12 +144,9 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
   }
 
   function hydrate(options?: PermissionStoreHydrateOptions): void {
-    persistence.start(
+    persistence.hydrate(
       options?.storageNamespace ?? activeProfileKvNamespace(PERMISSIONS_KV_NAMESPACE),
     );
-
-    const persisted = persistence.read();
-    applyState(persisted !== null ? coerceState(persisted) : { ...DEFAULT_STATE });
   }
 
   function dispose(): void {
@@ -169,7 +154,7 @@ export const usePermissionStore = defineStore("kernel-permissions", () => {
   }
 
   function isHydrated(): boolean {
-    return persistence.kv.value !== undefined;
+    return persistence.isHydrated;
   }
 
   return {

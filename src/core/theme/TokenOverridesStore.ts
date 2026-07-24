@@ -1,12 +1,15 @@
 import { defineStore } from "pinia";
-import { ref, watch, type WatchStopHandle } from "vue";
+import { ref } from "vue";
 
 import { activeProfileKvNamespace } from "~/core/profile/storageScope";
 import {
   TOKEN_OVERRIDES_KV_NAMESPACE,
   TOKEN_OVERRIDES_KV_PRIMARY_KEY,
 } from "~/core/storage/constants";
-import { createKvBackedStore } from "~/core/storage/createKvBackedStore";
+import {
+  createPersistedState,
+  type PersistedStateOrigin,
+} from "~/core/storage/createPersistedState";
 
 const PERSIST_DEBOUNCE_MS = 250;
 
@@ -56,42 +59,39 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
 
   const overrides = ref<Record<string, string>>({});
 
-  let persistStop: WatchStopHandle | undefined;
-
   function snapshot(): Record<string, string> {
     return { ...overrides.value };
   }
 
-  const persistence = createKvBackedStore<Record<string, string>>({
+  const persistence = createPersistedState<Record<string, string>>({
     primaryKey: TOKEN_OVERRIDES_KV_PRIMARY_KEY,
     version: 1,
     debounceMs: PERSIST_DEBOUNCE_MS,
     snapshot,
-    onRemoteChange: () => {
-      handleRemoteKvNotification();
+    resolve: (candidate, origin) => {
+      if (candidate === null && origin === "remote") {
+        return undefined;
+      }
+      return { value: coerceOverrides(candidate) };
+    },
+    apply: applyKvPayload,
+    onRemoteReconciled: () => {
+      hooksRef.value?.onStorageSynced?.();
     },
   });
 
-  function applyKvPayload(next: Record<string, string>): void {
+  function applyKvPayload(next: Record<string, string>, origin: PersistedStateOrigin): void {
     const prev = overrides.value;
     const changed = diffKeys(prev, next);
     if (changed.length === 0) {
       return;
     }
 
-    persistence.runSuppressedUntilNextTick(() => {
-      overrides.value = next;
-    });
+    overrides.value = next;
 
-    hooksRef.value?.onTokensChanged?.(changed);
-  }
-
-  function handleRemoteKvNotification(): void {
-    const raw = persistence.read();
-    if (raw) {
-      applyKvPayload(coerceOverrides(raw));
+    if (origin === "remote") {
+      hooksRef.value?.onTokensChanged?.(changed);
     }
-    hooksRef.value?.onStorageSynced?.();
   }
 
   function set(key: string, value: string): void {
@@ -103,7 +103,6 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = { ...overrides.value, [key]: value };
     hooksRef.value?.onTokensChanged?.([key]);
-    persistence.schedule();
   }
 
   function unset(key: string): void {
@@ -114,7 +113,6 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     delete next[key];
     overrides.value = next;
     hooksRef.value?.onTokensChanged?.([key]);
-    persistence.schedule();
   }
 
   function setMany(patch: Record<string, string>): void {
@@ -135,7 +133,6 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = next;
     hooksRef.value?.onTokensChanged?.(changed);
-    persistence.schedule();
   }
 
   function reset(): void {
@@ -146,7 +143,6 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
     }
     overrides.value = {};
     hooksRef.value?.onTokensChanged?.(changed);
-    persistence.schedule();
   }
 
   function flush(): void {
@@ -156,37 +152,12 @@ export const useTokenOverridesStore = defineStore("kernel-token-overrides", () =
   function hydrate(initialHooks?: TokenOverridesHydrateHooks): void {
     hooksRef.value = initialHooks;
 
-    // Tear down any prior hydration so re-init (HMR, tests) starts clean.
-    persistStop?.();
-    persistStop = undefined;
-
-    persistence.start(
+    persistence.hydrate(
       initialHooks?.storageNamespace ?? activeProfileKvNamespace(TOKEN_OVERRIDES_KV_NAMESPACE),
-    );
-
-    const persisted = persistence.read();
-    const loaded = persisted !== null ? coerceOverrides(persisted) : {};
-
-    persistence.runSuppressed(() => {
-      overrides.value = loaded;
-    });
-
-    persistStop = watch(
-      overrides,
-      (): void => {
-        if (!persistence.kv.value || persistence.isSuppressed) {
-          return;
-        }
-        persistence.schedule();
-      },
-      { flush: "post", deep: true },
     );
   }
 
   function dispose(): void {
-    persistence.flush();
-    persistStop?.();
-    persistStop = undefined;
     persistence.dispose();
     hooksRef.value = undefined;
   }
