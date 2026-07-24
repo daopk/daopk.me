@@ -115,8 +115,16 @@ function stubRect(
   });
 }
 
+function setViewport(width: number, height: number): void {
+  Object.defineProperties(window, {
+    innerWidth: { configurable: true, value: width },
+    innerHeight: { configurable: true, value: height },
+  });
+}
+
 describe("DesktopWidgetGallery", () => {
   beforeEach(async () => {
+    setViewport(1024, 768);
     setActivePinia(createPinia());
     localStorage.clear();
     vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(
@@ -181,6 +189,69 @@ describe("DesktopWidgetGallery", () => {
     wrapper.unmount();
   });
 
+  it("defers search filtering until IME composition finishes", async () => {
+    registerAppWidget();
+    const wrapper = mountGallery();
+    openGallery();
+    await nextTick();
+
+    const search = wrapper.get<HTMLInputElement>('input[type="search"]').element;
+    search.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+    search.value = "no match";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
+
+    expect(search.value).toBe("no match");
+    expect(wrapper.text()).toContain("Lunar Date");
+    expect(wrapper.text()).not.toContain("No widgets match this view.");
+
+    search.dispatchEvent(new Event("compositionend", { bubbles: true }));
+    await nextTick();
+
+    expect(wrapper.text()).not.toContain("Lunar Date");
+    expect(wrapper.text()).toContain("No widgets match this view.");
+
+    search.dispatchEvent(new Event("compositionstart", { bubbles: true }));
+    search.value = "lunar";
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+    await nextTick();
+
+    expect(wrapper.text()).not.toContain("Lunar Date");
+
+    search.dispatchEvent(new Event("change", { bubbles: true }));
+    await nextTick();
+
+    expect(wrapper.text()).toContain("Lunar Date");
+
+    wrapper.unmount();
+  });
+
+  it("re-clamps its dragged panel when the viewport shrinks", async () => {
+    registerAppWidget();
+    const wrapper = mountGallery();
+    openGallery();
+    await nextTick();
+
+    const panel = wrapper.get(".desktop-widget-gallery");
+    stubRect(panel.element, { left: 600, top: 44, width: 380, height: 480 });
+
+    wrapper
+      .get(".desktop-widget-gallery__header")
+      .element.dispatchEvent(pointerEvent("pointerdown", { clientX: 760, clientY: 62 }));
+    document.dispatchEvent(pointerEvent("pointermove", { clientX: 900, clientY: 700 }));
+    document.dispatchEvent(pointerEvent("pointerup", { clientX: 900, clientY: 700 }));
+
+    setViewport(700, 600);
+    window.dispatchEvent(new Event("resize"));
+    await nextTick();
+
+    const style = panel.element.getAttribute("style") ?? "";
+    expect(style).toContain("inset-inline-start: 312px");
+    expect(style).toContain("inset-block-start: 112px");
+
+    wrapper.unmount();
+  });
+
   it("returns focus to the desktop when its context-menu opener is removed", async () => {
     const stage = addDesktopStage();
     const opener = document.createElement("button");
@@ -202,6 +273,48 @@ describe("DesktopWidgetGallery", () => {
     await nextTick();
 
     await vi.waitFor(() => expect(document.activeElement).toBe(stage));
+
+    wrapper.unmount();
+  });
+
+  it("cancels an active desktop gesture before closing the gallery", async () => {
+    addDesktopStage();
+    registerAppWidget();
+    const wrapper = mountGallery();
+    openGallery();
+    await nextTick();
+
+    const preview = wrapper.find(
+      '[data-widget-id="calendar-gallery:lunar"] .desktop-widget-gallery__preview',
+    );
+    preview.element.dispatchEvent(pointerEvent("pointerdown", { clientX: 320, clientY: 120 }));
+    document.dispatchEvent(pointerEvent("pointermove", { clientX: 323, clientY: 123 }));
+    await nextTick();
+
+    expect(document.body.querySelector(".desktop-widget-gallery__drag-ghost")).toBeNull();
+
+    document.dispatchEvent(pointerEvent("pointermove", { clientX: 520, clientY: 190 }));
+    await nextTick();
+
+    expect(document.body.querySelector(".desktop-widget-gallery__drag-ghost")).not.toBeNull();
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "Escape",
+      }),
+    );
+    await nextTick();
+
+    expect(wrapper.find(".desktop-widget-gallery").exists()).toBe(false);
+    expect(document.body.querySelector(".desktop-widget-gallery__drag-ghost")).toBeNull();
+
+    document.dispatchEvent(pointerEvent("pointerup", { clientX: 600, clientY: 220 }));
+
+    const placements = useWidgetPlacementStore();
+    expect(placements.isEnabled("desktop", "calendar-gallery:lunar", false)).toBe(false);
+    expect(placements.get("calendar-gallery:lunar")).toBeUndefined();
 
     wrapper.unmount();
   });

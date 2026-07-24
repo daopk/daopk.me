@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { ref, useId } from "vue";
+import { computed, ref, useId } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
 import { Button, IconButton, ScrollArea, Tabs, TabsList, TabsTrigger } from "~/components/ui";
@@ -10,57 +10,33 @@ import X from "~icons/lucide/x";
 import { SettingsWidgetsIcon as WidgetsIcon } from "~/icons/fluentColor";
 
 import { useDesktopWidgetGallery } from "./useDesktopWidgetGallery";
-import { useWidgetGalleryFocusTrap } from "./useWidgetGalleryFocusTrap";
 
 const panelRef = ref<HTMLElement | null>(null);
 const searchRef = ref<HTMLInputElement | null>(null);
 const headingId = useId();
 
-const {
-  open,
-  query,
-  activeSurface,
-  surfaceTabs,
-  filteredItems,
-  hasItems,
-  panelDragging,
-  panelStyle,
-  startPanelDrag,
-  dragging,
-  dragStyle,
-  startDesktopDrag,
-  close,
-  show,
-  hide,
-} = useDesktopWidgetGallery({ panelRef });
-
-useWidgetGalleryFocusTrap({
-  open,
+const { view, actions } = useDesktopWidgetGallery({
   panelRef,
   initialFocusRef: searchRef,
-  onClose: close,
 });
-
-function selectSurface(value: string | number | null): void {
-  if (value === "desktop:wallpaper" || value === "desktop:menubar") {
-    activeSurface.value = value;
-  }
-}
+const queryModel = computed({
+  get: () => view.value.query,
+  set: actions.setQuery,
+});
 </script>
 
 <template>
   <div
-    v-if="open"
+    v-if="view.isOpen"
     ref="panelRef"
+    v-bind="view.panelBindings"
     class="desktop-widget-gallery"
-    :class="{ 'desktop-widget-gallery--dragging': panelDragging }"
-    :style="panelStyle"
     role="dialog"
     aria-modal="false"
     :aria-labelledby="headingId"
     tabindex="-1"
   >
-    <div class="desktop-widget-gallery__header" @pointerdown="startPanelDrag">
+    <div class="desktop-widget-gallery__header" @pointerdown="actions.handlePanelPointerDown">
       <span class="desktop-widget-gallery__header-icon" aria-hidden="true">
         <WidgetsIcon />
       </span>
@@ -73,7 +49,7 @@ function selectSurface(value: string | number | null): void {
         ariaLabel="Close"
         size="xs"
         variant="plain"
-        @click="close"
+        @click="actions.close"
         @pointerdown.stop
       >
         <X aria-hidden="true" />
@@ -82,19 +58,19 @@ function selectSurface(value: string | number | null): void {
 
     <label class="desktop-widget-gallery__search">
       <Search class="desktop-widget-gallery__search-icon" aria-hidden="true" />
-      <input ref="searchRef" v-model="query" type="search" placeholder="Search widgets" />
+      <input ref="searchRef" v-model="queryModel" type="search" placeholder="Search widgets" />
     </label>
 
     <Tabs
       class="desktop-widget-gallery__tabs-root"
-      :model-value="activeSurface"
+      :model-value="view.activeSurface"
       variant="pills"
       size="xs"
       ariaLabel="Widget surface"
-      @update:model-value="selectSurface"
+      @update:model-value="actions.selectSurface"
     >
       <TabsList class="desktop-widget-gallery__tabs">
-        <TabsTrigger v-for="tab in surfaceTabs" :key="tab.id" :value="tab.id">
+        <TabsTrigger v-for="tab in view.surfaceTabs" :key="tab.id" :value="tab.id">
           {{ tab.label }}
         </TabsTrigger>
       </TabsList>
@@ -106,11 +82,11 @@ function selectSurface(value: string | number | null): void {
       :viewport-attrs="{ 'aria-live': 'polite' }"
     >
       <section class="desktop-widget-gallery__list-content">
-        <p v-if="!hasItems" class="desktop-widget-gallery__empty">No widgets match this view.</p>
+        <p v-if="view.empty" class="desktop-widget-gallery__empty">No widgets match this view.</p>
         <article
-          v-for="item in filteredItems"
+          v-for="item in view.items"
           v-else
-          :key="`${activeSurface}::${item.id}`"
+          :key="`${view.activeSurface}::${item.id}`"
           class="desktop-widget-gallery__item"
           :data-visible="item.visible || undefined"
           :data-widget-id="item.id"
@@ -120,7 +96,7 @@ function selectSurface(value: string | number | null): void {
             class="desktop-widget-gallery__preview"
             :disabled="item.visible || !item.desktopPlaceable"
             :aria-label="item.desktopPlaceable ? `Drag ${item.title} to desktop` : item.title"
-            @pointerdown="startDesktopDrag(item, $event)"
+            @pointerdown="actions.handleItemPointerDown(item, $event)"
           >
             <AppIcon
               :icon="item.icon"
@@ -145,10 +121,20 @@ function selectSurface(value: string | number | null): void {
           </div>
 
           <div class="desktop-widget-gallery__actions">
-            <Button v-if="item.visible" variant="ghost" size="sm" @click="hide(item)"
+            <Button
+              v-if="item.visible"
+              variant="ghost"
+              size="sm"
+              @click="actions.setItemVisible(item, false)"
               >Remove</Button
             >
-            <Button v-else variant="solid" color="blue" size="sm" @click="show(item)">
+            <Button
+              v-else
+              variant="solid"
+              color="blue"
+              size="sm"
+              @click="actions.setItemVisible(item, true)"
+            >
               <template #left><Plus aria-hidden="true" /></template>
               Add
             </Button>
@@ -160,12 +146,12 @@ function selectSurface(value: string | number | null): void {
 
   <Teleport to="body">
     <div
-      v-if="dragging"
+      v-if="view.dragPreview"
       class="desktop-widget-gallery__drag-ghost"
-      :style="dragStyle"
+      :style="view.dragPreview.style"
       aria-hidden="true"
     >
-      {{ dragging.item.title }}
+      {{ view.dragPreview.label }}
     </div>
   </Teleport>
 </template>
