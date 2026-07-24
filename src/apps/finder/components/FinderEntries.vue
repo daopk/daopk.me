@@ -14,7 +14,7 @@ import { Alert, Badge, ContextMenu, ContextMenuItem, ContextMenuSeparator } from
 
 import AppIcon from "~/components/AppIcon.vue";
 
-import type { FinderViewMode } from "../composables/useFinder";
+import type { FinderEntriesState, FinderSessionIntent } from "../composables/useFinderSession";
 import {
   entryIcon,
   entryKindLabel,
@@ -38,32 +38,11 @@ interface EntryPointerStart {
 }
 
 const props = defineProps<{
-  readonly activeDescendant?: string;
-  readonly cwd: string;
-  readonly entries: readonly VfsDirEntry[];
-  readonly error: string | null;
-  readonly loading: boolean;
-  readonly loadingPath: string | null;
-  readonly mutationDisabled: boolean;
-  readonly selectedPath: string | null;
-  readonly viewMode: FinderViewMode;
+  readonly state: FinderEntriesState;
 }>();
 
 const emit = defineEmits<{
-  copyPath: [path: string];
-  createFolder: [];
-  duplicateEntry: [entry: VfsDirEntry];
-  entryClick: [entry: VfsDirEntry];
-  entryContextMenu: [entry: VfsDirEntry];
-  entryDoubleClick: [entry: VfsDirEntry];
-  goUp: [];
-  moveSelection: [delta: number];
-  openEntry: [entry: VfsDirEntry];
-  openWithSuggestion: [entry: VfsDirEntry, suggestion: FinderOpenSuggestion];
-  openSelected: [];
-  refresh: [];
-  requestDeleteEntry: [entry: VfsDirEntry];
-  selectByIndex: [index: number];
+  intent: [intent: FinderSessionIntent];
 }>();
 
 const kernel = useKernel();
@@ -84,7 +63,7 @@ onUnmounted(() => {
 });
 
 watch(
-  () => [props.entries, props.viewMode] as const,
+  () => [props.state.entries, props.state.viewMode] as const,
   () => {
     void nextTick(syncGridObserver);
   },
@@ -111,7 +90,7 @@ function syncGridObserver(): void {
 
 function updateGridColumns(): void {
   const el = entriesRef.value;
-  if (el === null || props.viewMode !== "grid") {
+  if (el === null || props.state.viewMode !== "grid") {
     gridColumns.value = GRID_KEYBOARD_COLUMNS;
     return;
   }
@@ -129,11 +108,11 @@ function entryId(index: number): string {
 }
 
 function canMutateEntry(entry: VfsDirEntry): boolean {
-  return !props.mutationDisabled && !entry.readonly;
+  return !props.state.mutationDisabled && !entry.readonly;
 }
 
 function isLoadingCloudEntry(entry: VfsDirEntry): boolean {
-  return props.loadingPath === entry.path && isCloudDriveEntry(entry);
+  return props.state.loadingPath === entry.path && isCloudDriveEntry(entry);
 }
 
 function openSuggestionIconFor(suggestion: FinderOpenSuggestion): VaporComponent | null {
@@ -204,7 +183,7 @@ function onEntryPointerUp(entry: VfsDirEntry, event: PointerEvent): void {
     return;
   }
 
-  emit("openEntry", entry);
+  emit("intent", { type: "open-entry", path: entry.path });
 }
 
 function onEntryPointerCancel(event: PointerEvent): void {
@@ -240,46 +219,52 @@ function directPointerHandlers(entry: VfsDirEntry): DirectEntryPointerHandlers {
 
 function onEntryContextMenu(entry: VfsDirEntry): void {
   entryPointerStart = null;
-  emit("entryContextMenu", entry);
+  emit("intent", { type: "select-entry", path: entry.path });
 }
 
 function onBrowserKeydown(event: KeyboardEvent): void {
   switch (event.key) {
     case "ArrowDown":
       event.preventDefault();
-      emit("moveSelection", props.viewMode === "grid" ? gridColumns.value : 1);
+      emit("intent", {
+        type: "move-selection",
+        delta: props.state.viewMode === "grid" ? gridColumns.value : 1,
+      });
       break;
     case "ArrowUp":
       event.preventDefault();
-      emit("moveSelection", props.viewMode === "grid" ? -gridColumns.value : -1);
+      emit("intent", {
+        type: "move-selection",
+        delta: props.state.viewMode === "grid" ? -gridColumns.value : -1,
+      });
       break;
     case "ArrowRight":
-      if (props.viewMode === "grid") {
+      if (props.state.viewMode === "grid") {
         event.preventDefault();
-        emit("moveSelection", 1);
+        emit("intent", { type: "move-selection", delta: 1 });
       }
       break;
     case "ArrowLeft":
-      if (props.viewMode === "grid") {
+      if (props.state.viewMode === "grid") {
         event.preventDefault();
-        emit("moveSelection", -1);
+        emit("intent", { type: "move-selection", delta: -1 });
       }
       break;
     case "Home":
       event.preventDefault();
-      emit("selectByIndex", 0);
+      emit("intent", { type: "select-by-index", index: 0 });
       break;
     case "End":
       event.preventDefault();
-      emit("selectByIndex", props.entries.length - 1);
+      emit("intent", { type: "select-by-index", index: props.state.entries.length - 1 });
       break;
     case "Enter":
       event.preventDefault();
-      emit("openSelected");
+      emit("intent", { type: "open-selected-entry" });
       break;
     case "Backspace":
       event.preventDefault();
-      emit("goUp");
+      emit("intent", { type: "go-up" });
       break;
   }
 }
@@ -289,42 +274,42 @@ function onBrowserKeydown(event: KeyboardEvent): void {
   <ContextMenu :modal="false">
     <template #trigger>
       <section class="finder__browser" aria-label="Directory browser">
-        <Alert v-if="error" class="finder__notice" color="red" variant="surface" role="alert">
-          {{ error }}
+        <Alert v-if="state.error" class="finder__notice" color="red" variant="surface" role="alert">
+          {{ state.error }}
         </Alert>
-        <EmptyState v-else-if="!error && entries.length === 0" class="finder__empty">
+        <EmptyState v-else-if="state.entries.length === 0" class="finder__empty">
           This folder is empty.
         </EmptyState>
 
-        <ScrollArea v-if="entries.length > 0" class="finder__scroll">
+        <ScrollArea v-if="state.entries.length > 0" class="finder__scroll">
           <div
             ref="entriesRef"
             class="finder__entries"
-            :class="`finder__entries--${viewMode}`"
+            :class="`finder__entries--${state.viewMode}`"
             role="listbox"
             tabindex="0"
             aria-label="Directory contents"
-            :aria-activedescendant="activeDescendant"
+            :aria-activedescendant="state.activeDescendant"
             @keydown="onBrowserKeydown"
           >
-            <ContextMenu v-for="(entry, index) in entries" :key="entry.path" :modal="false">
+            <ContextMenu v-for="(entry, index) in state.entries" :key="entry.path" :modal="false">
               <template #trigger>
                 <div
                   :id="entryId(index)"
                   class="finder__entry"
-                  :class="{ 'finder__entry--selected': selectedPath === entry.path }"
+                  :class="{ 'finder__entry--selected': state.selectedPath === entry.path }"
                   role="option"
-                  :aria-selected="selectedPath === entry.path"
+                  :aria-selected="state.selectedPath === entry.path"
                   v-on="directPointerHandlers(entry)"
-                  @click="emit('entryClick', entry)"
+                  @click="emit('intent', { type: 'select-entry', path: entry.path })"
                   @contextmenu.stop="onEntryContextMenu(entry)"
-                  @dblclick="emit('entryDoubleClick', entry)"
+                  @dblclick="emit('intent', { type: 'open-entry', path: entry.path })"
                 >
                   <component
                     :is="isLoadingCloudEntry(entry) ? Loader2 : entryIcon(entry)"
                     class="finder__entry-icon"
                     :class="{ 'finder__entry-icon--loading': isLoadingCloudEntry(entry) }"
-                    :size="viewMode === 'grid' ? 28 : 18"
+                    :size="state.viewMode === 'grid' ? 28 : 18"
                     aria-hidden="true"
                   />
                   <span class="finder__entry-name" :title="entry.name">{{ entry.name }}</span>
@@ -348,7 +333,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
               <template #items>
                 <ContextMenuItem
                   v-if="entry.kind === 'directory'"
-                  @select="emit('openEntry', entry)"
+                  @select="emit('intent', { type: 'open-entry', path: entry.path })"
                 >
                   <Icon
                     :icon="FolderOpen"
@@ -361,7 +346,13 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                 <ContextMenuItem
                   v-for="suggestion in openSuggestionsForEntry(entry)"
                   :key="suggestion.id"
-                  @select="emit('openWithSuggestion', entry, suggestion)"
+                  @select="
+                    emit('intent', {
+                      type: 'open-with-suggestion',
+                      path: entry.path,
+                      suggestionId: suggestion.id,
+                    })
+                  "
                 >
                   <AppIcon
                     :icon="openSuggestionIconFor(suggestion)"
@@ -371,7 +362,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   />
                   <span>{{ suggestion.label }}</span>
                 </ContextMenuItem>
-                <ContextMenuItem @select="emit('copyPath', entry.path)">
+                <ContextMenuItem @select="emit('intent', { type: 'copy-path', path: entry.path })">
                   <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
                   <span>Copy Path</span>
                 </ContextMenuItem>
@@ -379,7 +370,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                   <ContextMenuSeparator />
                   <ContextMenuItem
                     :disabled="!canMutateEntry(entry)"
-                    @select="emit('duplicateEntry', entry)"
+                    @select="emit('intent', { type: 'duplicate-entry', path: entry.path })"
                   >
                     <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
                     <span>Duplicate</span>
@@ -388,7 +379,7 @@ function onBrowserKeydown(event: KeyboardEvent): void {
                 <ContextMenuSeparator />
                 <ContextMenuItem
                   :disabled="!canMutateEntry(entry)"
-                  @select="emit('requestDeleteEntry', entry)"
+                  @select="emit('intent', { type: 'request-delete', path: entry.path })"
                 >
                   <Icon :icon="Trash2" class="finder__context-icon" :size="15" aria-hidden="true" />
                   <span>Delete...</span>
@@ -400,16 +391,19 @@ function onBrowserKeydown(event: KeyboardEvent): void {
       </section>
     </template>
     <template #items>
-      <ContextMenuItem :disabled="mutationDisabled" @select="emit('createFolder')">
+      <ContextMenuItem
+        :disabled="state.mutationDisabled"
+        @select="emit('intent', { type: 'create-folder' })"
+      >
         <Icon :icon="FolderPlus" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>New Folder</span>
       </ContextMenuItem>
-      <ContextMenuItem @select="emit('refresh')">
+      <ContextMenuItem @select="emit('intent', { type: 'refresh' })">
         <Icon :icon="RefreshCw" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>Refresh</span>
       </ContextMenuItem>
       <ContextMenuSeparator />
-      <ContextMenuItem @select="emit('copyPath', cwd)">
+      <ContextMenuItem @select="emit('intent', { type: 'copy-path', path: state.cwd })">
         <Icon :icon="Copy" class="finder__context-icon" :size="15" aria-hidden="true" />
         <span>Copy Current Folder Path</span>
       </ContextMenuItem>

@@ -3,6 +3,11 @@ import { onBeforeUnmount, useId } from "vue";
 
 import { Button, Modal } from "@daopk/ui";
 
+import type {
+  FinderDeleteConfirmationState,
+  FinderSessionIntent,
+} from "../composables/useFinderSession";
+
 const DIALOG_CONTENT_BASE_Z_INDEX = 1601;
 const modalId = `finder-delete-${useId()}`;
 const modalFocusTrapOptions = {
@@ -18,23 +23,20 @@ onBeforeUnmount(() => {
 });
 
 defineProps<{
-  readonly description: string;
-  readonly loading: boolean;
-  readonly open: boolean;
+  readonly state: FinderDeleteConfirmationState;
 }>();
 
 const emit = defineEmits<{
-  cancel: [];
-  confirm: [];
+  intent: [intent: FinderSessionIntent];
 }>();
 </script>
 
 <template>
   <Modal
     :id="modalId"
-    :open="open"
+    :open="state.open"
     title="Move item to Trash?"
-    :description="description"
+    :description="state.description"
     size="420px"
     :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
     close-on-overlay-click
@@ -42,12 +44,24 @@ const emit = defineEmits<{
     :show-close-button="false"
     :focus-trap-options="modalFocusTrapOptions"
     :overlay-props="modalOverlayProps"
-    @close="emit('cancel')"
+    @close="emit('intent', { type: 'cancel-delete' })"
   >
     <template #footer>
       <div class="finder__dialog-actions">
-        <Button size="sm" :disabled="loading" @click="emit('cancel')">Cancel</Button>
-        <Button size="sm" variant="solid" color="blue" :loading="loading" @click="emit('confirm')">
+        <Button
+          size="sm"
+          :disabled="state.loading"
+          @click="emit('intent', { type: 'cancel-delete' })"
+        >
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          variant="solid"
+          color="blue"
+          :loading="state.loading"
+          @click="emit('intent', { type: 'confirm-delete' })"
+        >
           Move to Trash
         </Button>
       </div>

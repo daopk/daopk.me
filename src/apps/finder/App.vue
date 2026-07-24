@@ -6,69 +6,17 @@ import FinderDeleteDialog from "./components/FinderDeleteDialog.vue";
 import FinderEntries from "./components/FinderEntries.vue";
 import FinderPreviewPane from "./components/FinderPreviewPane.vue";
 import FinderToolbar from "./components/FinderToolbar.vue";
-import { useFinderController } from "./composables/useFinderController";
+import { useFinderSession } from "./composables/useFinderSession";
 
-const controller = useFinderController();
-const { finder, preview } = controller;
-const {
-  activeDescendant,
-  cancelDeleteEntry,
-  confirmDeleteEntry,
-  copyPath,
-  createFolder,
-  deleteDescription,
-  deleteDialogOpen,
-  deletingEntry,
-  duplicateEntry,
-  isMobile,
-  mutationDisabled,
-  onBreadcrumb,
-  onEntryClick,
-  onEntryContextMenu,
-  onEntryDoubleClick,
-  openEntry,
-  openSelectedEntry,
-  openWithSuggestion,
-  requestDeleteEntry,
-} = controller;
-
-const {
-  breadcrumbs,
-  cwd,
-  entries,
-  error,
-  loading,
-  loadingPath,
-  selectedEntry,
-  selectedPath,
-  viewMode,
-} = finder;
-const {
-  html: previewHtml,
-  imageUrl: previewImageUrl,
-  kind: previewKind,
-  loading: previewLoading,
-  message: previewMessage,
-  path: previewPath,
-  text: previewText,
-  title: previewTitle,
-} = preview;
+const session = useFinderSession();
 </script>
 
 <template>
   <AppFrame as="section" class="finder" layout="flex-column" aria-label="Finder">
     <div class="finder__chrome">
-      <FinderToolbar
-        :breadcrumbs="breadcrumbs"
-        :cwd="cwd"
-        :view-mode="viewMode"
-        @breadcrumb="onBreadcrumb"
-        @go-up="finder.goUp"
-        @refresh="finder.refresh"
-        @set-view-mode="finder.setViewMode"
-      />
+      <FinderToolbar :state="session.state.value.toolbar" @intent="session.send" />
       <Progress
-        v-if="loading"
+        v-if="session.state.value.loading"
         class="finder__loading-bar"
         indeterminate
         size="sm"
@@ -77,53 +25,15 @@ const {
     </div>
 
     <div class="finder__body">
-      <FinderEntries
-        :active-descendant="activeDescendant"
-        :cwd="cwd"
-        :entries="entries"
-        :error="error"
-        :loading="loading"
-        :loading-path="loadingPath"
-        :mutation-disabled="mutationDisabled"
-        :selected-path="selectedPath"
-        :view-mode="viewMode"
-        @copy-path="copyPath"
-        @create-folder="createFolder"
-        @duplicate-entry="duplicateEntry"
-        @entry-click="onEntryClick"
-        @entry-context-menu="onEntryContextMenu"
-        @entry-double-click="onEntryDoubleClick"
-        @go-up="finder.goUp"
-        @move-selection="finder.moveSelection"
-        @open-entry="openEntry"
-        @open-with-suggestion="openWithSuggestion"
-        @open-selected="openSelectedEntry"
-        @refresh="finder.refresh"
-        @request-delete-entry="requestDeleteEntry"
-        @select-by-index="finder.selectByIndex"
-      />
+      <FinderEntries :state="session.state.value.entries" @intent="session.send" />
 
       <FinderPreviewPane
-        v-if="!isMobile"
-        :html="previewHtml"
-        :image-url="previewImageUrl"
-        :kind="previewKind"
-        :loading="previewLoading"
-        :message="previewMessage"
-        :path="previewPath"
-        :selected-entry="selectedEntry"
-        :text="previewText"
-        :title="previewTitle"
+        v-if="session.state.value.previewPane"
+        :state="session.state.value.previewPane"
       />
     </div>
 
-    <FinderDeleteDialog
-      :description="deleteDescription"
-      :loading="deletingEntry"
-      :open="deleteDialogOpen"
-      @cancel="cancelDeleteEntry"
-      @confirm="confirmDeleteEntry"
-    />
+    <FinderDeleteDialog :state="session.state.value.deleteConfirmation" @intent="session.send" />
   </AppFrame>
 </template>
 

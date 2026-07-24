@@ -8,19 +8,14 @@ import List from "~icons/lucide/list";
 import RefreshCw from "~icons/lucide/refresh-cw";
 import { Button, IconButton, Radio, RadioGroup } from "@daopk/ui";
 
-import type { FinderBreadcrumb, FinderViewMode } from "../composables/useFinder";
+import type { FinderSessionIntent, FinderToolbarState } from "../composables/useFinderSession";
 
 defineProps<{
-  readonly breadcrumbs: readonly FinderBreadcrumb[];
-  readonly cwd: string;
-  readonly viewMode: FinderViewMode;
+  readonly state: FinderToolbarState;
 }>();
 
 const emit = defineEmits<{
-  breadcrumb: [path: string];
-  goUp: [];
-  refresh: [];
-  setViewMode: [mode: FinderViewMode];
+  intent: [intent: FinderSessionIntent];
 }>();
 
 const viewModeOptions = [
@@ -30,7 +25,7 @@ const viewModeOptions = [
 
 function onViewModeChange(value: string | number | null): void {
   if (value === "list" || value === "grid") {
-    emit("setViewMode", value);
+    emit("intent", { type: "set-view-mode", viewMode: value });
   }
 }
 
@@ -47,26 +42,26 @@ const viewModeRadioClassNames = {
       <IconButton
         class="finder__icon-button"
         ariaLabel="Go to parent folder"
-        :disabled="cwd === '/'"
-        @click="emit('goUp')"
+        :disabled="state.cwd === '/'"
+        @click="emit('intent', { type: 'go-up' })"
       >
         <ArrowUp aria-hidden="true" />
       </IconButton>
     </template>
 
     <nav class="finder__breadcrumbs" aria-label="Current folder">
-      <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
+      <template v-for="(crumb, index) in state.breadcrumbs" :key="crumb.path">
         <Button
           class="finder__breadcrumb"
           variant="plain"
           size="xs"
-          :aria-current="crumb.path === cwd ? 'page' : undefined"
-          @click="emit('breadcrumb', crumb.path)"
+          :aria-current="crumb.path === state.cwd ? 'page' : undefined"
+          @click="emit('intent', { type: 'navigate', path: crumb.path })"
         >
           {{ crumb.label }}
         </Button>
         <Icon
-          v-if="index < breadcrumbs.length - 1"
+          v-if="index < state.breadcrumbs.length - 1"
           :icon="ChevronRight"
           class="finder__breadcrumb-separator"
           :size="14"
@@ -76,13 +71,17 @@ const viewModeRadioClassNames = {
     </nav>
 
     <template #end>
-      <IconButton class="finder__icon-button" ariaLabel="Refresh folder" @click="emit('refresh')">
+      <IconButton
+        class="finder__icon-button"
+        ariaLabel="Refresh folder"
+        @click="emit('intent', { type: 'refresh' })"
+      >
         <RefreshCw aria-hidden="true" />
       </IconButton>
 
       <RadioGroup
         class="finder__view-toggle"
-        :model-value="viewMode"
+        :model-value="state.viewMode"
         orientation="horizontal"
         ariaLabel="View mode"
         @update:model-value="onViewModeChange"
