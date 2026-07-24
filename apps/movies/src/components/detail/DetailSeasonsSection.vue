@@ -1,18 +1,12 @@
 <script setup vapor lang="ts">
-import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { AspectRatio, Radio, RadioGroup } from "@daopk/ui";
 
-import {
-  fetchMovieSeason,
-  type MovieSeason,
-  type MovieSeasonDetail,
-  type MovieSeasonEpisode,
-} from "../../moviesApi";
+import { type MovieSeason, type MovieSeasonEpisode } from "../../moviesApi";
 import { useMoviesI18n } from "../../i18n/useMoviesI18n";
+import { useMoviesContent } from "../../moviesContent";
 import EpisodeList from "../EpisodeList.vue";
 import { episodeTotalLabel, seasonLabel, seasonMetaLabel } from "./detailFormatters";
-
-type EpisodesState = "idle" | "loading" | "ready" | "error";
 
 interface DetailSeasonsSectionProps {
   episodeTotal: string;
@@ -27,11 +21,8 @@ defineEmits<{
 }>();
 
 const selectedSeason = ref("");
-const seasonDetail = ref<MovieSeasonDetail | null>(null);
-const episodesState = ref<EpisodesState>("idle");
 const episodesSection = ref<HTMLElement | null>(null);
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const { t } = useMoviesI18n();
 
 const orderedSeasons = computed(() =>
   [...props.seasons].sort((left, right) => left.seasonNumber - right.seasonNumber),
@@ -41,6 +32,18 @@ const selectedSeasonNumber = computed(() => {
   const value = Number(selectedSeason.value);
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
 });
+const resource = useMoviesContent(() => {
+  const seasonNumber = selectedSeasonNumber.value;
+  return seasonNumber === null
+    ? null
+    : ({
+        kind: "season-episodes",
+        seasonNumber,
+        tmdbId: props.tmdbId,
+      } as const);
+});
+const seasonDetail = computed(() => resource.content.value?.season ?? null);
+const { state: episodesState } = resource;
 const activeSeason = computed(
   () =>
     seasonDetail.value ??
@@ -73,18 +76,6 @@ watch(
   { immediate: true },
 );
 
-watch(
-  () => [props.tmdbId, selectedSeasonNumber.value, locale.value] as const,
-  ([, seasonNumber]) => {
-    void loadSeason(seasonNumber);
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  abortController?.abort();
-});
-
 function selectSeason(seasonNumber: number): void {
   selectedSeason.value = String(seasonNumber);
   void scrollEpisodesIntoView();
@@ -93,32 +84,6 @@ function selectSeason(seasonNumber: number): void {
 function selectSeasonValue(value: string | number | null): void {
   if (value === null) return;
   selectSeason(Number(value));
-}
-
-async function loadSeason(seasonNumber: number | null): Promise<void> {
-  abortController?.abort();
-  seasonDetail.value = null;
-
-  if (seasonNumber === null) {
-    episodesState.value = "idle";
-    return;
-  }
-
-  const controller = new AbortController();
-  abortController = controller;
-  episodesState.value = "loading";
-
-  try {
-    seasonDetail.value = await fetchMovieSeason(props.tmdbId, seasonNumber, {
-      signal: controller.signal,
-    });
-    episodesState.value = "ready";
-  } catch {
-    if (controller.signal.aborted) {
-      return;
-    }
-    episodesState.value = "error";
-  }
 }
 
 async function scrollEpisodesIntoView(): Promise<void> {

@@ -228,6 +228,27 @@ describe("moviesApi", () => {
     ]);
   });
 
+  it("allows a content request to use an explicit locale", async () => {
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "https://daopk.test");
+      expect(url.searchParams.get("language")).toBe("vi-VN");
+      return new Response(
+        JSON.stringify({
+          mediaType: "movie",
+          name: "Fight Club VN",
+          tmdbId: 550,
+        }),
+        { headers: { "Content-Type": "application/json" } },
+      );
+    });
+    vi.stubGlobal("fetch", fetch);
+    setMoviesApiLocale("en");
+
+    await fetchMovieDetail("movie", 550, { locale: "vi" });
+
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
   it("fetches All catalog lists by combining movie and TV pages", async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input), "https://daopk.test");

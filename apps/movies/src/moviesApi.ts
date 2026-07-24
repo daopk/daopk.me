@@ -11,6 +11,11 @@ export type MoviesListPeriod = "day" | "week";
 export type MoviesListSort = "popular" | "newest" | "top-rated";
 export type MoviesListKind = "trending-movie" | "trending-tv";
 
+export interface MoviesApiRequestOptions {
+  readonly locale?: SupportedLocale;
+  readonly signal?: AbortSignal;
+}
+
 export interface MovieTaxonomyItem {
   readonly id: string;
   readonly name: string;
@@ -433,8 +438,8 @@ export function moviesApiLanguageForLocale(locale: SupportedLocale): string {
   return MOVIES_API_LANGUAGE_BY_LOCALE[locale];
 }
 
-function currentMoviesApiLanguage(): string {
-  return moviesApiLanguageForLocale(currentMoviesApiLocale ?? browserPreferredLocale());
+function currentMoviesApiLanguage(locale?: SupportedLocale): string {
+  return moviesApiLanguageForLocale(locale ?? currentMoviesApiLocale ?? browserPreferredLocale());
 }
 
 function publicApiUrl(pathname: string): string {
@@ -960,8 +965,8 @@ export function buildMovieTrailerUrl(mediaType: MovieMediaType, tmdbId: number):
   return publicApiUrl(`/public/movies/trailer/${mediaType}/${encodeURIComponent(String(tmdbId))}`);
 }
 
-async function fetchJson(url: string, options: { signal?: AbortSignal } = {}): Promise<unknown> {
-  const response = await fetch(urlWithMoviesApiLanguage(url), {
+async function fetchJson(url: string, options: MoviesApiRequestOptions = {}): Promise<unknown> {
+  const response = await fetch(urlWithMoviesApiLanguage(url, options.locale), {
     signal: options.signal,
     headers: { Accept: "application/json" },
   });
@@ -973,7 +978,7 @@ async function fetchJson(url: string, options: { signal?: AbortSignal } = {}): P
 
 export async function fetchMoviesList(
   query: MoviesListQuery,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MoviesListResult> {
   const page = Math.max(1, query.page ?? DEFAULT_PAGE);
   const limit = Math.max(
@@ -986,6 +991,7 @@ export async function fetchMoviesList(
   }
 
   const payload = await fetchJson(buildMoviesListUrl({ ...query, page, limit }), {
+    locale: options.locale,
     signal: options.signal,
   });
   const result = moviesListFromPayload(payload, { page, limit });
@@ -1006,7 +1012,7 @@ function isCatalogAllListQuery(query: MoviesListQuery): boolean {
 
 async function fetchCombinedMoviesList(
   query: MoviesListQuery & { readonly limit: number; readonly page: number },
-  options: { signal?: AbortSignal },
+  options: MoviesApiRequestOptions,
 ): Promise<MoviesListResult> {
   const movieLimit = Math.max(1, Math.ceil(query.limit / 2));
   const tvLimit = Math.max(1, query.limit - movieLimit);
@@ -1072,7 +1078,7 @@ function releaseTimestamp(movie: MovieSummary): number {
 
 export async function fetchMoviesFilters(
   media: MovieMediaType = "movie",
-  _options: { signal?: AbortSignal } = {},
+  _options: MoviesApiRequestOptions = {},
 ): Promise<MoviesFiltersResult> {
   return STATIC_MOVIES_FILTERS[media];
 }
@@ -1080,11 +1086,11 @@ export async function fetchMoviesFilters(
 export async function fetchMovieDetail(
   mediaType: MovieMediaType,
   tmdbId: number,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MovieDetail> {
   const payload = await fetchJson(
     publicApiUrl(`/public/movies/detail/${mediaType}/${encodeURIComponent(String(tmdbId))}`),
-    { signal: options.signal },
+    options,
   );
   const detail = movieDetailFromPayload(payload);
   if (detail === null) {
@@ -1095,11 +1101,9 @@ export async function fetchMovieDetail(
 
 export async function fetchMoviePerson(
   tmdbId: number,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MoviePersonDetail> {
-  const payload = await fetchJson(buildMoviePersonUrl(tmdbId), {
-    signal: options.signal,
-  });
+  const payload = await fetchJson(buildMoviePersonUrl(tmdbId), options);
   const person = moviePersonFromPayload(payload);
   if (person === null) {
     throw new Error("Movie person response was not usable.");
@@ -1110,22 +1114,18 @@ export async function fetchMoviePerson(
 export async function fetchMovieTrailer(
   mediaType: MovieMediaType,
   tmdbId: number,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MovieTrailerResult> {
-  const payload = await fetchJson(buildMovieTrailerUrl(mediaType, tmdbId), {
-    signal: options.signal,
-  });
+  const payload = await fetchJson(buildMovieTrailerUrl(mediaType, tmdbId), options);
   return movieTrailerFromPayload(payload);
 }
 
 export async function fetchMovieSeason(
   tmdbId: number,
   seasonNumber: number,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MovieSeasonDetail> {
-  const payload = await fetchJson(buildMovieSeasonUrl(tmdbId, seasonNumber), {
-    signal: options.signal,
-  });
+  const payload = await fetchJson(buildMovieSeasonUrl(tmdbId, seasonNumber), options);
   const season = movieSeasonFromPayload(payload);
   if (season === null) {
     throw new Error("Movie season response was not usable.");
@@ -1137,11 +1137,11 @@ export async function fetchMovieEpisode(
   tmdbId: number,
   seasonNumber: number,
   episodeNumber: number,
-  options: { signal?: AbortSignal } = {},
+  options: MoviesApiRequestOptions = {},
 ): Promise<MovieEpisodeDetail> {
   const [series, season] = await Promise.all([
-    fetchMovieDetail("tv", tmdbId, { signal: options.signal }),
-    fetchMovieSeason(tmdbId, seasonNumber, { signal: options.signal }),
+    fetchMovieDetail("tv", tmdbId, options),
+    fetchMovieSeason(tmdbId, seasonNumber, options),
   ]);
   const episode = movieEpisodeDetailFromParts(series, season, episodeNumber);
   if (episode === null) {
@@ -1154,9 +1154,9 @@ function publicApiSearchUrl(pathname: string): URL {
   return new URL(publicApiUrl(pathname), "https://daopk.local");
 }
 
-function urlWithMoviesApiLanguage(urlValue: string): string {
+function urlWithMoviesApiLanguage(urlValue: string, locale?: SupportedLocale): string {
   const url = new URL(urlValue, "https://daopk.local");
-  url.searchParams.set("language", currentMoviesApiLanguage());
+  url.searchParams.set("language", currentMoviesApiLanguage(locale));
   return urlToFetchString(url);
 }
 

@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { Button } from "@daopk/ui";
@@ -10,18 +10,14 @@ import DetailContent from "./detail/DetailContent.vue";
 import DetailHero from "./detail/DetailHero.vue";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
-  fetchMovieDetail,
-  fetchMovieTrailer,
-  type MovieDetail,
   type MovieEpisodeTarget,
   type MovieMediaType,
   type MoviePersonCredit,
   type MovieSeasonEpisode,
   type MovieSummary,
 } from "../moviesApi";
+import { useMoviesContent } from "../moviesContent";
 import type { MoviesWatchContinuity, MoviesWatchProgress } from "../moviesWatchContinuity";
-
-type LoadState = "loading" | "ready" | "error";
 
 interface DetailViewProps {
   mediaType: MovieMediaType;
@@ -39,57 +35,21 @@ const emit = defineEmits<{
   watch: [movie: MovieSummary];
 }>();
 
-const detail = ref<MovieDetail | null>(null);
-const state = ref<LoadState>("loading");
 const resumeProgress = ref<MoviesWatchProgress | null>(null);
-const trailerKey = ref<string | null>(null);
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
-
-watch(
-  () => [props.mediaType, props.tmdbId, locale.value] as const,
-  () => {
-    void loadDetail();
-  },
-  { immediate: true },
+const { t } = useMoviesI18n();
+const resource = useMoviesContent(
+  () =>
+    ({
+      kind: "detail",
+      mediaType: props.mediaType,
+      tmdbId: props.tmdbId,
+    }) as const,
 );
+const detail = computed(() => resource.content.value?.detail ?? null);
+const trailerKey = computed(() => resource.content.value?.trailerKey ?? null);
+const { state } = resource;
 
-onUnmounted(() => {
-  abortController?.abort();
-});
-
-async function loadDetail(): Promise<void> {
-  abortController?.abort();
-  const controller = new AbortController();
-  abortController = controller;
-  state.value = "loading";
-  detail.value = null;
-  resumeProgress.value = null;
-  trailerKey.value = null;
-
-  try {
-    const [nextDetail, trailerResult] = await Promise.all([
-      fetchMovieDetail(props.mediaType, props.tmdbId, {
-        signal: controller.signal,
-      }),
-      fetchMovieTrailer(props.mediaType, props.tmdbId, {
-        signal: controller.signal,
-      }).catch(() => ({ trailer: null })),
-    ]);
-    if (controller.signal.aborted) {
-      return;
-    }
-    detail.value = nextDetail;
-    trailerKey.value = trailerResult.trailer?.key ?? null;
-    refreshResumeProgress();
-    state.value = "ready";
-  } catch {
-    if (controller.signal.aborted) {
-      return;
-    }
-    state.value = "error";
-  }
-}
+watch(detail, refreshResumeProgress);
 
 function openEpisode(episode: MovieSeasonEpisode): void {
   if (detail.value === null) {

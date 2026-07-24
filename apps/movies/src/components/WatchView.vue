@@ -18,19 +18,15 @@ import {
 import { mediaLabel } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
-  fetchMovieDetail,
-  fetchMovieEpisode,
-  type MovieDetail,
-  type MovieEpisodeDetail,
   type MovieEpisodeTarget,
   type MoviePlayInfo,
   type MoviePersonCredit,
   type MovieSummary,
   type MovieSeasonEpisode,
 } from "../moviesApi";
+import { useMoviesContent } from "../moviesContent";
 import { type MoviesWatchContinuity, type MoviesWatchTarget } from "../moviesWatchContinuity";
 
-type LoadState = "loading" | "ready" | "error";
 interface MovieHlsPlayerInstance {
   readonly handleAppKeydown?: (event: KeyboardEvent) => void;
 }
@@ -56,18 +52,21 @@ const emit = defineEmits<{
   "watch-episode": [request: WatchEpisodeRequest];
 }>();
 
-const state = ref<LoadState>("loading");
-const movieDetail = ref<MovieDetail | null>(null);
-const episodeDetail = ref<MovieEpisodeDetail | null>(null);
 const playbackSpeed = ref(1);
 const selectedSourceIndex = ref(0);
 const playerRef = ref<MovieHlsPlayerInstance | null>(null);
 const scrollAreaRef = ref<{ element: HTMLElement | null } | null>(null);
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const { t } = useMoviesI18n();
 let viewportObserver: ResizeObserver | null = null;
 let lastViewportBlockSize = -1;
 const watchTarget = computed<MoviesWatchTarget | null>(() => props.target ?? null);
+const resource = useMoviesContent(() => {
+  const target = watchTarget.value;
+  return target === null ? null : ({ kind: "playback", target } as const);
+});
+const movieDetail = computed(() => resource.content.value?.movieDetail ?? null);
+const episodeDetail = computed(() => resource.content.value?.episodeDetail ?? null);
+const { state } = resource;
 
 const play = computed<MoviePlayInfo | null>(() => {
   const target = watchTarget.value;
@@ -196,13 +195,12 @@ const nextEpisodeLabel = computed(() => {
       });
 });
 
-watch(
-  () => [watchTarget.value, locale.value] as const,
-  () => {
-    void loadTarget();
-  },
-  { deep: true, immediate: true },
-);
+watch([state, resource.content], ([nextState]) => {
+  selectedSourceIndex.value = 0;
+  if (nextState === "ready") {
+    restoreSavedSourceIndex();
+  }
+});
 
 onMounted(() => {
   const element = scrollAreaRef.value?.element ?? null;
@@ -220,7 +218,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  abortController?.abort();
   viewportObserver?.disconnect();
   viewportObserver = null;
 });
@@ -235,43 +232,6 @@ function applyViewportBlockSize(element: HTMLElement, blockSize: number): void {
 
   lastViewportBlockSize = rounded;
   element.style.setProperty("--movies-player-fit-block-size", `${rounded}px`);
-}
-
-async function loadTarget(): Promise<void> {
-  abortController?.abort();
-  const target = watchTarget.value;
-  if (target === null) {
-    return;
-  }
-
-  const controller = new AbortController();
-  abortController = controller;
-  state.value = "loading";
-  movieDetail.value = null;
-  episodeDetail.value = null;
-  selectedSourceIndex.value = 0;
-
-  try {
-    if (target.kind === "movie") {
-      movieDetail.value = await fetchMovieDetail("movie", target.tmdbId, {
-        signal: controller.signal,
-      });
-    } else {
-      episodeDetail.value = await fetchMovieEpisode(
-        target.tmdbId,
-        target.seasonNumber,
-        target.episodeNumber,
-        { signal: controller.signal },
-      );
-    }
-    restoreSavedSourceIndex();
-    state.value = "ready";
-  } catch {
-    if (controller.signal.aborted) {
-      return;
-    }
-    state.value = "error";
-  }
 }
 
 function restoreSavedSourceIndex(): void {

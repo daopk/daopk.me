@@ -1,19 +1,13 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 
 import { Select, type SelectOption } from "@daopk/ui";
 
-import {
-  fetchMovieSeason,
-  type MovieDetail,
-  type MovieSeasonDetail,
-  type MovieSeasonEpisode,
-} from "../moviesApi";
+import { type MovieDetail, type MovieSeasonDetail, type MovieSeasonEpisode } from "../moviesApi";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
+import { useMoviesContent, type MoviesContentState } from "../moviesContent";
 import EpisodeList from "./EpisodeList.vue";
 import { seasonLabel, seasonMetaLabel } from "./detail/detailFormatters";
-
-type EpisodesState = "idle" | "loading" | "ready" | "error";
 
 interface SeasonEpisodesSectionProps {
   activeEpisodeNumber?: number | null;
@@ -36,11 +30,33 @@ const emit = defineEmits<{
   open: [episode: MovieSeasonEpisode];
 }>();
 
-const selectedSeasonDetail = ref<MovieSeasonDetail | null>(null);
 const selectedSeasonNumber = ref("");
-const episodesState = ref<EpisodesState>("idle");
 const { t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const selectedSeasonValue = computed(() => {
+  if (selectedSeasonNumber.value === "") return null;
+  const value = Number(selectedSeasonNumber.value);
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
+});
+const resource = useMoviesContent(() => {
+  const seasonNumber = selectedSeasonValue.value;
+  if (seasonNumber === null || seasonNumber === props.initialSeason.seasonNumber) {
+    return null;
+  }
+  return {
+    kind: "season-episodes",
+    seasonNumber,
+    tmdbId: props.tmdbId,
+  } as const;
+});
+const selectedSeasonDetail = computed<MovieSeasonDetail | null>(() => {
+  if (selectedSeasonValue.value === props.initialSeason.seasonNumber) {
+    return props.initialSeason;
+  }
+  return resource.content.value?.season ?? null;
+});
+const episodesState = computed<MoviesContentState>(() =>
+  selectedSeasonValue.value === props.initialSeason.seasonNumber ? "ready" : resource.state.value,
+);
 
 const selectedSeason = computed(() => {
   return (
@@ -82,59 +98,14 @@ const sectionAriaLabel = computed(() => props.ariaLabel ?? t("movies.section.epi
 watch(
   () => [props.tmdbId, props.initialSeason] as const,
   () => {
-    abortController?.abort();
-    selectedSeasonDetail.value = props.initialSeason;
     selectedSeasonNumber.value = String(props.initialSeason.seasonNumber);
-    episodesState.value = "ready";
   },
   { immediate: true },
 );
 
-onUnmounted(() => {
-  abortController?.abort();
-});
-
 function selectSeason(value: string | number | null): void {
   if (value === null) return;
-  const seasonValue = String(value);
-  selectedSeasonNumber.value = seasonValue;
-  const seasonNumber = Number(seasonValue);
-  void loadSelectedSeason(
-    Number.isSafeInteger(seasonNumber) && seasonNumber >= 0 ? seasonNumber : null,
-  );
-}
-
-async function loadSelectedSeason(seasonNumber: number | null): Promise<void> {
-  abortController?.abort();
-
-  if (seasonNumber === null) {
-    selectedSeasonDetail.value = null;
-    episodesState.value = "idle";
-    return;
-  }
-
-  if (seasonNumber === props.initialSeason.seasonNumber) {
-    selectedSeasonDetail.value = props.initialSeason;
-    episodesState.value = "ready";
-    return;
-  }
-
-  const controller = new AbortController();
-  abortController = controller;
-  selectedSeasonDetail.value = null;
-  episodesState.value = "loading";
-
-  try {
-    selectedSeasonDetail.value = await fetchMovieSeason(props.tmdbId, seasonNumber, {
-      signal: controller.signal,
-    });
-    episodesState.value = "ready";
-  } catch {
-    if (controller.signal.aborted) {
-      return;
-    }
-    episodesState.value = "error";
-  }
+  selectedSeasonNumber.value = String(value);
 }
 </script>
 

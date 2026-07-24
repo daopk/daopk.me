@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { AspectRatio, Button } from "@daopk/ui";
@@ -11,16 +11,11 @@ import DetailPeopleSection from "./detail/DetailPeopleSection.vue";
 import { episodeCountLabel, seasonLabel, seasonMetaLabel } from "./detail/detailFormatters";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
-  fetchMovieDetail,
-  fetchMovieSeason,
-  type MovieDetail,
   type MovieEpisodeTarget,
   type MoviePersonCredit,
-  type MovieSeasonDetail,
   type MovieSeasonEpisode,
 } from "../moviesApi";
-
-type LoadState = "loading" | "ready" | "error";
+import { useMoviesContent } from "../moviesContent";
 
 interface SeasonViewProps {
   seasonNumber: number;
@@ -36,11 +31,18 @@ const emit = defineEmits<{
   "open-person": [person: MoviePersonCredit];
 }>();
 
-const detail = ref<MovieDetail | null>(null);
-const season = ref<MovieSeasonDetail | null>(null);
-const state = ref<LoadState>("loading");
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const { t } = useMoviesI18n();
+const resource = useMoviesContent(
+  () =>
+    ({
+      kind: "season",
+      seasonNumber: props.seasonNumber,
+      tmdbId: props.tmdbId,
+    }) as const,
+);
+const detail = computed(() => resource.content.value?.detail ?? null);
+const season = computed(() => resource.content.value?.season ?? null);
+const { state } = resource;
 
 const heroImageUrl = computed(
   () => season.value?.posterUrl || detail.value?.backdropUrl || detail.value?.posterUrl || "",
@@ -63,18 +65,6 @@ const meta = computed(() => {
   return seasonMetaLabel(currentSeason, t) || episodeCountLabel(currentSeason.episodes.length, t);
 });
 
-watch(
-  () => [props.tmdbId, props.seasonNumber, locale.value] as const,
-  () => {
-    void loadSeason();
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  abortController?.abort();
-});
-
 function openEpisode(episode: MovieSeasonEpisode): void {
   emit("open-episode", {
     episodeNumber: episode.episodeNumber,
@@ -82,29 +72,6 @@ function openEpisode(episode: MovieSeasonEpisode): void {
     slug: detail.value?.slug ?? props.slug,
     tmdbId: props.tmdbId,
   });
-}
-
-async function loadSeason(): Promise<void> {
-  abortController?.abort();
-  abortController = new AbortController();
-  detail.value = null;
-  season.value = null;
-  state.value = "loading";
-
-  try {
-    const [nextDetail, nextSeason] = await Promise.all([
-      fetchMovieDetail("tv", props.tmdbId, { signal: abortController.signal }),
-      fetchMovieSeason(props.tmdbId, props.seasonNumber, { signal: abortController.signal }),
-    ]);
-    detail.value = nextDetail;
-    season.value = nextSeason;
-    state.value = "ready";
-  } catch {
-    if (abortController.signal.aborted) {
-      return;
-    }
-    state.value = "error";
-  }
 }
 </script>
 

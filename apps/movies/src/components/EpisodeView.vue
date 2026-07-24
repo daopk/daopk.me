@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { AspectRatio, Button } from "@daopk/ui";
@@ -14,15 +14,12 @@ import { episodeLabel, episodeMetaLabel, seasonLabel } from "./detail/detailForm
 import { moviesText } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
 import {
-  fetchMovieEpisode,
-  type MovieEpisodeDetail,
   type MovieEpisodeTarget,
   type MoviePersonCredit,
   type MovieSeasonEpisode,
   type MovieSummary,
 } from "../moviesApi";
-
-type LoadState = "loading" | "ready" | "error";
+import { useMoviesContent } from "../moviesContent";
 
 interface EpisodeViewProps {
   episodeNumber: number;
@@ -41,10 +38,18 @@ const emit = defineEmits<{
   watch: [request: MovieEpisodeTarget];
 }>();
 
-const episodeDetail = ref<MovieEpisodeDetail | null>(null);
-const state = ref<LoadState>("loading");
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const { t } = useMoviesI18n();
+const resource = useMoviesContent(
+  () =>
+    ({
+      episodeNumber: props.episodeNumber,
+      kind: "episode",
+      seasonNumber: props.seasonNumber,
+      tmdbId: props.tmdbId,
+    }) as const,
+);
+const episodeDetail = computed(() => resource.content.value?.detail ?? null);
+const { state } = resource;
 
 const detail = computed(() => episodeDetail.value?.series ?? null);
 const season = computed(() => episodeDetail.value?.season ?? null);
@@ -85,18 +90,6 @@ const facts = computed(() => {
   ].filter((fact) => fact.value.length > 0);
 });
 
-watch(
-  () => [props.tmdbId, props.seasonNumber, props.episodeNumber, locale.value] as const,
-  () => {
-    void loadEpisode();
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  abortController?.abort();
-});
-
 function openSeasonEpisode(nextEpisode: MovieSeasonEpisode): void {
   emit("open-episode", {
     episodeNumber: nextEpisode.episodeNumber,
@@ -125,29 +118,6 @@ function openSeriesDetail(): void {
   const currentDetail = detail.value;
   if (currentDetail !== null) {
     emit("open-detail", currentDetail);
-  }
-}
-
-async function loadEpisode(): Promise<void> {
-  abortController?.abort();
-  abortController = new AbortController();
-  state.value = "loading";
-  episodeDetail.value = null;
-
-  try {
-    const nextDetail = await fetchMovieEpisode(
-      props.tmdbId,
-      props.seasonNumber,
-      props.episodeNumber,
-      { signal: abortController.signal },
-    );
-    episodeDetail.value = nextDetail;
-    state.value = "ready";
-  } catch {
-    if (abortController.signal.aborted) {
-      return;
-    }
-    state.value = "error";
   }
 }
 </script>

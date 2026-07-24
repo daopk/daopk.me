@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue";
+import { computed } from "vue";
 
 import { EmptyState, ScrollArea } from "@daopk/kit";
 import { AspectRatio, Button } from "@daopk/ui";
@@ -8,9 +8,8 @@ import ArrowLeft from "~icons/lucide/arrow-left";
 import MovieCard from "./MovieCard.vue";
 import MoviesLoadingOverlay from "./MoviesLoadingOverlay.vue";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
-import { fetchMoviePerson, type MoviePersonDetail, type MovieSummary } from "../moviesApi";
-
-type LoadState = "loading" | "ready" | "error";
+import type { MovieSummary } from "../moviesApi";
+import { useMoviesContent } from "../moviesContent";
 
 interface PersonViewProps {
   tmdbId: number;
@@ -23,45 +22,20 @@ defineEmits<{
   "open-detail": [movie: MovieSummary];
 }>();
 
-const person = ref<MoviePersonDetail | null>(null);
-const state = ref<LoadState>("loading");
-const { locale, t } = useMoviesI18n();
-let abortController: AbortController | null = null;
+const { t } = useMoviesI18n();
+const resource = useMoviesContent(
+  () =>
+    ({
+      kind: "person",
+      tmdbId: props.tmdbId,
+    }) as const,
+);
+const person = computed(() => resource.content.value?.person ?? null);
+const { state } = resource;
 
 const subtitle = computed(() =>
   [person.value?.knownForDepartment, person.value?.placeOfBirth].filter(Boolean).join(" · "),
 );
-
-watch(
-  () => [props.tmdbId, locale.value] as const,
-  () => {
-    void loadPerson();
-  },
-  { immediate: true },
-);
-
-onUnmounted(() => {
-  abortController?.abort();
-});
-
-async function loadPerson(): Promise<void> {
-  abortController?.abort();
-  abortController = new AbortController();
-  state.value = "loading";
-  person.value = null;
-
-  try {
-    person.value = await fetchMoviePerson(props.tmdbId, {
-      signal: abortController.signal,
-    });
-    state.value = "ready";
-  } catch {
-    if (abortController.signal.aborted) {
-      return;
-    }
-    state.value = "error";
-  }
-}
 </script>
 
 <template>
