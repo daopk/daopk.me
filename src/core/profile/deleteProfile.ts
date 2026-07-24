@@ -4,7 +4,7 @@ import { profileIdbName } from "~/core/profile/storageScope";
 
 const PROFILE_DATABASE_DOMAINS = ["vfs", "trash", "wallpapers"] as const;
 
-export async function deleteProfileAccount(profileId: string): Promise<boolean> {
+export async function deleteProfile(profileId: string): Promise<boolean> {
   await deleteProfileStorage(profileId);
 
   const store = new ProfileStore();

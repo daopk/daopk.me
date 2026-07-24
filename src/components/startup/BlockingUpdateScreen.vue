@@ -17,28 +17,28 @@ const emit = defineEmits<{
 
 <template>
   <section
-    class="auth-auto-update"
+    class="blocking-update"
     :aria-busy="!failed"
     :aria-live="failed ? undefined : 'polite'"
     :role="failed ? 'alert' : 'status'"
   >
-    <div class="auth-auto-update__surface">
-      <div class="auth-auto-update__mark" :class="{ 'auth-auto-update__mark--failed': failed }">
-        <AlertCircle v-if="failed" class="auth-auto-update__icon" aria-hidden="true" />
+    <div class="blocking-update__surface">
+      <div class="blocking-update__mark" :class="{ 'blocking-update__mark--failed': failed }">
+        <AlertCircle v-if="failed" class="blocking-update__icon" aria-hidden="true" />
         <Loader2
           v-else
-          class="auth-auto-update__icon auth-auto-update__icon--spin"
+          class="blocking-update__icon blocking-update__icon--spin"
           aria-hidden="true"
         />
       </div>
 
-      <p class="auth-auto-update__eyebrow">
+      <p class="blocking-update__eyebrow">
         {{ failed ? "Update failed" : "Updating" }}
       </p>
-      <h1 :id="titleId" class="auth-auto-update__title">
+      <h1 :id="titleId" class="blocking-update__title">
         {{ failed ? "Update couldn't finish" : "Updating WebOS" }}
       </h1>
-      <p class="auth-auto-update__subtitle">
+      <p class="blocking-update__subtitle">
         {{
           failed
             ? errorMessage || "Try again when you're back online."
@@ -48,7 +48,7 @@ const emit = defineEmits<{
 
       <Button
         v-if="failed"
-        class="auth-auto-update__retry"
+        class="blocking-update__retry"
         variant="solid"
         color="blue"
         type="button"
@@ -62,7 +62,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped lang="scss">
-.auth-auto-update {
+.blocking-update {
   align-items: center;
   color: var(--color-fg);
   display: grid;
@@ -71,7 +71,7 @@ const emit = defineEmits<{
   place-items: center;
 }
 
-.auth-auto-update__surface {
+.blocking-update__surface {
   align-items: center;
   backdrop-filter: blur(28px) saturate(1.08);
   background: color-mix(in srgb, var(--color-bg-elevated) 58%, transparent);
@@ -86,7 +86,7 @@ const emit = defineEmits<{
   text-align: center;
 }
 
-.auth-auto-update__mark {
+.blocking-update__mark {
   align-items: center;
   background: color-mix(in srgb, var(--color-bg) 34%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-border) 62%, transparent);
@@ -98,26 +98,26 @@ const emit = defineEmits<{
   margin-block-end: var(--space-sm);
 }
 
-.auth-auto-update__mark--failed {
+.blocking-update__mark--failed {
   background: color-mix(in srgb, var(--color-error) 12%, var(--color-bg));
   border-color: color-mix(in srgb, var(--color-error) 32%, var(--color-border));
 }
 
-.auth-auto-update__icon {
+.blocking-update__icon {
   block-size: 22px;
   color: var(--color-accent);
   inline-size: 22px;
 }
 
-.auth-auto-update__mark--failed .auth-auto-update__icon {
+.blocking-update__mark--failed .blocking-update__icon {
   color: var(--color-error);
 }
 
-.auth-auto-update__icon--spin {
-  animation: auth-auto-update-spin 1s linear infinite;
+.blocking-update__icon--spin {
+  animation: blocking-update-spin 1s linear infinite;
 }
 
-.auth-auto-update__eyebrow {
+.blocking-update__eyebrow {
   color: var(--color-fg-muted);
   font-size: 11px;
   font-weight: 700;
@@ -126,7 +126,7 @@ const emit = defineEmits<{
   text-transform: uppercase;
 }
 
-.auth-auto-update__title {
+.blocking-update__title {
   font-size: 44px;
   font-weight: 680;
   letter-spacing: 0;
@@ -135,26 +135,26 @@ const emit = defineEmits<{
   overflow-wrap: anywhere;
 }
 
-.auth-auto-update__subtitle {
+.blocking-update__subtitle {
   color: var(--color-fg-muted);
   font-size: 14px;
   line-height: 1.4;
   margin: 0;
 }
 
-.auth-auto-update__retry {
+.blocking-update__retry {
   inline-size: 100%;
   margin-block-start: var(--space-lg);
 }
 
-@keyframes auth-auto-update-spin {
+@keyframes blocking-update-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
 @media (max-width: 760px) {
-  .auth-auto-update {
+  .blocking-update {
     align-items: stretch;
     inline-size: 100%;
     max-inline-size: 420px;
@@ -162,7 +162,7 @@ const emit = defineEmits<{
     z-index: 1;
   }
 
-  .auth-auto-update__surface {
+  .blocking-update__surface {
     align-items: stretch;
     backdrop-filter: none;
     background: transparent;
@@ -174,7 +174,7 @@ const emit = defineEmits<{
     text-align: start;
   }
 
-  .auth-auto-update__mark {
+  .blocking-update__mark {
     align-self: flex-start;
     backdrop-filter: blur(18px) saturate(1.08);
     background: color-mix(in srgb, var(--color-bg-elevated) 54%, transparent);
@@ -183,38 +183,38 @@ const emit = defineEmits<{
     margin-block-end: var(--space-md);
   }
 
-  .auth-auto-update__icon {
+  .blocking-update__icon {
     block-size: 19px;
     inline-size: 19px;
   }
 
-  .auth-auto-update__eyebrow {
+  .blocking-update__eyebrow {
     font-size: 10px;
   }
 
-  .auth-auto-update__title {
+  .blocking-update__title {
     font-size: 34px;
     line-height: 1.08;
   }
 
-  .auth-auto-update__subtitle {
+  .blocking-update__subtitle {
     font-size: 14px;
     max-inline-size: 28rem;
   }
 
-  .auth-auto-update__retry {
+  .blocking-update__retry {
     margin-block-start: 28px;
   }
 }
 
 @media (max-width: 360px) {
-  .auth-auto-update__title {
+  .blocking-update__title {
     font-size: 30px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-auto-update__icon--spin {
+  .blocking-update__icon--spin {
     animation: none;
   }
 }

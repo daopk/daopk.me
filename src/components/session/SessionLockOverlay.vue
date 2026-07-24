@@ -1,38 +1,26 @@
 <script setup vapor lang="ts">
-import { computed, onUnmounted, ref } from "vue";
+import { computed } from "vue";
 import { Modal, type ModalFocusTrapOptions } from "~/components/ui";
 
 import { Button } from "~/components/ui";
 import { useActiveShell } from "~/composables/useActiveShell";
-import AuthAutoUpdateScreen from "~/components/auth/AuthAutoUpdateScreen.vue";
-import { PasskeyService, ProfileAuthError } from "~/core/profile/PasskeyService";
-import { ProfileStore } from "~/core/profile/ProfileStore";
+import BlockingUpdateScreen from "~/components/startup/BlockingUpdateScreen.vue";
+import { useBlockingAutoUpdate } from "~/components/startup/useBlockingAutoUpdate";
 import {
   DEFAULT_WALLPAPER_DESKTOP_URL,
   DEFAULT_WALLPAPER_MOBILE_URL,
 } from "~/core/theme/wallpapers";
 import { useKernel } from "~/composables/useKernel";
 import Lock from "~icons/lucide/lock";
-import LogOut from "~icons/lucide/log-out";
 import Unlock from "~icons/lucide/unlock";
-
-import { useAuthAutoUpdate } from "./useAuthAutoUpdate";
 
 const kernel = useKernel();
 const locked = kernel.profile.useLocked();
 const profile = kernel.profile.current();
 const { shellId } = useActiveShell();
-const store = new ProfileStore();
-const passkeys = new PasskeyService();
-const autoUpdate = useAuthAutoUpdate(computed(() => locked.value));
-
-const busy = ref(false);
-const errorMessage = ref("");
-
-const isGuest = computed(() => profile.authMode === "guest");
-const unlockLabel = computed(() => (isGuest.value ? "Unlock Guest" : "Unlock Desktop"));
+const autoUpdate = useBlockingAutoUpdate(computed(() => locked.value));
 const subtitle = computed(() =>
-  isGuest.value ? "Guest session" : profile.encrypted ? "Passkey required" : "Passkey protected",
+  profile.owner.kind === "guest" ? "Privacy lock · Guest profile" : "Privacy lock · Linked profile",
 );
 const lockScreenStyle = computed<Record<string, string>>(() => ({
   backgroundImage: [
@@ -58,52 +46,13 @@ const modalClassNames = {
 };
 const modalStyles = computed(() => ({ root: lockScreenStyle.value }));
 
-function describeError(error: unknown): string {
-  if (error instanceof ProfileAuthError || error instanceof Error) {
-    return error.message;
-  }
-  return "Unlock failed.";
-}
-
-async function unlockDesktop(): Promise<void> {
-  if (busy.value || !locked.value) {
+function unlockDesktop(): void {
+  if (!locked.value) {
     return;
   }
 
-  if (isGuest.value) {
-    kernel.profile.unlock();
-    return;
-  }
-
-  if (!passkeys.isAvailable()) {
-    errorMessage.value = "Passkeys are not available in this browser context.";
-    return;
-  }
-
-  busy.value = true;
-  errorMessage.value = "";
-
-  try {
-    const record = store.get(profile.profileId);
-    if (!record || record.authMode !== "passkey") {
-      throw new Error("This profile could not be found.");
-    }
-    const session = await passkeys.unlockProfile(record);
-    kernel.profile.unlock(session);
-  } catch (error: unknown) {
-    errorMessage.value = describeError(error);
-  } finally {
-    busy.value = false;
-  }
+  kernel.profile.unlock();
 }
-
-function signOut(): void {
-  void kernel.profile.signOut();
-}
-
-onUnmounted(() => {
-  store.dispose();
-});
 </script>
 
 <template>
@@ -116,13 +65,13 @@ onUnmounted(() => {
     :close-on-overlay-click="false"
     :close-on-escape="false"
     :show-close-button="false"
-    initial-focus=".session-lock__unlock, .auth-auto-update__retry"
+    initial-focus=".session-lock__unlock, .blocking-update__retry"
     :focus-trap-options="focusTrapOptions"
     :overlay-props="{ color: 'transparent' }"
     :class-names="modalClassNames"
     :styles="modalStyles"
   >
-    <AuthAutoUpdateScreen
+    <BlockingUpdateScreen
       v-if="autoUpdate.visible.value"
       title-id="session-lock-title"
       :failed="autoUpdate.failed.value"
@@ -139,28 +88,15 @@ onUnmounted(() => {
       <h2 id="session-lock-title" class="session-lock__title">{{ profile.displayName }}</h2>
       <p class="session-lock__subtitle">{{ subtitle }}</p>
 
-      <p v-if="errorMessage" class="session-lock__error" role="alert">{{ errorMessage }}</p>
-
       <form class="session-lock__actions" @submit.prevent="unlockDesktop">
         <Button
           class="session-lock__button session-lock__unlock"
           variant="solid"
           color="blue"
           type="submit"
-          :loading="busy"
         >
           <template #left><Unlock aria-hidden="true" /></template>
-          {{ unlockLabel }}
-        </Button>
-        <Button
-          class="session-lock__button"
-          variant="surface"
-          type="button"
-          :disabled="busy"
-          @click="signOut"
-        >
-          <template #left><LogOut aria-hidden="true" /></template>
-          Sign Out
+          Unlock Desktop
         </Button>
       </form>
     </div>

@@ -33,6 +33,11 @@ export interface AppServiceWorkerRegistrationOptions {
   >;
 }
 
+export interface AppServiceWorkerRegistration {
+  readonly registered: boolean;
+  readonly initialUpdateDiscovery: Promise<void>;
+}
+
 export function canRegisterAppServiceWorker(
   env: AppServiceWorkerEnv = import.meta.env,
   navigatorLike: ServiceWorkerNavigatorLike = globalThis.navigator,
@@ -42,17 +47,31 @@ export function canRegisterAppServiceWorker(
 
 export function registerAppServiceWorker(
   options: AppServiceWorkerRegistrationOptions = {},
-): boolean {
+): AppServiceWorkerRegistration {
   const env = options.env ?? import.meta.env;
   const navigatorLike = options.navigator ?? globalThis.navigator;
 
   if (!canRegisterAppServiceWorker(env, navigatorLike)) {
-    return false;
+    return {
+      registered: false,
+      initialUpdateDiscovery: Promise.resolve(),
+    };
   }
 
   const registrar = options.register ?? registerSW;
   const reload = options.reload ?? (() => globalThis.location.reload());
   const updateController = options.updateController ?? serviceWorkerUpdateController;
+  let completeInitialUpdateDiscovery = (): void => {};
+  const initialUpdateDiscovery = new Promise<void>((resolve) => {
+    let complete = false;
+    completeInitialUpdateDiscovery = () => {
+      if (complete) {
+        return;
+      }
+      complete = true;
+      resolve();
+    };
+  });
 
   try {
     let registrationRef: ServiceWorkerRegistration | undefined;
@@ -180,6 +199,7 @@ export function registerAppServiceWorker(
             notifyUpdateAvailable();
           }
         });
+        completeInitialUpdateDiscovery();
       },
       onNeedReload: () => {
         debugLog("[service-worker]", "reload needed");
@@ -187,14 +207,22 @@ export function registerAppServiceWorker(
       },
       onRegisterError: (error) => {
         updateController.setUpdateChecker(undefined);
+        completeInitialUpdateDiscovery();
         debugWarn("[service-worker]", "registration failed", error);
       },
     });
 
-    return true;
+    return {
+      registered: true,
+      initialUpdateDiscovery,
+    };
   } catch (error: unknown) {
+    completeInitialUpdateDiscovery();
     debugWarn("[service-worker]", "registration setup failed", error);
 
-    return false;
+    return {
+      registered: false,
+      initialUpdateDiscovery,
+    };
   }
 }

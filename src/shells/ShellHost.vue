@@ -1,7 +1,7 @@
 <script setup vapor lang="ts">
 import { nextTick, onMounted, onUnmounted, useTemplateRef, watchEffect } from "vue";
 
-import SessionLockOverlay from "~/components/auth/SessionLockOverlay.vue";
+import SessionLockOverlay from "~/components/session/SessionLockOverlay.vue";
 import { useToast } from "~/components/ui";
 import { runAutorunManifests } from "~/core/boot/autorun";
 import {
@@ -169,7 +169,7 @@ function focusShellMain(rootEl: Element): void {
   opacity: 0;
 }
 
-// Initial boot reveal stays instant (no `appear`); the auth gate lifts away to
+// Initial boot reveal stays instant (no `appear`); the startup gate lifts away to
 // expose a fully-painted shell. Only runtime shell swaps cross-fade.
 @media (prefers-reduced-motion: reduce) {
   .shell-fade-enter-active,

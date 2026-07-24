@@ -2,10 +2,8 @@
 /**
  * Account section.
  *
- * Local account management surface for the active passkey-backed profile.
- * Lock is intentionally soft: it keeps running app state in memory and
- * renders the shell-level lock overlay. Sign out is the destructive path that
- * closes apps and reloads into AuthGate.
+ * Local profile management surface. Lock is intentionally a privacy cover:
+ * it keeps running app state in memory and renders the shell-level overlay.
  */
 
 import { computed, onBeforeUnmount, ref, useId } from "vue";
@@ -18,7 +16,6 @@ import AlertCircle from "~icons/lucide/alert-circle";
 import CloudOff from "~icons/lucide/cloud-off";
 import KeyRound from "~icons/lucide/key-round";
 import Lock from "~icons/lucide/lock";
-import LogOut from "~icons/lucide/log-out";
 import Shield from "~icons/lucide/shield";
 import Trash2 from "~icons/lucide/trash-2";
 
@@ -54,37 +51,26 @@ const deleteConfirmationText = ref("");
 const deletingAccount = ref(false);
 const deleteError = ref("");
 
-const protectionLabel = computed(() => {
-  if (profile.authMode === "guest") {
-    return t("settings.account.guestAccount");
-  }
-  return profile.encrypted
-    ? t("settings.account.encryptedProfile")
-    : t("settings.account.passkeyProtected");
-});
-const storageLabel = computed(() =>
-  profile.authMode === "guest"
-    ? t("settings.account.guestStorage")
-    : t("settings.account.browserStorage"),
+const protectionLabel = computed(() =>
+  profile.owner.kind === "guest"
+    ? t("settings.account.guestProfile")
+    : t("settings.account.linkedProfile"),
 );
+const storageLabel = computed(() => t("settings.account.localStorage"));
 const canConfirmDelete = computed(() => deleteConfirmationText.value === profile.displayName);
 const deleteDialogDescription = computed(() =>
-  t("settings.account.deleteDialogDescription", { name: profile.displayName }),
+  t("settings.account.resetDialogDescription", { name: profile.displayName }),
 );
 
 function lockSession(): void {
   void kernel.profile.lock();
 }
 
-function signOut(): void {
-  void kernel.profile.signOut();
-}
-
 function describeDeleteError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return t("settings.account.deleteFailed");
+  return t("settings.account.resetFailed");
 }
 
 function requestDeleteAccount(): void {
@@ -111,7 +97,7 @@ async function confirmDeleteAccount(): Promise<void> {
   deleteError.value = "";
 
   try {
-    await kernel.profile.deleteCurrentAccount();
+    await kernel.profile.deleteCurrentProfile();
   } catch (error: unknown) {
     deleteError.value = describeDeleteError(error);
     deletingAccount.value = false;
@@ -149,10 +135,6 @@ async function confirmDeleteAccount(): Promise<void> {
           <template #left><Lock aria-hidden="true" /></template>
           {{ t("settings.account.lockSession") }}
         </Button>
-        <Button class="account__action" variant="solid" color="blue" type="button" @click="signOut">
-          <template #left><LogOut aria-hidden="true" /></template>
-          {{ t("settings.account.signOut") }}
-        </Button>
       </div>
     </Panel>
 
@@ -189,10 +171,10 @@ async function confirmDeleteAccount(): Promise<void> {
     >
       <div class="account__danger-copy">
         <h3 id="account-danger-title" class="account__danger-title">
-          {{ t("settings.account.deleteTitle") }}
+          {{ t("settings.account.resetTitle") }}
         </h3>
         <p class="account__danger-text">
-          {{ t("settings.account.deleteCopy") }}
+          {{ t("settings.account.resetCopy") }}
         </p>
       </div>
       <Button
@@ -203,14 +185,14 @@ async function confirmDeleteAccount(): Promise<void> {
         @click="requestDeleteAccount"
       >
         <template #left><Trash2 aria-hidden="true" /></template>
-        {{ t("settings.account.deleteButton") }}
+        {{ t("settings.account.resetButton") }}
       </Button>
     </Panel>
 
     <Modal
       :id="deleteAccountModalId"
       v-model:open="deleteDialogOpen"
-      :title="t('settings.account.deleteDialogTitle')"
+      :title="t('settings.account.resetDialogTitle')"
       :description="deleteDialogDescription"
       size="420px"
       :base-z-index="DIALOG_CONTENT_BASE_Z_INDEX"
@@ -226,12 +208,12 @@ async function confirmDeleteAccount(): Promise<void> {
           <template #icon>
             <AlertCircle class="account__delete-warning-icon" aria-hidden="true" />
           </template>
-          {{ t("settings.account.deleteWarning") }}
+          {{ t("settings.account.resetWarning") }}
         </Alert>
 
         <div class="account__delete-field">
           <span :id="deleteConfirmationLabelId" class="account__delete-label">
-            {{ t("settings.account.deleteConfirmLabel", { name: profile.displayName }) }}
+            {{ t("settings.account.resetConfirmLabel", { name: profile.displayName }) }}
           </span>
           <Input
             v-model="deleteConfirmationText"
@@ -269,7 +251,7 @@ async function confirmDeleteAccount(): Promise<void> {
             @click="confirmDeleteAccount"
           >
             <template #left><Trash2 aria-hidden="true" /></template>
-            {{ t("settings.account.deleteConfirmButton") }}
+            {{ t("settings.account.resetConfirmButton") }}
           </Button>
         </div>
       </template>

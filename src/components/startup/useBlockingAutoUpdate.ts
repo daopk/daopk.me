@@ -1,8 +1,11 @@
 import { computed, watch, type ComputedRef, type Ref } from "vue";
 
-import { serviceWorkerUpdateController } from "~/service-worker/updateController";
+import {
+  isBlockingServiceWorkerUpdate,
+  serviceWorkerUpdateController,
+} from "~/service-worker/updateController";
 
-export interface AuthAutoUpdateState {
+export interface BlockingAutoUpdateState {
   readonly visible: ComputedRef<boolean>;
   readonly updating: ComputedRef<boolean>;
   readonly failed: ComputedRef<boolean>;
@@ -10,16 +13,10 @@ export interface AuthAutoUpdateState {
   retry(): void;
 }
 
-export function useAuthAutoUpdate(enabled: Readonly<Ref<boolean>>): AuthAutoUpdateState {
+export function useBlockingAutoUpdate(enabled: Readonly<Ref<boolean>>): BlockingAutoUpdateState {
   const state = serviceWorkerUpdateController.state;
 
-  const visible = computed(
-    () =>
-      enabled.value &&
-      (state.value.kind === "update-installing" ||
-        state.value.kind === "update-available" ||
-        state.value.kind === "refresh-error"),
-  );
+  const visible = computed(() => enabled.value && isBlockingServiceWorkerUpdate(state.value));
   const updating = computed(
     () =>
       enabled.value &&

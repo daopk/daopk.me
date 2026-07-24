@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   consumeInitialAppUrlIntent,
-  hasAutoGuestLoginUrlIntent,
   hasRegisteredAppUrlIntent,
   isFirstPartyAppProtocolUrl,
   parseAppProtocolIntent,
@@ -526,40 +525,6 @@ describe("app URL intents", () => {
       manifestId: "about",
       source: "deeplink",
     });
-  });
-
-  it("detects known auto guest login URL intents before all apps are registered", () => {
-    const { kernel, eventsEmit } = makeKernel([]);
-
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/blog")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/blog/field-notes")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/apps/calendar")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/movie/550-fight-club")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys/season/1")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/tv/76479-the-boys/season/1/episode/2")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/vi/tv/220102-spider-noir")).toBe(true);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/movie/not-a-valid-route")).toBe(true);
-
-    expect(eventsEmit).not.toHaveBeenCalled();
-  });
-
-  it("detects registered non-built-in app URL intents for auto guest login", () => {
-    const { kernel, eventsEmit } = makeKernel(["custom-tool"]);
-
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/apps/custom-tool")).toBe(true);
-
-    expect(eventsEmit).not.toHaveBeenCalled();
-  });
-
-  it("rejects unknown, malformed, and homepage URL intents for auto guest login", () => {
-    const { kernel, eventsEmit } = makeKernel([]);
-
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/apps/not-real")).toBe(false);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/blog/a/b")).toBe(false);
-    expect(hasAutoGuestLoginUrlIntent(kernel, "/")).toBe(false);
-
-    expect(eventsEmit).not.toHaveBeenCalled();
   });
 
   it("rejects unknown, malformed, and homepage URL intents without emitting", () => {

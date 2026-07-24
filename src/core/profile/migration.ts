@@ -32,12 +32,11 @@ const KV_MIGRATIONS = [
 
 export interface ProfileMigrationOptions {
   profileId: string;
-  encryptionKey?: CryptoKey;
 }
 
 export async function migrateGlobalDataToProfile(options: ProfileMigrationOptions): Promise<void> {
   migrateKvNamespaces(options.profileId);
-  await migrateVfs(options);
+  await migrateVfs(options.profileId);
   await migrateWallpaperBlobs(options.profileId);
 }
 
@@ -73,12 +72,11 @@ function jsonEqual(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-async function migrateVfs(options: ProfileMigrationOptions): Promise<void> {
+async function migrateVfs(profileId: string): Promise<void> {
   const source = new IDBAdapter({ id: "global-vfs-migration-source", dbName: VFS_IDB_DB_NAME });
   const target = new IDBAdapter({
     id: "profile-vfs-migration-target",
-    dbName: profileIdbName(options.profileId, "vfs"),
-    encryptionKey: options.encryptionKey,
+    dbName: profileIdbName(profileId, "vfs"),
   });
 
   try {

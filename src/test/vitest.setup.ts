@@ -9,9 +9,7 @@ import type { ActiveProfileSession } from "~/types/profile";
 const TEST_PROFILE_SESSION: ActiveProfileSession = {
   profileId: "test-profile",
   displayName: "Test Profile",
-  authMode: "passkey",
-  encryption: "none",
-  encrypted: false,
+  owner: { kind: "guest" },
 };
 
 setProfileSessionFallback(() => ({ ...TEST_PROFILE_SESSION }));

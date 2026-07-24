@@ -7,9 +7,8 @@ const locked = shallowRef(false);
 
 /**
  * Optional fallback consulted by {@link ensureActiveProfileSessionForKernel}
- * when the kernel boots without an unlocked session. Production never installs
- * one (boot requires a real unlocked profile); the test harness installs a
- * deterministic profile here so kernel specs don't each have to seed one.
+ * when the kernel boots without an active profile. Production never installs
+ * one; the test harness installs a deterministic profile here.
  */
 type ProfileSessionFallback = () => ActiveProfileSession | null;
 let sessionFallback: ProfileSessionFallback | null = null;
@@ -22,9 +21,7 @@ function snapshotOf(session: ActiveProfileSession): ProfileSessionSnapshot {
   return {
     profileId: session.profileId,
     displayName: session.displayName,
-    authMode: session.authMode,
-    encryption: session.encryption,
-    encrypted: session.encrypted,
+    owner: { ...session.owner },
   };
 }
 
@@ -49,6 +46,17 @@ export function setActiveProfileSession(session: ActiveProfileSession): void {
   locked.value = false;
 }
 
+export function replaceActiveProfileSession(session: ActiveProfileSession): void {
+  const current = activeSession.value;
+  if (!current) {
+    throw new Error("Cannot replace without an active profile session.");
+  }
+  if (current.profileId !== session.profileId) {
+    throw new Error("Cannot replace the active session with a different profile.");
+  }
+  activeSession.value = session;
+}
+
 export function clearActiveProfileSession(): void {
   activeSession.value = null;
   locked.value = false;
@@ -61,10 +69,7 @@ export function lockActiveProfileSession(): void {
   locked.value = true;
 }
 
-export function unlockActiveProfileSession(session?: ActiveProfileSession): void {
-  if (session) {
-    activeSession.value = session;
-  }
+export function unlockActiveProfileSession(): void {
   if (!activeSession.value) {
     throw new Error("Cannot unlock without an active profile session.");
   }
@@ -82,7 +87,7 @@ export function currentProfileSessionSnapshot(): ProfileSessionSnapshot {
 function requireActiveProfileSession(): ActiveProfileSession {
   const session = activeSession.value;
   if (!session) {
-    throw new Error("Kernel.init() requires an unlocked local profile.");
+    throw new Error("Kernel.init() requires an active local profile.");
   }
   return session;
 }

@@ -17,7 +17,6 @@ import {
   withinDepth,
   type VfsPath,
 } from "~/core/vfs/path";
-import { randomBytes } from "~/core/profile/encoding";
 import { IndexedDBStore } from "~/core/storage/IndexedDBStore";
 import { VFS_IDB_DB_NAME, VFS_IDB_STORE_NAME, VFS_IDB_VERSION } from "~/core/storage/constants";
 import { StorageError } from "~/core/storage/types";
@@ -30,6 +29,7 @@ interface PersistedVfsNode {
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly mimeType?: string;
+  /** Retained only to reject orphaned passkey-era data instead of returning ciphertext. */
   readonly encryption?: {
     readonly name: "aes-gcm-v1";
     readonly iv: ArrayBuffer;
@@ -42,7 +42,6 @@ export interface IDBAdapterOptions {
   readonly storeName?: string;
   readonly version?: number;
   readonly baseTimestamp?: number;
-  readonly encryptionKey?: CryptoKey;
 }
 
 function copyBytes(bytes: Uint8Array): Uint8Array {
@@ -55,10 +54,6 @@ function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   return buffer;
-}
-
-function copyArrayBuffer(buffer: ArrayBuffer): ArrayBuffer {
-  return buffer.slice(0);
 }
 
 function bytesFromBuffer(buffer?: ArrayBuffer): Uint8Array {
@@ -116,8 +111,6 @@ export class IDBAdapter implements VfsAdapter {
 
   private readonly baseTimestamp: number;
 
-  private readonly encryptionKey?: CryptoKey;
-
   private rootLatch: Promise<void> | undefined;
 
   constructor(options?: IDBAdapterOptions) {
@@ -128,7 +121,6 @@ export class IDBAdapter implements VfsAdapter {
       options?.version ?? VFS_IDB_VERSION,
     );
     this.baseTimestamp = options?.baseTimestamp ?? 0;
-    this.encryptionKey = options?.encryptionKey;
   }
 
   async stat(path: VfsPath): Promise<VfsStat> {
@@ -239,15 +231,13 @@ export class IDBAdapter implements VfsAdapter {
       }
 
       const now = options?.now ?? Date.now();
-      const encoded = await this.encodeBytes(bytes);
       const node: PersistedVfsNode = {
         path,
         kind: "file",
-        bytes: encoded.bytes,
+        bytes: copyToArrayBuffer(bytes),
         size: bytes.byteLength,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
-        ...(encoded.encryption === undefined ? {} : { encryption: encoded.encryption }),
         ...(options?.mimeType === undefined
           ? existing?.mimeType === undefined
             ? {}
@@ -357,51 +347,13 @@ export class IDBAdapter implements VfsAdapter {
     await this.rootLatch;
   }
 
-  private async encodeBytes(bytes: Uint8Array): Promise<{
-    bytes: ArrayBuffer;
-    encryption?: PersistedVfsNode["encryption"];
-  }> {
-    if (!this.encryptionKey) {
-      return { bytes: copyToArrayBuffer(bytes) };
-    }
-
-    const iv = randomBytes(12);
-    const encrypted = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv },
-      this.encryptionKey,
-      copyToArrayBuffer(bytes),
-    );
-    return {
-      bytes: encrypted,
-      encryption: {
-        name: "aes-gcm-v1",
-        iv: copyToArrayBuffer(iv),
-      },
-    };
-  }
-
-  private async decodeNodeBytes(node: PersistedVfsNode): Promise<Uint8Array> {
-    if (node.encryption === undefined) {
-      return bytesFromBuffer(node.bytes);
-    }
-
-    if (!this.encryptionKey) {
-      throw new VfsError("ADAPTER_UNAVAILABLE", `Encrypted file requires an unlocked profile`, {
+  private decodeNodeBytes(node: PersistedVfsNode): Uint8Array {
+    if (node.encryption !== undefined) {
+      throw new VfsError("ADAPTER_UNAVAILABLE", "Legacy passkey-encrypted file is not available.", {
         path: node.path,
       });
     }
-
-    const encrypted = node.bytes ?? new ArrayBuffer(0);
-    const plain = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: copyArrayBuffer(node.encryption.iv),
-      },
-      this.encryptionKey,
-      encrypted,
-    );
-
-    return bytesFromBuffer(plain);
+    return bytesFromBuffer(node.bytes);
   }
 
   private async mkdirRecursive(path: VfsPath, now: number): Promise<void> {

@@ -1,35 +1,31 @@
-import { flushPromises, mountVaporTest as mount, type VaporTestWrapper } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { flushPromises, mountVaporTest as mount, type VaporTestWrapper } from "~/test/mountVapor";
+import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 import type { Kernel } from "~/types/kernel";
 import { KernelInjectionKey } from "~/types/kernel";
-import { finishLeavingModals, queryActiveModalDialog } from "~/test/ropavModal";
 
 import AccountSection from "./AccountSection.vue";
 
 function makeKernel(overrides: Partial<ReturnType<Kernel["profile"]["current"]>> = {}) {
   const lock = vi.fn(async () => undefined);
-  const signOut = vi.fn(async () => undefined);
-  const deleteCurrentAccount = vi.fn(async () => undefined);
+  const deleteCurrentProfile = vi.fn(async () => undefined);
   const kernel = {
     profile: {
       current: vi.fn(() => ({
         profileId: "alpha",
-        displayName: "Alpha",
-        authMode: "passkey",
-        encryption: "none",
-        encrypted: false,
+        displayName: "Guest",
+        owner: { kind: "guest" as const },
         ...overrides,
       })),
       lock,
-      signOut,
-      deleteCurrentAccount,
+      deleteCurrentProfile,
     },
   } as unknown as Kernel;
 
-  return { kernel, lock, signOut, deleteCurrentAccount };
+  return { kernel, lock, deleteCurrentProfile };
 }
 
 const mountedWrappers: VaporTestWrapper[] = [];
@@ -76,41 +72,30 @@ describe("AccountSection", () => {
     }
   });
 
-  it("shows the active local account summary", () => {
+  it("shows the active guest profile and local storage summary", () => {
     const { kernel } = makeKernel();
     const wrapper = mountSection(kernel);
 
     expect(wrapper.find(".account").exists()).toBe(true);
     expect(wrapper.text()).toContain("Account");
-    expect(wrapper.text()).toContain("Alpha");
+    expect(wrapper.text()).toContain("Guest");
     expect(wrapper.text()).toContain("alpha");
-    expect(wrapper.text()).toContain("Passkey protected");
+    expect(wrapper.text()).toContain("Guest profile");
     expect(wrapper.text()).toContain("Stored only in this browser");
+    expect(wrapper.text()).not.toContain("Sign Out");
   });
 
-  it("labels encrypted profiles", () => {
+  it("labels linked ownership without exposing credentials", () => {
     const { kernel } = makeKernel({
-      encryption: "prf-aes-gcm-v1",
-      encrypted: true,
+      owner: { kind: "account", accountId: "account-1", linkedAt: 2 },
     });
     const wrapper = mountSection(kernel);
 
-    expect(wrapper.text()).toContain("Encrypted passkey profile");
+    expect(wrapper.text()).toContain("Linked account profile");
+    expect(wrapper.text()).not.toContain("account-1");
   });
 
-  it("labels guest profiles as unencrypted guest accounts", () => {
-    const { kernel } = makeKernel({
-      authMode: "guest",
-      encryption: "none",
-      encrypted: false,
-    });
-    const wrapper = mountSection(kernel);
-
-    expect(wrapper.text()).toContain("Guest account");
-    expect(wrapper.text()).toContain("No encryption; stored only in this browser");
-  });
-
-  it("locks the session from account settings", async () => {
+  it("locks the session from profile settings", async () => {
     const { kernel, lock } = makeKernel();
     const wrapper = mountSection(kernel);
 
@@ -119,38 +104,24 @@ describe("AccountSection", () => {
     expect(lock).toHaveBeenCalledTimes(1);
   });
 
-  it("signs out from account settings", async () => {
-    const { kernel, signOut } = makeKernel();
+  it("requires typing the profile name before resetting local data", async () => {
+    const { kernel, deleteCurrentProfile } = makeKernel();
     const wrapper = mountSection(kernel);
 
-    await findButtonByText(wrapper, "Sign Out").trigger("click");
-
-    expect(signOut).toHaveBeenCalledTimes(1);
-  });
-
-  it("requires typing the account name before deleting the current account", async () => {
-    const { kernel, deleteCurrentAccount } = makeKernel();
-    const wrapper = mountSection(kernel);
-
-    await findButtonByText(wrapper, "Delete Account...").trigger("click");
+    await findButtonByText(wrapper, "Reset Local Profile...").trigger("click");
     await flushAndPaint();
 
     const dialog = queryActiveModalDialog();
     expect(dialog).not.toBeNull();
-    expect(dialog?.textContent).toContain("Delete current account?");
-    expect(dialog?.textContent).toContain("Type Alpha to confirm");
+    expect(dialog?.textContent).toContain("Reset current profile?");
+    expect(dialog?.textContent).toContain("Type Guest to confirm");
 
-    const confirmButton = findDialogButtonByText("Delete Account");
+    const confirmButton = findDialogButtonByText("Reset Profile");
     expect(confirmButton.disabled).toBe(true);
 
     const input = dialog!.querySelector<HTMLInputElement>("input");
     expect(input).not.toBeNull();
-    input!.value = "Alph";
-    input!.dispatchEvent(new Event("input", { bubbles: true }));
-    await flushAndPaint();
-    expect(confirmButton.disabled).toBe(true);
-
-    input!.value = "Alpha";
+    input!.value = "Guest";
     input!.dispatchEvent(new Event("input", { bubbles: true }));
     await flushAndPaint();
     expect(confirmButton.disabled).toBe(false);
@@ -158,20 +129,20 @@ describe("AccountSection", () => {
     confirmButton.click();
     await flushAndPaint();
 
-    expect(deleteCurrentAccount).toHaveBeenCalledTimes(1);
+    expect(deleteCurrentProfile).toHaveBeenCalledTimes(1);
   });
 
-  it("cancels account deletion without calling the kernel", async () => {
-    const { kernel, deleteCurrentAccount } = makeKernel();
+  it("cancels profile reset without calling the kernel", async () => {
+    const { kernel, deleteCurrentProfile } = makeKernel();
     const wrapper = mountSection(kernel);
 
-    await findButtonByText(wrapper, "Delete Account...").trigger("click");
+    await findButtonByText(wrapper, "Reset Local Profile...").trigger("click");
     await flushAndPaint();
 
     findDialogButtonByText("Cancel").click();
     await flushAndPaint();
 
-    expect(deleteCurrentAccount).not.toHaveBeenCalled();
+    expect(deleteCurrentProfile).not.toHaveBeenCalled();
     expect(queryActiveModalDialog()).toBeNull();
   });
 });

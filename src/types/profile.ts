@@ -1,31 +1,32 @@
-export type ProfileEncryptionMode = "prf-aes-gcm-v1" | "none";
-export type ProfileAuthMode = "passkey" | "guest";
+export type ProfileOwner =
+  | { readonly kind: "guest" }
+  | {
+      readonly kind: "account";
+      readonly accountId: string;
+      readonly linkedAt: number;
+    };
 
 export interface ProfileBaseRecord {
-  id: string;
-  displayName: string;
-  createdAt: number;
-  authMode: ProfileAuthMode;
-  encryption: ProfileEncryptionMode;
-  lastUnlockedAt?: number;
-}
-
-export interface PasskeyProfileRecord extends ProfileBaseRecord {
-  authMode: "passkey";
-  credentialId: string;
-  userHandle: string;
-  publicKey: string;
-  publicKeyAlg: number;
-  transports: AuthenticatorTransport[];
-  prfSalt?: string;
+  readonly id: string;
+  readonly displayName: string;
+  readonly createdAt: number;
+  readonly owner: ProfileOwner;
+  readonly lastOpenedAt?: number;
 }
 
 export interface GuestProfileRecord extends ProfileBaseRecord {
-  authMode: "guest";
-  encryption: "none";
+  readonly owner: { readonly kind: "guest" };
 }
 
-export type ProfileRecord = PasskeyProfileRecord | GuestProfileRecord;
+export interface AccountProfileRecord extends ProfileBaseRecord {
+  readonly owner: {
+    readonly kind: "account";
+    readonly accountId: string;
+    readonly linkedAt: number;
+  };
+}
+
+export type ProfileRecord = GuestProfileRecord | AccountProfileRecord;
 
 export interface ProfilesState {
   profiles: ProfileRecord[];
@@ -34,13 +35,9 @@ export interface ProfilesState {
 }
 
 export interface ProfileSessionSnapshot {
-  profileId: string;
-  displayName: string;
-  authMode: ProfileAuthMode;
-  encryption: ProfileEncryptionMode;
-  encrypted: boolean;
+  readonly profileId: string;
+  readonly displayName: string;
+  readonly owner: ProfileOwner;
 }
 
-export interface ActiveProfileSession extends ProfileSessionSnapshot {
-  encryptionKey?: CryptoKey;
-}
+export type ActiveProfileSession = ProfileSessionSnapshot;

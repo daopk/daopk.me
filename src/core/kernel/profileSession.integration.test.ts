@@ -1,21 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ActiveProfileSession } from "~/types/profile";
 import {
   clearActiveProfileSession,
   getActiveProfileSession,
   setActiveProfileSession,
 } from "~/core/profile/ProfileSession";
 import { ProfileStore } from "~/core/profile/ProfileStore";
+import type { ActiveProfileSession } from "~/types/profile";
 
 import { kernel } from "./index";
 
 const session: ActiveProfileSession = {
   profileId: "alpha",
-  displayName: "Alpha",
-  authMode: "passkey",
-  encryption: "none",
-  encrypted: false,
+  displayName: "Guest",
+  owner: { kind: "guest" },
 };
 
 function deferred() {
@@ -32,7 +30,7 @@ function stubReload(): ReturnType<typeof vi.fn> {
   return reload;
 }
 
-describe("kernel profile session lock/signOut", () => {
+describe("kernel profile privacy lock and reset", () => {
   afterEach(() => {
     kernel.dispose();
     clearActiveProfileSession();
@@ -41,7 +39,7 @@ describe("kernel profile session lock/signOut", () => {
     vi.restoreAllMocks();
   });
 
-  it("profile.lock soft-locks without clearing session, killing processes, or reloading", async () => {
+  it("profile.lock keeps the active session, running apps, and page state", async () => {
     const reload = stubReload();
     setActiveProfileSession(session);
     const handle = kernel.processes.spawn("about");
@@ -53,55 +51,20 @@ describe("kernel profile session lock/signOut", () => {
     expect(Array.from(kernel.processes.list()).some(([id]) => id === handle.id)).toBe(true);
     expect(reload).not.toHaveBeenCalled();
 
+    kernel.profile.unlock();
+    expect(kernel.profile.isLocked()).toBe(false);
+    expect(getActiveProfileSession()).toEqual(session);
     kernel.processes.kill(handle.id);
   });
 
-  it("profile.signOut kills apps, waits for async teardown, clears session, and reloads", async () => {
-    const reload = stubReload();
-    setActiveProfileSession(session);
-    const gate = deferred();
-    const first = kernel.processes.spawn("notes");
-    const second = kernel.processes.spawn("finder");
-    const stopWillKill = kernel.events.on("app.will-kill", (payload) => {
-      if (payload.handleId === first.id) {
-        payload.waitUntil(gate.promise);
-      }
-    });
-
-    try {
-      const signOut = kernel.profile.signOut();
-      await Promise.resolve();
-
-      expect(reload).not.toHaveBeenCalled();
-      expect(getActiveProfileSession()?.profileId).toBe("alpha");
-      expect(Array.from(kernel.processes.list()).some(([id]) => id === first.id)).toBe(true);
-      expect(Array.from(kernel.processes.list()).some(([id]) => id === second.id)).toBe(false);
-
-      gate.resolve();
-      await signOut;
-
-      expect(Array.from(kernel.processes.list())).toHaveLength(0);
-      expect(getActiveProfileSession()).toBeNull();
-      expect(reload).toHaveBeenCalledTimes(1);
-    } finally {
-      stopWillKill();
-    }
-  });
-
-  it("profile.deleteCurrentAccount waits for teardown, deletes account data, clears session, and reloads", async () => {
+  it("profile.deleteCurrentProfile waits for teardown and deletes local data", async () => {
     const reload = stubReload();
     const store = new ProfileStore();
     store.add({
       id: "alpha",
-      displayName: "Alpha",
+      displayName: "Guest",
       createdAt: 1,
-      authMode: "passkey",
-      credentialId: "credential",
-      userHandle: "user",
-      publicKey: "public-key",
-      publicKeyAlg: -7,
-      transports: ["internal"],
-      encryption: "none",
+      owner: { kind: "guest" },
     });
     store.dispose();
     localStorage.setItem("profiles:alpha:settings:state", "alpha-settings");
@@ -115,7 +78,7 @@ describe("kernel profile session lock/signOut", () => {
     });
 
     try {
-      const deletion = kernel.profile.deleteCurrentAccount();
+      const deletion = kernel.profile.deleteCurrentProfile();
       await Promise.resolve();
 
       expect(reload).not.toHaveBeenCalled();

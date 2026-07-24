@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { serviceWorkerUpdateController } from "~/service-worker/updateController";
+import {
+  isBlockingServiceWorkerUpdate,
+  serviceWorkerUpdateController,
+} from "~/service-worker/updateController";
 
 describe("serviceWorkerUpdateController", () => {
   beforeEach(() => {
@@ -17,6 +20,16 @@ describe("serviceWorkerUpdateController", () => {
     expect(serviceWorkerUpdateController.state.value).toEqual({ kind: "idle" });
     expect(serviceWorkerUpdateController.checkState.value).toEqual({ kind: "idle" });
     expect(serviceWorkerUpdateController.hasSettingsAttention.value).toBe(false);
+  });
+
+  it("classifies only installing, available, and refresh-error states as blocking", () => {
+    expect(isBlockingServiceWorkerUpdate({ kind: "idle" })).toBe(false);
+    expect(isBlockingServiceWorkerUpdate({ kind: "offline-ready" })).toBe(false);
+    expect(isBlockingServiceWorkerUpdate({ kind: "update-installing" })).toBe(true);
+    expect(isBlockingServiceWorkerUpdate({ kind: "update-available", refreshing: false })).toBe(
+      true,
+    );
+    expect(isBlockingServiceWorkerUpdate({ kind: "refresh-error", message: "offline" })).toBe(true);
   });
 
   it("shows update state and Settings attention when an update is available", () => {

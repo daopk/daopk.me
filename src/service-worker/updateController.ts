@@ -30,6 +30,14 @@ export interface ServiceWorkerUpdateController {
   resetForTests(): void;
 }
 
+export function isBlockingServiceWorkerUpdate(state: ServiceWorkerUpdateState): boolean {
+  return (
+    state.kind === "update-installing" ||
+    state.kind === "update-available" ||
+    state.kind === "refresh-error"
+  );
+}
+
 const OFFLINE_READY_VISIBLE_MS = 3_000;
 const NO_UPDATE_CHECKER_MESSAGE = "Manual update checks are not available in this build.";
 
@@ -61,11 +69,7 @@ function setIdle(): void {
 }
 
 function hasDiscoveredUpdate(): boolean {
-  return (
-    stateRef.value.kind === "update-installing" ||
-    stateRef.value.kind === "update-available" ||
-    stateRef.value.kind === "refresh-error"
-  );
+  return isBlockingServiceWorkerUpdate(stateRef.value);
 }
 
 function errorMessage(error: unknown): string {

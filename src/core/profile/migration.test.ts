@@ -28,7 +28,6 @@ describe("profile migration", () => {
     await Promise.all([
       deleteDatabase(VFS_IDB_DB_NAME),
       deleteDatabase(profileIdbName("alpha", "vfs")),
-      deleteDatabase(profileIdbName("encrypted", "vfs")),
     ]);
   });
 
@@ -57,37 +56,6 @@ describe("profile migration", () => {
     expect(decoder.decode(read.bytes)).toBe("hello");
     expect(read.stat.mimeType).toBe("text/markdown");
     profileVfs.dispose();
-  });
-
-  it("encrypts migrated VFS files when the profile has a PRF key", async () => {
-    const globalVfs = new IDBAdapter({ dbName: VFS_IDB_DB_NAME });
-    await globalVfs.write(normalizeVfsPath("/secret.txt"), new TextEncoder().encode("secret"));
-    globalVfs.dispose();
-
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new Uint8Array(32).fill(3),
-      { name: "AES-GCM" },
-      false,
-      ["encrypt", "decrypt"],
-    );
-
-    await migrateGlobalDataToProfile({ profileId: "encrypted", encryptionKey: key });
-
-    const locked = new IDBAdapter({ dbName: profileIdbName("encrypted", "vfs") });
-    await expect(locked.read(normalizeVfsPath("/secret.txt"))).rejects.toMatchObject({
-      code: "ADAPTER_UNAVAILABLE",
-    });
-    locked.dispose();
-
-    const unlocked = new IDBAdapter({
-      dbName: profileIdbName("encrypted", "vfs"),
-      encryptionKey: key,
-    });
-    expect(decoder.decode((await unlocked.read(normalizeVfsPath("/secret.txt"))).bytes)).toBe(
-      "secret",
-    );
-    unlocked.dispose();
   });
 
   it("rejects when a migration step fails so import can be retried", async () => {

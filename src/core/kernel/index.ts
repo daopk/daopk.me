@@ -52,7 +52,7 @@ import {
   unlockActiveProfileSession,
   useProfileSessionLocked,
 } from "~/core/profile/ProfileSession";
-import { deleteProfileAccount } from "~/core/profile/deleteProfile";
+import { deleteProfile } from "~/core/profile/deleteProfile";
 import { profileIdbName, profileKvNamespace } from "~/core/profile/storageScope";
 import { usePermissionStore } from "~/core/permissions/PermissionStore";
 import { resetInitialAppUrlIntentLatch } from "~/core/routing/appUrlIntents";
@@ -222,7 +222,7 @@ function buildKernel(): Kernel {
         vfsInternal = createKernelVfs(profile);
 
         // Boot may start from a component event handler. Keep kernel-owned
-        // watchers out of that component's scope so unmounting the boot/auth
+        // watchers out of that component's scope so unmounting the startup
         // UI cannot silently stop live settings updates.
         kernelEffectScope?.stop();
         const effects = effectScope(true);
@@ -459,25 +459,17 @@ function buildKernel(): Kernel {
         lockActiveProfileSession();
       },
 
-      unlock(session): void {
-        unlockActiveProfileSession(session);
+      unlock(): void {
+        unlockActiveProfileSession();
       },
 
-      async signOut(): Promise<void> {
-        await killAllProcessesAndWait();
-
-        kernel.dispose();
-        clearActiveProfileSession();
-        globalThis.location?.reload();
-      },
-
-      async deleteCurrentAccount(): Promise<void> {
+      async deleteCurrentProfile(): Promise<void> {
         const profile = currentProfileSessionSnapshot();
 
         await killAllProcessesAndWait();
 
         kernel.dispose();
-        await deleteProfileAccount(profile.profileId);
+        await deleteProfile(profile.profileId);
         clearActiveProfileSession();
         globalThis.location?.reload();
       },

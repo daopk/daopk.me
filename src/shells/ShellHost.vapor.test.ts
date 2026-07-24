@@ -67,7 +67,7 @@ vi.mock("~/composables/useBreakpoint", async () => {
   };
 });
 
-vi.mock("~/components/auth/SessionLockOverlay.vue", async () => {
+vi.mock("~/components/session/SessionLockOverlay.vue", async () => {
   const { defineVaporComponent } = await import("vue");
   return {
     default: defineVaporComponent(() => {

@@ -2,34 +2,27 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import "fake-indexeddb/auto";
 
-import { deleteProfileAccount, deleteProfileStorage } from "~/core/profile/deleteProfile";
+import { deleteProfile, deleteProfileStorage } from "~/core/profile/deleteProfile";
 import { ProfileStore } from "~/core/profile/ProfileStore";
 import { profileIdbName } from "~/core/profile/storageScope";
 import { WALLPAPERS_IDB_STORE_NAME, WALLPAPERS_IDB_VERSION } from "~/core/storage/constants";
 import { IndexedDBStore } from "~/core/storage/IndexedDBStore";
 import { IDBAdapter } from "~/core/vfs/adapters/IDBAdapter";
 import { normalizeVfsPath } from "~/core/vfs/path";
-import type { GuestProfileRecord, PasskeyProfileRecord } from "~/types/profile";
+import type { AccountProfileRecord, GuestProfileRecord } from "~/types/profile";
 
-const alpha: PasskeyProfileRecord = {
+const alpha: AccountProfileRecord = {
   id: "alpha",
   displayName: "Alpha",
   createdAt: 1,
-  authMode: "passkey",
-  credentialId: "credential",
-  userHandle: "user",
-  publicKey: "public-key",
-  publicKeyAlg: -7,
-  transports: ["internal"],
-  encryption: "none",
+  owner: { kind: "account", accountId: "account-alpha", linkedAt: 2 },
 };
 
 const beta: GuestProfileRecord = {
   id: "beta",
   displayName: "Beta",
   createdAt: 2,
-  authMode: "guest",
-  encryption: "none",
+  owner: { kind: "guest" },
 };
 
 function deleteDatabase(name: string): Promise<void> {
@@ -123,7 +116,7 @@ describe("profile deletion", () => {
     store.dispose();
     localStorage.setItem("profiles:alpha:settings:state", "alpha-settings");
 
-    await deleteProfileAccount("alpha");
+    await deleteProfile("alpha");
 
     const next = new ProfileStore();
     expect(next.get("alpha")).toBeNull();

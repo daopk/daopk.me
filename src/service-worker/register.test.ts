@@ -136,35 +136,35 @@ describe("service worker registration", () => {
     expect(canRegisterAppServiceWorker(prodEnv, undefined)).toBe(false);
   });
 
-  it("no-ops outside production", () => {
+  it("no-ops outside production with an already-complete discovery", async () => {
     const register = vi.fn() as unknown as AppServiceWorkerRegistrar;
 
-    expect(
-      registerAppServiceWorker({
-        env: devEnv,
-        navigator: serviceWorkerNavigator,
-        register,
-      }),
-    ).toBe(false);
+    const result = registerAppServiceWorker({
+      env: devEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+    });
 
+    expect(result.registered).toBe(false);
+    await expect(result.initialUpdateDiscovery).resolves.toBeUndefined();
     expect(register).not.toHaveBeenCalled();
   });
 
-  it("no-ops when service workers are unavailable", () => {
+  it("no-ops when service workers are unavailable", async () => {
     const register = vi.fn() as unknown as AppServiceWorkerRegistrar;
 
-    expect(
-      registerAppServiceWorker({
-        env: prodEnv,
-        navigator: {},
-        register,
-      }),
-    ).toBe(false);
+    const result = registerAppServiceWorker({
+      env: prodEnv,
+      navigator: {},
+      register,
+    });
 
+    expect(result.registered).toBe(false);
+    await expect(result.initialUpdateDiscovery).resolves.toBeUndefined();
     expect(register).not.toHaveBeenCalled();
   });
 
-  it("registers immediately with prompt-safe callbacks", () => {
+  it("registers immediately with prompt-safe callbacks", async () => {
     let capturedOptions: RegisterSWOptions | undefined;
     const update = vi.fn(async () => undefined);
     const register: AppServiceWorkerRegistrar = vi.fn((options) => {
@@ -174,15 +174,14 @@ describe("service worker registration", () => {
     });
     const updateController = makeUpdateController();
 
-    expect(
-      registerAppServiceWorker({
-        env: prodEnv,
-        navigator: serviceWorkerNavigator,
-        register,
-        updateController,
-      }),
-    ).toBe(true);
+    const result = registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
 
+    expect(result.registered).toBe(true);
     expect(register).toHaveBeenCalledTimes(1);
     expect(capturedOptions).toEqual(
       expect.objectContaining({
@@ -198,6 +197,42 @@ describe("service worker registration", () => {
     expect(() => capturedOptions?.onNeedRefresh?.()).not.toThrow();
     expect(() => capturedOptions?.onOfflineReady?.()).not.toThrow();
     expect(() => capturedOptions?.onRegisterError?.(new Error("offline"))).not.toThrow();
+    await expect(result.initialUpdateDiscovery).resolves.toBeUndefined();
+  });
+
+  it("completes initial discovery only after inspecting an existing waiting worker", async () => {
+    let capturedOptions: RegisterSWOptions | undefined;
+    const waitingWorker = makeServiceWorker("installed");
+    const registration = makeServiceWorkerRegistration({
+      installing: null,
+      waiting: waitingWorker,
+    });
+    const updateController = makeUpdateController();
+    const register: AppServiceWorkerRegistrar = vi.fn((options) => {
+      capturedOptions = options;
+
+      return vi.fn(async () => undefined);
+    });
+
+    const result = registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+      updateController,
+    });
+    let discoveryComplete = false;
+    void result.initialUpdateDiscovery.then(() => {
+      discoveryComplete = true;
+    });
+    await Promise.resolve();
+
+    expect(discoveryComplete).toBe(false);
+
+    capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    await result.initialUpdateDiscovery;
+
+    expect(updateController.notifyUpdateAvailable).toHaveBeenCalledTimes(1);
+    expect(discoveryComplete).toBe(true);
   });
 
   it("marks update available without refreshing until the controller action runs", async () => {
@@ -393,7 +428,7 @@ describe("service worker registration", () => {
     expect(updateController.notifyUpdateAvailable).not.toHaveBeenCalled();
   });
 
-  it("surfaces workers that are already installing or waiting when registration completes", () => {
+  it("surfaces workers that are already installing or waiting when registration completes", async () => {
     let capturedOptions: RegisterSWOptions | undefined;
     const installingWorker = makeServiceWorker("installing");
     const registration = makeServiceWorkerRegistration({ installing: installingWorker });
@@ -404,7 +439,7 @@ describe("service worker registration", () => {
       return vi.fn(async () => undefined);
     });
 
-    registerAppServiceWorker({
+    const result = registerAppServiceWorker({
       env: prodEnv,
       navigator: serviceWorkerNavigator,
       register,
@@ -412,6 +447,7 @@ describe("service worker registration", () => {
     });
 
     capturedOptions?.onRegisteredSW?.("/sw.js", registration);
+    await result.initialUpdateDiscovery;
 
     expect(updateController.notifyUpdateInstalling).toHaveBeenCalledTimes(1);
 
@@ -549,21 +585,21 @@ describe("service worker registration", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("swallows synchronous setup failures", async () => {
+  it("swallows synchronous setup failures and completes discovery", async () => {
     const { debugWarn } = await import("~/core/debug");
     const error = new Error("virtual module exploded");
     const register: AppServiceWorkerRegistrar = vi.fn(() => {
       throw error;
     });
 
-    expect(
-      registerAppServiceWorker({
-        env: prodEnv,
-        navigator: serviceWorkerNavigator,
-        register,
-      }),
-    ).toBe(false);
+    const result = registerAppServiceWorker({
+      env: prodEnv,
+      navigator: serviceWorkerNavigator,
+      register,
+    });
 
+    expect(result.registered).toBe(false);
+    await expect(result.initialUpdateDiscovery).resolves.toBeUndefined();
     expect(debugWarn).toHaveBeenCalledWith("[service-worker]", "registration setup failed", error);
   });
 });

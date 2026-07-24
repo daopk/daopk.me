@@ -119,7 +119,7 @@ describe("MenuBarBrand", () => {
     wrapper.unmount();
   });
 
-  it("dispatches theme and session commands with menu source", async () => {
+  it("dispatches theme and privacy-lock commands with menu source", async () => {
     const { kernel, wrapper } = mountBrand();
 
     await openMenu(wrapper);
@@ -132,7 +132,6 @@ describe("MenuBarBrand", () => {
       "Spotlight",
       "Toggle Theme",
       "Lock Desktop",
-      "Sign Out",
     ]);
 
     click(menuItem("Toggle Theme"));
@@ -146,13 +145,6 @@ describe("MenuBarBrand", () => {
     await flushOverlay();
 
     expect(kernel.commands.dispatch).toHaveBeenCalledWith("system:lock", { source: "menu" });
-
-    click(wrapper.get("button.brand").element);
-    await flushOverlay();
-    click(menuItem("Sign Out"));
-    await flushOverlay();
-
-    expect(kernel.commands.dispatch).toHaveBeenCalledWith("system:signOut", { source: "menu" });
 
     wrapper.unmount();
   });

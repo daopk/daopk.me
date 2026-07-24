@@ -7,6 +7,7 @@ import {
   getActiveProfileSession,
   isProfileSessionLocked,
   lockActiveProfileSession,
+  replaceActiveProfileSession,
   setActiveProfileSession,
   unlockActiveProfileSession,
   useProfileSessionLocked,
@@ -15,9 +16,7 @@ import {
 const session: ActiveProfileSession = {
   profileId: "alpha",
   displayName: "Alpha",
-  authMode: "passkey",
-  encryption: "none",
-  encrypted: false,
+  owner: { kind: "guest" },
 };
 
 describe("ProfileSession lock state", () => {
@@ -35,18 +34,62 @@ describe("ProfileSession lock state", () => {
     expect(useProfileSessionLocked().value).toBe(true);
   });
 
-  it("unlock clears the lock state and can replace the active session", () => {
-    const next: ActiveProfileSession = {
-      ...session,
-      displayName: "Alpha Reloaded",
-    };
+  it("unlock clears the privacy lock without replacing the active session", () => {
     setActiveProfileSession(session);
     lockActiveProfileSession();
 
-    unlockActiveProfileSession(next);
+    unlockActiveProfileSession();
 
-    expect(getActiveProfileSession()).toEqual(next);
+    expect(getActiveProfileSession()).toEqual(session);
     expect(isProfileSessionLocked()).toBe(false);
+  });
+
+  it("replaces active profile metadata without clearing the privacy lock", () => {
+    setActiveProfileSession(session);
+    lockActiveProfileSession();
+
+    replaceActiveProfileSession({
+      ...session,
+      displayName: "Linked Alpha",
+      owner: { kind: "account", accountId: "account-1", linkedAt: 2 },
+    });
+
+    expect(getActiveProfileSession()).toEqual({
+      profileId: "alpha",
+      displayName: "Linked Alpha",
+      owner: { kind: "account", accountId: "account-1", linkedAt: 2 },
+    });
+    expect(isProfileSessionLocked()).toBe(true);
+  });
+
+  it("replaces active profile metadata without locking an unlocked session", () => {
+    setActiveProfileSession(session);
+
+    replaceActiveProfileSession({ ...session, displayName: "Updated Alpha" });
+
+    expect(getActiveProfileSession()?.displayName).toBe("Updated Alpha");
+    expect(isProfileSessionLocked()).toBe(false);
+  });
+
+  it("requires an active profile before replacing its metadata", () => {
+    expect(() => replaceActiveProfileSession(session)).toThrow(
+      "Cannot replace without an active profile session.",
+    );
+    expect(isProfileSessionLocked()).toBe(false);
+  });
+
+  it("does not use metadata replacement to switch profiles", () => {
+    setActiveProfileSession(session);
+    lockActiveProfileSession();
+
+    expect(() =>
+      replaceActiveProfileSession({
+        ...session,
+        profileId: "beta",
+      }),
+    ).toThrow("Cannot replace the active session with a different profile.");
+    expect(getActiveProfileSession()).toEqual(session);
+    expect(isProfileSessionLocked()).toBe(true);
   });
 
   it("set and clear both reset the lock state to unlocked", () => {

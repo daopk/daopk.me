@@ -136,13 +136,10 @@ function makeFakeKernel(apps: readonly AppManifest[] = []): Kernel {
       current: vi.fn(() => ({
         profileId: "alpha",
         displayName: "Alpha",
-        authMode: "passkey",
-        encryption: "none",
-        encrypted: false,
+        owner: { kind: "guest" },
       })),
       lock: vi.fn(async () => undefined),
-      signOut: vi.fn(async () => undefined),
-      deleteCurrentAccount: vi.fn(async () => undefined),
+      deleteCurrentProfile: vi.fn(async () => undefined),
     },
   } as unknown as Kernel;
 }

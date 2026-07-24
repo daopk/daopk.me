@@ -14,7 +14,7 @@ import type {
   PermissionResponseInput,
 } from "~/types/permissions";
 import type { KernelPreviewsFacade } from "~/types/preview";
-import type { ActiveProfileSession, ProfileSessionSnapshot } from "~/types/profile";
+import type { ProfileSessionSnapshot } from "~/types/profile";
 import type { KernelSearchFacade } from "~/types/search";
 import type { SettingsState } from "~/types/settings";
 import type { KernelTelemetryFacade } from "~/types/telemetry";
@@ -136,9 +136,8 @@ export interface KernelVfsFacade {
 export interface KernelProfileFacade {
   current(): ProfileSessionSnapshot;
   lock(): Promise<void>;
-  unlock(_session?: ActiveProfileSession): void;
-  signOut(): Promise<void>;
-  deleteCurrentAccount(): Promise<void>;
+  unlock(): void;
+  deleteCurrentProfile(): Promise<void>;
   isLocked(): boolean;
   useLocked(): Readonly<ShallowRef<boolean>>;
 }

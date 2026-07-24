@@ -104,15 +104,6 @@ export function buildBuiltinCommands(kernel: Kernel): readonly CommandManifest[]
       },
     },
     {
-      id: "system:signOut",
-      title: "Sign Out",
-      scope: "global",
-      keywords: ["logout", "log out", "signout", "account", "session"],
-      async run() {
-        await kernel.profile.signOut();
-      },
-    },
-    {
       id: "finder:open",
       title: "Open Finder",
       scope: "global",

@@ -8,7 +8,6 @@ import {
 } from "~/components/ui";
 import Info from "~icons/lucide/info";
 import Lock from "~icons/lucide/lock";
-import LogOut from "~icons/lucide/log-out";
 import Palette from "~icons/lucide/palette";
 import Search from "~icons/lucide/search";
 import Settings from "~icons/lucide/settings";
@@ -71,10 +70,6 @@ function dispatchCommand(
         <DropdownMenuItem text-value="Lock Desktop" @select="dispatchCommand('system:lock')">
           <Lock class="ds-dropdown-menu__item-icon" aria-hidden="true" />
           <span>Lock Desktop</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem text-value="Sign Out" @select="dispatchCommand('system:signOut')">
-          <LogOut class="ds-dropdown-menu__item-icon" aria-hidden="true" />
-          <span>Sign Out</span>
         </DropdownMenuItem>
       </template>
     </DropdownMenu>

@@ -33,7 +33,6 @@ export function createKernelVfs(profile?: ActiveProfileSession): KernelVfs {
       ? new IDBAdapter({
           id: "home-idb",
           dbName: profileIdbName(profile.profileId, "vfs"),
-          encryptionKey: profile.encryptionKey,
         })
       : new MemoryAdapter({ id: "home-memory" }),
     { id: "home" },
@@ -44,7 +43,6 @@ export function createKernelVfs(profile?: ActiveProfileSession): KernelVfs {
       ? new IDBAdapter({
           id: "trash-idb",
           dbName: profileIdbName(profile.profileId, "trash"),
-          encryptionKey: profile.encryptionKey,
         })
       : new MemoryAdapter({ id: "trash-memory" }),
     { id: "trash" },

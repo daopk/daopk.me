@@ -67,31 +67,6 @@ describe("IDBAdapter", () => {
     adapter.dispose();
   });
 
-  it("encrypts file payloads when an encryption key is supplied", async () => {
-    const name = dbName();
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new Uint8Array(32).fill(7),
-      { name: "AES-GCM" },
-      false,
-      ["encrypt", "decrypt"],
-    );
-    const encrypted = new IDBAdapter({ dbName: name, encryptionKey: key });
-
-    await encrypted.write(normalizeVfsPath("/secret.txt"), new TextEncoder().encode("hidden"));
-
-    expect(decoder.decode((await encrypted.read(normalizeVfsPath("/secret.txt"))).bytes)).toBe(
-      "hidden",
-    );
-    encrypted.dispose();
-
-    const locked = new IDBAdapter({ dbName: name });
-    await expect(locked.read(normalizeVfsPath("/secret.txt"))).rejects.toMatchObject({
-      code: "ADAPTER_UNAVAILABLE",
-    });
-    locked.dispose();
-  });
-
   it("walks a subtree without repeated directory listings", async () => {
     const adapter = new IDBAdapter({ dbName: dbName() });
 

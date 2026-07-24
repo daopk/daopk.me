@@ -28,9 +28,7 @@ describe("profile storage scope", () => {
     setActiveProfileSession({
       profileId: "alpha",
       displayName: "Alpha",
-      authMode: "passkey",
-      encryption: "none",
-      encrypted: false,
+      owner: { kind: "guest" },
     });
 
     expect(activeProfileKvNamespace("settings")).toBe("profiles:alpha:settings");

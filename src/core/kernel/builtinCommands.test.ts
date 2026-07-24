@@ -13,7 +13,6 @@ interface FakeKernelHandles {
   eventsEmit: ReturnType<typeof vi.fn>;
   commandsRegister: ReturnType<typeof vi.fn>;
   profileLock: ReturnType<typeof vi.fn>;
-  profileSignOut: ReturnType<typeof vi.fn>;
 }
 
 function makeFakeKernel(initialTheme: "light" | "dark" = "light"): FakeKernelHandles {
@@ -27,7 +26,6 @@ function makeFakeKernel(initialTheme: "light" | "dark" = "light"): FakeKernelHan
   });
   const eventsEmit = vi.fn();
   const profileLock = vi.fn(async () => undefined);
-  const profileSignOut = vi.fn(async () => undefined);
   const disposers: Array<() => void> = [];
   const commandsRegister = vi.fn((_manifest: CommandManifest) => {
     const dispose = vi.fn();
@@ -52,7 +50,7 @@ function makeFakeKernel(initialTheme: "light" | "dark" = "light"): FakeKernelHan
     theme: { current: themeCurrent, setTheme: themeSetTheme },
     events: { emit: eventsEmit },
     commands: { register: commandsRegister },
-    profile: { lock: profileLock, signOut: profileSignOut },
+    profile: { lock: profileLock },
   } as unknown as Kernel;
 
   return {
@@ -63,7 +61,6 @@ function makeFakeKernel(initialTheme: "light" | "dark" = "light"): FakeKernelHan
     eventsEmit,
     commandsRegister,
     profileLock,
-    profileSignOut,
   };
 }
 
@@ -108,7 +105,6 @@ describe("builtinCommands — manifest catalog (M2a.2)", () => {
       "settings:openSection",
       "widgets:openGallery",
       "system:lock",
-      "system:signOut",
       "finder:open",
       "browser:open",
       "editor:open",
@@ -238,15 +234,6 @@ describe("builtinCommands — run() behavior (M2a.2)", () => {
     expect(handles.profileLock).toHaveBeenCalledTimes(1);
   });
 
-  it("system:signOut signs out the current profile", async () => {
-    const handles = makeFakeKernel();
-    const cmd = findCommand(handles.kernel, "system:signOut");
-
-    await cmd.run(makeCtx(handles.kernel));
-
-    expect(handles.profileSignOut).toHaveBeenCalledTimes(1);
-  });
-
   it("finder:open emits app.launch.requested for 'finder'", async () => {
     const handles = makeFakeKernel();
     const cmd = findCommand(handles.kernel, "finder:open");
@@ -350,7 +337,7 @@ describe("registerBuiltinCommands — wiring (M2a.2)", () => {
 
     registerBuiltinCommands(handles.kernel);
 
-    expect(handles.commandsRegister).toHaveBeenCalledTimes(15);
+    expect(handles.commandsRegister).toHaveBeenCalledTimes(14);
     const registeredIds = handles.commandsRegister.mock.calls.map(
       ([manifest]) => (manifest as CommandManifest).id,
     );
@@ -361,7 +348,6 @@ describe("registerBuiltinCommands — wiring (M2a.2)", () => {
       "settings:openSection",
       "widgets:openGallery",
       "system:lock",
-      "system:signOut",
       "finder:open",
       "browser:open",
       "editor:open",
@@ -403,7 +389,6 @@ describe("kernel built-ins — CommandRegistry integration (M2a.2)", () => {
     expect(listed).toContain("settings:openSection");
     expect(listed).toContain("widgets:openGallery");
     expect(listed).toContain("system:lock");
-    expect(listed).toContain("system:signOut");
     expect(listed).toContain("finder:open");
     expect(listed).toContain("browser:open");
     expect(listed).toContain("editor:open");
@@ -421,6 +406,5 @@ describe("kernel built-ins — CommandRegistry integration (M2a.2)", () => {
     expect(afterDispose).not.toContain("pdf-viewer:open");
     expect(afterDispose).not.toContain("widgets:openGallery");
     expect(afterDispose).not.toContain("system:lock");
-    expect(afterDispose).not.toContain("system:signOut");
   });
 });
