@@ -3,6 +3,11 @@ import { defineVaporComponent, inject, nextTick, type Component } from "vue";
 import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 
 import {
+  AppKeyboardScopeInjectionKey,
+  useAppKeyboard,
+  type AppKeyboardScope,
+} from "~/composables/useAppKeyboard";
+import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
   type AppChromeController,
@@ -41,6 +46,16 @@ function asEsm(component: Component): { default: Component } {
     default: component,
     __esModule: true,
   });
+}
+
+function dispatchKey(target: EventTarget): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    key: "ArrowRight",
+  });
+  target.dispatchEvent(event);
+  return event;
 }
 
 function manifest(overrides: Partial<AppManifest> = {}): AppManifest {
@@ -251,7 +266,7 @@ describe("AppMount", () => {
     expect(errorEmits).toHaveLength(0);
   });
 
-  it("provides AppContext (manifestId, handleId, args) to descendants", async () => {
+  it("provides AppContext identity, args, and live active state to descendants", async () => {
     const captured: { ctx: AppContext | null } = { ctx: null };
 
     const Probe = defineVaporComponent(() => {
@@ -264,7 +279,7 @@ describe("AppMount", () => {
 
     currentKernel = makeKernel([manifest({ component: () => Promise.resolve(asEsm(Probe)) })]);
 
-    mount(AppMount, {
+    const wrapper = mount(AppMount, {
       props: {
         manifestId: "template",
         handleId: "h-8",
@@ -280,7 +295,91 @@ describe("AppMount", () => {
       manifestId: "template",
       handleId: "h-8",
       args: { greeting: "hi" },
+      isActive: expect.any(Function),
     });
+    expect(captured.ctx?.isActive()).toBe(false);
+
+    await wrapper.setProps({ focused: true });
+    expect(captured.ctx?.isActive()).toBe(true);
+
+    await wrapper.setProps({ focused: false });
+    expect(captured.ctx?.isActive()).toBe(false);
+  });
+
+  it("provides live keyboard ownership scoped to its connected app root", async () => {
+    const captured: { scope: AppKeyboardScope | null } = { scope: null };
+
+    const Probe = defineVaporComponent(() => {
+      captured.scope = inject(AppKeyboardScopeInjectionKey) ?? null;
+      const probe = document.createElement("button");
+      probe.className = "keyboard-probe";
+      return probe;
+    });
+
+    currentKernel = makeKernel([manifest({ component: () => Promise.resolve(asEsm(Probe)) })]);
+
+    const wrapper = mount(AppMount, {
+      attachTo: document.body,
+      props: { manifestId: "template", handleId: "h-keyboard", focused: true },
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    const scope = captured.scope;
+    const shellTarget = document.createElement("button");
+    document.body.append(shellTarget);
+    const ownedEvent = dispatchKey(wrapper.get(".keyboard-probe").element);
+    const shellEvent = dispatchKey(shellTarget);
+    const windowEvent = dispatchKey(window);
+    const documentEvent = dispatchKey(document);
+    const bodyEvent = dispatchKey(document.body);
+
+    expect(scope?.ownsEvent(ownedEvent)).toBe(true);
+    expect(scope?.ownsEvent(shellEvent)).toBe(false);
+    expect(scope?.ownsEvent(windowEvent)).toBe(true);
+    expect(scope?.ownsEvent(documentEvent)).toBe(true);
+    expect(scope?.ownsEvent(bodyEvent)).toBe(true);
+
+    wrapper.unmount();
+    await nextTick();
+
+    expect(scope?.ownsEvent(windowEvent)).toBe(false);
+    shellTarget.remove();
+  });
+
+  it("composes its ownership scope with the public app keyboard router", async () => {
+    const handler = vi.fn(() => true);
+
+    const Probe = defineVaporComponent(() => {
+      useAppKeyboard(handler);
+      const probe = document.createElement("button");
+      probe.className = "keyboard-router-probe";
+      return probe;
+    });
+
+    currentKernel = makeKernel([manifest({ component: () => Promise.resolve(asEsm(Probe)) })]);
+
+    const wrapper = mount(AppMount, {
+      attachTo: document.body,
+      props: { manifestId: "template", handleId: "h-keyboard-router", focused: true },
+    });
+
+    await flushPromises();
+    await nextTick();
+
+    const shellTarget = document.createElement("button");
+    document.body.append(shellTarget);
+    const ownedEvent = dispatchKey(wrapper.get(".keyboard-router-probe").element);
+    const shellEvent = dispatchKey(shellTarget);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(ownedEvent);
+    expect(ownedEvent.defaultPrevented).toBe(true);
+    expect(shellEvent.defaultPrevented).toBe(false);
+
+    wrapper.unmount();
+    shellTarget.remove();
   });
 
   it("provides the optional AppChrome controller to descendants", async () => {

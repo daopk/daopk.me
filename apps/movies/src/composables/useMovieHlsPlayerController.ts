@@ -58,6 +58,10 @@ const KEYBOARD_SEEK_REVEAL_SUPPRESSION_MS = 1200;
 const SURFACE_CLICK_DELAY_MS = 220;
 const VOLUME_STEP = 0.1;
 
+function hasSystemShortcutModifier(event: KeyboardEvent): boolean {
+  return event.metaKey || event.ctrlKey || event.altKey;
+}
+
 export function useMovieHlsPlayerController({
   emitPlaybackSpeed,
   props,
@@ -480,6 +484,7 @@ export function useMovieHlsPlayerController({
     const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
     if (
       event.defaultPrevented ||
+      hasSystemShortcutModifier(event) ||
       seekDeltaSeconds === null ||
       isTypingTarget(event.target) ||
       !preserveHiddenControlsForKeyboardSeek()
@@ -492,70 +497,69 @@ export function useMovieHlsPlayerController({
     seekBy(seekDeltaSeconds, { preserveHiddenControls: true });
   }
 
-  function handleKeyboardShortcut(event: KeyboardEvent): void {
-    if (event.defaultPrevented) {
-      return;
+  function handleKeyboardShortcut(event: KeyboardEvent): boolean {
+    if (event.defaultPrevented || hasSystemShortcutModifier(event)) {
+      return false;
     }
 
     if (event.key === " " || event.key.toLowerCase() === "k") {
-      event.preventDefault();
       togglePlayback();
-      return;
+      return true;
     }
 
     const seekDeltaSeconds = keyboardSeekDeltaSeconds(event.key);
     if (seekDeltaSeconds !== null) {
-      event.preventDefault();
       seekBy(seekDeltaSeconds, {
         preserveHiddenControls: preserveHiddenControlsForKeyboardSeek(),
       });
-      return;
+      return true;
     }
 
     if (event.key === "ArrowUp") {
-      event.preventDefault();
       setVolume(volume.value + VOLUME_STEP);
-      return;
+      return true;
     }
 
     if (event.key === "ArrowDown") {
-      event.preventDefault();
       setVolume(volume.value - VOLUME_STEP);
-      return;
+      return true;
     }
 
     if (event.key.toLowerCase() === "m") {
-      event.preventDefault();
       toggleMute();
-      return;
+      return true;
     }
 
     if (event.key.toLowerCase() === "f") {
-      event.preventDefault();
       void toggleFullscreen();
-      return;
+      return true;
     }
 
     if (event.key === "Escape") {
       if (fallbackFullscreen.value) {
-        event.preventDefault();
         exitFallbackFullscreen();
-        return;
+        return true;
       }
 
       cancelSeekPreview();
     }
+
+    return false;
   }
 
-  function handleAppKeydown(event: KeyboardEvent): void {
-    if (!isTypingTarget(event.target) && !playerControlsContain(event.target)) {
-      handleKeyboardShortcut(event);
+  function handleAppKeydown(event: KeyboardEvent): boolean {
+    if (keyboardSeekDeltaSeconds(event.key) !== null) {
+      return handleKeyboardShortcut(event);
     }
+
+    return !isTypingTarget(event.target) && !playerControlsContain(event.target)
+      ? handleKeyboardShortcut(event)
+      : false;
   }
 
   function onStageKeydown(event: KeyboardEvent): void {
-    if (!isTypingTarget(event.target)) {
-      handleKeyboardShortcut(event);
+    if (!isTypingTarget(event.target) && handleKeyboardShortcut(event)) {
+      event.preventDefault();
     }
   }
   const {

@@ -2,6 +2,7 @@ import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, inject, nextTick, onMounted, type Component } from "vue";
 
+import { AppKeyboardScopeInjectionKey, type AppKeyboardScope } from "~/composables/useAppKeyboard";
 import {
   AppChromeInjectionKey,
   AppContextInjectionKey,
@@ -78,6 +79,16 @@ function makePointerEvent(type: string, init: { x?: number; y?: number } = {}): 
   return e;
 }
 
+function dispatchKey(target: EventTarget): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    key: "ArrowRight",
+  });
+  target.dispatchEvent(event);
+  return event;
+}
+
 describe("AppView", () => {
   beforeEach(() => {
     lifecycleEmit.mockClear();
@@ -133,11 +144,13 @@ describe("AppView", () => {
     wrapper.unmount();
   });
 
-  it("F1 — frame.args flows through AppMount into AppContext", async () => {
+  it("F1 — frame identity, args, and current state flow through AppMount into AppContext", async () => {
     const captured: { ctx: AppContext | null } = { ctx: null };
+    const keyboard: { scope: AppKeyboardScope | null } = { scope: null };
 
     const Probe = probeComponent(() => {
       captured.ctx = inject(AppContextInjectionKey) ?? null;
+      keyboard.scope = inject(AppKeyboardScopeInjectionKey) ?? null;
     });
 
     const probeManifest: AppManifest = {
@@ -186,14 +199,32 @@ describe("AppView", () => {
     await flushPromises();
     await nextTick();
 
+    const appContext = captured.ctx;
     expect(captured.ctx).toEqual({
       manifestId: "alpha",
       handleId: "h-args",
       args: { deepLinkTo: "settings/background" },
+      isActive: expect.any(Function),
     });
     expect(Object.isFrozen(captured.ctx?.args)).toBe(true);
+    expect(captured.ctx?.isActive()).toBe(true);
+    const appEvent = dispatchKey(wrapper.get(".probe").element);
+    const chromeEvent = dispatchKey(wrapper.get(".app-view__back").element);
+    expect(keyboard.scope?.ownsEvent(appEvent)).toBe(true);
+    expect(keyboard.scope?.ownsEvent(chromeEvent)).toBe(false);
+
+    await wrapper.setProps({ isCurrent: false });
+
+    expect(captured.ctx).toBe(appContext);
+    expect(captured.ctx?.isActive()).toBe(false);
+
+    await wrapper.setProps({ isCurrent: true });
+
+    expect(captured.ctx).toBe(appContext);
+    expect(captured.ctx?.isActive()).toBe(true);
 
     wrapper.unmount();
+    expect(keyboard.scope?.ownsEvent(appEvent)).toBe(false);
   });
 
   it("lets hosted apps override the mobile chrome title and back action", async () => {

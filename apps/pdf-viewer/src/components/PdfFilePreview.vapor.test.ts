@@ -31,6 +31,7 @@ const context: AppContext = Object.freeze({
   manifestId: "finder",
   handleId: "finder-handle",
   args: Object.freeze({}),
+  isActive: () => true,
 });
 
 function makeKernel(): Kernel {

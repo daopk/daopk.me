@@ -97,6 +97,7 @@ function makeContext(): AppContext {
     manifestId: "editor",
     handleId: "editor-handle",
     args: {},
+    isActive: () => true,
   };
 }
 

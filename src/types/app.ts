@@ -90,6 +90,7 @@ export interface AppContext {
   manifestId: string;
   handleId: string;
   args: Readonly<Record<string, unknown>>;
+  isActive(): boolean;
   // TODO: inject AbortSignal tied to window unmount + process kill.
 }
 

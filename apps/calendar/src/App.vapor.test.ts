@@ -51,6 +51,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "calendar",
     handleId: "calendar-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

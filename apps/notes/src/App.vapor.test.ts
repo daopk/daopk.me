@@ -186,6 +186,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "notes",
     handleId: "notes-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

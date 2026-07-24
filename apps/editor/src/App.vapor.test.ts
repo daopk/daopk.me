@@ -168,6 +168,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "editor",
     handleId: "editor-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

@@ -10,6 +10,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "browser",
     handleId: "browser-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

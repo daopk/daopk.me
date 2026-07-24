@@ -2,7 +2,8 @@ import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, inject, nextTick } from "vue";
 
-import { AppContextInjectionKey } from "~/types/app";
+import { AppKeyboardScopeInjectionKey, type AppKeyboardScope } from "~/composables/useAppKeyboard";
+import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import type { DesktopRendererManifest } from "~/types/desktop";
 import { KernelInjectionKey, type Kernel } from "~/types/kernel";
 
@@ -36,6 +37,8 @@ describe("DesktopRendererMount", () => {
 
   it("mounts a renderer with an app context and kills its process on unmount", async () => {
     const { kernel, spawn, kill } = makeKernel();
+    const captured: { ctx: AppContext | null } = { ctx: null };
+    const keyboard: { scope: AppKeyboardScope | null } = { scope: null };
     const renderer: DesktopRendererManifest = {
       id: "notes:desktop-layer",
       manifestId: "notes",
@@ -44,6 +47,8 @@ describe("DesktopRendererMount", () => {
         Promise.resolve({
           default: defineVaporComponent(() => {
             const context = inject(AppContextInjectionKey);
+            captured.ctx = context ?? null;
+            keyboard.scope = inject(AppKeyboardScopeInjectionKey) ?? null;
             const renderer = document.createElement("div");
             renderer.className = "probe-renderer";
             renderer.textContent = context?.handleId ?? "";
@@ -70,6 +75,18 @@ describe("DesktopRendererMount", () => {
       surface: "desktop:wallpaper",
     });
     expect(wrapper.text()).toContain("renderer-handle");
+    expect(captured.ctx).toEqual({
+      manifestId: "notes",
+      handleId: "renderer-handle",
+      args: {
+        contributionId: "notes:desktop-layer",
+        surface: "desktop:wallpaper",
+      },
+      isActive: expect.any(Function),
+    });
+    expect(captured.ctx?.isActive()).toBe(false);
+    expect(keyboard.scope).toEqual({ ownsEvent: expect.any(Function) });
+    expect(keyboard.scope?.ownsEvent(new KeyboardEvent("keydown"))).toBe(false);
 
     wrapper.unmount();
     await nextTick();

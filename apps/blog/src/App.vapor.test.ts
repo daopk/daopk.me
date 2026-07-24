@@ -138,12 +138,14 @@ const blogContext: AppContext = Object.freeze({
     slug: "field-notes",
     path: "/home/posts/field-notes.md",
   }),
+  isActive: () => true,
 });
 
 const blogIndexContext: AppContext = Object.freeze({
   manifestId: "blog",
   handleId: "h-blog-test",
   args: Object.freeze({}),
+  isActive: () => true,
 });
 
 function makeKernel() {

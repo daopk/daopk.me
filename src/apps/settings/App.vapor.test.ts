@@ -160,6 +160,7 @@ function mountApp(
       manifestId: "settings",
       handleId: "settings-1",
       args: Object.freeze({ ...options.appArgs }),
+      isActive: () => true,
     } satisfies AppContext;
   }
   if (options.appChrome !== undefined) {

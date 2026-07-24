@@ -1,5 +1,5 @@
 <script setup vapor lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
+import { computed, inject, onUnmounted, ref, useTemplateRef } from "vue";
 
 import { AppFrame } from "@daopk/kit";
 import { Button, Modal } from "@daopk/ui";
@@ -14,6 +14,7 @@ import MoviesToolbar from "./components/MoviesToolbar.vue";
 import PersonView from "./components/PersonView.vue";
 import SeasonView from "./components/SeasonView.vue";
 import WatchView from "./components/WatchView.vue";
+import { useMoviesAppKeyboard } from "./composables/useMoviesAppKeyboard";
 import { useMoviesNavigation } from "./composables/useMoviesNavigation";
 import { useMoviesThemeSuggestion } from "./composables/useMoviesThemeSuggestion";
 import { useMoviesI18n } from "./i18n/useMoviesI18n";
@@ -21,7 +22,7 @@ import type { MovieEpisodeTarget, MoviesListQuery } from "./moviesApi";
 import { createMoviesWatchContinuity } from "./moviesWatchContinuity";
 
 interface WatchViewInstance {
-  readonly handleKeyboardEvent?: (event: KeyboardEvent) => void;
+  readonly handleKeyboardEvent?: (event: KeyboardEvent) => boolean;
 }
 
 interface AppFrameRef {
@@ -68,36 +69,14 @@ const {
   switchSystemThemeToDark,
 } = useMoviesThemeSuggestion({ kernel });
 
-function moviesAppRoot(): Element | null {
-  return rootElement.value;
-}
-
-function shouldHandleMoviesKeyboardEvent(event: KeyboardEvent): boolean {
-  if (typeof document === "undefined" || view.value.name !== "watch") {
-    return false;
-  }
-
-  const root = moviesAppRoot();
-  if (root === null || !document.contains(root)) {
-    return false;
-  }
-
-  const target = event.target;
-  return (
-    !(target instanceof Node) ||
-    target === document ||
-    target === document.body ||
-    root.contains(target)
-  );
-}
-
-function onMoviesKeydown(event: KeyboardEvent): void {
-  if (!shouldHandleMoviesKeyboardEvent(event)) {
-    return;
-  }
-
-  watchViewRef.value?.handleKeyboardEvent?.(event);
-}
+useMoviesAppKeyboard(
+  () => rootElement.value,
+  (event) => watchViewRef.value?.handleKeyboardEvent?.(event) === true,
+  {
+    enabled: () => view.value.name === "watch",
+    includeEditableTargets: true,
+  },
+);
 
 function openToolbarList(query: MoviesListQuery): void {
   openList(query, { replace: view.value.name === "list" });
@@ -110,17 +89,8 @@ function openWatchEpisode(request: WatchEpisodeRequest): void {
   });
 }
 
-onMounted(() => {
-  if (typeof window !== "undefined") {
-    window.addEventListener("keydown", onMoviesKeydown, { capture: true });
-  }
-});
-
 onUnmounted(() => {
   watchContinuity.dispose();
-  if (typeof window !== "undefined") {
-    window.removeEventListener("keydown", onMoviesKeydown, { capture: true });
-  }
 });
 </script>
 

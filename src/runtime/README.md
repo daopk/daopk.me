@@ -27,6 +27,11 @@ copies of an injection-key symbol, silently break injection.
   When a module imports the shared surfaces, it gets the same instances the
   shell already uses.
 
+Because app and shell releases publish independently, an app must not statically
+import a newly added host export until that host capability is available on
+every supported shell. Deploy host support first, or keep a compatibility
+adapter that uses only older SDK exports and feature-detects the new capability.
+
 ## First-Party App Packages
 
 Each package in `apps/<id>` owns an `app.manifest.json`, builds a single ES
@@ -72,6 +77,33 @@ Inside the app, import runtime helpers from the public facades:
 import { useKernel, useVfs } from "@daopk/sdk";
 import { AppFrame } from "@daopk/kit";
 ```
+
+### App-Scoped Keyboard Input
+
+Apps that need shortcuts outside their focused component can register them
+through `useAppKeyboard`. The shell routes events only to the active app
+instance; the app remains responsible for assigning meaning to each key.
+
+```ts
+import { useAppKeyboard } from "@daopk/sdk";
+
+useAppKeyboard(
+  (event) => {
+    if (event.key !== "ArrowRight") return false;
+    seekBy(10);
+    return true;
+  },
+  { enabled: () => view.value.name === "watch" },
+);
+```
+
+The host automatically scopes events to the app's connected mount root while
+preserving the browser's window/document/body focus fallbacks. The listener runs
+in the capture phase, ignores IME composition and editable targets by default,
+and cleans itself up with the Vue lifecycle. Returning `true` consumes the
+event; returning `false` leaves it available to the focused element and shell.
+Set `includeEditableTargets` only when the app handler needs to decide target
+behavior per key.
 
 ### App-Owned Translations
 

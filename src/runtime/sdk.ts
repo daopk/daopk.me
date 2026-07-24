@@ -125,6 +125,11 @@ export {
 // Added for the satellite-app migration — treat as stable ABI like the rest of
 // this surface.
 export { useBreakpoint } from "~/composables/useBreakpoint";
+export {
+  useAppKeyboard,
+  type AppKeyboardHandler,
+  type UseAppKeyboardOptions,
+} from "~/composables/useAppKeyboard";
 export { useI18n } from "~/composables/useI18n";
 export { debugLog, debugWarn } from "~/core/debug";
 export {

@@ -1,5 +1,13 @@
 <script setup vapor lang="ts">
-import { computed, defineVaporAsyncComponent, onMounted, watch, provide, shallowRef } from "vue";
+import {
+  computed,
+  defineVaporAsyncComponent,
+  onMounted,
+  provide,
+  shallowRef,
+  useTemplateRef,
+  watch,
+} from "vue";
 
 import { useKernel } from "~/composables/useKernel";
 import { debugWarn } from "~/core/debug";
@@ -9,6 +17,7 @@ import {
   type AppChromeController,
   type AppContext,
 } from "~/types/app";
+import { AppKeyboardScopeInjectionKey, type AppKeyboardScope } from "~/composables/useAppKeyboard";
 import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { AppMountRetryKey } from "./appMountContext";
@@ -24,6 +33,7 @@ const props = defineProps<{
 }>();
 
 const kernel = useKernel();
+const rootRef = useTemplateRef<HTMLElement>("rootRef");
 
 const manifest = computed(() => kernel.apps.list().find((entry) => entry.id === props.manifestId));
 
@@ -33,9 +43,30 @@ const context: AppContext = Object.freeze({
   manifestId: props.manifestId,
   handleId: props.handleId,
   args: Object.freeze({ ...props.args }),
+  isActive: () => props.focused,
 });
 
 provide(AppContextInjectionKey, context);
+
+const keyboardScope: AppKeyboardScope = Object.freeze({
+  ownsEvent: (event: KeyboardEvent) => eventBelongsToAppRoot(event, rootRef.value),
+});
+
+provide(AppKeyboardScopeInjectionKey, keyboardScope);
+
+function eventBelongsToAppRoot(event: KeyboardEvent, root: Element | null): boolean {
+  if (typeof document === "undefined" || root === null || !root.isConnected) {
+    return false;
+  }
+
+  const target = event.target;
+  return (
+    !(target instanceof Node) ||
+    target === document ||
+    target === document.body ||
+    (target instanceof Node && root.contains(target))
+  );
+}
 
 if (props.chrome !== undefined) {
   provide(AppChromeInjectionKey, props.chrome);
@@ -127,7 +158,7 @@ watch(
 </script>
 
 <template>
-  <div class="app-mount">
+  <div ref="rootRef" class="app-mount">
     <component :is="resolvedComponent" v-if="resolvedComponent" />
     <AppMountError v-else />
   </div>

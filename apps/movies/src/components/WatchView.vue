@@ -28,7 +28,7 @@ import { useMoviesContent } from "../moviesContent";
 import { type MoviesWatchContinuity, type MoviesWatchTarget } from "../moviesWatchContinuity";
 
 interface MovieHlsPlayerInstance {
-  readonly handleAppKeydown?: (event: KeyboardEvent) => void;
+  readonly handleAppKeydown?: (event: KeyboardEvent) => boolean;
 }
 
 interface WatchViewProps {
@@ -300,8 +300,8 @@ function openSeriesDetail(): void {
   }
 }
 
-function handleKeyboardEvent(event: KeyboardEvent): void {
-  playerRef.value?.handleAppKeydown?.(event);
+function handleKeyboardEvent(event: KeyboardEvent): boolean {
+  return playerRef.value?.handleAppKeydown?.(event) === true;
 }
 
 defineExpose({

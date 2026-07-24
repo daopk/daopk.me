@@ -13,6 +13,7 @@ function makeContext(): AppContext {
     manifestId: "trash",
     handleId: "trash-handle",
     args: Object.freeze({}),
+    isActive: () => true,
   });
 }
 

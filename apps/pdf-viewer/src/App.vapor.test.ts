@@ -107,6 +107,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "pdf-viewer",
     handleId: "pdf-viewer-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

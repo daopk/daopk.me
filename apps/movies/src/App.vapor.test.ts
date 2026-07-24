@@ -151,6 +151,12 @@ function mountMovies(options: VaporTestMountOptions = {}): VaporTestWrapper {
     global: {
       ...global,
       provide: {
+        [AppContextInjectionKey as symbol]: Object.freeze({
+          args: Object.freeze({}),
+          handleId: "movies-test",
+          isActive: () => true,
+          manifestId: "movies",
+        } satisfies AppContext),
         [KernelInjectionKey as symbol]: defaultMoviesKernel,
         ...global?.provide,
       },
@@ -693,6 +699,8 @@ describe("Movies app", () => {
     document.body.innerHTML = "";
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    movieHlsPlayerHandleAppKeydown.mockReset();
+    movieHlsPlayerHandleAppKeydown.mockReturnValue(false);
     setViewportWidth(1280);
     defaultMoviesKernel = kernelWithTheme("dark");
     delete document.documentElement.dataset.shell;
@@ -1426,6 +1434,7 @@ describe("Movies app", () => {
       manifestId: "movies",
       handleId: "h-movies-test",
       args: Object.freeze({}),
+      isActive: () => true,
     });
     const wrapper = mountMovies({
       global: {
@@ -2736,10 +2745,10 @@ describe("Movies app", () => {
     expect(window.location.pathname).toBe("/movie/550-fight-club");
   });
 
-  it("forwards watch keyboard events from the Movies app level to the player", async () => {
+  it("consumes watch keyboard events from the owning Movies root", async () => {
     vi.mocked(fetchMovieDetail).mockResolvedValue(detail({ play: playInfo() }));
 
-    const wrapper = mountMovies({ attachTo: document.body });
+    const wrapper = mountMovies();
     await settle();
 
     await wrapper.get(".movie-card").trigger("click");
@@ -2752,17 +2761,24 @@ describe("Movies app", () => {
     await playButton.trigger("click");
     await settle();
 
-    movieHlsPlayerHandleAppKeydown.mockClear();
+    movieHlsPlayerHandleAppKeydown.mockReset();
+    movieHlsPlayerHandleAppKeydown.mockReturnValue(true);
+    const moviesRoot = wrapper.get(".movies-app").element;
+    const rootKeydown = vi.fn();
+    moviesRoot.addEventListener("keydown", rootKeydown);
 
     const event = new KeyboardEvent("keydown", {
       bubbles: true,
       cancelable: true,
       key: "ArrowRight",
+      repeat: true,
     });
-    window.dispatchEvent(event);
+    moviesRoot.dispatchEvent(event);
 
     expect(movieHlsPlayerHandleAppKeydown).toHaveBeenCalledTimes(1);
     expect(movieHlsPlayerHandleAppKeydown).toHaveBeenCalledWith(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(rootKeydown).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });
@@ -3314,6 +3330,7 @@ describe("Movies app", () => {
               slug: "planet-cinema",
               tmdbId: 1399,
             }),
+            isActive: () => true,
           }),
         },
       },

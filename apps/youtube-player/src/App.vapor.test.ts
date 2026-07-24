@@ -100,6 +100,7 @@ function makeContext(args: Readonly<Record<string, unknown>> = {}): AppContext {
     manifestId: "youtube-player",
     handleId: "youtube-player-handle",
     args: Object.freeze(args),
+    isActive: () => true,
   });
 }
 

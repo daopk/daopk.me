@@ -117,6 +117,7 @@ const context: AppContext = Object.freeze({
   manifestId: "finder",
   handleId: "finder-session-test",
   args: Object.freeze({}),
+  isActive: () => true,
 });
 
 function mountSession(kernel: Kernel) {

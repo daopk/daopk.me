@@ -471,6 +471,27 @@ function menuRadioItem(label: string): Element {
   return item;
 }
 
+function handleAppKeydown(
+  wrapper: VaporTestWrapper,
+  target: EventTarget,
+  key: string,
+  init: KeyboardEventInit = {},
+): { readonly event: KeyboardEvent; readonly handled: boolean } {
+  const event = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    key,
+    ...init,
+  });
+  Object.defineProperty(event, "target", { configurable: true, value: target });
+  const handled = (
+    wrapper.vm as unknown as {
+      handleAppKeydown(event: KeyboardEvent): boolean;
+    }
+  ).handleAppKeydown(event);
+  return { event, handled };
+}
+
 function bottomVolumeButton(wrapper: VaporTestWrapper, label: "Mute" | "Unmute") {
   return wrapper.get(`.movies-hls-player__volume-control button[aria-label="${label}"]`);
 }
@@ -1090,6 +1111,75 @@ content-c.ts
     await stage.trigger("keydown", { key: "Escape" });
     await settle();
     expect(stage.classes()).not.toContain("movies-hls-player__stage--fullscreen");
+  });
+
+  it("leaves modified playback shortcuts unhandled while plain k toggles playback", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const stage = wrapper.get(".movies-hls-player__stage").element;
+    const play = vi.mocked(HTMLMediaElement.prototype.play);
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+
+    expect(handleAppKeydown(wrapper, stage, "k", { metaKey: true }).handled).toBe(false);
+    expect(handleAppKeydown(wrapper, stage, "k", { ctrlKey: true }).handled).toBe(false);
+    await settle();
+
+    expect(play).not.toHaveBeenCalled();
+    expect(pause).not.toHaveBeenCalled();
+
+    expect(handleAppKeydown(wrapper, stage, "k").handled).toBe(true);
+    await settle();
+
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(pause).not.toHaveBeenCalled();
+  });
+
+  it("handles app-scoped horizontal arrows from every focused player control", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    setMediaMetrics(video, { currentTime: 30, duration: 120 });
+    await settle();
+
+    const seekSlider = sliderInputs(wrapper)[0]!.element;
+    const volumeSlider = sliderInputs(wrapper)[1]!.element;
+    expect(handleAppKeydown(wrapper, seekSlider, "ArrowRight", { repeat: true }).handled).toBe(
+      true,
+    );
+    expect(video.currentTime).toBe(40);
+
+    expect(handleAppKeydown(wrapper, volumeSlider, "ArrowLeft").handled).toBe(true);
+    expect(video.currentTime).toBe(30);
+    expect(video.volume).toBe(1);
+
+    const button = wrapper.get(".movies-hls-player__fullscreen-button").element;
+    expect(handleAppKeydown(wrapper, button, "ArrowRight").handled).toBe(true);
+    expect(video.currentTime).toBe(40);
+
+    await openSettings(wrapper);
+    const settingsItem = menuRadioItem("1.5x");
+    expect(handleAppKeydown(wrapper, settingsItem, "ArrowLeft").handled).toBe(true);
+    expect(video.currentTime).toBe(30);
+
+    expect(handleAppKeydown(wrapper, volumeSlider, "ArrowUp").handled).toBe(false);
+    expect(video.volume).toBe(1);
+  });
+
+  it("clamps app-scoped horizontal arrow seeks at media bounds", async () => {
+    const wrapper = mountPlayer();
+    await settle();
+    const video = wrapper.get("video").element as HTMLVideoElement;
+    const target = wrapper.get(".movies-hls-player__fullscreen-button").element;
+
+    setMediaMetrics(video, { currentTime: 4, duration: 120 });
+    await settle();
+    expect(handleAppKeydown(wrapper, target, "ArrowLeft").handled).toBe(true);
+    expect(video.currentTime).toBe(0);
+
+    setMediaMetrics(video, { currentTime: 115, duration: 120 });
+    await settle();
+    expect(handleAppKeydown(wrapper, target, "ArrowRight").handled).toBe(true);
+    expect(video.currentTime).toBe(120);
   });
 
   it("toggles picture-in-picture from the control row when supported", async () => {

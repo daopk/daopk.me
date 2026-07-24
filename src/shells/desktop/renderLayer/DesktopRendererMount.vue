@@ -1,6 +1,7 @@
 <script setup vapor lang="ts">
 import { defineVaporAsyncComponent, markRaw, onUnmounted, provide, type VaporComponent } from "vue";
 
+import { AppKeyboardScopeInjectionKey } from "~/composables/useAppKeyboard";
 import { useKernel } from "~/composables/useKernel";
 import { AppContextInjectionKey, type AppContext } from "~/types/app";
 import type { DesktopRendererManifest } from "~/types/desktop";
@@ -27,9 +28,11 @@ const context: AppContext = Object.freeze({
     contributionId: props.renderer.id,
     surface: props.renderer.surface,
   }),
+  isActive: () => false,
 });
 
 provide(AppContextInjectionKey, context);
+provide(AppKeyboardScopeInjectionKey, Object.freeze({ ownsEvent: () => false }));
 
 onUnmounted(() => {
   kernel.processes.kill(handle.id, "shell");

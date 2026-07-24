@@ -14,6 +14,7 @@ function makeContext(): AppContext {
     manifestId: "notes",
     handleId: "notes-renderer-handle",
     args: Object.freeze({ contributionId: "notes:desktop-layer" }),
+    isActive: () => true,
   });
 }
 
