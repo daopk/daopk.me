@@ -158,6 +158,84 @@ describe("DesktopStickyNote", () => {
     wrapper.unmount();
   });
 
+  it("reloads a body-only note without overwriting an external replacement", async () => {
+    const { kernel } = makeKernel();
+    const note: PinnedDesktopNote = {
+      path: "/home/notes/a.md",
+      x: 10,
+      y: 20,
+      z: 1,
+      color: "yellow",
+    };
+    let source = "Original body only";
+    vi.mocked(kernel.vfs.readText).mockImplementation(async () => source);
+    vi.mocked(kernel.vfs.writeText).mockImplementation(async (path, text) => {
+      source = text;
+      return {
+        path,
+        kind: "file",
+        size: text.length,
+        createdAt: 1,
+        updatedAt: 2,
+        readonly: false,
+        mimeType: NOTES_MIME_TYPE,
+      };
+    });
+    const wrapper = mountSticky(note, kernel);
+
+    await flushPromises();
+    await nextTick();
+    expect(wrapper.find<HTMLTextAreaElement>(".desktop-sticky-note__body").value).toBe(
+      "Original body only",
+    );
+
+    source = "External replacement";
+    kernel.events.emit("vfs.changed", {
+      path: note.path,
+      operation: "write",
+      kind: "file",
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(kernel.vfs.readText).toHaveBeenCalledTimes(2);
+    expect(wrapper.find<HTMLTextAreaElement>(".desktop-sticky-note__body").value).toBe(
+      "External replacement",
+    );
+
+    wrapper.unmount();
+    expect(kernel.vfs.writeText).not.toHaveBeenCalled();
+  });
+
+  it("keeps failed note controls focusable without allowing edits", async () => {
+    const { kernel } = makeKernel();
+    const note: PinnedDesktopNote = {
+      path: "/home/notes/a.md",
+      x: 10,
+      y: 20,
+      z: 1,
+      color: "yellow",
+    };
+    vi.mocked(kernel.vfs.readText).mockRejectedValueOnce(new Error("Disk unavailable"));
+    const wrapper = mountSticky(note, kernel);
+
+    await flushPromises();
+    await nextTick();
+
+    const title = wrapper.find<HTMLInputElement>(".desktop-sticky-note__title");
+    const body = wrapper.find<HTMLTextAreaElement>(".desktop-sticky-note__body");
+    expect(title.readOnly).toBe(true);
+    expect(body.readOnly).toBe(true);
+    expect(title.disabled).toBe(false);
+    expect(body.disabled).toBe(false);
+    expect(wrapper.find('[role="status"]').textContent).toContain("Disk unavailable");
+    await wrapper.setValue(".desktop-sticky-note__body", "Unsavable edit");
+    await vi.advanceTimersByTimeAsync(800);
+    expect(kernel.vfs.writeText).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
   it("moves the desktop note when dragging from the title", async () => {
     const { kernel } = makeKernel();
     const store = usePinnedDesktopNotes();

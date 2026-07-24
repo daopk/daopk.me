@@ -408,6 +408,43 @@ describe("useNotes", () => {
     expect(notes.title.value).toBe("Beta");
   });
 
+  it("does not restore a deleted note when a pending selection resolves late", async () => {
+    const vfs = makeVfs({
+      [NOTES_ROOT]: { kind: "directory" },
+      "/home/notes/a.md": {
+        kind: "file",
+        text: "# Alpha\n\nA",
+        mimeType: NOTES_MIME_TYPE,
+        updatedAt: 2,
+      },
+      "/home/notes/b.md": {
+        kind: "file",
+        text: "# Beta\n\nB",
+        mimeType: NOTES_MIME_TYPE,
+        updatedAt: 1,
+      },
+    });
+    const notes = useNotes({ vfs });
+
+    await notes.loadNotes();
+    expect(notes.selectedPath.value).toBe("/home/notes/a.md");
+
+    const pendingRead = deferred<string | null>();
+    vi.mocked(vfs.readText).mockImplementationOnce(async () => await pendingRead.promise);
+    const selection = notes.selectNote("/home/notes/b.md");
+    await Promise.resolve();
+    expect(vfs.readText).toHaveBeenLastCalledWith("/home/notes/b.md");
+
+    await expect(notes.deleteNote("/home/notes/b.md")).resolves.toBe(true);
+    expect(notes.selectedPath.value).toBe("/home/notes/a.md");
+
+    pendingRead.resolve("# Beta\n\nB");
+    await expect(selection).resolves.toBe(false);
+
+    expect(notes.notes.value.map((note) => note.path)).toEqual(["/home/notes/a.md"]);
+    expect(notes.selectedPath.value).toBe("/home/notes/a.md");
+  });
+
   it("keeps local state intact and surfaces an error when delete fails", async () => {
     const vfs = makeVfs({
       [NOTES_ROOT]: { kind: "directory" },

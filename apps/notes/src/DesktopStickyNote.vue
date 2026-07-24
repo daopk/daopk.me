@@ -9,14 +9,9 @@ import {
   Input,
   Textarea,
 } from "@daopk/ui";
-import { AppContextInjectionKey, NOTES_ROOT, useKernel, useVfs, type VfsPath } from "@daopk/sdk";
+import { AppContextInjectionKey, NOTES_ROOT, useKernel, type VfsPath } from "@daopk/sdk";
 
-import {
-  NOTES_AUTOSAVE_DEBOUNCE_MS,
-  NOTES_MIME_TYPE,
-  noteSource,
-  parseNoteSource,
-} from "./useNotes";
+import { useNoteEditingSession } from "./useNoteEditingSession";
 import {
   type PinnedDesktopNote,
   type PinnedDesktopNoteColor,
@@ -41,20 +36,18 @@ const emit = defineEmits<{
 }>();
 
 const kernel = useKernel();
-const vfs = useVfs();
 const appContext = inject(AppContextInjectionKey, null);
 const pinnedNotes = usePinnedDesktopNotes();
 
-const title = ref("");
-const body = ref("");
-const savedSource = ref("");
-const status = ref<"loading" | "saved" | "unsaved" | "saving" | "error">("loading");
+const editing = useNoteEditingSession();
+const title = editing.title;
+const body = editing.body;
+const status = editing.status;
+const error = editing.error;
 const dragging = ref<{ x: number; y: number } | null>(null);
 
-let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
-let savePromise: Promise<void> | undefined;
-
 const position = computed(() => dragging.value ?? { x: props.note.x, y: props.note.y });
+const editorReadonly = computed(() => editing.path.value === null);
 const { noteColor, noteStyle } = useDesktopStickyNoteTheme({
   note: toRef(props, "note"),
   position,
@@ -62,6 +55,8 @@ const { noteColor, noteStyle } = useDesktopStickyNoteTheme({
 
 const statusText = computed(() => {
   switch (status.value) {
+    case "idle":
+      return "";
     case "loading":
       return "Loading...";
     case "saved":
@@ -71,14 +66,14 @@ const statusText = computed(() => {
     case "saving":
       return "Saving...";
     case "error":
-      return "Could not save";
+      return error.value ?? "Error";
   }
   return "";
 });
 
 const stopVfsChanged = kernel.events.on("vfs.changed", (payload) => {
   if (payload.path === props.note.path && status.value !== "unsaved" && status.value !== "saving") {
-    void loadNote();
+    void refreshNote();
   }
 });
 
@@ -87,106 +82,47 @@ const stopWillKill = kernel.events.on("app.will-kill", (payload) => {
     return;
   }
 
-  payload.waitUntil(flushAutosave());
+  payload.waitUntil(editing.flush());
 });
 
 onMounted(() => {
-  void loadNote();
+  void openNote();
 });
 
 onUnmounted(() => {
   stopVfsChanged();
   stopWillKill();
-  clearAutosave();
-  void flushAutosave();
+  editing.dispose();
 });
 
-async function loadNote(): Promise<void> {
-  status.value = "loading";
-  const source = await vfs.readText(props.note.path);
-  if (source === null) {
+async function openNote(): Promise<void> {
+  const result = await editing.open(props.note.path);
+  if (result === "unavailable") {
     emit("missing", props.note.path);
-    return;
   }
-
-  const parsed = parseNoteSource(source, props.note.path);
-  title.value = parsed.title;
-  body.value = parsed.body;
-  savedSource.value = source;
-  status.value = "saved";
 }
 
-function currentSource(): string {
-  return noteSource(title.value, body.value);
-}
-
-function markUnsaved(): void {
-  if (currentSource() === savedSource.value) {
-    status.value = "saved";
-    clearAutosave();
-    return;
+async function refreshNote(): Promise<void> {
+  const result = await editing.refresh(props.note.path);
+  if (result === "unavailable") {
+    emit("missing", props.note.path);
   }
-
-  status.value = "unsaved";
-  scheduleAutosave();
 }
 
 function updateTitle(value: string): void {
-  title.value = value;
-  markUnsaved();
-}
-
-function updateBody(value: string): void {
-  body.value = value;
-  markUnsaved();
-}
-
-function scheduleAutosave(): void {
-  clearAutosave();
-  autosaveTimer = setTimeout(() => {
-    autosaveTimer = undefined;
-    void flushAutosave();
-  }, NOTES_AUTOSAVE_DEBOUNCE_MS);
-}
-
-function clearAutosave(): void {
-  if (autosaveTimer !== undefined) {
-    clearTimeout(autosaveTimer);
-    autosaveTimer = undefined;
-  }
-}
-
-async function flushAutosave(): Promise<void> {
-  clearAutosave();
-  if (savePromise !== undefined) {
-    await savePromise;
-  }
-  if (currentSource() === savedSource.value) {
-    status.value = "saved";
+  if (editorReadonly.value) {
     return;
   }
 
-  const nextSource = currentSource();
-  status.value = "saving";
-  savePromise = (async () => {
-    const stat = await vfs.writeText(props.note.path, nextSource, {
-      overwrite: true,
-      mimeType: NOTES_MIME_TYPE,
-    });
-    if (stat === null) {
-      status.value = "error";
-      return;
-    }
+  editing.setTitle(value);
+}
 
-    savedSource.value = nextSource;
-    status.value = "saved";
-  })();
-
-  try {
-    await savePromise;
-  } finally {
-    savePromise = undefined;
+function updateBody(value: string): void {
+  if (editorReadonly.value) {
+    return;
   }
+
+  editing.setBody(value);
 }
 
 function clampX(value: number): number {
@@ -306,18 +242,20 @@ function setNoteColor(color: PinnedDesktopNoteColor): void {
               class="desktop-sticky-note__title-control"
               :class-names="{ input: 'desktop-sticky-note__title' }"
               :model-value="title"
+              :readonly="editorReadonly"
               ariaLabel="Note title"
               :input-attrs="{ spellcheck: true }"
               @update:model-value="updateTitle"
               @pointerdown.stop="startTitleDrag"
             />
-            <span class="desktop-sticky-note__status">{{ statusText }}</span>
+            <span class="desktop-sticky-note__status" role="status">{{ statusText }}</span>
           </header>
 
           <Textarea
             class="desktop-sticky-note__body-control"
             :class-names="{ input: 'desktop-sticky-note__body' }"
             :model-value="body"
+            :readonly="editorReadonly"
             ariaLabel="Note body"
             resize="none"
             :input-attrs="{ spellcheck: true }"

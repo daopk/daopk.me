@@ -6,10 +6,9 @@ import {
   type VfsPath,
 } from "@daopk/sdk";
 
-import { NOTES_MIME_TYPE, noteSource } from "./useNotes";
+import { noteSource, UNTITLED_NOTE_TITLE } from "./noteSource";
+import { NOTES_MIME_TYPE } from "./useNoteEditingSession";
 import { usePinnedDesktopNotes } from "./usePinnedDesktopNotes";
-
-const UNTITLED_TITLE = "Untitled note";
 
 export async function createDesktopNote({
   kernel,
@@ -23,7 +22,7 @@ export async function createDesktopNote({
   }
 
   const path = await nextNotePath(kernel, handle.id);
-  const stat = await kernel.vfs.writeText(path, noteSource(UNTITLED_TITLE, ""), {
+  const stat = await kernel.vfs.writeText(path, noteSource(UNTITLED_NOTE_TITLE, ""), {
     ...access,
     overwrite: false,
     mimeType: NOTES_MIME_TYPE,
