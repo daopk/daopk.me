@@ -432,7 +432,13 @@ describe("useNotes", () => {
     const pendingRead = deferred<string | null>();
     vi.mocked(vfs.readText).mockImplementationOnce(async () => await pendingRead.promise);
     const selection = notes.selectNote("/home/notes/b.md");
-    await Promise.resolve();
+    for (
+      let turn = 0;
+      turn < 10 && vi.mocked(vfs.readText).mock.calls.at(-1)?.[0] !== "/home/notes/b.md";
+      turn += 1
+    ) {
+      await Promise.resolve();
+    }
     expect(vfs.readText).toHaveBeenLastCalledWith("/home/notes/b.md");
 
     await expect(notes.deleteNote("/home/notes/b.md")).resolves.toBe(true);

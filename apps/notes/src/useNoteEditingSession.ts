@@ -68,7 +68,10 @@ export interface NoteEditingDocumentLease {
 
 interface NoteEditingDocumentEntry {
   readonly editing: NoteEditingSession;
+  /** Adapters owned by live leases or temporarily retained for a final flush. */
   readonly clients: Map<symbol, NoteEditingVfsClient>;
+  /** Tokens for leases that have not been released. */
+  readonly liveClients: Set<symbol>;
   readonly persistedListeners: Map<symbol, (event: NotePersistedEvent) => void>;
   opening: Promise<NoteOpenResult> | undefined;
 }
@@ -163,7 +166,7 @@ export function createNoteEditingSession({
     const previous = active.value;
     active.value = candidate;
     clearSurfaceState();
-    previous?.release({ flush: false });
+    previous?.release();
     return "opened";
   }
 
@@ -180,7 +183,7 @@ export function createNoteEditingSession({
   function prepareForMutation(): Promise<boolean> {
     openRun += 1;
     clearSurfaceState();
-    return active.value?.editing.prepareForMutation() ?? Promise.resolve(true);
+    return persistCurrent();
   }
 
   function usePersisted(nextPath: string, source: string): void {
@@ -195,7 +198,7 @@ export function createNoteEditingSession({
     candidate.usePersisted(source);
     active.value = candidate;
     clearSurfaceState();
-    previous?.release({ flush: false });
+    previous?.release();
   }
 
   function clear(): void {
@@ -209,11 +212,13 @@ export function createNoteEditingSession({
   }
 
   function setTitle(value: string): void {
+    openRun += 1;
     clearSurfaceState();
     active.value?.editing.setTitle(value);
   }
 
   function setBody(value: string): void {
+    openRun += 1;
     clearSurfaceState();
     active.value?.editing.setBody(value);
   }
@@ -240,7 +245,7 @@ export function createNoteEditingSession({
       return Promise.resolve(true);
     }
 
-    return active.value.editing.prepareForMutation();
+    return active.value.editing.flush();
   }
 
   function clearSurfaceState(): void {
@@ -290,6 +295,7 @@ export function createNoteEditingSessions(): NoteEditingSessions {
 
     const token = Symbol(path);
     entry.clients.set(token, vfs);
+    entry.liveClients.add(token);
     if (onPersisted !== undefined) {
       entry.persistedListeners.set(token, onPersisted);
     }
@@ -321,7 +327,8 @@ export function createNoteEditingSessions(): NoteEditingSessions {
       }
       released = true;
 
-      const shouldRetire = entry!.clients.size === 1;
+      entry!.liveClients.delete(token);
+      const shouldRetire = entry!.liveClients.size === 0;
       const finalFlush = shouldRetire && flush ? entry!.editing.flush() : undefined;
       entry!.persistedListeners.delete(token);
       if (finalFlush === undefined) {
@@ -337,7 +344,11 @@ export function createNoteEditingSessions(): NoteEditingSessions {
         .catch(() => false)
         .then(() => {
           entry!.clients.delete(token);
-          if (entry!.clients.size > 0 || entries.get(path) !== entry) {
+          if (
+            entry!.liveClients.size > 0 ||
+            entry!.clients.size > 0 ||
+            entries.get(path) !== entry
+          ) {
             return;
           }
 
@@ -357,6 +368,7 @@ export function createNoteEditingSessions(): NoteEditingSessions {
 
   function createEntry(debounceMs: number): NoteEditingDocumentEntry {
     const clients = new Map<symbol, NoteEditingVfsClient>();
+    const liveClients = new Set<symbol>();
     const persistedListeners = new Map<symbol, (event: NotePersistedEvent) => void>();
     const editing = createNoteDocumentSession({
       vfs: multiplexVfs(clients),
@@ -370,6 +382,7 @@ export function createNoteEditingSessions(): NoteEditingSessions {
 
     return {
       clients,
+      liveClients,
       persistedListeners,
       editing,
       opening: undefined,
@@ -534,8 +547,10 @@ function createNoteDocumentSession({
     const run = ++saveRun;
     const source = currentSource();
     if (!isDirty() && inFlightSaves === 0) {
-      status.value = "saved";
-      error.value = null;
+      if (status.value !== "loading") {
+        status.value = "saved";
+        error.value = null;
+      }
       return true;
     }
 

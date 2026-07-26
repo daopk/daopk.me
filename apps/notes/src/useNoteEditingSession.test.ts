@@ -147,7 +147,109 @@ describe("useNoteEditingSession", () => {
     expect(vfs.writes.at(-1)?.text).toBe("# Shared title\n\nStill owned by the remaining caller");
   });
 
-  it("retires a path after a replacement caller leaves during the final save", async () => {
+  it("flushes shared edits made while another caller switches paths", async () => {
+    vi.useFakeTimers();
+    const firstPath = "/home/notes/a.md";
+    const secondPath = "/home/notes/b.md";
+    const vfs = makeVfs({
+      [firstPath]: "# Alpha\n\nOld",
+      [secondPath]: "# Beta\n\nBody",
+    });
+    const pendingRead = deferred<string | null>();
+    const editingSessions = createNoteEditingSessions();
+    const main = createSession(vfs, { editingSessions });
+    const sticky = createSession(vfs, { editingSessions });
+
+    await Promise.all([main.open(firstPath), sticky.open(firstPath)]);
+    vi.mocked(vfs.readText).mockImplementationOnce(async () => await pendingRead.promise);
+
+    const opening = main.open(secondPath);
+    for (let turn = 0; turn < 10 && vi.mocked(vfs.readText).mock.calls.length < 2; turn += 1) {
+      await Promise.resolve();
+    }
+    expect(vfs.readText).toHaveBeenLastCalledWith(secondPath);
+
+    sticky.setBody("Changed while the other surface switched");
+    sticky.dispose();
+    pendingRead.resolve("# Beta\n\nBody");
+
+    await expect(opening).resolves.toBe("opened");
+    expect(vfs.writes.map(({ path, text }) => ({ path, text }))).toEqual([
+      {
+        path: firstPath,
+        text: "# Alpha\n\nChanged while the other surface switched",
+      },
+    ]);
+    expect(vfs.nodes[firstPath]?.text).toBe("# Alpha\n\nChanged while the other surface switched");
+    expect(main.path.value).toBe(secondPath);
+  });
+
+  it("flushes the active draft before replacing it with persisted content", async () => {
+    vi.useFakeTimers();
+    const firstPath = "/home/notes/a.md";
+    const secondPath = "/home/notes/b.md";
+    const vfs = makeVfs({ [firstPath]: "# Alpha\n\nOld" });
+    const session = createSession(vfs);
+
+    await session.open(firstPath);
+    session.setBody("Changed before replacement");
+    session.usePersisted(secondPath, "# Beta\n\nPersisted");
+
+    expect(vfs.writes.map(({ path, text }) => ({ path, text }))).toEqual([
+      {
+        path: firstPath,
+        text: "# Alpha\n\nChanged before replacement",
+      },
+    ]);
+    expect(session.path.value).toBe(secondPath);
+    expect(session.body.value).toBe("Persisted");
+  });
+
+  it("flushes replacement edits while the prior owner's final save is pending", async () => {
+    vi.useFakeTimers();
+    const path = "/home/notes/a.md";
+    const vfs = makeVfs({ [path]: "# Alpha\n\nOld" });
+    const pending = deferred<VfsStat>();
+    vi.mocked(vfs.writeText).mockImplementationOnce(
+      async (nextPath: string, text: string, options = {}) => {
+        const normalized = normalizeVfsPath(nextPath);
+        vfs.writes.push({ path: normalized, text, options });
+        const result = await pending.promise;
+        vfs.nodes[normalized] = { text, updatedAt: result.updatedAt };
+        return result;
+      },
+    );
+    const editingSessions = createNoteEditingSessions();
+    const first = createSession(vfs, { editingSessions });
+
+    await first.open(path);
+    first.setBody("Saved while closing");
+    first.dispose();
+
+    const replacement = createSession(vfs, { editingSessions });
+    await expect(replacement.open(path)).resolves.toBe("opened");
+    replacement.setBody("Saved by the replacement");
+    replacement.dispose();
+
+    pending.resolve(stat(path, { text: "# Alpha\n\nSaved while closing", updatedAt: 11 }));
+    for (let turn = 0; turn < 10; turn += 1) {
+      await Promise.resolve();
+    }
+
+    expect(vfs.writes.map(({ text }) => text)).toEqual([
+      "# Alpha\n\nSaved while closing",
+      "# Alpha\n\nSaved by the replacement",
+    ]);
+    expect(vfs.nodes[path]?.text).toBe("# Alpha\n\nSaved by the replacement");
+
+    const reopened = createSession(vfs, { editingSessions });
+    await expect(reopened.open(path)).resolves.toBe("opened");
+    expect(vfs.readText).toHaveBeenCalledTimes(2);
+    expect(reopened.body.value).toBe("Saved by the replacement");
+  });
+
+  it("retires a path after a replacement caller leaves without flushing", async () => {
+    vi.useFakeTimers();
     const path = "/home/notes/a.md";
     const vfs = makeVfs({ [path]: "# Alpha\n\nOld" });
     const pending = deferred<VfsStat>();
@@ -179,6 +281,36 @@ describe("useNoteEditingSession", () => {
     const reopened = createSession(vfs, { editingSessions });
     await expect(reopened.open(path)).resolves.toBe("opened");
     expect(vfs.readText).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not cancel another caller's refresh when switching paths", async () => {
+    const firstPath = "/home/notes/a.md";
+    const secondPath = "/home/notes/b.md";
+    const vfs = makeVfs({
+      [firstPath]: "# Alpha\n\nOld",
+      [secondPath]: "# Beta\n\nBody",
+    });
+    const editingSessions = createNoteEditingSessions();
+    const main = createSession(vfs, { editingSessions });
+    const sticky = createSession(vfs, { editingSessions });
+
+    await Promise.all([main.open(firstPath), sticky.open(firstPath)]);
+
+    const pendingRefresh = deferred<string | null>();
+    vi.mocked(vfs.readText).mockImplementationOnce(async () => await pendingRefresh.promise);
+    const refreshing = sticky.refresh(firstPath);
+    expect(vfs.readText).toHaveBeenCalledTimes(2);
+    expect(sticky.status.value).toBe("loading");
+
+    await expect(main.open(secondPath)).resolves.toBe("opened");
+    expect(sticky.status.value).toBe("loading");
+    pendingRefresh.resolve("# Alpha\n\nExternal replacement");
+
+    await expect(refreshing).resolves.toBe("opened");
+    expect(main.path.value).toBe(secondPath);
+    expect(sticky.path.value).toBe(firstPath);
+    expect(sticky.body.value).toBe("External replacement");
+    expect(vfs.writes).toHaveLength(0);
   });
 
   it("loads and autosaves a note through its interface", async () => {
@@ -269,6 +401,33 @@ describe("useNoteEditingSession", () => {
     await expect(opening).resolves.toBe("failed");
     expect(session.path.value).toBe("/home/notes/a.md");
     expect(session.title.value).toBe("Alpha");
+  });
+
+  it("cancels a pending path switch when the visible note is edited", async () => {
+    const firstPath = "/home/notes/a.md";
+    const secondPath = "/home/notes/b.md";
+    const vfs = makeVfs({
+      [firstPath]: "# Alpha\n\nA",
+      [secondPath]: "# Beta\n\nB",
+    });
+    const pending = deferred<string | null>();
+    const session = createSession(vfs);
+
+    await session.open(firstPath);
+    vi.mocked(vfs.readText).mockImplementationOnce(async () => await pending.promise);
+    const opening = session.open(secondPath);
+    for (let turn = 0; turn < 10 && vi.mocked(vfs.readText).mock.calls.length < 2; turn += 1) {
+      await Promise.resolve();
+    }
+
+    session.setBody("Edited while loading");
+    pending.resolve("# Beta\n\nB");
+
+    await expect(opening).resolves.toBe("failed");
+    expect(session.path.value).toBe(firstPath);
+    expect(session.body.value).toBe("Edited while loading");
+    await expect(session.flush()).resolves.toBe(true);
+    expect(vfs.nodes[firstPath]?.text).toBe("# Alpha\n\nEdited while loading");
   });
 
   it("repairs stale disk content after an in-flight edit is reverted", async () => {
