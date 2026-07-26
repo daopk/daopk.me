@@ -15,6 +15,8 @@ interface WindowFrameRecord {
   readonly maximized: boolean;
 }
 
+type WindowFrameBounds = Readonly<Pick<WindowFrameRecord, "x" | "y" | "width" | "height">>;
+
 export interface WindowFrameSnapshot {
   readonly window: WindowFrameRecord;
   readonly stageBounds: StageBounds;
@@ -298,7 +300,7 @@ export function useWindowFrameInteractions(session: WindowFrameSession): WindowF
 
   function applyResizeDelta(
     direction: WindowFrameResizeDirection,
-    start: WindowFrameRecord,
+    start: WindowFrameBounds,
     dx: number,
     dy: number,
   ): { x: number; y: number; width: number; height: number } {
@@ -326,8 +328,14 @@ export function useWindowFrameInteractions(session: WindowFrameSession): WindowF
   }
 
   function startResize(direction: WindowFrameResizeDirection, event: PointerEvent): void {
-    const start = session.read();
-    const windowId = start.window.id;
+    const window = session.read().window;
+    const windowId = window.id;
+    const startBounds: WindowFrameBounds = {
+      x: window.x,
+      y: window.y,
+      width: window.width,
+      height: window.height,
+    };
     const startX = event.clientX;
     const startY = event.clientY;
 
@@ -341,7 +349,7 @@ export function useWindowFrameInteractions(session: WindowFrameSession): WindowF
         onMove: (move) => {
           const next = applyResizeDelta(
             direction,
-            start.window,
+            startBounds,
             move.clientX - startX,
             move.clientY - startY,
           );

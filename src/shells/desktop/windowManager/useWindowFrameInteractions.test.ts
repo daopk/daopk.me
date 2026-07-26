@@ -19,6 +19,7 @@ interface HarnessOptions {
   readonly window?: Partial<WindowFrameSnapshot["window"]>;
   readonly stageBounds?: WindowFrameSnapshot["stageBounds"];
   readonly stageOffset?: WindowFrameSnapshot["stageOffset"];
+  readonly applyResizeOutcomes?: boolean;
 }
 
 function fakePointerEvent(type: string, init: FakePointerEventInit = {}): PointerEvent {
@@ -46,16 +47,17 @@ function pointerDown(
 function createHarness(options: HarnessOptions = {}) {
   const element = document.createElement("div");
   document.body.appendChild(element);
+  const window = {
+    id: "window-1",
+    x: 100,
+    y: 80,
+    width: 300,
+    height: 240,
+    maximized: false,
+    ...options.window,
+  };
   const snapshot: WindowFrameSnapshot = {
-    window: {
-      id: "window-1",
-      x: 100,
-      y: 80,
-      width: 300,
-      height: 240,
-      maximized: false,
-      ...options.window,
-    },
+    window,
     stageBounds: options.stageBounds ?? { width: 500, height: 400 },
     stageOffset: options.stageOffset,
   };
@@ -64,7 +66,17 @@ function createHarness(options: HarnessOptions = {}) {
   const interactions = useWindowFrameInteractions({
     read: () => snapshot,
     focus,
-    publish: (outcome) => outcomes.push(outcome),
+    publish: (outcome) => {
+      outcomes.push(outcome);
+      if (options.applyResizeOutcomes && outcome.type === "resize-window") {
+        Object.assign(window, {
+          x: outcome.x,
+          y: outcome.y,
+          width: outcome.width,
+          height: outcome.height,
+        });
+      }
+    },
   });
 
   return { element, focus, interactions, outcomes, snapshot };
@@ -168,6 +180,36 @@ describe("window frame interaction seam", () => {
 
     element.dispatchEvent(fakePointerEvent("pointerup"));
     expect(interactions.resizing.value).toBe(false);
+  });
+
+  it("anchors every resize move to an immutable pointer-down snapshot", () => {
+    const { element, interactions, outcomes } = createHarness({
+      applyResizeOutcomes: true,
+      stageBounds: { width: 2_000, height: 2_000 },
+    });
+
+    pointerDown(element, (event) => interactions.startResize("e", event));
+    element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 10 }));
+    element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 20 }));
+
+    expect(outcomes).toEqual([
+      {
+        type: "resize-window",
+        windowId: "window-1",
+        x: 100,
+        y: 80,
+        width: 310,
+        height: 240,
+      },
+      {
+        type: "resize-window",
+        windowId: "window-1",
+        x: 100,
+        y: 80,
+        width: 320,
+        height: 240,
+      },
+    ]);
   });
 
   it.each<{
