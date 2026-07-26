@@ -35,6 +35,21 @@ export { ColorSwatch } from "ropav/color-swatch";
 export type { ColorSwatchPart, ColorSwatchProps, ColorSwatchSize } from "ropav/color-swatch";
 export { Field } from "ropav/field";
 export type { FieldControlProps, FieldProps, FieldSlotProps } from "ropav/field";
+export { HoverCard } from "ropav/hover-card";
+export type {
+  HoverCardContentSlotProps,
+  HoverCardOffset,
+  HoverCardOffsetOptions,
+  HoverCardOpenChangeDetails,
+  HoverCardOpenChangeReason,
+  HoverCardPart,
+  HoverCardPlacement,
+  HoverCardProps,
+  HoverCardSlotProps,
+  HoverCardTarget,
+  HoverCardTouchBehavior,
+  HoverCardTriggerProps,
+} from "ropav/hover-card";
 export { default as Icon } from "~/icons/Icon.vue";
 export { IconButton } from "ropav/icon-button";
 export type { IconButtonProps } from "ropav/icon-button";
@@ -80,6 +95,18 @@ export type {
   ScrollAreaSlotProps,
   ScrollAreaType,
 } from "ropav/scroll-area";
+export { SegmentedControl } from "ropav/segmented-control";
+export type {
+  SegmentedControlColor,
+  SegmentedControlOption,
+  SegmentedControlOptionSlotProps,
+  SegmentedControlOrientation,
+  SegmentedControlPart,
+  SegmentedControlProps,
+  SegmentedControlRadius,
+  SegmentedControlSize,
+  SegmentedControlValue,
+} from "ropav/segmented-control";
 export { Select } from "ropav/select";
 export type { SelectOption, SelectProps } from "ropav/select";
 export { Slider } from "ropav/slider";
@@ -124,5 +151,4 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "./DropdownMenu.vue";
-export { default as HoverCard } from "./HoverCard.vue";
 export { default as ToastHost } from "./ToastHost.vue";

@@ -10,7 +10,7 @@ import {
   ScrollArea,
   ToolbarTitle,
 } from "@daopk/kit";
-import { Button, Radio, RadioGroup, Switch } from "@daopk/ui";
+import { Button, SegmentedControl, Switch, type SegmentedControlOption } from "@daopk/ui";
 import ArrowLeft from "~icons/lucide/arrow-left";
 import RotateCcw from "~icons/lucide/rotate-ccw";
 
@@ -32,11 +32,10 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-const weekStartOptions: ReadonlyArray<{ readonly id: CalendarWeekStart; readonly label: string }> =
-  [
-    { id: 1, label: "Monday" },
-    { id: 0, label: "Sunday" },
-  ];
+const weekStartOptions: SegmentedControlOption[] = [
+  { value: 1 satisfies CalendarWeekStart, label: "Monday" },
+  { value: 0 satisfies CalendarWeekStart, label: "Sunday" },
+];
 
 const weekStartsOn = computed(() => props.settings.weekStartsOn.value);
 const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value);
@@ -44,11 +43,6 @@ const showLunarCalendar = computed(() => props.settings.showLunarCalendar.value)
 function selectWeekStart(value: string | number | null): void {
   if (value === 0 || value === 1) props.settings.setWeekStartsOn(value);
 }
-
-const choiceRadioClassNames = {
-  indicator: "calendar-settings__radio-indicator",
-  label: "calendar-settings__radio-label",
-} as const;
 </script>
 
 <template>
@@ -96,23 +90,14 @@ const choiceRadioClassNames = {
         >
           Week start
         </GroupLabel>
-        <RadioGroup
-          class="calendar-settings__option-grid calendar-settings__option-grid--compact"
+        <SegmentedControl
+          class="calendar-settings__week-start"
           :model-value="weekStartsOn"
+          :options="weekStartOptions"
           labelledby="calendar-settings-week-start"
+          size="sm"
           @update:model-value="selectWeekStart"
-        >
-          <Radio
-            v-for="option in weekStartOptions"
-            :key="option.id"
-            class="calendar-settings__choice"
-            :class="{ 'calendar-settings__choice--active': option.id === weekStartsOn }"
-            :class-names="choiceRadioClassNames"
-            :value="option.id"
-          >
-            {{ option.label }}
-          </Radio>
-        </RadioGroup>
+        />
       </Panel>
 
       <ActionRow
@@ -176,14 +161,6 @@ const choiceRadioClassNames = {
   min-inline-size: 0;
 }
 
-:deep(.calendar-settings__radio-indicator) {
-  display: none;
-}
-
-:deep(.calendar-settings__radio-label) {
-  display: contents;
-}
-
 .calendar-settings__row-title {
   margin: 0;
 }
@@ -214,43 +191,8 @@ const choiceRadioClassNames = {
   gap: var(--space-sm);
 }
 
-.calendar-settings__option-grid {
-  display: grid;
-  gap: var(--space-sm);
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-}
-
-.calendar-settings__option-grid--compact {
-  grid-template-columns: repeat(auto-fit, minmax(96px, max-content));
-}
-
-.calendar-settings__choice {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-fg);
-  cursor: pointer;
-  font: inherit;
-  min-block-size: 34px;
-  padding: var(--space-xs) var(--space-sm);
-  text-align: center;
-
-  &:hover,
-  &:focus-visible,
-  &:has(input:focus-visible) {
-    border-color: var(--color-accent);
-  }
-
-  &:focus-visible,
-  &:has(input:focus-visible) {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-}
-
-.calendar-settings__choice--active {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent) inset;
+.calendar-settings__week-start {
+  align-self: flex-start;
 }
 
 .calendar-settings__toggle-row {
@@ -278,9 +220,8 @@ const choiceRadioClassNames = {
     padding: var(--space-lg);
   }
 
-  .calendar-settings__option-grid,
-  .calendar-settings__option-grid--compact {
-    grid-template-columns: 1fr;
+  .calendar-settings__week-start {
+    align-self: stretch;
   }
 }
 </style>

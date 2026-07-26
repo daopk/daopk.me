@@ -10,8 +10,8 @@ catalogs:
       specifier: ^6.0.8
       version: 6.0.8
     ropav:
-      specifier: ^0.1.7
-      version: 0.1.7
+      specifier: ^0.1.8
+      version: 0.1.8
     vite:
       specifier: ^8.1.5
       version: 8.1.5
@@ -73,7 +73,7 @@ importers:
         version: 11.1.2
       ropav:
         specifier: 'catalog:'
-        version: 0.1.7(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.2(typescript@6.0.3))
+        version: 0.1.8(@vue/compiler-vapor@3.6.0-rc.2)(unplugin-icons@23.0.1)(vue@3.6.0-rc.2(typescript@6.0.3))
       shiki:
         specifier: ^4.3.1
         version: 4.3.1
@@ -133,8 +133,8 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(vitest@4.1.10)
       '@vue/compiler-vapor':
-        specifier: 3.6.0-rc.1
-        version: 3.6.0-rc.1
+        specifier: 3.6.0-rc.2
+        version: 3.6.0-rc.2
       '@vue/tsconfig':
         specifier: ^0.9.1
         version: 0.9.1(typescript@6.0.3)(vue@3.6.0-rc.2(typescript@6.0.3))
@@ -2266,17 +2266,11 @@ packages:
   '@vue/compiler-core@3.5.40':
     resolution: {integrity: sha512-39E8IgOhTbVDnoJFMKc2DvYnypcZwUqgUhQkccva/0m6FUwtIKSGV7n1hpVmYcFaoRAwf9pBcwnKlCEsN63ZEQ==}
 
-  '@vue/compiler-core@3.6.0-rc.1':
-    resolution: {integrity: sha512-0zHxvG8TBoqFYzA35RHEdS5tDt18+CJ6vhwvYKICnGBt04Wrw2hElMyuaoQ9neCdDpTRX0pNOoj8Sr/JPj6wMA==}
-
   '@vue/compiler-core@3.6.0-rc.2':
     resolution: {integrity: sha512-Xx79h4EpJktQBShelXNKaRuvn9N6YsYL1j+RXdvPKzI+8tohYziBJbxOFGAkdcOKBwKc2SIWV4DOlTAMhE96yQ==}
 
   '@vue/compiler-dom@3.5.40':
     resolution: {integrity: sha512-pwkx4vqlqOspFstrcmzwkKLePVMD3PT65imRzLhanU2V1Fj4K13g6OXjanOyzw3aTAuRk84BOmY8f3rEHqPaVA==}
-
-  '@vue/compiler-dom@3.6.0-rc.1':
-    resolution: {integrity: sha512-EZ7LMqPlq1qBAtvlkLinMiDKduj7BrBmsE2pLuKaZDqkYmjdX7xQityGxl9S3Ll5KHc3O8qzOem910Yb8QaT2w==}
 
   '@vue/compiler-dom@3.6.0-rc.2':
     resolution: {integrity: sha512-dRTdTdi/KXzHYIkHtyjGxepTIxnsZ/hB3v1osnS8c4MeycAyzkSoZW6OZkXXN4oVVVU6NKXds1XtKAEKVVw7nA==}
@@ -2286,9 +2280,6 @@ packages:
 
   '@vue/compiler-ssr@3.6.0-rc.2':
     resolution: {integrity: sha512-lqHSdQTmlhKX3dNEvR1TcspUzDlTR82T7BYLDzfvTwAqGXxAI2WJfyGJPcNpPjPKYEMI9JRGF32DU8TlHLx1AA==}
-
-  '@vue/compiler-vapor@3.6.0-rc.1':
-    resolution: {integrity: sha512-jbknW7YM1VUx6ZcpXGzc81aN6TKPaWAcAqCG1pDvQ88xCOgAXFgeKAniJtZmWl5PNGvH07XoyclOlykcC4l77A==}
 
   '@vue/compiler-vapor@3.6.0-rc.2':
     resolution: {integrity: sha512-QbrA01pbj9xemF2McgBopyaOwj3kQGN0W1GW5EdFXORIT4fQQJpmUOj40h99S3bk09gLs5bFTRS4YE+Oyw/F9w==}
@@ -2324,9 +2315,6 @@ packages:
 
   '@vue/shared@3.5.40':
     resolution: {integrity: sha512-WxnBtruIqOoV3rA4jeKDWzrYI5h7Cp4+pjwDi8kWGHz+IslhiN+wguLVVhtv2l8VoU02rzDCVfDjgCl1lNpZVg==}
-
-  '@vue/shared@3.6.0-rc.1':
-    resolution: {integrity: sha512-G2Y0ePuu7QIZ7eX7I8r0Q6mwO6rwhMXyYY8UAlPvkXsu7IxT5i8wDxiZK8EI5FnYYJKdSWInDnZREDX9w9zdCg==}
 
   '@vue/shared@3.6.0-rc.2':
     resolution: {integrity: sha512-Tz44lKLjxhWRu3GJ38768dc2hW4XhDtTB5aUo5fCMis6YDyFzwQYkrD/B9SuQ1v/ailv6UVR3wSHiujNXSjMCQ==}
@@ -3535,8 +3523,8 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
-  ropav@0.1.7:
-    resolution: {integrity: sha512-Ett6XiYacSN83CM1no4L5gfVyrX30EkpVgP0DNcEo1lKDw2lzVmGGdv7rRtCsK7/1ebQ8Bdmtp50RsWMlaqIGg==}
+  ropav@0.1.8:
+    resolution: {integrity: sha512-3aE0boW2tpCtd4RnBmpx4lP+grZjXEfAv+pNRF6mkV0s4Z9YWCdfLUPcUHbvgaX3sqdXDGR5Xwm15BuTQHVhQw==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24.0.0}
     peerDependencies:
       '@vue/compiler-vapor': 3.6.0-rc.2
@@ -5817,14 +5805,6 @@ snapshots:
       estree-walker: 2.0.2
       source-map-js: 1.2.1
 
-  '@vue/compiler-core@3.6.0-rc.1':
-    dependencies:
-      '@babel/parser': 7.29.7
-      '@vue/shared': 3.6.0-rc.1
-      entities: 7.0.1
-      estree-walker: 2.0.2
-      source-map-js: 1.2.1
-
   '@vue/compiler-core@3.6.0-rc.2':
     dependencies:
       '@babel/parser': 7.29.7
@@ -5837,11 +5817,6 @@ snapshots:
     dependencies:
       '@vue/compiler-core': 3.5.40
       '@vue/shared': 3.5.40
-
-  '@vue/compiler-dom@3.6.0-rc.1':
-    dependencies:
-      '@vue/compiler-core': 3.6.0-rc.1
-      '@vue/shared': 3.6.0-rc.1
 
   '@vue/compiler-dom@3.6.0-rc.2':
     dependencies:
@@ -5865,14 +5840,6 @@ snapshots:
     dependencies:
       '@vue/compiler-dom': 3.6.0-rc.2
       '@vue/shared': 3.6.0-rc.2
-
-  '@vue/compiler-vapor@3.6.0-rc.1':
-    dependencies:
-      '@babel/parser': 7.29.7
-      '@vue/compiler-dom': 3.6.0-rc.1
-      '@vue/shared': 3.6.0-rc.1
-      estree-walker: 2.0.2
-      source-map-js: 1.2.1
 
   '@vue/compiler-vapor@3.6.0-rc.2':
     dependencies:
@@ -5934,8 +5901,6 @@ snapshots:
       '@vue/shared': 3.6.0-rc.2
 
   '@vue/shared@3.5.40': {}
-
-  '@vue/shared@3.6.0-rc.1': {}
 
   '@vue/shared@3.6.0-rc.2': {}
 
@@ -7493,13 +7458,13 @@ snapshots:
       '@rollup/rollup-win32-x64-msvc': 4.62.2
       fsevents: 2.3.3
 
-  ropav@0.1.7(@vue/compiler-vapor@3.6.0-rc.1)(unplugin-icons@23.0.1)(vue@3.6.0-rc.2(typescript@6.0.3)):
+  ropav@0.1.8(@vue/compiler-vapor@3.6.0-rc.2)(unplugin-icons@23.0.1)(vue@3.6.0-rc.2(typescript@6.0.3)):
     dependencies:
       '@floating-ui/dom': 1.8.0
       focus-trap: 8.2.2
       vue: 3.6.0-rc.2(typescript@6.0.3)
     optionalDependencies:
-      '@vue/compiler-vapor': 3.6.0-rc.1
+      '@vue/compiler-vapor': 3.6.0-rc.2
       unplugin-icons: 23.0.1
 
   rxjs@7.8.2:

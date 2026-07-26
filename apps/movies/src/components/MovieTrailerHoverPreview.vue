@@ -39,6 +39,20 @@ const emit = defineEmits<{
 
 const localTrailerCache = new Map<string, Promise<MovieTrailerResult>>();
 const emptyStyle: Record<string, string> = {};
+const hoverCardClassNames = {
+  content: "movies-trailer-hover-card__content",
+} as const;
+const hoverCardFlipOptions = {
+  fallbackStrategy: "initialPlacement",
+} as const;
+const hoverCardStyles = {
+  content: {
+    maxInlineSize: "none",
+    overflow: "hidden",
+    padding: 0,
+    pointerEvents: "auto",
+  },
+} as const;
 
 const { locale, t } = useMoviesI18n();
 const state = ref<TrailerPreviewState>("idle");
@@ -174,20 +188,22 @@ function setTrailerPreviewAspectRatio(nextAspectRatio: number | null): void {
 
 <template>
   <HoverCard
-    v-if="anchorMode === 'element'"
+    v-if="anchorMode === 'element' && hoverCardOpen"
     :open="hoverCardOpen"
     :disabled="disabled || movie === null || reference === undefined"
-    :portal-to="portalTo"
-    content-class="movies-trailer-hover-card__content"
-    side="top"
-    align="center"
+    :target="reference"
+    :teleport-to="portalTo"
+    :class-names="hoverCardClassNames"
+    :flip-options="hoverCardFlipOptions"
+    :styles="hoverCardStyles"
+    :base-z-index="2000"
+    :offset="10"
+    placement="top"
+    strategy="fixed"
+    arrow
     :open-delay="0"
     :close-delay="0"
-    :prioritize-position="true"
-    :reference="reference"
   >
-    <span class="movies-trailer-hover-card__anchor" aria-hidden="true" />
-
     <template #content>
       <MovieTrailerPreviewCard
         v-if="movie !== null"
@@ -233,10 +249,6 @@ function setTrailerPreviewAspectRatio(nextAspectRatio: number | null): void {
   overflow: hidden;
   pointer-events: none;
   position: fixed;
-}
-
-.movies-trailer-hover-card__content {
-  pointer-events: auto;
 }
 
 .movies-trailer-hover-card__center {

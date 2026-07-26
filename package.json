@@ -60,7 +60,7 @@
     "@types/node": "^26.1.1",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "4.1.10",
-    "@vue/compiler-vapor": "3.6.0-rc.1",
+    "@vue/compiler-vapor": "3.6.0-rc.2",
     "@vue/tsconfig": "^0.9.1",
     "axe-core": "^4.12.1",
     "fake-indexeddb": "^6.2.5",

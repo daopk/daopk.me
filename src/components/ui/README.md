@@ -6,10 +6,10 @@ adapter is required for shell behavior; applications should otherwise use
 Ropav's props, events, slots and built-in behavior.
 
 Direct Ropav exports currently include alerts, aspect ratios, avatars, badges,
-buttons and button links, cards, color swatches, form controls, modal, numeric
-inputs, overlays, popover, progress, scroll area, tabs, toast and tooltip.
-Importing through `@daopk/ui` keeps first-party apps on the host's single
-Ropav/Vue runtime copy.
+buttons and button links, cards, color swatches, form controls, hover cards,
+modal, numeric inputs, overlays, popover, progress, scroll area, segmented
+controls, tabs, toast and tooltip. Importing through `@daopk/ui` keeps
+first-party apps on the host's single Ropav/Vue runtime copy.
 
 The façade includes the media/layout helpers `AspectRatio` and `Overlay`, the
 identity and color primitives `Avatar` and `ColorSwatch`, navigation-aware
@@ -28,8 +28,6 @@ composition:
   `tabIndex` override for panels that already contain interactive controls.
 - `DropdownMenu` and `ContextMenu` preserve the shell's menu item/submenu API
   while composing `ropav/dropdown-menu` behavior.
-- `HoverCard` composes Ropav hover disclosure and floating positioning for the
-  richer preview surface used by the shell.
 - `ToastHost` applies the daopk viewport class and safe-area styling around
   Ropav's `ToastViewport`. It must be rendered below a `ToastProvider`.
 

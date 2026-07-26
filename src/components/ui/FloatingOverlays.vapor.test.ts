@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { HoverCard } from "ropav/hover-card";
 import { Tooltip } from "ropav/tooltip";
 
 import { mountVaporRoot, type VaporMount } from "~/test/mountVapor";
-
-import HoverCard from "./HoverCard.vue";
 
 const mounted: VaporMount[] = [];
 
@@ -127,24 +126,26 @@ describe("HoverCard", () => {
         content: "<div>Preview content</div>",
       },
     });
-    const trigger = wrapper.find<HTMLButtonElement>("button");
+    const triggerRoot = wrapper.find<HTMLElement>(".rp-hover-card");
 
-    pointer(trigger, "pointerenter");
+    pointer(triggerRoot, "pointerenter");
     await vi.advanceTimersByTimeAsync(80);
     await settlePosition();
-    const panel = document.body.querySelector<HTMLElement>(".ds-hover-card");
+    const panel = document.body.querySelector<HTMLElement>(".rp-hover-card__content");
     expect(panel?.textContent).toContain("Preview content");
     expect(updates).toEqual([true]);
 
-    pointer(trigger, "pointerleave");
+    pointer(triggerRoot, "pointerleave");
     pointer(panel!, "pointerenter");
     await vi.advanceTimersByTimeAsync(60);
-    expect(document.body.querySelector(".ds-hover-card")).not.toBeNull();
+    expect(document.body.querySelector(".rp-hover-card__content")).not.toBeNull();
 
     pointer(panel!, "pointerleave");
     await vi.advanceTimersByTimeAsync(60);
     await nextTick();
-    expect(document.body.querySelector(".ds-hover-card")).toBeNull();
+    await vi.runAllTimersAsync();
+    await nextTick();
+    expect(document.body.querySelector(".rp-hover-card__content")).toBeNull();
     expect(updates).toEqual([true, false]);
   });
 
@@ -153,7 +154,13 @@ describe("HoverCard", () => {
       getBoundingClientRect: () => new DOMRect(120, 80, 20, 20),
     };
     mount(HoverCard, {
-      props: { defaultOpen: true, reference, side: "right", sideOffset: 12 },
+      props: {
+        defaultOpen: true,
+        target: reference,
+        placement: "right",
+        offset: 12,
+        strategy: "fixed",
+      },
       slots: {
         default: () => button("Preview"),
         content: "<div>Virtual preview</div>",
@@ -161,7 +168,7 @@ describe("HoverCard", () => {
     });
 
     await settlePosition();
-    const panel = document.body.querySelector<HTMLElement>(".ds-hover-card");
+    const panel = document.body.querySelector<HTMLElement>(".rp-hover-card__content");
     expect(panel?.textContent).toContain("Virtual preview");
     expect(panel?.style.position).toBe("fixed");
     expect(panel?.dataset.side).toMatch(/right|left/);
@@ -181,10 +188,10 @@ describe("HoverCard", () => {
         content: "<div>Controlled content</div>",
       },
     });
-    pointer(controlled.find("button"), "pointerenter");
+    pointer(controlled.find(".rp-hover-card"), "pointerenter");
     await vi.runAllTimersAsync();
     expect(updates).toEqual([true]);
-    expect(document.body.querySelector(".ds-hover-card")).toBeNull();
+    expect(document.body.querySelector(".rp-hover-card__content")).toBeNull();
 
     const disabled = mount(HoverCard, {
       props: { defaultOpen: true, disabled: true },
