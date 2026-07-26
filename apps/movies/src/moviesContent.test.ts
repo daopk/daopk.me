@@ -7,7 +7,17 @@ import {
   createInMemoryMoviesContentAdapter,
   type MoviesContentRemote,
 } from "./moviesContentRemote";
-import type { MovieDetail, MoviePersonDetail, MovieTrailerResult } from "./moviesApi";
+import {
+  HOME_DISCOVERY_GROUPS,
+  type MovieDetail,
+  type MoviePersonDetail,
+  type MovieSummary,
+  type MovieTrailerResult,
+  type MoviesFiltersResult,
+  type MoviesListPeriod,
+  type MoviesListResult,
+} from "./moviesApi";
+import type { MoviesContinueWatchingRecord } from "./moviesWatchContinuity";
 
 describe("Movies content", () => {
   it("assembles detail content behind one interface with an in-memory adapter", async () => {
@@ -115,9 +125,153 @@ describe("Movies content", () => {
     await settleContent();
     expect(resource?.content.value).toBeNull();
   });
+
+  it("owns catalog filters and pagination behind one interface", async () => {
+    const firstMovie = movieDetail(550, "Fight Club");
+    const secondMovie = movieDetail(551, "Page Two");
+    const movieFilters = filters("movie", 28, "Action");
+    const tvFilters = filters("tv", 10759, "Action & Adventure");
+    const module = createMoviesContent(
+      createInMemoryMoviesContentAdapter({
+        filters: [
+          { mediaType: "movie", value: movieFilters },
+          { mediaType: "tv", value: tvFilters },
+        ],
+        lists: [
+          {
+            query: { limit: 1, media: "all", page: 1 },
+            value: list([firstMovie], 1, 2),
+          },
+          {
+            query: { limit: 1, media: "all", page: 2 },
+            value: list([secondMovie], 2, 2),
+          },
+        ],
+      }),
+    );
+    const locale = ref<SupportedLocale>("en");
+    const scope = effectScope();
+    const resource = scope.run(() => module.useCatalog(() => ({ limit: 1, media: "all" }), locale));
+
+    expect(resource?.state.value).toBe("loading");
+    expect(resource?.filterState.value).toBe("loading");
+    await settleContent();
+
+    expect(resource?.state.value).toBe("ready");
+    expect(resource?.filterState.value).toBe("ready");
+    expect(resource?.content.value.items).toEqual([firstMovie]);
+    expect(resource?.content.value.filters?.genres).toEqual([
+      movieFilters.genres[0],
+      tvFilters.genres[0],
+    ]);
+    expect(resource?.canLoadMore.value).toBe(true);
+
+    await resource?.loadMore();
+    await settleContent();
+
+    expect(resource?.content.value.items).toEqual([firstMovie, secondMovie]);
+    expect(resource?.canLoadMore.value).toBe(false);
+    scope.stop();
+  });
+
+  it("does not let a stale catalog result overwrite a newer query", async () => {
+    const first = deferred<MoviesListResult>();
+    const second = deferred<MoviesListResult>();
+    const signals: AbortSignal[] = [];
+    const baseAdapter = createInMemoryMoviesContentAdapter({});
+    const remote: MoviesContentRemote = {
+      ...baseAdapter,
+      fetchList: vi.fn((_, options) => {
+        signals.push(options.signal);
+        return signals.length === 1 ? first.promise : second.promise;
+      }),
+    };
+    const module = createMoviesContent(remote);
+    const locale = ref<SupportedLocale>("en");
+    const keyword = ref("first");
+    const scope = effectScope();
+    const resource = scope.run(() =>
+      module.useCatalog(() => ({ keyword: keyword.value, media: "all" }), locale),
+    );
+
+    keyword.value = "second";
+    await nextTick();
+
+    expect(signals[0]?.aborted).toBe(true);
+    first.resolve(list([movieDetail(550, "Stale")]));
+    await settleContent();
+    expect(resource?.state.value).toBe("loading");
+    expect(resource?.content.value.items).toEqual([]);
+
+    const currentMovie = movieDetail(551, "Current");
+    second.resolve(list([currentMovie]));
+    await settleContent();
+    expect(resource?.state.value).toBe("ready");
+    expect(resource?.content.value.items).toEqual([currentMovie]);
+    scope.stop();
+  });
+
+  it("assembles Home rows and Continue Watching behind one interface", async () => {
+    const featured = movieDetail(550, "Fight Club");
+    const rowMovie = movieDetail(551, "Discovery");
+    const period = ref<MoviesListPeriod>("week");
+    const records: readonly MoviesContinueWatchingRecord[] = [
+      {
+        progress: { currentTime: 50, duration: 100, updatedAt: 1 },
+        target: { kind: "movie", slug: "fight-club", tmdbId: 550 },
+      },
+    ];
+    const module = createMoviesContent(
+      createInMemoryMoviesContentAdapter({
+        details: [{ mediaType: "movie", tmdbId: 550, value: featured }],
+        lists: [
+          {
+            query: { kind: "trending-movie", limit: 6, period: "week" },
+            value: list([featured]),
+          },
+          ...HOME_DISCOVERY_GROUPS.flatMap((group) =>
+            group.rows.map((row) => ({
+              query: {
+                ...row.query,
+                limit: 12,
+                ...(group.id === "trending" ? { period: period.value } : {}),
+              },
+              value: list([rowMovie]),
+            })),
+          ),
+        ],
+      }),
+    );
+    const locale = ref<SupportedLocale>("en");
+    const scope = effectScope();
+    const resource = scope.run(() =>
+      module.useHome(
+        () => period.value,
+        () => records,
+        locale,
+      ),
+    );
+
+    expect(resource?.state.value).toBe("loading");
+    await settleContent();
+
+    expect(resource?.state.value).toBe("ready");
+    expect(resource?.content.value.featured).toEqual([featured]);
+    expect(resource?.content.value.rows[HOME_DISCOVERY_GROUPS[0]!.rows[0]!.id]).toEqual([rowMovie]);
+    expect(resource?.content.value.continueWatchingItems).toEqual([
+      expect.objectContaining({
+        id: "movie-550",
+        progressPercent: 50,
+        title: "Fight Club",
+      }),
+    ]);
+    scope.stop();
+  });
 });
 
 async function settleContent(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
   await nextTick();
@@ -183,5 +337,26 @@ function moviePerson(tmdbId: number, name: string): MoviePersonDetail {
     profileUrl: "",
     slug: name.toLowerCase().replaceAll(" ", "-"),
     tmdbId,
+  };
+}
+
+function list(items: readonly MovieSummary[], currentPage = 1, totalPages = 1): MoviesListResult {
+  return {
+    items,
+    pagination: {
+      currentPage,
+      totalItems: items.length * totalPages,
+      totalItemsPerPage: items.length,
+      totalPages,
+    },
+  };
+}
+
+function filters(media: "movie" | "tv", genreId: number, genreName: string): MoviesFiltersResult {
+  return {
+    countries: [{ code: "VN", name: "Vietnam" }],
+    genres: [{ id: genreId, name: genreName, slug: genreName.toLowerCase().replaceAll(" ", "-") }],
+    media,
+    sortOptions: [{ label: "Popular", value: "popular" }],
   };
 }

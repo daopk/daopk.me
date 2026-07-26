@@ -6,12 +6,17 @@ import {
   fetchMoviePerson,
   fetchMovieSeason,
   fetchMovieTrailer,
+  fetchMoviesFilters,
+  fetchMoviesList,
   type MovieDetail,
   type MovieEpisodeDetail,
   type MovieMediaType,
   type MoviePersonDetail,
   type MovieSeasonDetail,
   type MovieTrailerResult,
+  type MoviesFiltersResult,
+  type MoviesListQuery,
+  type MoviesListResult,
 } from "./moviesApi";
 
 export interface MoviesContentRemoteOptions {
@@ -31,6 +36,11 @@ export interface MoviesContentRemote {
     episodeNumber: number,
     options: MoviesContentRemoteOptions,
   ): Promise<MovieEpisodeDetail>;
+  fetchFilters(
+    mediaType: MovieMediaType,
+    options: MoviesContentRemoteOptions,
+  ): Promise<MoviesFiltersResult>;
+  fetchList(query: MoviesListQuery, options: MoviesContentRemoteOptions): Promise<MoviesListResult>;
   fetchPerson(tmdbId: number, options: MoviesContentRemoteOptions): Promise<MoviePersonDetail>;
   fetchSeason(
     tmdbId: number,
@@ -47,6 +57,8 @@ export interface MoviesContentRemote {
 export const moviesContentHttpAdapter: MoviesContentRemote = {
   fetchDetail: fetchMovieDetail,
   fetchEpisode: fetchMovieEpisode,
+  fetchFilters: fetchMoviesFilters,
+  fetchList: fetchMoviesList,
   fetchPerson: fetchMoviePerson,
   fetchSeason: fetchMovieSeason,
   fetchTrailer: fetchMovieTrailer,
@@ -70,6 +82,16 @@ interface InMemoryPerson {
   readonly value: MoviePersonDetail;
 }
 
+interface InMemoryFilters {
+  readonly mediaType: MovieMediaType;
+  readonly value: MoviesFiltersResult;
+}
+
+interface InMemoryList {
+  readonly query: MoviesListQuery;
+  readonly value: MoviesListResult;
+}
+
 interface InMemorySeason {
   readonly seasonNumber: number;
   readonly tmdbId: number;
@@ -85,6 +107,8 @@ interface InMemoryTrailer {
 export interface InMemoryMoviesContent {
   readonly details?: readonly InMemoryDetail[];
   readonly episodes?: readonly InMemoryEpisode[];
+  readonly filters?: readonly InMemoryFilters[];
+  readonly lists?: readonly InMemoryList[];
   readonly people?: readonly InMemoryPerson[];
   readonly seasons?: readonly InMemorySeason[];
   readonly trailers?: readonly InMemoryTrailer[];
@@ -113,6 +137,16 @@ export function createInMemoryMoviesContentAdapter(
         "episode",
       ).value;
     },
+    async fetchFilters(mediaType, options) {
+      assertActive(options.signal);
+      return findContent(content.filters, (entry) => entry.mediaType === mediaType, "filters")
+        .value;
+    },
+    async fetchList(query, options) {
+      assertActive(options.signal);
+      return findContent(content.lists, (entry) => sameMoviesListQuery(entry.query, query), "list")
+        .value;
+    },
     async fetchPerson(tmdbId, options) {
       assertActive(options.signal);
       return findContent(content.people, (entry) => entry.tmdbId === tmdbId, "person").value;
@@ -134,6 +168,25 @@ export function createInMemoryMoviesContentAdapter(
       ).value;
     },
   };
+}
+
+const MOVIES_LIST_QUERY_KEYS = [
+  "country",
+  "countryName",
+  "filterFocus",
+  "genre",
+  "genreName",
+  "kind",
+  "keyword",
+  "limit",
+  "media",
+  "page",
+  "period",
+  "sort",
+] as const satisfies readonly (keyof MoviesListQuery)[];
+
+function sameMoviesListQuery(left: MoviesListQuery, right: MoviesListQuery): boolean {
+  return MOVIES_LIST_QUERY_KEYS.every((key) => left[key] === right[key]);
 }
 
 function assertActive(signal: AbortSignal): void {

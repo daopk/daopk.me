@@ -1,4 +1,4 @@
-import { computed, nextTick, onUnmounted, ref, useTemplateRef, watch, type Ref } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch, type Ref } from "vue";
 
 import {
   catalogMediaOptions,
@@ -6,21 +6,15 @@ import {
   searchMediaTabs as localizedSearchMediaTabs,
 } from "../i18n/labels";
 import { useMoviesI18n } from "../i18n/useMoviesI18n";
+import { useMoviesCatalogContent, type MoviesContentState } from "../moviesContent";
 import {
   DEFAULT_MOVIES_LIST_LIMIT,
-  fetchMoviesFilters,
-  fetchMoviesList,
-  type MovieMediaType,
   type MovieSummary,
   type MoviesFiltersResult,
   type MoviesListQuery,
   type MoviesListSort,
-  type MoviesPagination,
   type MoviesSearchMedia,
 } from "../moviesApi";
-
-type LoadState = "idle" | "loading" | "ready" | "error";
-type FilterLoadState = "idle" | "loading" | "ready" | "error";
 
 const POPULAR_COUNTRY_CODES = [
   "VN",
@@ -52,11 +46,11 @@ export interface UseMoviesListViewBindings {
   readonly activeGenreValue: Ref<string>;
   readonly activeSearchMedia: Ref<MoviesSearchMedia>;
   readonly activeSort: Ref<MoviesListSort>;
-  readonly canLoadMore: Ref<boolean>;
+  readonly canLoadMore: Readonly<Ref<boolean>>;
   readonly catalogMedia: Ref<MoviesSearchMedia>;
   readonly catalogMediaSelectOptions: Ref<ReturnType<typeof catalogMediaOptions>>;
   readonly currentFilters: Ref<MoviesFiltersResult | null>;
-  readonly currentFilterState: Ref<FilterLoadState>;
+  readonly currentFilterState: Readonly<Ref<MoviesContentState>>;
   readonly isSearchList: Ref<boolean>;
   readonly items: Ref<readonly MovieSummary[]>;
   readonly loadingInitial: Ref<boolean>;
@@ -64,7 +58,7 @@ export interface UseMoviesListViewBindings {
   readonly popularCountries: Ref<MoviesFiltersResult["countries"]>;
   readonly searchDraft: Ref<string>;
   readonly searchMediaOptions: Ref<ReturnType<typeof localizedSearchMediaTabs>>;
-  readonly state: Ref<LoadState>;
+  readonly state: Readonly<Ref<MoviesContentState>>;
   readonly t: ReturnType<typeof useMoviesI18n>["t"];
   readonly title: Ref<string>;
   loadMore(): Promise<void>;
@@ -80,25 +74,13 @@ export function useMoviesListView({
   openList,
   query,
 }: UseMoviesListViewOptions): UseMoviesListViewBindings {
-  const { locale, t } = useMoviesI18n();
-  const items = ref<readonly MovieSummary[]>([]);
-  const pagination = ref<MoviesPagination | null>(null);
-  const state = ref<LoadState>("idle");
-  const filtersByMedia = ref<Record<MovieMediaType, MoviesFiltersResult | null>>({
-    movie: null,
-    tv: null,
-  });
-  const filterStateByMedia = ref<Record<MovieMediaType, FilterLoadState>>({
-    movie: "idle",
-    tv: "idle",
-  });
+  const { t } = useMoviesI18n();
+  const resource = useMoviesCatalogContent(() => query.value);
+  const items = computed(() => resource.content.value.items);
+  const currentFilters = computed(() => resource.content.value.filters);
+  const { canLoadMore, filterState: currentFilterState, loadMore, state } = resource;
   const genreSelect = useTemplateRef<SelectHandle>("genreSelect");
   const countrySelect = useTemplateRef<SelectHandle>("countrySelect");
-  let abortController: AbortController | null = null;
-  const filtersAbortControllers: Record<MovieMediaType, AbortController | null> = {
-    movie: null,
-    tv: null,
-  };
 
   const title = computed(() => localizedListTitleForQuery(query.value, t));
   const searchKeyword = computed(() => query.value.keyword?.trim() ?? "");
@@ -108,15 +90,6 @@ export function useMoviesListView({
   const catalogMediaSelectOptions = computed(() => catalogMediaOptions(t));
   const isSearchList = computed(() => searchKeyword.value.length > 0);
   const catalogMedia = computed<MoviesSearchMedia>(() => catalogMediaForQuery(query.value));
-  const combinedFilters = computed<MoviesFiltersResult | null>(() =>
-    combineFilters(filtersByMedia.value.movie, filtersByMedia.value.tv),
-  );
-  const currentFilters = computed(() =>
-    catalogMedia.value === "all" ? combinedFilters.value : filtersByMedia.value[catalogMedia.value],
-  );
-  const currentFilterState = computed<FilterLoadState>(() =>
-    filterStateForCatalogMedia(catalogMedia.value),
-  );
   const activeGenreValue = computed(() => (query.value.genre ?? "").toString());
   const activeCountry = computed(() => query.value.country ?? "");
   const activeSort = computed<MoviesListSort>(() => query.value.sort ?? "popular");
@@ -139,23 +112,6 @@ export function useMoviesListView({
   });
   const loadingInitial = computed(() => state.value === "loading" && items.value.length === 0);
   const loadingMore = computed(() => state.value === "loading" && items.value.length > 0);
-  const canLoadMore = computed(
-    () =>
-      state.value !== "loading" &&
-      pagination.value !== null &&
-      pagination.value.currentPage < pagination.value.totalPages,
-  );
-
-  watch(
-    () => [catalogMedia.value, isSearchList.value] as const,
-    ([media, searching]) => {
-      if (!searching) {
-        void ensureFiltersForCatalogMedia(media);
-      }
-    },
-    { immediate: true },
-  );
-
   watch(
     () => query.value.filterFocus,
     (filterFocus) => {
@@ -172,104 +128,6 @@ export function useMoviesListView({
       searchDraft.value = keyword?.trim() ?? "";
     },
   );
-
-  watch(
-    () => [query.value, locale.value] as const,
-    () => {
-      void loadFirstPage();
-    },
-    { immediate: true, deep: true },
-  );
-
-  onUnmounted(() => {
-    abortController?.abort();
-    filtersAbortControllers.movie?.abort();
-    filtersAbortControllers.tv?.abort();
-  });
-
-  async function ensureFiltersForMedia(media: MovieMediaType): Promise<void> {
-    const state = filterStateByMedia.value[media];
-    if (state === "loading" || state === "ready") {
-      return;
-    }
-
-    filtersAbortControllers[media]?.abort();
-    const filtersAbortController = new AbortController();
-    filtersAbortControllers[media] = filtersAbortController;
-    filterStateByMedia.value = { ...filterStateByMedia.value, [media]: "loading" };
-    try {
-      const filters = await fetchMoviesFilters(media, { signal: filtersAbortController.signal });
-      filtersByMedia.value = { ...filtersByMedia.value, [media]: filters };
-      filterStateByMedia.value = { ...filterStateByMedia.value, [media]: "ready" };
-    } catch {
-      if (!filtersAbortController.signal.aborted) {
-        filterStateByMedia.value = { ...filterStateByMedia.value, [media]: "error" };
-      }
-    }
-  }
-
-  async function ensureFiltersForCatalogMedia(media: MoviesSearchMedia): Promise<void> {
-    if (media === "all") {
-      await Promise.all([ensureFiltersForMedia("movie"), ensureFiltersForMedia("tv")]);
-      return;
-    }
-
-    await ensureFiltersForMedia(media);
-  }
-
-  async function loadFirstPage(): Promise<void> {
-    abortController?.abort();
-    abortController = new AbortController();
-    state.value = "loading";
-    items.value = [];
-
-    try {
-      const result = await fetchMoviesList(
-        {
-          ...query.value,
-          limit: query.value.limit ?? DEFAULT_MOVIES_LIST_LIMIT,
-          page: 1,
-        },
-        { signal: abortController.signal },
-      );
-      items.value = result.items;
-      pagination.value = result.pagination;
-      state.value = "ready";
-    } catch {
-      if (abortController.signal.aborted) {
-        return;
-      }
-      state.value = "error";
-    }
-  }
-
-  async function loadMore(): Promise<void> {
-    if (!canLoadMore.value || pagination.value === null) {
-      return;
-    }
-    abortController?.abort();
-    abortController = new AbortController();
-    state.value = "loading";
-
-    try {
-      const result = await fetchMoviesList(
-        {
-          ...query.value,
-          limit: query.value.limit ?? DEFAULT_MOVIES_LIST_LIMIT,
-          page: pagination.value.currentPage + 1,
-        },
-        { signal: abortController.signal },
-      );
-      items.value = [...items.value, ...result.items];
-      pagination.value = result.pagination;
-      state.value = "ready";
-    } catch {
-      if (abortController.signal.aborted) {
-        return;
-      }
-      state.value = "error";
-    }
-  }
 
   function mediaQuery(media: MoviesSearchMedia): MoviesListQuery {
     if (isSearchList.value) {
@@ -402,54 +260,6 @@ export function useMoviesListView({
       return currentQuery.media;
     }
     return currentQuery.kind === "trending-tv" ? "tv" : "movie";
-  }
-
-  function filterStateForCatalogMedia(media: MoviesSearchMedia): FilterLoadState {
-    if (media !== "all") {
-      return filterStateByMedia.value[media];
-    }
-
-    const states = Object.values(filterStateByMedia.value);
-    if (states.includes("error")) {
-      return "error";
-    }
-    if (states.includes("idle") || states.includes("loading")) {
-      return "loading";
-    }
-    return "ready";
-  }
-
-  function combineFilters(
-    movieFilters: MoviesFiltersResult | null,
-    tvFilters: MoviesFiltersResult | null,
-  ): MoviesFiltersResult | null {
-    if (movieFilters === null && tvFilters === null) {
-      return null;
-    }
-
-    return {
-      countries: uniqueBy(
-        [...(movieFilters?.countries ?? []), ...(tvFilters?.countries ?? [])],
-        (country) => country.code,
-      ),
-      genres: uniqueBy([...(movieFilters?.genres ?? []), ...(tvFilters?.genres ?? [])], (genre) =>
-        String(genre.id),
-      ),
-      media: "movie",
-      sortOptions: movieFilters?.sortOptions ?? tvFilters?.sortOptions ?? [],
-    };
-  }
-
-  function uniqueBy<T>(entries: readonly T[], keyForItem: (item: T) => string): readonly T[] {
-    const seen = new Set<string>();
-    return entries.filter((item) => {
-      const key = keyForItem(item);
-      if (seen.has(key)) {
-        return false;
-      }
-      seen.add(key);
-      return true;
-    });
   }
 
   return {
