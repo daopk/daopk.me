@@ -4,8 +4,10 @@ import { normalizeVfsPath, type VfsStat } from "@daopk/sdk";
 
 import {
   createNoteEditingSession,
+  createNoteEditingSessions,
   NOTES_MIME_TYPE,
   type NoteEditingSession,
+  type NoteEditingSessions,
   type NoteEditingVfsClient,
 } from "./useNoteEditingSession";
 
@@ -73,11 +75,16 @@ function makeVfs(seed: Record<string, string>): FakeVfs {
 
 function createSession(
   vfs: FakeVfs,
-  options: { debounceMs?: number; onPersisted?: ReturnType<typeof vi.fn> } = {},
+  options: {
+    debounceMs?: number;
+    editingSessions?: NoteEditingSessions;
+    onPersisted?: ReturnType<typeof vi.fn>;
+  } = {},
 ): NoteEditingSession {
   const session = createNoteEditingSession({
     vfs,
     ...(options.debounceMs === undefined ? {} : { debounceMs: options.debounceMs }),
+    ...(options.editingSessions === undefined ? {} : { editingSessions: options.editingSessions }),
     ...(options.onPersisted === undefined ? {} : { onPersisted: options.onPersisted }),
   });
   sessions.push(session);
@@ -93,6 +100,87 @@ function deferred<T>() {
 }
 
 describe("useNoteEditingSession", () => {
+  it("shares one draft and autosave pipeline between callers editing the same path", async () => {
+    vi.useFakeTimers();
+    const path = "/home/notes/a.md";
+    const vfs = makeVfs({ [path]: "# Alpha\n\nOld" });
+    const editingSessions = createNoteEditingSessions();
+    const firstPersisted = vi.fn();
+    const secondPersisted = vi.fn();
+    const first = createSession(vfs, {
+      debounceMs: 800,
+      editingSessions,
+      onPersisted: firstPersisted,
+    });
+    const second = createSession(vfs, {
+      debounceMs: 800,
+      editingSessions,
+      onPersisted: secondPersisted,
+    });
+
+    await expect(Promise.all([first.open(path), second.open(path)])).resolves.toEqual([
+      "opened",
+      "opened",
+    ]);
+    expect(vfs.readText).toHaveBeenCalledOnce();
+
+    first.setBody("Shared body");
+    expect(second.body.value).toBe("Shared body");
+    second.setTitle("Shared title");
+    expect(first.title.value).toBe("Shared title");
+
+    await vi.advanceTimersByTimeAsync(800);
+    expect(vfs.writes).toEqual([
+      {
+        path,
+        text: "# Shared title\n\nShared body",
+        options: { overwrite: true, mimeType: NOTES_MIME_TYPE },
+      },
+    ]);
+    expect(firstPersisted).toHaveBeenCalledOnce();
+    expect(secondPersisted).toHaveBeenCalledOnce();
+
+    first.dispose({ flush: false });
+    second.setBody("Still owned by the remaining caller");
+    await vi.advanceTimersByTimeAsync(800);
+
+    expect(vfs.writes.at(-1)?.text).toBe("# Shared title\n\nStill owned by the remaining caller");
+  });
+
+  it("retires a path after a replacement caller leaves during the final save", async () => {
+    const path = "/home/notes/a.md";
+    const vfs = makeVfs({ [path]: "# Alpha\n\nOld" });
+    const pending = deferred<VfsStat>();
+    vi.mocked(vfs.writeText).mockImplementationOnce(
+      async (nextPath: string, text: string, options = {}) => {
+        const normalized = normalizeVfsPath(nextPath);
+        vfs.writes.push({ path: normalized, text, options });
+        const result = await pending.promise;
+        vfs.nodes[normalized] = { text, updatedAt: result.updatedAt };
+        return result;
+      },
+    );
+    const editingSessions = createNoteEditingSessions();
+    const first = createSession(vfs, { editingSessions });
+
+    await first.open(path);
+    first.setBody("Saved while closing");
+    first.dispose();
+
+    const replacement = createSession(vfs, { editingSessions });
+    await expect(replacement.open(path)).resolves.toBe("opened");
+    replacement.dispose({ flush: false });
+
+    pending.resolve(stat(path, { text: "# Alpha\n\nSaved while closing", updatedAt: 11 }));
+    for (let turn = 0; turn < 5; turn += 1) {
+      await Promise.resolve();
+    }
+
+    const reopened = createSession(vfs, { editingSessions });
+    await expect(reopened.open(path)).resolves.toBe("opened");
+    expect(vfs.readText).toHaveBeenCalledTimes(2);
+  });
+
   it("loads and autosaves a note through its interface", async () => {
     vi.useFakeTimers();
     const vfs = makeVfs({ "/home/notes/a.md": "# Alpha\n\nOld" });

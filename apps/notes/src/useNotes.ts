@@ -28,6 +28,7 @@ import {
   NOTES_AUTOSAVE_DEBOUNCE_MS,
   NOTES_MIME_TYPE,
   createNoteEditingSession,
+  type NoteEditingSessions,
   type NoteEditingStatus,
   type NoteEditingVfsClient,
 } from "./useNoteEditingSession";
@@ -60,6 +61,7 @@ export interface UseNotesOptions {
   readonly vfs: NotesVfsClient;
   readonly now?: () => Date;
   readonly debounceMs?: number;
+  readonly editingSessions?: NoteEditingSessions;
 }
 
 export interface UseNotesBindings {
@@ -86,6 +88,7 @@ export function useNotes({
   vfs,
   now = () => new Date(),
   debounceMs = NOTES_AUTOSAVE_DEBOUNCE_MS,
+  editingSessions,
 }: UseNotesOptions): UseNotesBindings {
   const notes = ref<readonly NoteListItem[]>([]);
   const operationStatus = ref<NotesStatus | null>("idle");
@@ -94,6 +97,7 @@ export function useNotes({
   const editing = createNoteEditingSession({
     vfs,
     debounceMs,
+    ...(editingSessions === undefined ? {} : { editingSessions }),
     onPersisted: ({ path, source, stat }) => {
       notes.value = sortNotes(
         upsertNote(notes.value, noteItemFromStat(stat, parseNoteSource(source, path).title)),

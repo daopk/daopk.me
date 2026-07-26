@@ -31,6 +31,7 @@ import {
   type NoteListItem,
   type NotesStatus,
 } from "./useNotes";
+import { useNoteEditingSessions } from "./useNoteEditingSession";
 import { usePinnedDesktopNotes } from "./usePinnedDesktopNotes";
 
 const COMPACT_BREAKPOINT = 620;
@@ -44,6 +45,7 @@ const appContext = inject(AppContextInjectionKey, null);
 const vfs = useVfs();
 const toast = useToast();
 const pinnedNotes = usePinnedDesktopNotes();
+const editingSessions = useNoteEditingSessions();
 const notes = useNotes({
   vfs: {
     ...vfs,
@@ -52,6 +54,7 @@ const notes = useNotes({
         ? Promise.resolve(null)
         : kernel.trash.moveToTrash(path, { handleId: appContext.handleId }),
   },
+  editingSessions,
 });
 const rootRef = useTemplateRef<AppFrameRef>("rootRef");
 const rootElement = computed(() => rootRef.value?.element ?? null);
