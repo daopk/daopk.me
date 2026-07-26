@@ -84,14 +84,21 @@ vi.mock("./Window.vue", () => ({
     (props: { record: WindowRecord }, { emit }) => {
       onMounted(() => {
         const windowId = props.record.id;
-        emit("focus:window", windowId);
+        emit("frame:outcome", { type: "focus-window", windowId });
         emit("close:window", windowId);
-        emit("move:window", windowId, 10, 20);
-        emit("resize:window", windowId, 10, 20, 640, 480);
+        emit("frame:outcome", { type: "move-window", windowId, x: 10, y: 20 });
+        emit("frame:outcome", {
+          type: "resize-window",
+          windowId,
+          x: 10,
+          y: 20,
+          width: 640,
+          height: 480,
+        });
         emit("maximize:window", windowId);
         emit("minimize:window", windowId);
-        emit("snap:window", windowId, "left");
-        emit("snap-intent:window", windowId, "right");
+        emit("frame:outcome", { type: "snap-window", windowId, edge: "left" });
+        emit("frame:outcome", { type: "preview-snap", windowId, edge: "right" });
         emit("title:window", windowId, "Updated");
         emit("content-size:window", windowId, { width: 600, height: 400 });
       });
@@ -104,14 +111,10 @@ vi.mock("./Window.vue", () => ({
     {
       props: ["record", "stageBounds", "stageOffset"] as never,
       emits: [
-        "focus:window",
+        "frame:outcome",
         "close:window",
-        "move:window",
-        "resize:window",
         "maximize:window",
         "minimize:window",
-        "snap:window",
-        "snap-intent:window",
         "title:window",
         "content-size:window",
       ],

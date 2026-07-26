@@ -48,19 +48,10 @@ useShellBrowserChromeSync(browserPath, browserTitle);
         :record="record"
         :stage-bounds="stage.stageBounds"
         :stage-offset="stage.stageOffset.value"
-        @focus:window="(windowId) => session.send({ type: 'focus-window', windowId })"
+        @frame:outcome="session.send"
         @close:window="(windowId) => session.send({ type: 'close-window', windowId })"
-        @move:window="(windowId, x, y) => session.send({ type: 'move-window', windowId, x, y })"
-        @resize:window="
-          (windowId, x, y, width, height) =>
-            session.send({ type: 'resize-window', windowId, x, y, width, height })
-        "
         @maximize:window="(windowId) => session.send({ type: 'toggle-maximize', windowId })"
         @minimize:window="(windowId) => session.send({ type: 'minimize-window', windowId })"
-        @snap:window="(windowId, edge) => session.send({ type: 'snap-window', windowId, edge })"
-        @snap-intent:window="
-          (windowId, edge) => session.send({ type: 'preview-snap', windowId, edge })
-        "
         @title:window="(windowId, title) => session.send({ type: 'set-title', windowId, title })"
         @content-size:window="
           (windowId, size) => session.send({ type: 'report-content-size', windowId, size })

@@ -19,9 +19,9 @@ import { useKernel } from "~/composables/useKernel";
 import { hasAppSettings } from "~/core/apps/appSettings";
 import type { AppChromeContentSize, AppChromeController } from "~/types/app";
 import AppMount from "~/shells/shared/AppMount.vue";
-import { type SnapEdge, type WindowRecord } from "./useWindowManager";
+import type { WindowRecord } from "./useWindowManager";
 import { useWindowFocusScope } from "./useWindowFocusScope";
-import { useWindowFrameInteractions } from "./useWindowFrameInteractions";
+import { useWindowFrameInteractions, type WindowFrameOutcome } from "./useWindowFrameInteractions";
 
 const props = defineProps<{
   record: WindowRecord;
@@ -30,14 +30,10 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  "focus:window": [id: string];
+  "frame:outcome": [outcome: WindowFrameOutcome];
   "close:window": [id: string];
-  "move:window": [id: string, x: number, y: number];
-  "resize:window": [id: string, x: number, y: number, width: number, height: number];
   "maximize:window": [id: string];
   "minimize:window": [id: string];
-  "snap:window": [id: string, edge: SnapEdge];
-  "snap-intent:window": [id: string, edge: SnapEdge | null];
   "title:window": [id: string, title: string];
   "content-size:window": [id: string, size: AppChromeContentSize | null];
 }>();
@@ -57,19 +53,20 @@ const { activate: activateWindowFocusScope } = useWindowFocusScope({
   windowRef,
   overlayRef,
   getRecord: () => props.record,
-  onFocusRequest: (id) => emit("focus:window", id),
+  onFocusRequest: (windowId) => emit("frame:outcome", { type: "focus-window", windowId }),
 });
 
-const { dragging, resizing, drag, resizeDirections, resizeHandlers } = useWindowFrameInteractions({
-  getRecord: () => props.record,
-  getStageBounds: () => props.stageBounds,
-  getStageOffset: () => props.stageOffset,
-  onFocus: activateWindowFocusScope,
-  onMove: (id, x, y) => emit("move:window", id, x, y),
-  onResize: (id, x, y, width, height) => emit("resize:window", id, x, y, width, height),
-  onSnap: (id, edge) => emit("snap:window", id, edge),
-  onSnapIntent: (id, edge) => emit("snap-intent:window", id, edge),
-});
+const { dragging, resizing, resizeDirections, startDrag, startResize } = useWindowFrameInteractions(
+  {
+    read: () => ({
+      window: props.record,
+      stageBounds: props.stageBounds,
+      stageOffset: props.stageOffset,
+    }),
+    focus: activateWindowFocusScope,
+    publish: (outcome) => emit("frame:outcome", outcome),
+  },
+);
 
 const style = computed<Record<string, string>>(() => ({
   left: `${props.record.x.toString()}px`,
@@ -167,7 +164,7 @@ function dispatchWindowCommand(id: string): void {
           <header
             class="window__titlebar"
             :class="{ 'window__titlebar--locked': record.maximized }"
-            @pointerdown="record.maximized ? null : drag.onPointerDown($event)"
+            @pointerdown="record.maximized ? null : startDrag($event)"
             @dblclick="onMaximize"
           >
             <AppIcon
@@ -251,7 +248,7 @@ function dispatchWindowCommand(id: string): void {
           :key="direction"
           :class="['window__handle', `window__handle--${direction}`]"
           :data-direction="direction"
-          @pointerdown="resizeHandlers[direction]($event)"
+          @pointerdown="startResize(direction, $event)"
         />
       </template>
     </TeleportProvider>

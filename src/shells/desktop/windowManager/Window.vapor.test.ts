@@ -325,7 +325,9 @@ describe("Window", () => {
     const selected = wrapper.get<HTMLButtonElement>("[data-app-focus-first]").element;
     selected.focus();
 
-    expect(wrapper.emitted("focus:window")).toEqual([["window-1"]]);
+    expect(wrapper.emitted("frame:outcome")).toEqual([
+      [{ type: "focus-window", windowId: "window-1" }],
+    ]);
     expect(document.activeElement).toBe(selected);
   });
 

@@ -36,6 +36,7 @@ import {
   type StageSize,
   type WindowRecord,
 } from "./useWindowManager";
+import type { WindowFrameOutcome } from "./useWindowFrameInteractions";
 
 export interface DesktopWindowStageAdapter {
   readonly stageBounds: StageSize;
@@ -68,6 +69,7 @@ export interface DesktopWindowSessionState {
 }
 
 export type DesktopWindowSessionIntent =
+  | WindowFrameOutcome
   | {
       readonly type: "launch-app";
       readonly manifestId: string;
@@ -80,30 +82,9 @@ export type DesktopWindowSessionIntent =
       readonly args?: Readonly<Record<string, unknown>>;
     }
   | { readonly type: "open-request"; readonly request: ShellOpenRequest }
-  | { readonly type: "focus-window"; readonly windowId: string }
   | { readonly type: "close-window"; readonly windowId: string }
-  | {
-      readonly type: "move-window";
-      readonly windowId: string;
-      readonly x: number;
-      readonly y: number;
-    }
-  | {
-      readonly type: "resize-window";
-      readonly windowId: string;
-      readonly x: number;
-      readonly y: number;
-      readonly width: number;
-      readonly height: number;
-    }
   | { readonly type: "toggle-maximize"; readonly windowId: string }
   | { readonly type: "minimize-window"; readonly windowId: string }
-  | { readonly type: "snap-window"; readonly windowId: string; readonly edge: SnapEdge }
-  | {
-      readonly type: "preview-snap";
-      readonly windowId: string;
-      readonly edge: SnapEdge | null;
-    }
   | {
       readonly type: "set-title";
       readonly windowId: string;

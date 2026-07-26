@@ -1,13 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { effectScope } from "vue";
 
-import type { WindowRecord } from "./useWindowManager";
-import { useWindowFrameInteractions } from "./useWindowFrameInteractions";
+import {
+  useWindowFrameInteractions,
+  type WindowFrameOutcome,
+  type WindowFrameResizeDirection,
+  type WindowFrameSnapshot,
+} from "./useWindowFrameInteractions";
 
 interface FakePointerEventInit {
   readonly button?: number;
   readonly clientX?: number;
   readonly clientY?: number;
   readonly pointerId?: number;
+}
+
+interface HarnessOptions {
+  readonly window?: Partial<WindowFrameSnapshot["window"]>;
+  readonly stageBounds?: WindowFrameSnapshot["stageBounds"];
+  readonly stageOffset?: WindowFrameSnapshot["stageOffset"];
 }
 
 function fakePointerEvent(type: string, init: FakePointerEventInit = {}): PointerEvent {
@@ -24,120 +35,251 @@ function fakePointerEvent(type: string, init: FakePointerEventInit = {}): Pointe
 
 function pointerDown(
   element: HTMLElement,
-  handler: (event: PointerEvent) => void,
+  start: (event: PointerEvent) => void,
   init: FakePointerEventInit = {},
 ): void {
   const event = fakePointerEvent("pointerdown", init);
   Object.defineProperty(event, "currentTarget", { value: element });
-  handler(event);
+  start(event);
 }
 
-function makeRecord(overrides: Partial<WindowRecord> = {}): WindowRecord {
-  return {
-    id: "window-1",
-    manifestId: "notes",
-    handleId: "handle-1",
-    title: "Notes",
-    x: 100,
-    y: 80,
-    width: 300,
-    height: 240,
-    minWidth: 240,
-    minHeight: 160,
-    z: 101,
-    focused: true,
-    singleton: false,
-    maximized: false,
-    minimized: false,
-    argsRevision: 0,
-    ...overrides,
+function createHarness(options: HarnessOptions = {}) {
+  const element = document.createElement("div");
+  document.body.appendChild(element);
+  const snapshot: WindowFrameSnapshot = {
+    window: {
+      id: "window-1",
+      x: 100,
+      y: 80,
+      width: 300,
+      height: 240,
+      maximized: false,
+      ...options.window,
+    },
+    stageBounds: options.stageBounds ?? { width: 500, height: 400 },
+    stageOffset: options.stageOffset,
   };
+  const outcomes: WindowFrameOutcome[] = [];
+  const focus = vi.fn();
+  const interactions = useWindowFrameInteractions({
+    read: () => snapshot,
+    focus,
+    publish: (outcome) => outcomes.push(outcome),
+  });
+
+  return { element, focus, interactions, outcomes, snapshot };
 }
 
 afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("useWindowFrameInteractions", () => {
-  it("clamps drag output, reports snap intent, and commits the pending snap", () => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    const record = makeRecord();
-    const onFocus = vi.fn();
-    const onMove = vi.fn();
-    const onSnap = vi.fn();
-    const onSnapIntent = vi.fn();
-    const interactions = useWindowFrameInteractions({
-      getRecord: () => record,
-      getStageBounds: () => ({ width: 500, height: 400 }),
-      getStageOffset: () => ({ x: 10, y: 20 }),
-      onFocus,
-      onMove,
-      onResize: vi.fn(),
-      onSnap,
-      onSnapIntent,
+describe("window frame interaction seam", () => {
+  it("owns the complete drag, clamp, snap-preview, and snap-commit lifecycle", () => {
+    const { element, focus, interactions, outcomes } = createHarness({
+      stageOffset: { x: 10, y: 20 },
     });
 
-    pointerDown(element, interactions.drag.onPointerDown, { clientX: 110, clientY: 100 });
+    pointerDown(element, interactions.startDrag, { clientX: 110, clientY: 100 });
 
     expect(interactions.dragging.value).toBe(true);
-    expect(onFocus).toHaveBeenCalledOnce();
+    expect(focus).toHaveBeenCalledOnce();
 
     element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 1_000, clientY: 1_000 }));
 
-    expect(onMove).toHaveBeenLastCalledWith("window-1", 440, 372);
-    expect(onSnapIntent).toHaveBeenLastCalledWith("window-1", "right");
+    expect(outcomes).toEqual([
+      { type: "move-window", windowId: "window-1", x: 440, y: 372 },
+      { type: "preview-snap", windowId: "window-1", edge: "right" },
+    ]);
 
     element.dispatchEvent(fakePointerEvent("pointerup"));
 
     expect(interactions.dragging.value).toBe(false);
-    expect(onSnapIntent).toHaveBeenLastCalledWith("window-1", null);
-    expect(onSnap).toHaveBeenCalledWith("window-1", "right");
+    expect(outcomes).toEqual([
+      { type: "move-window", windowId: "window-1", x: 440, y: 372 },
+      { type: "preview-snap", windowId: "window-1", edge: "right" },
+      { type: "preview-snap", windowId: "window-1", edge: null },
+      { type: "snap-window", windowId: "window-1", edge: "right" },
+    ]);
   });
 
-  it("clamps resize bounds to the stage and exposes resize lifecycle state", () => {
-    const element = document.createElement("div");
-    document.body.appendChild(element);
-    const record = makeRecord();
-    const onFocus = vi.fn();
-    const onResize = vi.fn();
-    const interactions = useWindowFrameInteractions({
-      getRecord: () => record,
-      getStageBounds: () => ({ width: 500, height: 400 }),
-      getStageOffset: () => undefined,
-      onFocus,
-      onMove: vi.fn(),
-      onResize,
-      onSnap: vi.fn(),
-      onSnapIntent: vi.fn(),
-    });
+  it.each([
+    {
+      name: "keeps the titlebar visible past the left edge",
+      window: {},
+      stageBounds: { width: 500, height: 400 },
+      move: { clientX: -1_000, clientY: 100 },
+      expected: { x: -240, y: 80 },
+    },
+    {
+      name: "keeps a narrow window at the left edge",
+      window: { width: 40 },
+      stageBounds: { width: 500, height: 400 },
+      move: { clientX: -1_000, clientY: 100 },
+      expected: { x: 0, y: 80 },
+    },
+    {
+      name: "keeps the titlebar inside the vertical stage band",
+      window: {},
+      stageBounds: { width: 500, height: 400 },
+      move: { clientX: 110, clientY: 1_000 },
+      expected: { x: 100, y: 372 },
+    },
+    {
+      name: "passes through coordinates before the stage is measured",
+      window: {},
+      stageBounds: { width: 0, height: 0 },
+      move: { clientX: -490, clientY: -180 },
+      expected: { x: -500, y: -200 },
+    },
+  ])("$name", ({ window, stageBounds, move, expected }) => {
+    const { element, interactions, outcomes } = createHarness({ window, stageBounds });
 
-    pointerDown(element, interactions.resizeHandlers.nw);
+    pointerDown(element, interactions.startDrag, { clientX: 110, clientY: 100 });
+    element.dispatchEvent(fakePointerEvent("pointermove", move));
+
+    expect(outcomes).toContainEqual({
+      type: "move-window",
+      windowId: "window-1",
+      ...expected,
+    });
+  });
+
+  it("clamps resize bounds and exposes only the gesture lifecycle state", () => {
+    const { element, focus, interactions, outcomes } = createHarness();
+
+    pointerDown(element, (event) => interactions.startResize("nw", event));
 
     expect(interactions.resizing.value).toBe(true);
-    expect(onFocus).toHaveBeenCalledOnce();
+    expect(focus).toHaveBeenCalledOnce();
 
     element.dispatchEvent(fakePointerEvent("pointermove", { clientX: -200, clientY: -200 }));
 
-    expect(onResize).toHaveBeenCalledWith("window-1", 0, 0, 400, 320);
+    expect(outcomes).toEqual([
+      {
+        type: "resize-window",
+        windowId: "window-1",
+        x: 0,
+        y: 0,
+        width: 400,
+        height: 320,
+      },
+    ]);
 
     element.dispatchEvent(fakePointerEvent("pointerup"));
     expect(interactions.resizing.value).toBe(false);
   });
 
-  it("provides all eight frame resize directions", () => {
-    const interactions = useWindowFrameInteractions({
-      getRecord: () => makeRecord(),
-      getStageBounds: () => ({ width: 500, height: 400 }),
-      getStageOffset: () => undefined,
-      onFocus: vi.fn(),
-      onMove: vi.fn(),
-      onResize: vi.fn(),
-      onSnap: vi.fn(),
-      onSnapIntent: vi.fn(),
+  it.each<{
+    direction: WindowFrameResizeDirection;
+    delta: { clientX: number; clientY: number };
+    expected: { x: number; y: number; width: number; height: number };
+  }>([
+    {
+      direction: "e",
+      delta: { clientX: 50, clientY: 999 },
+      expected: { x: 100, y: 80, width: 450, height: 300 },
+    },
+    {
+      direction: "s",
+      delta: { clientX: 999, clientY: 70 },
+      expected: { x: 100, y: 80, width: 400, height: 370 },
+    },
+    {
+      direction: "w",
+      delta: { clientX: -40, clientY: 0 },
+      expected: { x: 60, y: 80, width: 440, height: 300 },
+    },
+    {
+      direction: "n",
+      delta: { clientX: 0, clientY: -30 },
+      expected: { x: 100, y: 50, width: 400, height: 330 },
+    },
+    {
+      direction: "se",
+      delta: { clientX: 25, clientY: 15 },
+      expected: { x: 100, y: 80, width: 425, height: 315 },
+    },
+    {
+      direction: "nw",
+      delta: { clientX: -20, clientY: -10 },
+      expected: { x: 80, y: 70, width: 420, height: 310 },
+    },
+    {
+      direction: "ne",
+      delta: { clientX: 30, clientY: -20 },
+      expected: { x: 100, y: 60, width: 430, height: 320 },
+    },
+    {
+      direction: "sw",
+      delta: { clientX: -15, clientY: 25 },
+      expected: { x: 85, y: 80, width: 415, height: 325 },
+    },
+  ])("calculates $direction resize outcomes", ({ direction, delta, expected }) => {
+    const { element, interactions, outcomes } = createHarness({
+      window: { width: 400, height: 300 },
+      stageBounds: { width: 2_000, height: 2_000 },
     });
 
+    pointerDown(element, (event) => interactions.startResize(direction, event));
+    element.dispatchEvent(fakePointerEvent("pointermove", delta));
+
+    expect(outcomes).toEqual([{ type: "resize-window", windowId: "window-1", ...expected }]);
+  });
+
+  it("ignores non-primary pointer starts", () => {
+    const { element, focus, interactions, outcomes } = createHarness();
+
+    pointerDown(element, interactions.startDrag, { button: 2 });
+    pointerDown(element, (event) => interactions.startResize("e", event), { button: 2 });
+
+    expect(interactions.dragging.value).toBe(false);
+    expect(interactions.resizing.value).toBe(false);
+    expect(focus).not.toHaveBeenCalled();
+    expect(outcomes).toEqual([]);
+  });
+
+  it("cancels drag without committing snap and detaches pointer listeners", () => {
+    const { element, interactions, outcomes } = createHarness();
+
+    pointerDown(element, interactions.startDrag, { clientX: 110, clientY: 100 });
+    element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 499, clientY: 100 }));
+    element.dispatchEvent(fakePointerEvent("pointercancel"));
+
+    expect(interactions.dragging.value).toBe(false);
+    expect(outcomes).toContainEqual({
+      type: "preview-snap",
+      windowId: "window-1",
+      edge: null,
+    });
+    expect(outcomes.some((outcome) => outcome.type === "snap-window")).toBe(false);
+
+    const outcomeCount = outcomes.length;
+    element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 200, clientY: 200 }));
+    expect(outcomes).toHaveLength(outcomeCount);
+  });
+
+  it("cancels an active gesture when its Vue scope is disposed", () => {
+    const scope = effectScope();
+    const { element, interactions, outcomes } = scope.run(() => createHarness())!;
+
+    pointerDown(element, interactions.startDrag, { clientX: 110, clientY: 100 });
+    element.dispatchEvent(fakePointerEvent("pointermove", { clientX: 499, clientY: 100 }));
+
+    scope.stop();
+
+    expect(interactions.dragging.value).toBe(false);
+    expect(outcomes.at(-1)).toEqual({
+      type: "preview-snap",
+      windowId: "window-1",
+      edge: null,
+    });
+    expect(outcomes.some((outcome) => outcome.type === "snap-window")).toBe(false);
+  });
+
+  it("exposes all eight resize handles through the frame seam", () => {
+    const { interactions } = createHarness();
+
     expect(interactions.resizeDirections).toEqual(["n", "s", "e", "w", "ne", "nw", "se", "sw"]);
-    expect(Object.keys(interactions.resizeHandlers)).toEqual(interactions.resizeDirections);
   });
 });
