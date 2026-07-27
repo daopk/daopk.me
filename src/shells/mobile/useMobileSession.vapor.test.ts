@@ -5,6 +5,7 @@ import { defineVaporComponent, nextTick } from "vue";
 import type { AppHandle, AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
+import { useMobileManifestProjection } from "./useMobileManifestProjection";
 import { useMobileSession, type MobileSessionAdapters } from "./useMobileSession";
 
 const StubIcon = defineVaporComponent(() =>
@@ -101,17 +102,19 @@ function makeKernel(
 
 function mountSession(
   kernel: Kernel,
-  overrides: Partial<Omit<MobileSessionAdapters, "kernel">> = {},
+  overrides: Partial<Omit<MobileSessionAdapters, "kernel" | "manifests">> = {},
 ) {
-  const adapters: MobileSessionAdapters = {
-    kernel,
-    titleFor: (manifestId) =>
-      kernel.apps.list().find((entry) => entry.id === manifestId)?.name ?? manifestId,
-    notifyUnsupported: vi.fn(),
-    restoreHomeFocus: vi.fn(),
-    ...overrides,
-  };
-  const mounted = mountVaporComposable(() => useMobileSession(adapters));
+  let adapters!: MobileSessionAdapters;
+  const mounted = mountVaporComposable(() => {
+    adapters = {
+      kernel,
+      manifests: useMobileManifestProjection(kernel),
+      notifyUnsupported: vi.fn(),
+      restoreHomeFocus: vi.fn(),
+      ...overrides,
+    };
+    return useMobileSession(adapters);
+  });
   return { ...mounted, adapters };
 }
 
@@ -210,7 +213,15 @@ describe("mobile session", () => {
     mounted.result.send({ type: "launch-app", manifestId: unsupported.id });
 
     expect(launch).not.toHaveBeenCalled();
-    expect(notifyUnsupported).toHaveBeenCalledWith(unsupported);
+    expect(notifyUnsupported).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: unsupported.id,
+        name: unsupported.name,
+        supported: false,
+        unsupportedMessage:
+          "Desktop Tool is not supported on mobile. Open it from the desktop shell.",
+      }),
+    );
     expect(mounted.result.state.value.frames).toHaveLength(0);
 
     mounted.unmount();

@@ -4,7 +4,6 @@ import Layers2 from "~icons/lucide/layers-2";
 import Minimize2 from "~icons/lucide/minimize-2";
 import { computed, nextTick, onMounted, provide, ref, shallowRef, watch } from "vue";
 
-import { useKernel } from "~/composables/useKernel";
 import { useEdgeSwipe } from "~/composables/useEdgeSwipe";
 import { IconButton } from "~/components/ui";
 
@@ -16,11 +15,13 @@ import {
   type AppChromeTitlebarVisibility,
 } from "~/types/app";
 import type { NavigationFrame } from "./useMobileSession";
+import type { MobileManifest } from "./useMobileManifestProjection";
 
 const props = withDefaults(
   defineProps<{
     frame: NavigationFrame;
-    title: string;
+    manifest?: MobileManifest | null;
+    title?: string;
     /**
      * Whether this AppView is the user-interacting surface. Drives
      * `aria-current`, `inert`, `tabindex` on chrome buttons, and the
@@ -32,6 +33,8 @@ const props = withDefaults(
     isForegroundFrame?: boolean;
   }>(),
   {
+    manifest: null,
+    title: undefined,
     isForegroundFrame: undefined,
   },
 );
@@ -44,28 +47,26 @@ const emit = defineEmits<{
   (e: "title:frame", handleId: string, manifestId: string, title: string | null): void;
 }>();
 
-const kernel = useKernel();
 const surface = ref<HTMLElement | null>(null);
 const chromeTitle = ref<string | null>(null);
 const chromeBackAction = shallowRef<AppChromeBackAction | null>(null);
 const chromeTitlebar = ref<AppChromeTitlebarVisibility | null>(null);
 
-const manifest = computed(() =>
-  kernel.apps.list().find((entry) => entry.id === props.frame.manifestId),
-);
 const animateForeground = computed<boolean>(() =>
   props.isForegroundFrame === undefined ? props.isCurrent : props.isForegroundFrame,
 );
-const displayTitle = computed(() => chromeTitle.value ?? props.title);
+const displayTitle = computed(
+  () => chromeTitle.value ?? props.manifest?.name ?? props.title ?? props.frame.manifestId,
+);
 const backAriaLabel = computed(() => chromeBackAction.value?.ariaLabel ?? "Back to home");
 const manifestTitlebar = computed<AppChromeTitlebarVisibility>(
-  () => manifest.value?.chrome?.mobile?.titlebar ?? "visible",
+  () => props.manifest?.chrome.titlebar ?? "visible",
 );
 const resolvedTitlebar = computed<AppChromeTitlebarVisibility>(
   () => chromeTitlebar.value ?? manifestTitlebar.value,
 );
 const showTitlebar = computed(() => resolvedTitlebar.value !== "hidden");
-const edgeSwipeEnabled = computed(() => manifest.value?.chrome?.mobile?.edgeSwipe !== "disabled");
+const edgeSwipeEnabled = computed(() => props.manifest?.chrome.edgeSwipe !== "disabled");
 const edgeSwipeSurface = ref<HTMLElement | null>(null);
 
 provide(AppChromeInjectionKey, {

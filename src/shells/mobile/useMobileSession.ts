@@ -10,8 +10,6 @@ import {
   type DeepReadonly,
 } from "vue";
 
-import { hasAppSettings } from "~/core/apps/appSettings";
-import { appSupportsShell } from "~/core/apps/shellSupport";
 import { debugWarn } from "~/core/debug";
 import {
   appBrowserTitle,
@@ -31,7 +29,6 @@ import {
   type AppSurfaceRecord,
 } from "~/shells/shared/appSurface";
 import { useShellAppEventBridge } from "~/shells/shared/useShellAppEventBridge";
-import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 import {
@@ -40,6 +37,7 @@ import {
   registerMobileSessionHandleOwner,
   waitForMobileSessionHandleClaims,
 } from "./mobileSessionHandleOwnership";
+import type { MobileManifest, MobileManifestProjection } from "./useMobileManifestProjection";
 
 export interface NavigationFrame extends AppSurfaceRecord {
   readonly frameId: string;
@@ -89,8 +87,8 @@ export interface MobileSession {
 
 export interface MobileSessionAdapters {
   readonly kernel: Kernel;
-  readonly titleFor: (manifestId: string) => string;
-  readonly notifyUnsupported: (manifest: AppManifest) => void;
+  readonly manifests: MobileManifestProjection;
+  readonly notifyUnsupported: (manifest: MobileManifest) => void;
   readonly restoreHomeFocus: (manifestId: string) => void;
 }
 
@@ -100,7 +98,7 @@ export interface MobileSessionAdapters {
  * recents, process navigation, open requests, and focus restoration stay here.
  */
 export function useMobileSession(adapters: MobileSessionAdapters): MobileSession {
-  const { kernel, notifyUnsupported, restoreHomeFocus, titleFor } = adapters;
+  const { kernel, manifests, notifyUnsupported, restoreHomeFocus } = adapters;
 
   const frames = reactive<NavigationFrame[]>([]);
   const publishedFrames = readonly(frames) as DeepReadonly<NavigationFrame[]>;
@@ -114,10 +112,6 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
   const releasePendingHandleClaims = new Set<() => void>();
   let launchChain: Promise<unknown> = Promise.resolve();
   let disposed = false;
-
-  function manifestFor(manifestId: string): AppManifest | null {
-    return kernel.apps.list().find((manifest) => manifest.id === manifestId) ?? null;
-  }
 
   function beginHandleClaim(manifestId: string): () => void {
     const unregister = registerMobileSessionHandleClaim(kernel, manifestId);
@@ -169,7 +163,7 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
     if (disposed) {
       // A replacement may have synchronously claimed this singleton launch but
       // not published its frame yet. Let every live claim settle before reaping.
-      if (manifestFor(manifestId)?.singleton === true) {
+      if (manifests.find(manifestId)?.singleton === true) {
         await waitForMobileSessionHandleClaims(kernel, manifestId);
       }
       killHandleIfUnowned(handle.id, "shell", "late launch teardown");
@@ -332,7 +326,9 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
       browserTitle:
         frame === null
           ? DEFAULT_BROWSER_TITLE
-          : appBrowserTitle(frame.title ?? titleFor(frame.manifestId)),
+          : appBrowserTitle(
+              frame.title ?? manifests.find(frame.manifestId)?.name ?? frame.manifestId,
+            ),
     };
   });
 
@@ -356,13 +352,12 @@ export function useMobileSession(adapters: MobileSessionAdapters): MobileSession
   }
 
   function manifestHasSettings(manifestId: string): boolean {
-    const manifest = manifestFor(manifestId);
-    return manifest !== null && hasAppSettings(manifest);
+    return manifests.find(manifestId)?.hasSettings ?? false;
   }
 
-  function unsupportedManifestFor(manifestId: string): AppManifest | null {
-    const manifest = manifestFor(manifestId);
-    if (!manifest || appSupportsShell(manifest, "mobile")) {
+  function unsupportedManifestFor(manifestId: string): MobileManifest | null {
+    const manifest = manifests.find(manifestId);
+    if (!manifest || manifest.supported) {
       return null;
     }
     return manifest;

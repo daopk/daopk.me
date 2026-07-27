@@ -5,30 +5,30 @@ import Wallpaper from "~/components/wallpaper/Wallpaper.vue";
 import { useToast } from "~/components/ui";
 import { useKernel } from "~/composables/useKernel";
 import { useWallpaperLabelContrast } from "~/composables/useWallpaperLabelContrast";
-import { appUnsupportedShellMessage } from "~/core/apps/shellSupport";
 import { useShellBrowserChromeSync } from "~/shells/shared/useShellBrowserChromeSync";
-import type { AppManifest } from "~/types/app";
 
 import AppSwitcher from "./appSwitcher/AppSwitcher.vue";
 import AppView from "./AppView.vue";
 import HomeScreen from "./homeScreen/HomeScreen.vue";
 import MobilePermissionPromptHost from "./permissionPrompt/MobilePermissionPromptHost.vue";
 import MobileSpotlightHost from "./spotlight/MobileSpotlightHost.vue";
-import { useAppViewTitle } from "./useAppViewTitle";
+import { useMobileManifestProjection, type MobileManifest } from "./useMobileManifestProjection";
 import { useMobileSession } from "./useMobileSession";
 
 const kernel = useKernel();
 const toast = useToast();
-const { titleFor } = useAppViewTitle();
+const manifests = useMobileManifestProjection(kernel);
+const allManifests = manifests.all;
+const launcherManifests = manifests.launcher;
 const homeLabelContrastStyle = useWallpaperLabelContrast("mobile");
 
 const session = useMobileSession({
   kernel,
-  titleFor,
-  notifyUnsupported(manifest: AppManifest): void {
+  manifests,
+  notifyUnsupported(manifest: MobileManifest): void {
     toast.warning({
       title: "Not available on mobile",
-      description: appUnsupportedShellMessage(manifest, "mobile"),
+      description: manifest.unsupportedMessage ?? `${manifest.name} is not available on mobile.`,
     });
   },
   restoreHomeFocus(manifestId: string): void {
@@ -125,6 +125,7 @@ function onFrameTitle(handleId: string, manifestId: string, title: string | null
     <div class="mobile-shell__body">
       <HomeScreen
         ref="homeRef"
+        :manifests="launcherManifests"
         :aria-hidden="!mobile.homeVisible"
         :inert="!mobile.homeVisible"
         :recents-available="mobile.recentsAvailable"
@@ -137,7 +138,7 @@ function onFrameTitle(handleId: string, manifestId: string, title: string | null
           v-for="frame in mobile.frames"
           :key="frame.frameId"
           :frame="frame"
-          :title="titleFor(frame.manifestId)"
+          :manifest="manifests.find(frame.manifestId)"
           :is-current="frame.frameId === mobile.foregroundFrameId && !mobile.recentsVisible"
           :is-foreground-frame="frame.frameId === mobile.foregroundFrameId"
           @back="goHome"
@@ -151,6 +152,7 @@ function onFrameTitle(handleId: string, manifestId: string, title: string | null
         <AppSwitcher
           v-if="mobile.recentsVisible"
           :frames="mobile.frames"
+          :manifests="allManifests"
           @close="closeRecents"
           @select="onSelect"
           @dismiss="onDismiss"

@@ -1,4 +1,4 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import { mountVaporTest } from "~/test/mountVapor";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, nextTick } from "vue";
@@ -6,6 +6,7 @@ import { defineVaporComponent, nextTick } from "vue";
 import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
+import type { MobileManifest } from "../useMobileManifestProjection";
 import HomeScreen from "./HomeScreen.vue";
 
 vi.mock("~/composables/useReducedMotion", () => ({
@@ -67,6 +68,35 @@ function makeKernel(manifests: AppManifest[]): Pick<Kernel, "apps" | "widgets" |
   };
 }
 
+function projectManifest(manifest: AppManifest): MobileManifest {
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    icon: manifest.icon,
+    singleton: manifest.singleton === true,
+    hasSettings: manifest.settings !== undefined,
+    supported: manifest.supportedShells?.includes("mobile") ?? true,
+    unsupportedMessage: null,
+    chrome: {
+      titlebar: manifest.chrome?.mobile?.titlebar ?? "visible",
+      edgeSwipe: manifest.chrome?.mobile?.edgeSwipe ?? "enabled",
+    },
+  };
+}
+
+function mount(
+  component: typeof HomeScreen,
+  options?: Parameters<typeof mountVaporTest>[1],
+): ReturnType<typeof mountVaporTest> {
+  return mountVaporTest(component, {
+    ...options,
+    props: {
+      manifests: currentKernel.apps.list().map(projectManifest),
+      ...options?.props,
+    },
+  });
+}
+
 describe("HomeScreen multi-page (M1.4)", () => {
   beforeEach(() => {
     sessionStorage.clear();
@@ -108,56 +138,6 @@ describe("HomeScreen multi-page (M1.4)", () => {
     expect(icons[1].attributes("data-manifest-id")).toBe("beta");
     expect(wrapper.find(".home-icon-page__grid").element.tagName).toBe("DIV");
     expect(wrapper.find(".home-icon-page__grid").attributes("aria-label")).toBeUndefined();
-  });
-
-  it("refreshes the mobile icon grid when an app registers after mount", async () => {
-    const manifests = [manifest({ id: "alpha", name: "Alpha" })];
-    currentKernel = makeKernel(manifests);
-
-    const wrapper = mount(HomeScreen, {
-      props: { recentsAvailable: false },
-    });
-
-    expect(
-      wrapper.findAll("button.home-icon").map((icon) => icon.attributes("data-manifest-id")),
-    ).toEqual(["alpha"]);
-
-    manifests.push(manifest({ id: "baby-touch", name: "Baby Touch" }));
-    currentKernel.events.emit("app.registered", { id: "baby-touch" });
-    await nextTick();
-
-    expect(
-      wrapper.findAll("button.home-icon").map((icon) => icon.attributes("data-manifest-id")),
-    ).toEqual(["alpha", "baby-touch"]);
-  });
-
-  it("hides private and hidden manifests on page 1", () => {
-    currentKernel = makeKernel([
-      manifest({ id: "alpha" }),
-      manifest({ id: "_template" }),
-      manifest({ id: "trash", hidden: true }),
-      manifest({ id: "beta" }),
-    ]);
-
-    const wrapper = mount(HomeScreen, {
-      props: { recentsAvailable: false },
-    });
-
-    const ids = wrapper
-      .findAll("button.home-icon")
-      .map((icon) => icon.attributes("data-manifest-id"));
-    expect(ids).toEqual(["alpha", "beta"]);
-  });
-
-  it("renders the icon-grid empty state when no launcher-visible manifests exist", () => {
-    currentKernel = makeKernel([manifest({ id: "_template" })]);
-
-    const wrapper = mount(HomeScreen, {
-      props: { recentsAvailable: false },
-    });
-
-    expect(wrapper.findAll("button.home-icon").length).toBe(0);
-    expect(wrapper.find(".home-icon-page__empty").exists()).toBe(true);
   });
 
   it("emits `launch` with the manifest id when an icon is activated", async () => {

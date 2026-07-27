@@ -1,4 +1,4 @@
-import { flushPromises, mountVaporTest as mount } from "~/test/mountVapor";
+import { flushPromises, mountVaporTest } from "~/test/mountVapor";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent, inject, nextTick, onMounted, type Component } from "vue";
 
@@ -12,6 +12,7 @@ import {
 import type { Kernel } from "~/types/kernel";
 
 import AppView from "./AppView.vue";
+import type { MobileManifest } from "./useMobileManifestProjection";
 
 const StubIcon = defineVaporComponent(() => document.createElement("svg"));
 const StubApp = defineVaporComponent(() => document.createElement("div"));
@@ -66,6 +67,38 @@ function makeKernel(
       on: vi.fn(() => () => undefined),
     },
   };
+}
+
+function projectManifest(manifest: AppManifest): MobileManifest {
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    icon: manifest.icon,
+    singleton: manifest.singleton === true,
+    hasSettings: manifest.settings !== undefined,
+    supported: manifest.supportedShells?.includes("mobile") ?? true,
+    unsupportedMessage: null,
+    chrome: {
+      titlebar: manifest.chrome?.mobile?.titlebar ?? "visible",
+      edgeSwipe: manifest.chrome?.mobile?.edgeSwipe ?? "enabled",
+    },
+  };
+}
+
+function mount(
+  component: typeof AppView,
+  options?: Parameters<typeof mountVaporTest>[1],
+): ReturnType<typeof mountVaporTest> {
+  const frame = options?.props?.frame as { manifestId?: string } | undefined;
+  const manifest = currentKernel.apps.list().find((entry) => entry.id === frame?.manifestId);
+
+  return mountVaporTest(component, {
+    ...options,
+    props: {
+      manifest: manifest === undefined ? null : projectManifest(manifest),
+      ...options?.props,
+    },
+  });
 }
 
 function makePointerEvent(type: string, init: { x?: number; y?: number } = {}): PointerEvent {

@@ -4,11 +4,11 @@ import Loader2 from "~icons/lucide/loader-2";
 import { computed, type VaporComponent } from "vue";
 
 import AppIcon from "~/components/AppIcon.vue";
-import type { AppManifest } from "~/types/app";
+import type { MobileManifest } from "../useMobileManifestProjection";
 
 const props = withDefaults(
   defineProps<{
-    manifest: AppManifest;
+    manifest: Pick<MobileManifest, "id" | "name" | "icon">;
     /**
      * True while the parent is awaiting `kernel.apps.launch` for this
      * manifest. Drives `aria-busy`, the `disabled` attribute, the

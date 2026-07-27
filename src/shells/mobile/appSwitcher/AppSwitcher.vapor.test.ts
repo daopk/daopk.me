@@ -1,4 +1,4 @@
-import { mountVaporTest as mount } from "~/test/mountVapor";
+import { mountVaporTest } from "~/test/mountVapor";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defineVaporComponent } from "vue";
 
@@ -6,6 +6,7 @@ import type { AppManifest } from "~/types/app";
 import type { Kernel } from "~/types/kernel";
 
 import AppSwitcher from "./AppSwitcher.vue";
+import type { MobileManifest } from "../useMobileManifestProjection";
 
 const StubIcon = defineVaporComponent(() => document.createElement("svg"));
 const StubApp = defineVaporComponent(() => document.createElement("div"));
@@ -22,6 +23,35 @@ function manifest(id: string, name?: string, overrides: Partial<AppManifest> = {
 }
 
 let currentManifests: AppManifest[] = [];
+
+function projectManifest(manifest: AppManifest): MobileManifest {
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    icon: manifest.icon,
+    singleton: manifest.singleton === true,
+    hasSettings: manifest.settings !== undefined,
+    supported: manifest.supportedShells?.includes("mobile") ?? true,
+    unsupportedMessage: null,
+    chrome: {
+      titlebar: manifest.chrome?.mobile?.titlebar ?? "visible",
+      edgeSwipe: manifest.chrome?.mobile?.edgeSwipe ?? "enabled",
+    },
+  };
+}
+
+function mount(
+  component: typeof AppSwitcher,
+  options?: Parameters<typeof mountVaporTest>[1],
+): ReturnType<typeof mountVaporTest> {
+  return mountVaporTest(component, {
+    ...options,
+    props: {
+      manifests: currentManifests.map(projectManifest),
+      ...options?.props,
+    },
+  });
+}
 
 vi.mock("~/composables/useKernel", () => ({
   useKernel(): Pick<Kernel, "apps"> {

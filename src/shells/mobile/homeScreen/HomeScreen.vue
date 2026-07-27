@@ -3,6 +3,7 @@ import Layers2 from "~icons/lucide/layers-2";
 import { computed, ref } from "vue";
 
 import { IconButton } from "~/components/ui";
+import type { MobileManifest } from "../useMobileManifestProjection";
 import HomeIconPage from "./HomeIconPage.vue";
 import HomePager from "./HomePager.vue";
 import HomePageIndicator from "./HomePageIndicator.vue";
@@ -10,10 +11,12 @@ import MobileWidgetsPage from "./MobileWidgetsPage.vue";
 
 const props = withDefaults(
   defineProps<{
+    manifests?: readonly MobileManifest[];
     recentsAvailable: boolean;
     launchingManifestIds?: ReadonlySet<string>;
   }>(),
   {
+    manifests: () => [],
     launchingManifestIds: () => new Set<string>(),
   },
 );
@@ -75,6 +78,7 @@ defineExpose({ scrollEl });
       <template #page-0>
         <HomeIconPage
           ref="iconPageRef"
+          :manifests="manifests"
           :launching-manifest-ids="launchingManifestIds"
           @launch="onLaunch"
         />

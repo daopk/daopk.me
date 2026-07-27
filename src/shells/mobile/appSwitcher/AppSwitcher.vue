@@ -4,14 +4,20 @@ import CloseIcon from "~icons/lucide/x";
 import { computed, type VaporComponent } from "vue";
 
 import { IconButton, Modal, type ModalFocusTrapOptions } from "~/components/ui";
-import { useKernel } from "~/composables/useKernel";
 
 import type { NavigationFrame } from "../useMobileSession";
+import type { MobileManifest } from "../useMobileManifestProjection";
 import AppSwitcherCard from "./AppSwitcherCard.vue";
 
-const props = defineProps<{
-  frames: ReadonlyArray<NavigationFrame>;
-}>();
+const props = withDefaults(
+  defineProps<{
+    frames: ReadonlyArray<NavigationFrame>;
+    manifests?: readonly MobileManifest[];
+  }>(),
+  {
+    manifests: () => [],
+  },
+);
 
 const emit = defineEmits<{
   (e: "close"): void;
@@ -19,8 +25,6 @@ const emit = defineEmits<{
   (e: "dismiss", frameId: string): void;
   (e: "dismiss-all"): void;
 }>();
-
-const kernel = useKernel();
 
 const APP_SWITCHER_CONTENT_BASE_Z_INDEX = 951;
 const focusTrapOptions: ModalFocusTrapOptions = {
@@ -40,7 +44,7 @@ interface ResolvedFrame extends NavigationFrame {
 }
 
 const cards = computed<ResolvedFrame[]>(() => {
-  const manifests = new Map(kernel.apps.list().map((m) => [m.id, m]));
+  const manifests = new Map(props.manifests.map((manifest) => [manifest.id, manifest]));
   const resolved: ResolvedFrame[] = [];
 
   for (let i = props.frames.length - 1; i >= 0; i--) {

@@ -1,16 +1,16 @@
 <script setup vapor lang="ts">
 import { ref } from "vue";
 
-import { useKernel } from "~/composables/useKernel";
-
-import { useHomeScreenGrid } from "./useHomeScreenGrid";
+import type { MobileManifest } from "../useMobileManifestProjection";
 import HomeScreenIcon from "./HomeScreenIcon.vue";
 
 withDefaults(
   defineProps<{
+    manifests?: readonly MobileManifest[];
     launchingManifestIds?: ReadonlySet<string>;
   }>(),
   {
+    manifests: () => [],
     launchingManifestIds: () => new Set<string>(),
   },
 );
@@ -18,9 +18,6 @@ withDefaults(
 const emit = defineEmits<{
   (e: "launch", manifestId: string): void;
 }>();
-
-const kernel = useKernel();
-const { slots } = useHomeScreenGrid(kernel);
 
 function onLaunch(manifestId: string): void {
   emit("launch", manifestId);
@@ -33,15 +30,15 @@ defineExpose({ scrollEl });
 
 <template>
   <div ref="scrollEl" class="home-icon-page">
-    <section v-if="slots.length === 0" class="home-icon-page__empty" role="status">
+    <section v-if="manifests.length === 0" class="home-icon-page__empty" role="status">
       <p>No apps registered yet.</p>
     </section>
     <div v-else class="home-icon-page__grid">
       <HomeScreenIcon
-        v-for="slot in slots"
-        :key="slot.manifest.id"
-        :manifest="slot.manifest"
-        :launching="launchingManifestIds.has(slot.manifest.id)"
+        v-for="manifest in manifests"
+        :key="manifest.id"
+        :manifest="manifest"
+        :launching="launchingManifestIds.has(manifest.id)"
         @launch="onLaunch"
       />
     </div>
