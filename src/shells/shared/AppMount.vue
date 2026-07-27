@@ -11,18 +11,16 @@ import {
 
 import { useKernel } from "~/composables/useKernel";
 import { debugWarn } from "~/core/debug";
-import {
-  AppChromeInjectionKey,
-  AppContextInjectionKey,
-  type AppChromeController,
-  type AppContext,
-} from "~/types/app";
-import { AppKeyboardScopeInjectionKey, type AppKeyboardScope } from "~/composables/useAppKeyboard";
+import { AppChromeInjectionKey, type AppChromeController } from "~/types/app";
 import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
 import { AppMountRetryKey } from "./appMountContext";
 import AppMountError from "./AppMountError.vue";
 import AppMountLoading from "./AppMountLoading.vue";
+import {
+  createConnectedRootKeyboardAdapter,
+  provideHostedAppEnvironment,
+} from "./hostedAppEnvironment";
 
 const props = defineProps<{
   manifestId: string;
@@ -37,36 +35,13 @@ const rootRef = useTemplateRef<HTMLElement>("rootRef");
 
 const manifest = computed(() => kernel.apps.list().find((entry) => entry.id === props.manifestId));
 
-// Deep-freeze the args snapshot — `Object.freeze` is shallow, so without the
-// Singleton relaunch / shell-policy short-circuits intentionally drop new
-const context: AppContext = Object.freeze({
+provideHostedAppEnvironment({
   manifestId: props.manifestId,
   handleId: props.handleId,
-  args: Object.freeze({ ...props.args }),
+  args: props.args,
   isActive: () => props.focused,
+  keyboard: createConnectedRootKeyboardAdapter(() => rootRef.value),
 });
-
-provide(AppContextInjectionKey, context);
-
-const keyboardScope: AppKeyboardScope = Object.freeze({
-  ownsEvent: (event: KeyboardEvent) => eventBelongsToAppRoot(event, rootRef.value),
-});
-
-provide(AppKeyboardScopeInjectionKey, keyboardScope);
-
-function eventBelongsToAppRoot(event: KeyboardEvent, root: Element | null): boolean {
-  if (typeof document === "undefined" || root === null || !root.isConnected) {
-    return false;
-  }
-
-  const target = event.target;
-  return (
-    !(target instanceof Node) ||
-    target === document ||
-    target === document.body ||
-    (target instanceof Node && root.contains(target))
-  );
-}
 
 if (props.chrome !== undefined) {
   provide(AppChromeInjectionKey, props.chrome);

@@ -1,9 +1,11 @@
 <script setup vapor lang="ts">
-import { defineVaporAsyncComponent, markRaw, onUnmounted, provide, type VaporComponent } from "vue";
+import { defineVaporAsyncComponent, markRaw, onUnmounted, type VaporComponent } from "vue";
 
-import { AppKeyboardScopeInjectionKey } from "~/composables/useAppKeyboard";
 import { useKernel } from "~/composables/useKernel";
-import { AppContextInjectionKey, type AppContext } from "~/types/app";
+import {
+  denyAllKeyboardAdapter,
+  provideHostedAppEnvironment,
+} from "~/shells/shared/hostedAppEnvironment";
 import type { DesktopRendererManifest } from "~/types/desktop";
 import { verifiedVaporLoader } from "~/utils/vaporComponent";
 
@@ -21,18 +23,16 @@ const handle = kernel.processes.spawn(manifestId, {
   surface: props.renderer.surface,
 });
 
-const context: AppContext = Object.freeze({
+provideHostedAppEnvironment({
   manifestId,
   handleId: handle.id,
-  args: Object.freeze({
+  args: {
     contributionId: props.renderer.id,
     surface: props.renderer.surface,
-  }),
+  },
   isActive: () => false,
+  keyboard: denyAllKeyboardAdapter,
 });
-
-provide(AppContextInjectionKey, context);
-provide(AppKeyboardScopeInjectionKey, Object.freeze({ ownsEvent: () => false }));
 
 onUnmounted(() => {
   kernel.processes.kill(handle.id, "shell");
