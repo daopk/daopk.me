@@ -369,17 +369,40 @@ function createMoviesHomeContentResource(
     continueWatchingController?.abort();
     const controller = new AbortController();
     continueWatchingController = controller;
-    const records = continueWatchingRecords();
+    const records = uniqueContinueWatchingRecords(continueWatchingRecords());
+    const cachedItemsByTarget = new Map(
+      content.value.continueWatchingItems.map((item) => [
+        continueWatchingItemTargetKey(item),
+        item,
+      ]),
+    );
+    const cachedItems = records.flatMap((record) => {
+      const item = cachedItemsByTarget.get(continueWatchingRecordTargetKey(record));
+      return item === undefined
+        ? []
+        : [
+            {
+              ...item,
+              progress: record.progress,
+              progressPercent: continueProgressPercent(record.progress),
+            },
+          ];
+    });
+    content.value = { ...content.value, continueWatchingItems: cachedItems };
 
     if (records.length === 0) {
-      content.value = { ...content.value, continueWatchingItems: [] };
       return;
     }
 
-    void loadContinueWatchingContent(remote, records, {
-      locale: locale.value,
-      signal: controller.signal,
-    }).then((items) => {
+    void loadContinueWatchingContent(
+      remote,
+      records,
+      {
+        locale: locale.value,
+        signal: controller.signal,
+      },
+      cachedItems,
+    ).then((items) => {
       if (currentRevision !== continueWatchingRevision || controller.signal.aborted) {
         return;
       }
@@ -432,7 +455,7 @@ function createMoviesCatalogContentResource(
   );
 
   watch(
-    () => [filtersMediaForQuery(query()), locale.value] as const,
+    [() => filtersMediaForQuery(query()), locale],
     ([media, nextLocale]) => {
       filtersRevision += 1;
       const currentRevision = filtersRevision;
@@ -602,14 +625,18 @@ async function loadContinueWatchingContent(
   remote: MoviesContentRemote,
   records: readonly MoviesContinueWatchingRecord[],
   options: MoviesContentRemoteOptions,
+  cachedItems: readonly MoviesContinueWatchingItem[] = [],
 ): Promise<readonly MoviesContinueWatchingItem[]> {
   const uniqueRecords = uniqueContinueWatchingRecords(records);
+  const cachedItemsByTarget = new Map(
+    cachedItems.map((item) => [continueWatchingItemTargetKey(item), item]),
+  );
   const items = await Promise.all(
     uniqueRecords.map(async (record) => {
       try {
         return await hydrateContinueWatchingRecord(remote, record, options);
       } catch {
-        return null;
+        return cachedItemsByTarget.get(continueWatchingRecordTargetKey(record)) ?? null;
       }
     }),
   );
@@ -707,6 +734,18 @@ function continueWatchingRecordGroupKey(record: MoviesContinueWatchingRecord): s
   return record.target.kind === "movie"
     ? `movie:${record.target.tmdbId}`
     : `tv:${record.target.tmdbId}`;
+}
+
+function continueWatchingRecordTargetKey(record: MoviesContinueWatchingRecord): string {
+  return record.target.kind === "movie"
+    ? `movie:${record.target.tmdbId}`
+    : `tv:${record.target.tmdbId}:s${record.target.seasonNumber}:e${record.target.episodeNumber}`;
+}
+
+function continueWatchingItemTargetKey(item: MoviesContinueWatchingItem): string {
+  return item.target.kind === "movie"
+    ? `movie:${item.target.movie.tmdbId}`
+    : `tv:${item.target.episode.tmdbId}:s${item.target.episode.seasonNumber}:e${item.target.episode.episodeNumber}`;
 }
 
 function filtersMediaForQuery(query: MoviesListQuery): MoviesSearchMedia | null {

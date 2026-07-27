@@ -15,6 +15,7 @@ import {
   type MovieTrailerResult,
   type MoviesFiltersResult,
   type MoviesListPeriod,
+  type MoviesListQuery,
   type MoviesListResult,
 } from "./moviesApi";
 import type { MoviesContinueWatchingRecord } from "./moviesWatchContinuity";
@@ -211,6 +212,52 @@ describe("Movies content", () => {
     scope.stop();
   });
 
+  it("keeps ready catalog filters when only list criteria change", async () => {
+    const movieFilters = filters("movie", 28, "Action");
+    const pendingFilters = deferred<MoviesFiltersResult>();
+    const firstMovie = movieDetail(550, "Popular");
+    const secondMovie = movieDetail(551, "Newest");
+    const baseAdapter = createInMemoryMoviesContentAdapter({
+      lists: [
+        {
+          query: { limit: 1, media: "movie", page: 1, sort: "popular" },
+          value: list([firstMovie]),
+        },
+        {
+          query: { limit: 1, media: "movie", page: 1, sort: "newest" },
+          value: list([secondMovie]),
+        },
+      ],
+    });
+    let initialFiltersLoaded = false;
+    const remote: MoviesContentRemote = {
+      ...baseAdapter,
+      fetchFilters: () => {
+        if (!initialFiltersLoaded) {
+          initialFiltersLoaded = true;
+          return Promise.resolve(movieFilters);
+        }
+        return pendingFilters.promise;
+      },
+    };
+    const module = createMoviesContent(remote);
+    const locale = ref<SupportedLocale>("en");
+    const query = ref<MoviesListQuery>({ limit: 1, media: "movie", sort: "popular" });
+    const scope = effectScope();
+    const resource = scope.run(() => module.useCatalog(() => query.value, locale));
+
+    await settleContent();
+    expect(resource?.filterState.value).toBe("ready");
+    expect(resource?.content.value.filters).toEqual(movieFilters);
+
+    query.value = { limit: 1, media: "movie", sort: "newest" };
+    await nextTick();
+
+    expect(resource?.filterState.value).toBe("ready");
+    expect(resource?.content.value.filters).toEqual(movieFilters);
+    scope.stop();
+  });
+
   it("assembles Home rows and Continue Watching behind one interface", async () => {
     const featured = movieDetail(550, "Fight Club");
     const rowMovie = movieDetail(551, "Discovery");
@@ -264,6 +311,82 @@ describe("Movies content", () => {
         progressPercent: 50,
         title: "Fight Club",
       }),
+    ]);
+    scope.stop();
+  });
+
+  it("reconciles cached Continue Watching items before refreshing them", async () => {
+    const removedMovie = movieDetail(550, "Fight Club");
+    const survivingMovie = movieDetail(551, "Survivor");
+    const rowMovie = movieDetail(552, "Discovery");
+    const survivorRefresh = deferred<MovieDetail>();
+    const records = ref<readonly MoviesContinueWatchingRecord[]>([
+      {
+        progress: { currentTime: 25, duration: 100, updatedAt: 2 },
+        target: { kind: "movie", slug: "fight-club", tmdbId: 550 },
+      },
+      {
+        progress: { currentTime: 50, duration: 100, updatedAt: 1 },
+        target: { kind: "movie", slug: "survivor", tmdbId: 551 },
+      },
+    ]);
+    let survivorRequests = 0;
+    const baseAdapter = createInMemoryMoviesContentAdapter({
+      lists: [
+        {
+          query: { kind: "trending-movie", limit: 6, period: "week" },
+          value: list([removedMovie]),
+        },
+        ...HOME_DISCOVERY_GROUPS.flatMap((group) =>
+          group.rows.map((row) => ({
+            query: {
+              ...row.query,
+              limit: 12,
+              ...(group.id === "trending" ? { period: "week" as const } : {}),
+            },
+            value: list([rowMovie]),
+          })),
+        ),
+      ],
+    });
+    const remote: MoviesContentRemote = {
+      ...baseAdapter,
+      fetchDetail: vi.fn((_, tmdbId) => {
+        if (tmdbId === removedMovie.tmdbId) {
+          return Promise.resolve(removedMovie);
+        }
+        survivorRequests += 1;
+        return survivorRequests === 1 ? Promise.resolve(survivingMovie) : survivorRefresh.promise;
+      }),
+    };
+    const module = createMoviesContent(remote);
+    const locale = ref<SupportedLocale>("en");
+    const scope = effectScope();
+    const resource = scope.run(() =>
+      module.useHome(
+        () => "week",
+        () => records.value,
+        locale,
+      ),
+    );
+
+    await settleContent();
+    expect(resource?.content.value.continueWatchingItems.map((item) => item.title)).toEqual([
+      "Fight Club",
+      "Survivor",
+    ]);
+
+    records.value = [records.value[1]!];
+    resource?.refreshContinueWatching();
+
+    expect(resource?.content.value.continueWatchingItems.map((item) => item.title)).toEqual([
+      "Survivor",
+    ]);
+
+    survivorRefresh.reject(new Error("Offline"));
+    await settleContent();
+    expect(resource?.content.value.continueWatchingItems.map((item) => item.title)).toEqual([
+      "Survivor",
     ]);
     scope.stop();
   });
